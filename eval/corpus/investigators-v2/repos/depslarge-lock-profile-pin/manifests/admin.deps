@@ -1,0 +1,8 @@
+# admin component dependencies (.deps format: name<TAB>constraint)
+
+yamlish	^1.2.16
+ledgercore	^2.6.8
+blobstore	^0.2.16
+metricsd	^0.11.10
+cipherbox	^1.9.1
+tracekit	^0.3.2

@@ -1,0 +1,10 @@
+2026-05-11T10:01:04Z session=sess-4402 query=reports.export_rows duration=812ms rows=1200
+2026-05-11T10:01:18Z session=sess-4403 query=reports.list_recent duration=12ms rows=25
+2026-05-11T10:01:44Z session=sess-4405 query=reports.list_recent duration=11ms rows=25
+2026-05-11T10:01:33Z session=sess-4410 query=reports.export_rows TIMEOUT after 30000ms
+2026-05-11T10:01:43Z session=sess-4471 query=orders.summary_by_month TIMEOUT after 30000ms
+2026-05-11T10:02:29Z session=sess-4415 query=reports.list_recent duration=14ms rows=25
+2026-05-11T10:02:51Z session=sess-4419 query=reports.list_recent duration=13ms rows=25
+2026-05-11T10:03:06Z session=sess-4422 query=reports.export_rows duration=905ms rows=1300
+2026-05-11T10:03:22Z session=sess-4425 query=reports.list_recent duration=12ms rows=25
+2026-05-11T10:04:01Z session=sess-4430 query=reports.list_recent duration=15ms rows=25

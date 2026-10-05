@@ -1,0 +1,3 @@
+# Production runs long ingest jobs and asks for more than the default.
+[http]
+request_timeout_ms = 90000

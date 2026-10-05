@@ -1,0 +1,6 @@
+# id,priority,status
+T-1005,low,closed
+T-1006,high,open
+T-1007,medium,open
+T-1008,high,closed
+T-1009,low,open

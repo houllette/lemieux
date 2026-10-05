@@ -1,0 +1,4 @@
+# disabled
+
+[http]
+request_timeout_ms = 12000

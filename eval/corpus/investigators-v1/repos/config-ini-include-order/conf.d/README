@@ -1,0 +1,2 @@
+Drop-in files for app.ini. Rename a file to *.ini.disabled to take it out of
+the include set without deleting it.

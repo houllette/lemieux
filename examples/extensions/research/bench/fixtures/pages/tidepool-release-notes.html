@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tidepool — Release notes</title>
+  <script type="text/javascript">document.cookie = "consent=1";</script>
+</head>
+<body>
+  <h1>Tidepool release notes</h1>
+  <h2>3.5.0</h2>
+  <ul>
+    <li>Consumers may now replay from a timestamp rather than an offset.</li>
+    <li>The metrics endpoint reports per-partition lag.</li>
+    <li>Fixed a race when two producers created the same topic at once.</li>
+  </ul>
+  <h2>3.4.0</h2>
+  <p>Release 3.4.0 introduced the reef compaction mode for cold partitions.
+  Reef mode rewrites a partition into a single sorted segment once it has
+  gone an hour without writes, which cuts replay time for archival topics.</p>
+  <ul>
+    <li>Reef compaction mode (see above).</li>
+    <li>The CLI gained <code>tidepool drain</code>.</li>
+    <li>Handshake timeouts are now configurable.</li>
+  </ul>
+  <h2>3.3.0</h2>
+  <ul>
+    <li>TLS support behind the <code>tls</code> configuration table.</li>
+    <li>Producers can batch up to 500 messages per frame.</li>
+    <li>The default partition count rose from 4 to 8.</li>
+  </ul>
+  <h2>3.2.1</h2>
+  <ul>
+    <li>Fixed a checksum mismatch on messages larger than 2 MiB.</li>
+    <li>Reduced memory use of idle consumers.</li>
+  </ul>
+  <h2>3.2.0</h2>
+  <ul>
+    <li>Consumer groups with cooperative rebalancing.</li>
+    <li>Retention can now be set per topic.</li>
+    <li>The <code>tidepool top</code> command shows live throughput.</li>
+  </ul>
+  <h2>3.1.0</h2>
+  <ul>
+    <li>Snapshot export to a directory of segment files.</li>
+    <li>Structured logging in JSON.</li>
+    <li>Graceful shutdown waits for in-flight acknowledgements.</li>
+  </ul>
+  <h2>3.0.0</h2>
+  <ul>
+    <li>New binary framing protocol; 2.x clients must upgrade.</li>
+    <li>Partitions replaced the old single-log layout.</li>
+    <li>The configuration file moved from INI to TOML.</li>
+  </ul>
+</body>
+</html>

@@ -1,0 +1,1 @@
+Tenant acme gets checkout_variant classic, determined by flags/defaults.json: the flag is locked there, so region-eu.json's express and tenant-acme.json's beta are both ignored.

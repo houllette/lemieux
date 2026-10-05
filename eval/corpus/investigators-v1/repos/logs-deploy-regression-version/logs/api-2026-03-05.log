@@ -1,0 +1,9 @@
+2026-03-05 00:12:09 WARN api cache miss ratio 0.40
+2026-03-05 07:41:12 ERROR api NullPointerException at PriceCalculator.apply(PriceCalculator.java:88)
+2026-03-05 07:41:13 ERROR api NullPointerException at PriceCalculator.apply(PriceCalculator.java:88)
+2026-03-05 07:58:44 ERROR api NullPointerException at PriceCalculator.apply(PriceCalculator.java:88)
+2026-03-05 08:06:10 INFO api boot v2.8.2
+2026-03-05 08:20:31 ERROR api NullPointerException at PriceCalculator.apply(PriceCalculator.java:88)
+2026-03-05 12:03:55 ERROR api NullPointerException at PriceCalculator.apply(PriceCalculator.java:88)
+2026-03-05 15:12:30 INFO api boot v2.8.3
+2026-03-05 16:45:02 WARN api slow query catalog.lookup 1300ms

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "review-extension-plumbing",
+    "exposure": "development"
+  },
+  "tasks": [
+    {
+      "id": "zero-denominator",
+      "prompt": "The public contract requires a clear error for a zero denominator. Identify the missing validation.",
+      "cwd": "fixtures/division",
+      "timeout_ms": 10000,
+      "grader": {
+        "command": [
+          "elixir",
+          "-e",
+          "case JSON.decode!(hd(System.argv())) do %{\"findings\" => [%{\"path\" => \"calculator.ex\", \"line\" => 2, \"message\" => message}]} -> if String.contains?(String.downcase(message), \"zero\"), do: IO.puts(\"pass\"), else: raise(\"missing zero-denominator finding\"); _ -> raise(\"missing seeded finding\") end",
+          "{answer}"
+        ]
+      }
+    }
+  ]
+}

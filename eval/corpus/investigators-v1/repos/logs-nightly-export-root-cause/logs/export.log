@@ -1,0 +1,5 @@
+2026-05-11 02:00:03 [nightly-export] starting, 14 datasets
+2026-05-11 02:05:41 [nightly-export] extracted 14 datasets (2.1 GB)
+2026-05-11 02:13:50 [nightly-export] requesting upload token for svc-export
+2026-05-11 02:13:55 [nightly-export] upload failed: 401 token expired (svc-export)
+2026-05-11 02:14:06 [nightly-export] giving up after 3 attempts

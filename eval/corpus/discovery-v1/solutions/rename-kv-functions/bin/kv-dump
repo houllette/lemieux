@@ -1,0 +1,15 @@
+#!/bin/sh
+# Usage: kv-dump [--json]
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root" || exit 1
+. ./lib/store.sh
+. ./lib/export.sh
+. ./lib/stats.sh
+if [ "${1:-}" = "--json" ]; then
+  export_json
+else
+  for key in $(kv_keys); do
+    printf '%s=%s\n' "$key" "$(kv_get "$key")"
+  done
+  printf '# %s key(s)\n' "$(store_count)"
+fi

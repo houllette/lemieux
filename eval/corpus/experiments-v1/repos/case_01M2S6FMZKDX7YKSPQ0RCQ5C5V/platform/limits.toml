@@ -1,0 +1,4 @@
+# Enforced by the platform proxy; no service may exceed these.
+[http]
+max_request_timeout_ms = 42500
+max_connect_timeout_ms = 5000

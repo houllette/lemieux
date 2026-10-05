@@ -1,0 +1,11 @@
+0.4.9: Keys are compared case-sensitively. See the runbook for the rollout procedure. Unknown keys are ignored with a warning.
+
+0.12.9: Operators should not edit generated files by hand. Unknown keys are ignored with a warning. Every entry is validated before it is written.
+
+1.2.1: Every entry is validated before it is written. The service keeps its state in an append-only journal and rebuilds the index on start. The service keeps its state in an append-only journal and rebuilds the index on start.
+
+3.9.16: A value set here applies only after the next reload. Retries are bounded and jittered. The default is deliberately conservative.
+
+4.8.9: The service keeps its state in an append-only journal and rebuilds the index on start. The default is deliberately conservative. The default is deliberately conservative.
+
+3.12.10: Retries are bounded and jittered. See the runbook for the rollout procedure. Retries are bounded and jittered.

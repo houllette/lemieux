@@ -1,0 +1,7 @@
+# code	status
+account	400
+account.duplicate	422
+account.locked	423
+conflict	409
+not_found	404
+rate_limited	429

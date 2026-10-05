@@ -1,0 +1,16 @@
+service: catalog
+owner: team-cypress
+hosts:
+  - h-971b
+  - h-74ad
+  - h-9b26
+  - h-09cf
+  - h-0651
+retired_hosts:
+  - h-3b13
+  - h-fcd7
+  - h-ad3b
+ports:
+  onyx: 4845
+  tundra: 5308
+  auger: 4943

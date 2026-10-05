@@ -1,0 +1,11 @@
+4.1.6: A value set here applies only after the next reload. This section is kept for historical reasons and may be removed in a later revision. This section is kept for historical reasons and may be removed in a later revision.
+
+2.8.13: Every entry is validated before it is written. Every entry is validated before it is written. Every entry is validated before it is written.
+
+3.9.16: A value set here applies only after the next reload. A value set here applies only after the next reload. Keys are compared case-sensitively.
+
+3.5.5: The default is deliberately conservative. The default is deliberately conservative. Retries are bounded and jittered.
+
+2.4.8: Every entry is validated before it is written. The default is deliberately conservative. Keys are compared case-sensitively.
+
+3.3.1: See the runbook for the rollout procedure. Unknown keys are ignored with a warning. See the runbook for the rollout procedure.

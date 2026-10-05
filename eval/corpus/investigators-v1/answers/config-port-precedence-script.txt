@@ -1,0 +1,1 @@
+Under systemd the service listens on port 9090, supplied by deploy/service.env (SERVICE_PORT=9090): the unit loads that env file, its --port=${OVERRIDE_PORT} flag expands to an empty value that start.sh treats as absent, and SERVICE_PORT overrides both config/service.conf (8080) and config/local.conf (8081).

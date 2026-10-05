@@ -1,0 +1,16 @@
+service: ledger
+owner: team-fennel
+hosts:
+  - h-77a0
+  - h-a382
+  - h-a41b
+  - h-dfd7
+  - h-46de
+retired_hosts:
+  - h-1538
+  - h-2cb9
+  - h-be9b
+ports:
+  meadow: 6290
+  verdant: 5765
+  sterling: 6510

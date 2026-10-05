@@ -1,0 +1,16 @@
+service: orders
+owner: team-onyx
+hosts:
+  - h-4f1a
+  - h-5cec
+  - h-f494
+  - h-a385
+  - h-364e
+retired_hosts:
+  - h-f7e8
+  - h-9c9d
+  - h-4f76
+ports:
+  coral: 6233
+  quartz: 8276
+  jasper: 7134

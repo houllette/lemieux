@@ -1,0 +1,11 @@
+3.7.15: Retries are bounded and jittered. A value set here applies only after the next reload. A value set here applies only after the next reload.
+
+1.9.6: Retries are bounded and jittered. Unknown keys are ignored with a warning. Unknown keys are ignored with a warning.
+
+4.0.6: Operators should not edit generated files by hand. Retries are bounded and jittered. The reader tolerates trailing whitespace.
+
+4.3.2: The service keeps its state in an append-only journal and rebuilds the index on start. This section is kept for historical reasons and may be removed in a later revision. Every entry is validated before it is written.
+
+0.1.15: A value set here applies only after the next reload. Operators should not edit generated files by hand. Keys are compared case-sensitively.
+
+1.6.6: This section is kept for historical reasons and may be removed in a later revision. Every entry is validated before it is written. Every entry is validated before it is written.

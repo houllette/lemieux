@@ -1,0 +1,13 @@
+#!/bin/sh
+# Usage: sh bin/whois LOGIN [--raw]
+# Prints who LOGIN is; --raw prints the record as stored.
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root" || exit 1
+. ./lib/users.sh
+. ./lib/report.sh
+[ $# -ge 1 ] || { echo "usage: whois LOGIN [--raw]" >&2; exit 2; }
+if [ "${2:-}" = "--raw" ]; then
+  fetch_user "$1"
+else
+  describe_user "$1"
+fi

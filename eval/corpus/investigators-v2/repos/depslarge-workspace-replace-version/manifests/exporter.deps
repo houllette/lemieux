@@ -1,0 +1,8 @@
+# exporter component dependencies (.deps format: name<TAB>constraint)
+
+ledgercore	^1.5.3
+blobstore	^4.3.5
+tracekit	^1.2.20
+clockwork	^4.2.0
+argsplit	^4.2.12
+yamlish	^0.2.12

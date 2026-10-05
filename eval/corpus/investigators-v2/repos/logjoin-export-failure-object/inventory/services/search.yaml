@@ -1,0 +1,16 @@
+service: search
+owner: team-aurora
+hosts:
+  - h-1f5b
+  - h-15b2
+  - h-e4fe
+  - h-a382
+  - h-c020
+retired_hosts:
+  - h-9339
+  - h-2380
+  - h-82af
+ports:
+  quartz: 6935
+  copper: 6101
+  brine: 8958

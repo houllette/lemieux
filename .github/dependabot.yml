@@ -1,0 +1,38 @@
+version: 2
+updates:
+  # Grouped so a week's bumps arrive as two PRs to review, not twelve.
+  # Dev/QA tooling is separated from runtime deps because the two carry very
+  # different risk: a Credo bump can only break CI, a runtime bump can break prod.
+  - package-ecosystem: mix
+    directory: /
+    schedule:
+      interval: weekly
+    # A release younger than a week is where a compromised package lives
+    # before it is yanked; security updates are not delayed by this.
+    cooldown:
+      default-days: 7
+    groups:
+      dev-deps:
+        dependency-type: development
+      runtime-deps:
+        dependency-type: production
+        update-types: [minor, patch]
+
+  # The installed `lmx` binary (`dist/lmx`) is a separate Mix project with its
+  # own lock, but it gets no entry here. Dependabot evaluates a directory's
+  # mix.exs in an isolated copy, and dist/lmx reads the repository's VERSION
+  # and depends on the library and the bundled Jev extension by path, none of
+  # which that copy has, so every update job fails. It is kept current
+  # another way: CI audits its lock, and `mix deps.drift` fails when a root
+  # bump is not carried over.
+  - package-ecosystem: github-actions
+    # The composite setup action pins setup-beam too; list it so its pin moves
+    # with the workflows'.
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

@@ -1,0 +1,16 @@
+service: orders
+owner: team-citrine
+hosts:
+  - h-ceff
+  - h-e7cf
+  - h-f541
+  - h-a848
+  - h-c4b0
+retired_hosts:
+  - h-f541
+  - h-07ab
+  - h-8b02
+ports:
+  flint: 8521
+  garnet: 8312
+  shale: 4967

@@ -1,0 +1,15 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Hotel finder</title>
+<style>body{font:20px system-ui;padding:32px;max-width:850px}label{display:block;margin:18px 0}input,select,button{font:inherit;padding:8px}article{margin-top:30px}</style>
+<h1>Hotel finder</h1>
+<form id="search"><label>Destination <input id="destination" type="text" required></label>
+<label>Style <select id="style"><option>Any</option><option>Design</option><option>Traditional</option></select></label>
+<label><input id="cancel" type="checkbox"> Free cancellation</label><button>Search hotels</button></form>
+<section id="results" aria-live="polite"></section>
+<script>
+const form=document.querySelector('form'), results=document.querySelector('#results');
+form.onsubmit=e=>{e.preventDefault();results.textContent='Loading results…';setTimeout(()=>{
+const correct=document.querySelector('#destination').value.trim().toLowerCase()==='lisbon' && document.querySelector('#style').value==='Design' && document.querySelector('#cancel').checked;
+results.innerHTML=correct?'<article><h2>Casa Flora</h2><p>Lisbon · Design · Free cancellation</p><button id="open">Open Casa Flora</button></article>':'<p>No matching hotels. Check destination and filters.</p>';
+if(correct)document.querySelector('#open').onclick=()=>{location.hash='casa-flora';document.body.innerHTML='<h1>Casa Flora</h1><p>Verified selection: Lisbon | Design | free cancellation</p><p>Hotel details. No reservation has been made.</p>';};
+},80);};
+</script></html>

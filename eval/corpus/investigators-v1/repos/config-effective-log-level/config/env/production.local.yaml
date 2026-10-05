@@ -1,0 +1,3 @@
+# Machine-specific tweaks for the production hosts.
+log_level: warn
+workers: 12

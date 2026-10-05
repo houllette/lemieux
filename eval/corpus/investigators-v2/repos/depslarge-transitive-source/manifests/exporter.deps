@@ -1,0 +1,8 @@
+# exporter component dependencies (.deps format: name<TAB>constraint)
+
+argsplit	^2.5.12
+ledgercore	^4.5.13
+retryable	^2.5.18
+clockwork	^2.8.16
+tracekit	^4.11.18
+tinyjson	^3.4.8

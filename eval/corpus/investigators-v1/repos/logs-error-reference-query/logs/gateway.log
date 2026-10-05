@@ -1,0 +1,10 @@
+2026-05-11T10:01:05Z ERROR gw req=req-2a71 ref=ERR-3C02 upstream=web-1 status=500 path=/api/reports
+2026-05-11T10:01:18Z INFO gw req=req-4b02 upstream=web-1 status=200 path=/api/reports
+2026-05-11T10:01:44Z INFO gw req=req-5c93 upstream=web-2 status=200 path=/api/reports
+2026-05-11T10:02:03Z ERROR gw req=req-6d14 ref=ERR-7B44 upstream=web-1 status=502 path=/api/reports
+2026-05-11T10:02:13Z ERROR gw req=req-8c1f ref=ERR-51A9 upstream=web-2 status=502 path=/api/reports
+2026-05-11T10:02:29Z INFO gw req=req-9e25 upstream=web-2 status=200 path=/api/reports
+2026-05-11T10:02:51Z INFO gw req=req-a136 upstream=web-1 status=200 path=/api/reports
+2026-05-11T10:03:07Z ERROR gw req=req-b247 ref=ERR-9D10 upstream=web-2 status=500 path=/api/reports
+2026-05-11T10:03:22Z INFO gw req=req-c358 upstream=web-1 status=200 path=/api/reports
+2026-05-11T10:04:01Z INFO gw req=req-d469 upstream=web-2 status=200 path=/api/reports

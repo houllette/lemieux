@@ -1,0 +1,6 @@
+def test_canvas():
+    assert True
+
+
+def test_hollow_2():
+    assert 1 + 1 == 2

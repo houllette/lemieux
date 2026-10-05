@@ -1,0 +1,63 @@
+name: Offline evaluation
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+    inputs:
+      subset:
+        description: Corpus tag to run
+        required: true
+        default: full
+        type: choice
+        options:
+          - smoke
+          - full
+
+permissions:
+  contents: read
+
+# Scheduled and manual runs only: no pull request reaches this workflow, and
+# it needs no credential beyond the read-only token. Pinning matches ci.yml.
+jobs:
+  fixture-eval:
+    name: Recorded ${{ inputs.subset || 'full' }} corpus
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up BEAM
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Run deterministic evaluation
+        env:
+          EVAL_SUBSET: ${{ inputs.subset || 'full' }}
+        run: |
+          if [ "${EVAL_SUBSET}" = "smoke" ]; then
+            eval_baseline="eval/baselines/v1-smoke.json"
+          else
+            eval_baseline="eval/baselines/v1.json"
+          fi
+          mix lemieux.eval \
+            --suite eval/corpus/v1/manifest.json \
+            --fixture-set eval/fixture_sets/v1.json \
+            --baseline "${eval_baseline}" \
+            --tag "${EVAL_SUBSET}" \
+            --format console \
+            --output lemieux-eval.json
+
+      - name: Upload evaluation evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: lemieux-offline-eval-${{ inputs.subset || 'full' }}
+          path: lemieux-eval.json
+          if-no-files-found: error

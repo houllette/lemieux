@@ -1,0 +1,1 @@
+The 401 is built by Shop.Auth.Responses.unauthorized/2 in lib/shop/auth/responses.ex: the :api pipeline runs Shop.Auth.Verify, Token.decode returns {:error, :expired} from check_expiry, and Verify calls Responses.unauthorized; Shop.Errors.unauthorized/1 in lib/shop/errors.ex only serves the :admin pipeline.

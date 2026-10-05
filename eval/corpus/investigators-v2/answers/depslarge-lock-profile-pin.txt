@@ -1,0 +1,1 @@
+build.sh sources build/profiles/release.env, which sets LOCK_DIR=locks/hardened (not locks/prod, despite the profile's name), so the pin is the cipherbox row in locks/hardened/worker.lock: 3.2.1. locks/prod and locks/p2 pin 3.1.0, locks/dev 3.3.0-beta, the manifest constraint is ~3.1 and vendor/cipherbox holds 3.0.4.

@@ -1,0 +1,4 @@
+# Defaults shared by every environment.
+[http]
+request_timeout_ms = 30000
+connect_timeout_ms = 2000

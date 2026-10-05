@@ -1,0 +1,1207 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "lemieux-investigators-v2",
+    "description": "Read-only investigation questions over fixtures too large to read in one tool call: logs joined through inventories, deep configuration layering, large call graphs, sharded data joins, fictional dependency and build trees, and documentation that disagrees with code. Built for the read-only investigator (delegate) evaluation after investigators-v1 tied on both arms.",
+    "tools": [
+      "read",
+      "bash"
+    ],
+    "clusters": [
+      "call-graph-large",
+      "config-layering-large",
+      "data-join-large",
+      "deps-and-build-large",
+      "docs-vs-code-large",
+      "log-join"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "logjoin-error-ref-user-host",
+      "prompt": "A support ticket quotes error reference ERR-9DC0D0 from 2026-09-15. Which username was signed in for the request that minted that reference, and which hostname served it? Report back without changing any files.",
+      "cwd": "repos/logjoin-error-ref-user-host",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-join",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "logs",
+          "join",
+          "edge",
+          "auth",
+          "directory"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 198,
+        "fixture_bytes": 485690,
+        "notes": "Retry/echo lines with the same ref name three other upstreams; the login_failed line binds the session to p-8510 (morkalbel-63); the retired directory row gives old-seltam-05; decommissioned.tsv gives an old-* hostname for h-59c8.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logjoin-slowest-query-service",
+      "prompt": "On 2026-09-14, which service issued the slowest query recorded under logs/db, and on which hostname was that connection open at the time? Spell the service as inventory/services does. Report back without changing any files.",
+      "cwd": "repos/logjoin-slowest-query-service",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-join",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "logs",
+          "join",
+          "db",
+          "pool",
+          "inventory"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 197,
+        "fixture_bytes": 482889,
+        "notes": "maintenance.log has a longer duration the same day; 2026-09-15 has a longer query on 2026-09-15; the pool log's earlier open for the same conn id names h-ccf7 (edge-euc-03.example.test) and the other day's open names h-8165; h-34d1 appears under retired_hosts of another service.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logjoin-lockout-device",
+      "prompt": "Account morlorash-17 was locked out on 2026-09-15. Which device name in inventory/devices produced the failing sign-in attempts that caused the lockout? Report back without changing any files.",
+      "cwd": "repos/logjoin-lockout-device",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-join",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "logs",
+          "join",
+          "auth",
+          "dhcp",
+          "devices"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 194,
+        "fixture_bytes": 485715,
+        "notes": "The retired row maps the username to p-7684 whose failed login came from 10.9.1.77 (depot-badger-420); the morning lease of 10.7.44.122 was eb:8d:37:68:36:86 (hq-ashen-524); the 08:12 successful login came from 10.7.44.9.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logjoin-first-5xx-build",
+      "prompt": "Route /api/exports started returning 5xx responses on 2026-09-15. Which build id was running on the host that served the first 5xx for that route that day (the build of the most recent successful deploy to that host before the failure)? Report back without changing any files.",
+      "cwd": "repos/logjoin-first-5xx-build",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-join",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "logs",
+          "join",
+          "edge",
+          "deploy",
+          "releases"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 197,
+        "fixture_bytes": 486964,
+        "notes": "Decoys: the previous day's 503 on h-08bf (release rel-128, build b-096e148); the later deploy rel-141 (build b-98724f9); sibling rel-142 on h-edd6 (build b-3cc0db9); the candidates/ rc manifest for rel-140 if present.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logjoin-export-failure-object",
+      "prompt": "The nightly export for tenant \"Ashtam Analytics\" failed on 2026-09-14. Which object path (as storage/manifests records it) was the worker reading when the failure of record happened? Report back without changing any files.",
+      "cwd": "repos/logjoin-export-failure-object",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-join",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "logs",
+          "join",
+          "jobs",
+          "worker",
+          "storage"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 195,
+        "fixture_bytes": 487246,
+        "notes": "Decoys: run run-7908de (superseded) read obj-a5974e1e; the similar tenant t-bc111's run run-90a8dd failed on upload in bk-staging; object obj-5c4a0495 also exists in bk-archive with an archive/ path.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "cfglarge-request-timeout-prod-eu",
+      "prompt": "What http.request_timeout_ms is in effect for the prod deployment in eu-central once every layer under profiles/, config/, deploy/ and policy/ is applied, and which file sets that value? Report back without changing any files.",
+      "cwd": "repos/cfglarge-request-timeout-prod-eu",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-layering-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "config",
+          "layering",
+          "include-order"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 133,
+        "fixture_bytes": 301283,
+        "notes": "Decoys: profiles/base.conf gives 3000; profiles/gateway.conf gives 9000; the leaf's own line before the include gives 1500; deploy/prod/eu-west/env.list gives 6000; deploy/staging/eu-central/env.list gives 2000; the .disabled leaf gives 12000.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "cfglarge-locked-pool-size",
+      "prompt": "What db.pool_size does the staging deployment in us-east actually run with after every configuration layer is applied, and which file decides it? Report back without changing any files.",
+      "cwd": "repos/cfglarge-locked-pool-size",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-layering-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "config",
+          "layering",
+          "locked-policy"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 132,
+        "fixture_bytes": 307444,
+        "notes": "Decoys: profiles/service.conf gives 8; profiles/ledger.conf gives 24; overlay ledger-strict gives 12; overlay high-memory gives 64; deploy/staging/us-east/env.list gives 96; policy/prod/locked.conf gives 40.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "cfglarge-overlay-order-variant",
+      "prompt": "Which features.checkout_variant does the prod deployment in apac-south end up with once the profile chain, overlays, env.list and policy are applied, and which file supplies it? Report back without changing any files.",
+      "cwd": "repos/cfglarge-overlay-order-variant",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-layering-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "config",
+          "layering",
+          "overlays"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 133,
+        "fixture_bytes": 311691,
+        "notes": "Decoys: profiles/web.conf gives classic; config/includes/feature-defaults.conf gives express; overlay beta-cohort (listed first) gives beta; overlay search-experiment (not listed) gives split; deploy/canary/apac-south/env.list gives guided; config/archive gives guided.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "cfglarge-log-sink-hostname",
+      "prompt": "Which hostname does the canary deployment in eu-west ship its logs to once logging.sink is resolved through every layer, the sink file and the host inventory? Report back without changing any files.",
+      "cwd": "repos/cfglarge-log-sink-hostname",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-layering-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "config",
+          "layering",
+          "sinks",
+          "inventory"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 133,
+        "fixture_bytes": 305414,
+        "notes": "Decoys: profiles/base.conf gives vale-collector-12.example.test; the .disabled leaf (@sinks/debug) gives wicker-collector-09.example.test; overlay low-memory (not listed) gives dapple-collector-18.example.test; policy/prod/locked.conf (@sinks/secondary) gives yarrow-collector-25.example.test; eu-collector's host_legacy gives retired-dapple-01.example.test.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "cfglarge-cert-path-vars",
+      "prompt": "Which file path does the prod deployment in us-east load its TLS certificate from, after tls.cert_file is resolved through every layer and its ${VAR} placeholders are substituted? Report back without changing any files.",
+      "cwd": "repos/cfglarge-cert-path-vars",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-layering-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "config",
+          "layering",
+          "variables"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 132,
+        "fixture_bytes": 301291,
+        "notes": "Decoys: profiles/base.conf gives /etc/mesh/certs/gateway.pem; config/includes/tls-defaults.conf gives /etc/mesh/certs/gateway-useast1.pem; overlay peak-season (not listed) gives /etc/mesh/certs/peak/gateway.pem; canary/us-east's CERT_DIR gives /etc/canary/certs/legacy/gateway-useast1-compat.pem; prod/eu-west's REGION_SLUG gives /etc/mesh/certs/legacy/gateway-euwest-compat.pem.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-cli-export-audit-writer",
+      "prompt": "When `lmxctl export` is run through app/cli/main.py, which function ultimately appends the audit record to the journal, and which file defines that function? Follow the code as it is wired today. Report back without changing any files.",
+      "cwd": "repos/callgraph-cli-export-audit-writer",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "callgraph",
+          "python",
+          "cli"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 145,
+        "fixture_bytes": 354015,
+        "notes": "Decoys: the COMMANDS dict routes export to export_legacy -> app/legacy/audit.py append_record -> legacy_journal.write_record; bindings.local.conf.example and docs/architecture.md bind audit to sink_v1 (write_record in app/storage/legacy_journal.py); legacy_journal.py also defines an append_record alias.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-event-refund-writer",
+      "prompt": "When the event bus publishes `order.refunded`, which function actually writes the ledger adjustment for that refund, and which file defines it? Follow the subscriptions table and the service bindings as they stand. Report back without changing any files.",
+      "cwd": "repos/callgraph-event-refund-writer",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "callgraph",
+          "python",
+          "events"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 7,
+        "fixture_files": 144,
+        "fixture_bytes": 356141,
+        "notes": "Decoys: on_refund -> app/legacy/handlers.py note_refund (docs say this); on_refund_v2 -> postings_legacy -> post_legacy; app/legacy/handlers.py has its own post_adjustment; the commented previous binding maps ledger to postings_legacy.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-http-invoice-template",
+      "prompt": "Which template file (path relative to the repository root) is rendered for GET /invoices/{id}.pdf once the route table, the controller and the template registry are followed? Report back without changing any files.",
+      "cwd": "repos/callgraph-http-invoice-template",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "callgraph",
+          "python",
+          "http"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 151,
+        "fixture_bytes": 362403,
+        "notes": "Decoys: the `*` row (templates/html/invoice-document.html); templates/pdf/invoice.tpl (old, unreferenced); templates/legacy/invoice_pdf.tpl via app/legacy/renderers.py and docs/architecture.md; the /invoices/{id} html route (templates/html/invoice.html).",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-scheduler-reconcile-digest",
+      "prompt": "When the scheduler runs the `reconcile` job, which function computes the digest that the job stores, and which file defines it? Follow the schedule table, the task and the configured algorithm. Report back without changing any files.",
+      "cwd": "repos/callgraph-scheduler-reconcile-digest",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "callgraph",
+          "python",
+          "scheduler"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 7,
+        "fixture_files": 145,
+        "fixture_bytes": 360033,
+        "notes": "Decoys: the first hash_algorithm line (sha-like -> app/hashing/sha_like.py digest_sha_like, also what docs say); settings.example.conf (crc-fold); reconcile-dry's run_dry; app/legacy/hashing.py defines its own digest_fold64.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-signal-quota-pager",
+      "prompt": "When the `quota.exceeded` signal fires through app/signals/dispatch.py, which function actually delivers the page, and which file defines it? Follow the signal table, the router and the channel configuration. Report back without changing any files.",
+      "cwd": "repos/callgraph-signal-quota-pager",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "callgraph",
+          "python",
+          "signals"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 145,
+        "fixture_bytes": 356374,
+        "notes": "Decoys: app/notify/channels/pager.py deliver_page (docs and channels.conf.orig point here); app/legacy/notify.py deliver_page; the [default] mail channel (send_mail); quota.warning's chat channel.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "datajoin-top-emea-customer",
+      "prompt": "Which customer (by name) had the highest net revenue in EUR from shipped orders placed in 2026-Q2 for region group EMEA, applying the rules in README.md (status, refunds, currency conversion, region groups)? Report back without changing any files.",
+      "cwd": "repos/datajoin-top-emea-customer",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-join-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "ndjson",
+          "aggregate"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 68,
+        "fixture_bytes": 449275,
+        "notes": "Decoys: Brannock Foundry wins on gross without the status filter; Velmoor Supply wins without currency conversion; Ashvale Europa Holdings wins without the region-group join; Torgale Systems wins without refunds.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "datajoin-sku-missing-from-catalog",
+      "prompt": "Which SKU was shipped during 2026-06 but was not in the catalog on its shipment date, under the rules in README.md? Report back without changing any files.",
+      "cwd": "repos/datajoin-sku-missing-from-catalog",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-join-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "ndjson",
+          "dates"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 70,
+        "fixture_bytes": 327603,
+        "notes": "Decoys: sku-34b81 (missing from the catalog entirely but only in a cancelled order); sku-be0aa (only pending, and listed under data/catalog/pending/); sku-69298 (row ends the day after shipment, so still effective); a grep for 'missing' finds the glossary.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "datajoin-order-total-after-discount",
+      "prompt": "What amount was charged for order o-ccff6f0 after the customer's tier discount and every refund are applied under the rules in README.md? Give the amount with two decimals. Report back without changing any files.",
+      "cwd": "repos/datajoin-order-total-after-discount",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-join-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "ndjson",
+          "arithmetic"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 66,
+        "fixture_bytes": 328944,
+        "notes": "Decoys: current tier platinum gives 105.5; ignoring refunds gives 140.8; catalog prices instead of line prices give 137.66; bronze gives 137.5; only the first refund gives 125.8.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "datajoin-skip-level-manager",
+      "prompt": "Who (by name) was the skip-level manager of the active employee named Ordwyn Falgale on 2026-05-06, according to the dated assignment history and the rules in README.md? Report back without changing any files.",
+      "cwd": "repos/datajoin-skip-level-manager",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-join-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "dates",
+          "org"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 103,
+        "fixture_bytes": 276361,
+        "notes": "Decoys: the namesake e-1399 (status left) reports to e-1100; the current manager e-1310 (Wenmir Halvor) whose manager is Kalran Pelvor; Selkal Torvane's later manager Kalran Pelvor; org/departments heads.csv lists a different head for the team.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "datajoin-sensor-breach-count",
+      "prompt": "How many readings from the sensors of site-meadow breached the site's threshold during ISO week 2026-W24 (Monday 2026-06-08 to Sunday 2026-06-14) once the calibration offsets and the threshold change in effect are applied per README.md? Report back without changing any files.",
+      "cwd": "repos/datajoin-sensor-breach-count",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-join-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "sensors",
+          "count"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 6,
+        "fixture_files": 131,
+        "fixture_bytes": 296533,
+        "notes": "Decoys: 150 without calibration; 190 ignoring the mid-week threshold change; 191 with neither; readings from the days outside the week and from other sites' sensors.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "depslarge-workspace-replace-version",
+      "prompt": "Which version of the ratelimit package does the api component actually compile against when built with build/build.sh, and from which directory is it taken? Report back without changing any files.",
+      "cwd": "repos/depslarge-workspace-replace-version",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "deps-and-build-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "deps",
+          "workspace",
+          "replace"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 206,
+        "fixture_bytes": 316224,
+        "notes": "Decoys: manifests/api.deps constraint ^1.4.0 and its [replace] to vendor/ratelimit/1.5.0-rc2; locks/*/api.lock pins 1.4.0 (hardened 1.4.1); vendor/ratelimit/1.5.0-rc2/VERSION.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "depslarge-lock-profile-pin",
+      "prompt": "Which version of cipherbox is pinned for the worker component when it is built with `build/build.sh worker release`, and which lock file supplies that pin? Report back without changing any files.",
+      "cwd": "repos/depslarge-lock-profile-pin",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "deps-and-build-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "deps",
+          "locks",
+          "profiles"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 221,
+        "fixture_bytes": 330711,
+        "notes": "Decoys: locks/prod/worker.lock and locks/p2/worker.lock (3.1.0); locks/dev/worker.lock (3.3.0-beta); manifests/worker.deps ~3.1; vendor/cipherbox/3.0.4.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "depslarge-image-tool-version",
+      "prompt": "Which version of the fmtcheck tool ends up installed in the image that build/image.sh builds from images/api/Buildfile? Report back without changing any files.",
+      "cwd": "repos/depslarge-image-tool-version",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "deps-and-build-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "deps",
+          "images",
+          "build-args"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 189,
+        "fixture_bytes": 297450,
+        "notes": "Decoys: the ARG FMTCHECK_VERSION default in images/api/Buildfile; the stale build/versions.env (2.2.0); other images' ARG defaults; docs/images.md.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "depslarge-transitive-source",
+      "prompt": "For the ledger component built with the prod profile, which direct dependency (from manifests/ledger.deps) is responsible for pulling in tinyjson, and which tinyjson version does that build's lock resolve? Report back without changing any files.",
+      "cwd": "repos/depslarge-transitive-source",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "deps-and-build-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "deps",
+          "locks",
+          "transitive"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 172,
+        "fixture_bytes": 288097,
+        "notes": "Decoys: locks/prod/ledger.lock (tinyjson 1.0.0 requested_by metricsd), which the prod profile does not use; locks/dev and locks/hardened (same); vendor/tinyjson/0.9.2; metricsd as the apparent parent.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "depslarge-include-path-vendor",
+      "prompt": "Which directory's copy of the hashfold headers does the cli target compile against under build/rules.build, once every included rule file is applied? Give the include directory path. Report back without changing any files.",
+      "cwd": "repos/depslarge-include-path-vendor",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "deps-and-build-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "deps",
+          "build-rules",
+          "include-path"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 198,
+        "fixture_bytes": 305300,
+        "notes": "Decoys: vendor/hashfold/2.1.0/include (paths.mk); vendor/hashfold/2.0.5/include (legacy target); third_party/hashfold/include (unreferenced); docs/BUILD.md does not mention overrides.mk.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "docslarge-duplicate-email-status",
+      "prompt": "What HTTP status code does the API actually return when POST /accounts is called with an email that is already registered? Follow the code, not the docs. Report back without changing any files.",
+      "cwd": "repos/docslarge-duplicate-email-status",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "docs-vs-code-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "docs",
+          "api",
+          "status-code"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 108,
+        "fixture_bytes": 281101,
+        "notes": "Decoys: docs/accounts.md and docs/errors.md (409); ConflictError.default_status (409); the `account` prefix row (400); src/errors/legacy_codes.py (409).",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "docslarge-rate-limit-reset-header",
+      "prompt": "Which response header does the mounted rate-limit middleware actually use to report the time until the limit resets, and in what unit is its value? Report back without changing any files.",
+      "cwd": "repos/docslarge-rate-limit-reset-header",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "docs-vs-code-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "docs",
+          "http",
+          "headers"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 109,
+        "fixture_bytes": 287670,
+        "notes": "Decoys: docs/rate-limits.md (X-RateLimit-Reset, seconds); ratelimit_legacy.py (same, and not mounted); the [compat] section and config/headers.conf.dist.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "docslarge-webhook-signature-algo",
+      "prompt": "Which signing algorithm does the webhook dispatcher actually use for X-Signature once the configured signing profile is resolved? Name the HMAC hash. Report back without changing any files.",
+      "cwd": "repos/docslarge-webhook-signature-algo",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "docs-vs-code-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "docs",
+          "webhooks",
+          "crypto"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 109,
+        "fixture_bytes": 288082,
+        "notes": "Decoys: docs/webhooks.md (HMAC-SHA256); [defaults] signing_profile = v1 and config/settings.conf.example; the `hmac` alias in SIGNERS (v1); signers_legacy.py.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "docslarge-default-page-size",
+      "prompt": "How many items does GET /items actually return per page when the request sends no page_size, once the configured default and the clamp are applied? Report back without changing any files.",
+      "cwd": "repos/docslarge-default-page-size",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "docs-vs-code-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "docs",
+          "api",
+          "pagination"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 111,
+        "fixture_bytes": 289567,
+        "notes": "Decoys: docs/pagination.md (50); config/api.conf (40); the compiled-in fallback (100); config/limits.conf.dist (20).",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "docslarge-cli-exit-partial",
+      "prompt": "What exit status does the `sync` CLI command actually return when some items fail and the rest succeed, once the configured exit table is applied? Report back without changing any files.",
+      "cwd": "repos/docslarge-cli-exit-partial",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "docs-vs-code-large",
+        "tags": [
+          "investigators",
+          "v2",
+          "read",
+          "report",
+          "docs",
+          "cli",
+          "exit-status"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 109,
+        "fixture_bytes": 281267,
+        "notes": "Decoys: docs/cli.md and docs/sync.md (2); src/cli/tables/default.py (2); src/cli/tables/lenient.py (0); config/cli.conf.example (default table).",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    }
+  ]
+}

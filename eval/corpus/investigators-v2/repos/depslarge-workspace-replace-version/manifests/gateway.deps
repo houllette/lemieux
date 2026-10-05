@@ -1,0 +1,8 @@
+# gateway component dependencies (.deps format: name<TAB>constraint)
+
+ratelimit	^0.5.2
+colorize	^1.12.9
+tabulate2	^1.1.7
+tinyjson	^2.0.8
+retryable	^4.11.2
+tracekit	^1.5.3

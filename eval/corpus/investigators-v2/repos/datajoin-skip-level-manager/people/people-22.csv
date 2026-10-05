@@ -1,0 +1,21 @@
+employee_id,name,status,department
+e-1035,Lanwyn Nockvel,active,catalog
+e-1101,Ordord Merecor,active,platform
+e-1805,Jormir Selquill,active,platform
+e-1585,Walvane Drinbel,active,platform
+e-1218,Miryor Lormir,active,ops
+e-1797,Istnock Kelvane,active,ops
+e-1006,Wickwick Wenhol,active,catalog
+e-1156,Zanfal Ostam,active,ledger
+e-1624,Ruswyn Drinhal,active,ops
+e-1362,Quillwal Vanebel,active,ledger
+e-1737,Zantam Vorlan,active,ledger
+e-1151,Ashith Istver,active,search
+e-1590,Ordmir Mirjor,active,platform
+e-1529,Ulran Dorash,active,ledger
+e-1272,Falfal Nimvor,active,search
+e-1565,Dortam Holtor,active,search
+e-1568,Ordlan Brantor,active,ledger
+e-1033,Torist Ulgri,active,platform
+e-1698,Halfen Norzan,active,ledger
+e-1665,Pelnock Ithpel,active,catalog

@@ -1,0 +1,16 @@
+service: billing
+owner: team-arbor
+hosts:
+  - h-08bf
+  - h-8781
+  - h-d218
+  - h-1404
+  - h-1d50
+retired_hosts:
+  - h-9b9d
+  - h-16da
+  - h-bf05
+ports:
+  saffron: 7258
+  sedge: 4412
+  yarrow: 7929

@@ -1,0 +1,6 @@
+def test_glacier():
+    assert True
+
+
+def test_cinder_7():
+    assert 1 + 1 == 2

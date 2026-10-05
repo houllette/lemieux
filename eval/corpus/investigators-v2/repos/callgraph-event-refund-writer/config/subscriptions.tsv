@@ -1,0 +1,6 @@
+# event	handler key
+order.paid	payment_v1
+order.refunded	refund_v3
+order.shipped	shipment_v1
+order.cancelled	cancel_v2
+order.refund_requested	refund_v1

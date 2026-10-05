@@ -1,0 +1,310 @@
+{
+  "version": 1,
+  "frozen_at": "2026-09-28",
+  "exposure": "development holdout; author selected sources and prompts before model runs",
+  "notes": "Twelve correlated tasks across Go, Rust, Node.js and Kubernetes. Each claim has a designated official supporting page. URL absence in preflight is a retrieval warning, not proof that all returned pages lack the fact.",
+  "tasks": [
+    {
+      "id": "go-methods-allocator",
+      "prompt": "A Go service team is planning a 1.27 migration and wants a short compatibility brief that separates language features from runtime changes. Explain what newly works for methods with type parameters and whether an interface method may itself declare type parameters. Also explain the small-allocation optimization's size boundary and the build-time opt-out. Use current Go project sources for each part.",
+      "claims": [
+        {
+          "id": "concrete-methods",
+          "pattern": "(?i)concrete.{0,45}(?:type parameters|generic)|(?:generic|type-parametrized).{0,45}concrete",
+          "source": "https://go.dev/blog/generic-methods"
+        },
+        {
+          "id": "interface-limit",
+          "pattern": "(?i)interface methods?.{0,45}(?:cannot|can.t|do not|not allowed).{0,45}(?:type parameters|generic)|(?:cannot|can.t|not allowed).{0,35}generic interface methods",
+          "source": "https://go.dev/blog/generic-methods"
+        },
+        {
+          "id": "allocation-bound",
+          "pattern": "(?i)(?:80 bytes|80-byte|80B)",
+          "source": "https://go.dev/blog/size-specialized-allocations"
+        },
+        {
+          "id": "allocation-optout",
+          "pattern": "nosizespecializedmalloc",
+          "source": "https://go.dev/blog/size-specialized-allocations"
+        }
+      ]
+    },
+    {
+      "id": "go-methods-leak",
+      "prompt": "A library maintainer says that Go 1.27 generic methods mean any instantiated concrete method automatically satisfies an interface with the same signature. Verify that assertion using the Go team's technical explanation, then give a production method for finding permanently blocked goroutines and the specific HTTP profile endpoint. Finally state a category of leaks that the new profiler can miss. Cite the official articles.",
+      "claims": [
+        {
+          "id": "interface-false-premise",
+          "pattern": "(?is)doesn.t.{0,80}implement|(?:not|cannot|can.t|won.t).{0,100}interface",
+          "source": "https://go.dev/blog/generic-methods"
+        },
+        {
+          "id": "profile-endpoint",
+          "pattern": "/debug/pprof/goroutineleak",
+          "source": "https://go.dev/blog/goroutine-leak-profiles"
+        },
+        {
+          "id": "profile-limit",
+          "pattern": "(?is)(?:global|reachable).{0,300}(?:miss|undetect|fail|leak)|(?:miss|fail|detect).{0,300}(?:global|reachable)",
+          "source": "https://go.dev/blog/goroutine-leak-profiles"
+        }
+      ]
+    },
+    {
+      "id": "go-simd-migration",
+      "prompt": "Write an upgrade note for an amd64 and arm64 team that has an experimental SIMD prototype from Go 1.26. Identify which architecture was first covered in 1.26 and what hardware families were added in 1.27, then name the portable package and the build opt-in. The later-version details matter more than generic SIMD background; use the Go team's own write-up and release notes.",
+      "claims": [
+        {
+          "id": "v126-amd64",
+          "pattern": "(?i)1\\.26.{0,80}amd64",
+          "source": "https://go.dev/blog/simd-experiment"
+        },
+        {
+          "id": "v127-arch",
+          "pattern": "(?i)(?:arm64|NEON).{0,80}wasm|wasm.{0,80}(?:arm64|NEON)",
+          "source": "https://go.dev/blog/simd-experiment"
+        },
+        {
+          "id": "portable-package",
+          "pattern": "(?i)(?:portable|platform.independent|platform.agnostic).{0,60}simd|simd.{0,60}(?:portable|platform.independent|platform.agnostic)",
+          "source": "https://go.dev/doc/go1.27"
+        },
+        {
+          "id": "simd-optin",
+          "pattern": "GOEXPERIMENT=simd",
+          "source": "https://go.dev/blog/simd-experiment"
+        }
+      ]
+    },
+    {
+      "id": "go-allocator-version",
+      "prompt": "A performance team has heard that size-specialized allocation shipped in Go 1.26 and that its emergency opt-out is permanent. Check both claims against official Go material. State when it actually shipped, why the team deferred it, which allocations it targets, and the version in which the release notes expect to remove the opt-out. Include the exact opt-out setting so an operator can reproduce it.",
+      "claims": [
+        {
+          "id": "shipped-127",
+          "pattern": "(?i)Go 1\\.27",
+          "source": "https://go.dev/blog/size-specialized-allocations"
+        },
+        {
+          "id": "delayed-126",
+          "pattern": "(?is)1\\.26.{0,180}(?:tuning|delay|wait|defer)|(?:tuning|delay|wait|defer).{0,180}1\\.26",
+          "source": "https://go.dev/blog/size-specialized-allocations"
+        },
+        {
+          "id": "allocator-optout",
+          "pattern": "nosizespecializedmalloc",
+          "source": "https://go.dev/doc/go1.27"
+        },
+        {
+          "id": "optout-removal",
+          "pattern": "(?i)Go 1\\.28",
+          "source": "https://go.dev/doc/go1.27"
+        }
+      ]
+    },
+    {
+      "id": "go-profile-version",
+      "prompt": "An incident-response note still tells staff to enable GOEXPERIMENT=goroutineleakprofile before collecting Go 1.27 leak diagnostics. Compare the Go 1.26 experiment with the 1.27 release: state the old opt-in setting, whether that setting still exists in 1.27, and the supported HTTP profile endpoint. Explain the detection limit described by the technical article. Use the two versioned release notes and the article.",
+      "claims": [
+        {
+          "id": "v126-experiment",
+          "pattern": "(?i)(?:Go )?1\\.26.{0,100}(?:experiment|goroutineleak)|(?:experiment|goroutineleak).{0,100}(?:Go )?1\\.26",
+          "source": "https://go.dev/doc/go1.26"
+        },
+        {
+          "id": "profile-type",
+          "pattern": "goroutineleak",
+          "source": "https://go.dev/doc/go1.27"
+        },
+        {
+          "id": "experiment-deleted",
+          "pattern": "(?i)(?:deleted|removed|no longer).{0,80}goroutineleakprofile|goroutineleakprofile.{0,80}(?:deleted|removed|no longer)",
+          "source": "https://go.dev/doc/go1.27"
+        },
+        {
+          "id": "profile-endpoint",
+          "pattern": "/debug/pprof/goroutineleak",
+          "source": "https://go.dev/blog/goroutine-leak-profiles"
+        },
+        {
+          "id": "subset-limit",
+          "pattern": "(?i)(?:subset|not all|cannot detect all|limited).{0,100}(?:leak|goroutine)|(?:leak|goroutine).{0,100}(?:subset|not all|cannot detect all|limited)",
+          "source": "https://go.dev/blog/goroutine-leak-profiles"
+        }
+      ]
+    },
+    {
+      "id": "go-simd-fallback",
+      "prompt": "A portability review assumes Go 1.27's new experimental portable SIMD package will fail to run on machines with no SIMD instructions. Evaluate that premise using the project's technical article. State the build opt-in and what happens on unsupported machines. Also distinguish that package from the architecture-specific package named in the release notes; give both package names.",
+      "claims": [
+        {
+          "id": "simd-package",
+          "pattern": "\\bsimd\\b",
+          "source": "https://go.dev/doc/go1.27"
+        },
+        {
+          "id": "archsimd-package",
+          "pattern": "archsimd",
+          "source": "https://go.dev/doc/go1.27"
+        },
+        {
+          "id": "software-emulation",
+          "pattern": "(?i)emulat",
+          "source": "https://go.dev/blog/simd-experiment"
+        },
+        {
+          "id": "simd-optin",
+          "pattern": "GOEXPERIMENT=simd",
+          "source": "https://go.dev/blog/simd-experiment"
+        }
+      ]
+    },
+    {
+      "id": "rust-198-patch",
+      "prompt": "For a Rust 1.98 upgrade review, describe one new feature of the original 1.98.0 release and evaluate the claim that staying on 1.98.0 is harmless because the later 1.98.1 patch only corrected diagnostics. Identify the specific compiler output defect and its possible runtime consequence. Use both official release announcements, and keep the difference between feature and patch clear.",
+      "claims": [
+        {
+          "id": "algebraic-ops",
+          "pattern": "(?i)algebraic.{0,50}(?:float|f32|f64)|(?:float|f32|f64).{0,50}algebraic",
+          "source": "https://blog.rust-lang.org/2026/08/20/Rust-1.98.0/"
+        },
+        {
+          "id": "vtable-null",
+          "pattern": "(?i)vtable.{0,80}null|null.{0,80}vtable",
+          "source": "https://blog.rust-lang.org/2026/09/03/Rust-1.98.1/"
+        },
+        {
+          "id": "undefined-behavior",
+          "pattern": "(?i)undefined behavior|segfault",
+          "source": "https://blog.rust-lang.org/2026/09/03/Rust-1.98.1/"
+        }
+      ]
+    },
+    {
+      "id": "rust-buffer-patch",
+      "prompt": "A Rust library wants to adopt the new buffered primitive integer formatting from 1.98.0. Name the method, its buffer type, and the form of the returned formatted value. Then explain why the team should deploy 1.98.1 instead of pinning 1.98.0 for this feature, including the class of miscompilation fixed by the patch. Cite the original and patch announcements.",
+      "claims": [
+        {
+          "id": "format-method",
+          "pattern": "format_into",
+          "source": "https://blog.rust-lang.org/2026/08/20/Rust-1.98.0/"
+        },
+        {
+          "id": "buffer-type",
+          "pattern": "NumBuffer",
+          "source": "https://blog.rust-lang.org/2026/08/20/Rust-1.98.0/"
+        },
+        {
+          "id": "return-type",
+          "pattern": "&str|borrowed.{0,30}str",
+          "source": "https://blog.rust-lang.org/2026/08/20/Rust-1.98.0/"
+        },
+        {
+          "id": "vtable-defect",
+          "pattern": "(?i)vtable.{0,80}(?:null|miscompil)|(?:null|miscompil).{0,80}vtable",
+          "source": "https://blog.rust-lang.org/2026/09/03/Rust-1.98.1/"
+        }
+      ]
+    },
+    {
+      "id": "node-header-removal",
+      "prompt": "A Node.js service still calls ServerResponse.writeHeader and an engineer says Node 26 only warns about it. Check the version transition: say what happened to the alias in Node 25, whether it remains in Node 26, and the replacement method. Use both official release announcements. Explain the difference between a runtime deprecation and end-of-life removal for this specific API.",
+      "claims": [
+        {
+          "id": "v25-runtime",
+          "pattern": "(?i)(?:25|v25).{0,80}(?:runtime|deprecat)|(?:runtime|deprecat).{0,80}(?:25|v25)",
+          "source": "https://nodejs.org/en/blog/release/v25.0.0"
+        },
+        {
+          "id": "header-removed",
+          "pattern": "(?i)writeHeader.{0,80}(?:removed|end.of.life)|(?:removed|end.of.life).{0,80}writeHeader",
+          "source": "https://nodejs.org/en/blog/release/v26.0.0"
+        },
+        {
+          "id": "header-replacement",
+          "pattern": "writeHead",
+          "source": "https://nodejs.org/en/blog/release/v26.0.0"
+        }
+      ]
+    },
+    {
+      "id": "node-stream-removal",
+      "prompt": "A package loads node:_stream_wrap directly and its maintainer assumes the internal stream module still works under Node 26 because it was only documented as deprecated. Compare the Node 25 deprecation to the Node 26 removal. Name the old private module and the public node:stream replacement, and state the exact change from warning to removal. Use both official release announcements.",
+      "claims": [
+        {
+          "id": "v25-deprecation",
+          "pattern": "(?is)(?:25|v25).{0,100}(?:deprecat|_stream_)|(?:deprecat|_stream_).{0,100}(?:25|v25)",
+          "source": "https://nodejs.org/en/blog/release/v25.0.0"
+        },
+        {
+          "id": "stream-removed",
+          "pattern": "(?is)_stream_wrap.{0,220}removed|removed.{0,220}_stream_wrap",
+          "source": "https://nodejs.org/en/blog/release/v26.0.0"
+        },
+        {
+          "id": "public-module",
+          "pattern": "node:stream|require\\([\\'\\\"]stream",
+          "source": "https://nodejs.org/api/stream.html"
+        }
+      ]
+    },
+    {
+      "id": "k8s-workload-api",
+      "prompt": "A controller vendor wrote to the Kubernetes 1.35 alpha Workload API and wants a precise 1.36 migration note. Compare the old and new scheduling.k8s.io API versions, identify which object is now the static template and which holds runtime state, and state whether the 1.35 API remains the version to enable. Use the two Kubernetes project articles, not a generic release summary.",
+      "claims": [
+        {
+          "id": "old-api",
+          "pattern": "v1alpha1",
+          "source": "https://kubernetes.io/blog/2025/12/29/kubernetes-v1-35-introducing-workload-aware-scheduling/"
+        },
+        {
+          "id": "new-api",
+          "pattern": "v1alpha2",
+          "source": "https://kubernetes.io/blog/2026/05/13/kubernetes-v1-36-advancing-workload-aware-scheduling/"
+        },
+        {
+          "id": "static-template",
+          "pattern": "(?i)Workload.{0,60}static template|static template.{0,60}Workload",
+          "source": "https://kubernetes.io/blog/2026/05/13/kubernetes-v1-36-advancing-workload-aware-scheduling/"
+        },
+        {
+          "id": "runtime-state",
+          "pattern": "(?i)PodGroup.{0,60}runtime state|runtime state.{0,60}PodGroup",
+          "source": "https://kubernetes.io/blog/2026/05/13/kubernetes-v1-36-advancing-workload-aware-scheduling/"
+        }
+      ]
+    },
+    {
+      "id": "k8s-scheduling-gates",
+      "prompt": "Compare Kubernetes 1.35's initial gang-scheduling setup with the revised 1.36 workload-aware scheduling setup. Identify the base feature gate and component placement common to both releases, the API version that operators must enable in each, and the extra scheduler gate needed for workload-aware preemption in 1.36. Also say whether that preemption gate depends on gang scheduling. Cite both project posts.",
+      "claims": [
+        {
+          "id": "base-gate",
+          "pattern": "GenericWorkload",
+          "source": "https://kubernetes.io/blog/2025/12/29/kubernetes-v1-35-introducing-workload-aware-scheduling/"
+        },
+        {
+          "id": "old-api",
+          "pattern": "v1alpha1",
+          "source": "https://kubernetes.io/blog/2025/12/29/kubernetes-v1-35-introducing-workload-aware-scheduling/"
+        },
+        {
+          "id": "new-api",
+          "pattern": "v1alpha2",
+          "source": "https://kubernetes.io/blog/2026/05/13/kubernetes-v1-36-advancing-workload-aware-scheduling/"
+        },
+        {
+          "id": "preemption-gate",
+          "pattern": "WorkloadAwarePreemption",
+          "source": "https://kubernetes.io/blog/2026/05/13/kubernetes-v1-36-advancing-workload-aware-scheduling/"
+        },
+        {
+          "id": "gang-dependency",
+          "pattern": "GangScheduling",
+          "source": "https://kubernetes.io/blog/2026/05/13/kubernetes-v1-36-advancing-workload-aware-scheduling/"
+        }
+      ]
+    }
+  ]
+}

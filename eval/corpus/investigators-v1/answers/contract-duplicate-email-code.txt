@@ -1,0 +1,1 @@
+The implementation returns the error code email_taken (with status 409): api/users.py raises DuplicateEmail and api/errors.py maps DuplicateEmail to (409, "email_taken"), whereas docs/API.md promises user_exists.

@@ -1,0 +1,7 @@
+# key	media	file (relative to templates/)
+invoice_page	html	html/invoice.html
+invoice_document	*	html/invoice-document.html
+invoice_document	pdf	pdf/invoice-2026.tpl
+invoice_print	html	html/invoice-print.html
+order_page	html	html/order.html
+receipt	pdf	pdf/receipt.tpl

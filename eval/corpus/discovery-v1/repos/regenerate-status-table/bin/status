@@ -1,0 +1,6 @@
+#!/bin/sh
+# Usage: status CODE
+root=$(cd "$(dirname "$0")/.." && pwd)
+. "$root/lib/status_codes.sh"
+[ $# -eq 1 ] || { echo "usage: status CODE" >&2; exit 2; }
+status_name "$1"

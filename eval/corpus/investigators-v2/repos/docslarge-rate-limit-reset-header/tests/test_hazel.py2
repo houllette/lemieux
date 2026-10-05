@@ -1,0 +1,6 @@
+def test_beacon():
+    assert True
+
+
+def test_linden_2():
+    assert 1 + 1 == 2

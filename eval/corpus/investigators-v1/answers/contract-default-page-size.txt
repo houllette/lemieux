@@ -1,0 +1,1 @@
+GET /items returns 15 items by default: config/limits.toml sets default = 25, but api/settings.py clamps DEFAULT_PAGE_SIZE to min(25, HARD_MAX_PAGE_SIZE) and api/constants.py sets HARD_MAX_PAGE_SIZE = 15; the documented 50 is not what runs.

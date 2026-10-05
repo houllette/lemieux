@@ -1,0 +1,10 @@
+{
+  "site": "site-wicker",
+  "sensors": [
+    "sn-ee3b2",
+    "sn-9514d",
+    "sn-1525a",
+    "sn-7b544"
+  ],
+  "location": "coral"
+}

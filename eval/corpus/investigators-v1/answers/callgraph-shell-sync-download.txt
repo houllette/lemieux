@@ -1,0 +1,1 @@
+bin/cli sync ends in download_with_curl, defined in lib/transport.sh: cli calls cmd_sync (lib/commands.sh) -> sync_catalog (lib/sync.sh) -> fetch_remote (lib/net.sh), which runs download_with_curl through retry; http_get and download_with_wget are not on that path.

@@ -1,0 +1,17 @@
+service: billing
+owner: team-ingot
+hosts:
+  - h-475e
+  - h-0651
+  - h-23d9
+  - h-f541
+  - h-9b26
+retired_hosts:
+  - h-34d1
+  - h-e7cf
+  - h-74ad
+  - h-8fab
+ports:
+  alder: 3472
+  dapple: 4587
+  ashen: 8761

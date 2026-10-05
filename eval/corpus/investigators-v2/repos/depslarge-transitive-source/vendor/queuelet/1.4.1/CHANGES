@@ -1,0 +1,11 @@
+3.10.8: A value set here applies only after the next reload. The default is deliberately conservative. Keys are compared case-sensitively.
+
+1.8.19: See the runbook for the rollout procedure. Every entry is validated before it is written. A value set here applies only after the next reload.
+
+1.7.16: Operators should not edit generated files by hand. Operators should not edit generated files by hand. A value set here applies only after the next reload.
+
+1.8.14: Unknown keys are ignored with a warning. See the runbook for the rollout procedure. Retries are bounded and jittered.
+
+3.0.17: The default is deliberately conservative. Keys are compared case-sensitively. Every entry is validated before it is written.
+
+3.7.10: This section is kept for historical reasons and may be removed in a later revision. Every entry is validated before it is written. Retries are bounded and jittered.

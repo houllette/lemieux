@@ -1,0 +1,16 @@
+service: catalog
+owner: team-kelp
+hosts:
+  - h-04d9
+  - h-1d54
+  - h-c490
+  - h-773c
+  - h-d032
+retired_hosts:
+  - h-705a
+  - h-ebb2
+  - h-4e77
+ports:
+  balsa: 7491
+  rowan: 8310
+  yarrow: 6673

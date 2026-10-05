@@ -1,0 +1,5 @@
+# This example is its own Mix project: its build, fetched dependencies and
+# evaluation outputs live here, not under the repository root's ignores.
+/_build/
+/deps/
+/tmp/

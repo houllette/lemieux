@@ -1,0 +1,8 @@
+# ledger component dependencies (.deps format: name<TAB>constraint)
+
+pemparse	^1.10.20
+tomlet	^2.2.14
+ratelimit	^3.6.14
+retryable	^4.3.10
+hashfold	^2.4.19
+clockwork	^2.12.1

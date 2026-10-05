@@ -1,0 +1,7 @@
+inherits = "web-hot"
+
+[database]
+timeout_ms = 3000
+
+[region]
+name = "eu"

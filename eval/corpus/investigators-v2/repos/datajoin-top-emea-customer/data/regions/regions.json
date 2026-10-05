@@ -1,0 +1,25 @@
+{
+  "groups": {
+    "r-01": "AMER",
+    "r-02": "AMER",
+    "r-03": "APAC",
+    "r-04": "EMEA",
+    "r-05": "EMEA",
+    "r-06": "AMER",
+    "r-07": "EMEA",
+    "r-08": "LATAM",
+    "r-09": "EMEA",
+    "r-10": "AMER",
+    "r-11": "LATAM",
+    "r-12": "LATAM",
+    "r-13": "LATAM",
+    "r-14": "APAC",
+    "r-15": "EMEA",
+    "r-16": "EMEA",
+    "r-17": "AMER",
+    "r-18": "EMEA",
+    "r-19": "APAC",
+    "r-20": "AMER"
+  },
+  "note": "region codes are opaque; codes are not ordered by geography"
+}

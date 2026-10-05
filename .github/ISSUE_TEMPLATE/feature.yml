@@ -1,0 +1,48 @@
+name: Feature proposal
+description: Describe a task you want to do, and why the existing hooks, tools and extensions do not cover it.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Much of what people want from Lemieux fits in a hook, a tool or an extension, without changing Lemieux itself: the [customization guide](https://hexdocs.pm/lemieux/customization.html) helps you choose.
+        Not sure yet? Start a conversation in [Discussions → Ideas](https://github.com/houllette/lemieux/discussions/categories/ideas).
+  - type: textarea
+    id: task
+    attributes:
+      label: What are you trying to do?
+      description: Describe the task and who it is for, not the implementation.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of Lemieux?
+      options:
+        - lmx terminal UI
+        - lmx commands and configuration
+        - Library and embedding API
+        - Extensions, hooks or tools
+        - MCP, A2A or web tools
+        - Providers and models
+        - Installing and updating lmx
+        - Documentation
+        - Not sure
+  - type: textarea
+    id: existing
+    attributes:
+      label: Why don't existing hooks, tools or extensions cover it?
+      description: What did you try (a setting, a hook, a tool, an extension, an MCP server), and where does it fall short?
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: What would success look like?
+      description: What a working solution lets you do, and how a test could check it.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on this myself, with some guidance.

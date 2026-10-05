@@ -1,0 +1,16 @@
+service: exporter
+owner: team-slate
+hosts:
+  - h-b5ae
+  - h-ebb2
+  - h-8aae
+  - h-97c3
+  - h-b4d3
+retired_hosts:
+  - h-705a
+  - h-8677
+  - h-9b9d
+ports:
+  crag: 3975
+  beacon: 6921
+  summit: 4543

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tidepool — Configuration</title>
+</head>
+<body>
+  <nav><a href="/tidepool-overview.html">Overview</a></nav>
+  <h1>Tidepool configuration</h1>
+  <p>Tidepool reads a single TOML file at start-up. Every key has a default,
+  so an empty file is a valid configuration.</p>
+  <h2>Retention</h2>
+  <p>By default Tidepool retains messages for 72 hours before they are
+  compacted away. Set <code>retention_hours</code> to change the window; a value
+  of zero keeps messages until a consumer acknowledges them.</p>
+  <h2>Partitions</h2>
+  <p>New topics get 8 partitions unless <code>partitions</code> says otherwise.
+  Partition counts can only grow.</p>
+  <table>
+    <tr><th>Key</th><th>Default</th></tr>
+    <tr><td>listen</td><td>7433</td></tr>
+    <tr><td>retention_hours</td><td>72</td></tr>
+    <tr><td>partitions</td><td>8</td></tr>
+  </table>
+</body>
+</html>

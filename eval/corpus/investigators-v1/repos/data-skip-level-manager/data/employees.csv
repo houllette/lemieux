@@ -1,0 +1,10 @@
+id,name,manager_id,department_id
+1,Ines Fardal,,10
+3,Ruth Achebe,1,10
+4,Daniel Okafor,1,20
+6,Amara Osei,1,20
+9,Lena Brandt,4,20
+12,Tomasz Wilk,4,20
+14,Chen Wei,6,30
+17,Priya Natarajan,9,20
+21,Sam Idowu,12,20

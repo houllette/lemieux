@@ -1,0 +1,8 @@
+# api component dependencies (.deps format: name<TAB>constraint)
+
+colorize	^0.12.7
+cipherbox	^1.10.0
+ledgercore	^0.6.14
+argsplit	^0.1.6
+blobstore	^2.1.18
+queuelet	^4.4.2

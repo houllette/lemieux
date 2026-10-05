@@ -1,0 +1,6 @@
+def test_cobalt():
+    assert True
+
+
+def test_shale_7():
+    assert 1 + 1 == 2

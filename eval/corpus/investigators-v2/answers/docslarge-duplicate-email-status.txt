@@ -1,0 +1,1 @@
+register() raises DuplicateAccount, whose code is account.duplicate. render() asks mapping.status_for, which finds the exact code in config/error-codes.tsv: 422. The docs' 409, ConflictError.default_status 409, the `account` prefix row 400 and src/errors/legacy_codes.py's 409 are not what is returned.

@@ -1,0 +1,11 @@
+1.11.14: This section is kept for historical reasons and may be removed in a later revision. This section is kept for historical reasons and may be removed in a later revision. The default is deliberately conservative.
+
+2.9.2: The default is deliberately conservative. Operators should not edit generated files by hand. Keys are compared case-sensitively.
+
+3.6.11: Keys are compared case-sensitively. Keys are compared case-sensitively. Operators should not edit generated files by hand.
+
+1.12.20: This section is kept for historical reasons and may be removed in a later revision. Unknown keys are ignored with a warning. Operators should not edit generated files by hand.
+
+2.12.0: Keys are compared case-sensitively. Operators should not edit generated files by hand. Operators should not edit generated files by hand.
+
+2.6.14: See the runbook for the rollout procedure. Operators should not edit generated files by hand. Retries are bounded and jittered.

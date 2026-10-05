@@ -1,0 +1,10 @@
+2026-06-02 07:58:12 bastion sshd Accepted publickey for mkline from 10.8.2.30 port 51022
+2026-06-02 08:20:45 bastion sshd Accepted publickey for jortiz from 10.8.2.41 port 50111
+2026-06-02 09:01:03 bastion sshd Failed password for mkline from 10.8.4.17 port 40211
+2026-06-02 09:01:09 bastion sshd Failed password for mkline from 10.8.4.17 port 40212
+2026-06-02 09:01:15 bastion sshd Failed password for mkline from 10.8.4.17 port 40213
+2026-06-02 09:01:22 bastion sshd Failed password for mkline from 10.8.4.17 port 40214
+2026-06-02 09:01:30 bastion sshd Failed password for mkline from 10.8.4.17 port 40215
+2026-06-02 09:01:30 bastion pam_tally account locked: mkline (5 failures)
+2026-06-02 09:03:41 bastion sshd Failed password for mkline from 10.8.2.30 port 51090
+2026-06-02 09:03:41 bastion sshd account locked: mkline

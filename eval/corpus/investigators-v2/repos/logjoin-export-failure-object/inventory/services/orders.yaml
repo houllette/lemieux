@@ -1,0 +1,16 @@
+service: orders
+owner: team-brine
+hosts:
+  - h-34d7
+  - h-d329
+  - h-6a13
+  - h-a41b
+  - h-0b2b
+retired_hosts:
+  - h-fe23
+  - h-6417
+  - h-6217
+ports:
+  wicker: 6052
+  umber: 7441
+  glacier: 6559

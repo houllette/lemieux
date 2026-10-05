@@ -1,0 +1,1 @@
+telemetry: mix.lock locks it at 0.4.3, but apps/core/mix.exs requires {:telemetry, "~> 1.2"}. Every other lock entry (jason 1.4.4, plug 1.16.1, bandit 1.6.0) satisfies its declared requirement.

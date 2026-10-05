@@ -1,0 +1,11 @@
+1.6.13: Every entry is validated before it is written. The default is deliberately conservative. Retries are bounded and jittered.
+
+0.2.1: Unknown keys are ignored with a warning. This section is kept for historical reasons and may be removed in a later revision. Unknown keys are ignored with a warning.
+
+3.9.2: Retries are bounded and jittered. This section is kept for historical reasons and may be removed in a later revision. The default is deliberately conservative.
+
+3.0.0: Operators should not edit generated files by hand. The default is deliberately conservative. The default is deliberately conservative.
+
+2.12.11: A value set here applies only after the next reload. Retries are bounded and jittered. Keys are compared case-sensitively.
+
+0.6.6: The reader tolerates trailing whitespace. Keys are compared case-sensitively. The default is deliberately conservative.

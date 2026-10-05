@@ -1,0 +1,10 @@
+{
+  "site": "site-meadow",
+  "sensors": [
+    "sn-ac847",
+    "sn-07c13",
+    "sn-74a28",
+    "sn-12120"
+  ],
+  "location": "kestrel"
+}

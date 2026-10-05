@@ -1,0 +1,1 @@
+build/build.sh resolves against workspace.deps first; its [replace] sends ratelimit to forks/ratelimit-fast, whose VERSION is 1.4.3-fast. That overrides manifests/api.deps' own replace (vendor/ratelimit/1.5.0-rc2) and every lock pin (1.4.0 in dev/p2/prod, 1.4.1 in hardened), per docs/BUILD.md.

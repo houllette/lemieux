@@ -1,0 +1,11 @@
+# api component dependencies (.deps format: name<TAB>constraint)
+
+ratelimit	^1.4.0
+argsplit	^1.12.18
+colorize	^1.11.3
+tomlet	^0.5.14
+ledgercore	^0.11.11
+fsync	^3.11.7
+
+[replace]
+ratelimit => vendor/ratelimit/1.5.0-rc2

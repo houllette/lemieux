@@ -1,0 +1,1 @@
+The binaries compile the fork at forks/ratelimit-fast, version 1.4.3-fast: go.work's replace overrides go.mod's replace to ./vendor-local/ratelimit (1.5.0-rc2), and the v1.4.0 in go.mod/go.sum is never fetched.

@@ -1,0 +1,25 @@
+#!/bin/sh
+# Usage: deploy ENV [--dry-run]
+# Deploys the current build to ENV. With --dry-run, prints what would happen
+# and changes nothing.
+set -u
+usage() { echo "usage: deploy ENV [--dry-run]" >&2; exit 2; }
+[ $# -ge 1 ] || usage
+env=$1
+shift
+dry_run=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) dry_run=1 ;;
+    *) echo "deploy: unknown option: $arg" >&2; usage ;;
+  esac
+done
+case "$env" in
+  staging|production) ;;
+  *) echo "deploy: unknown environment: $env" >&2; exit 2 ;;
+esac
+if [ "$dry_run" = 1 ]; then
+  echo "would deploy build to $env"
+else
+  echo "deploying build to $env"
+fi

@@ -1,0 +1,8 @@
+# admin component dependencies (.deps format: name<TAB>constraint)
+
+metricsd	^2.1.13
+hashfold	^1.5.5
+ledgercore	^2.11.4
+tracekit	^2.5.0
+httpkit	^3.9.12
+ratelimit	^1.2.12

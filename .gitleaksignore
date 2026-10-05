@@ -1,0 +1,34 @@
+# Reviewed historical false positives, not a directory-wide exclusion.
+# 66 SHA-256 file digests in research source manifests; two public OAuth client-id examples.
+# Exact commit/path/rule/line fingerprints only. New occurrences are scanned normally.
+01c0022054f286972fed4abacd4a4b7b723710c5:eval/procedural_graphs/results/2026-09-10/study.json:generic-api-key:1275
+6db8140e64b6a0467bc96a6750725b8a21e66f25:lib/lemieux/cli/options.ex:generic-api-key:106
+748b75a8c40f56949accfa5f4cb9218928731d82:README.md:generic-api-key:97
+b2009c4b3b197c56b5c352c2e9d8cd78ce8cde3d:eval/procedural_graphs_v5/results/canary-r6-sources.json:generic-api-key:1
+b2009c4b3b197c56b5c352c2e9d8cd78ce8cde3d:eval/procedural_graphs_v5/results/screen-r2-sources.json:generic-api-key:1
+b2009c4b3b197c56b5c352c2e9d8cd78ce8cde3d:eval/procedural_graphs_v6/results/canary-r1-sources.json:generic-api-key:1
+b2009c4b3b197c56b5c352c2e9d8cd78ce8cde3d:eval/procedural_graphs_v6/results/canary-r2-sources.json:generic-api-key:1
+b2009c4b3b197c56b5c352c2e9d8cd78ce8cde3d:eval/procedural_graphs_v6/results/canary-r3-sources.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/baseline-r2/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/compact-reuse-r1-excluded/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/compact-reuse-r2/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/compact-reuse-r2/validation.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/full-corpus-r1/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/headroom-corpus-r1/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/headroom-corpus-r1/validation.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/integration-r1/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/integration-r2/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/integration-r3/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/integration-r4/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/integration-r5/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/parallel-baseline-r1/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/parallel-recovery-r1/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/recovery-r2/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/solver-budget-replay-r1/validation.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/static-r2/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/transport-corpus-r1/protocol.json:generic-api-key:1
+bbed6adaee81885b1c8396b67a45c92a5221cc0d:eval/procedural_graphs_resume/results/transport-corpus-r1/validation.json:generic-api-key:1
+ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemieux-pg-v4-compare-1024-sources.json:generic-api-key:1
+ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemieux-pg-v4-compare-sources.json:generic-api-key:1
+ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemieux-pg-v4-evolve-1024-sources.json:generic-api-key:1
+ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemieux-pg-v4-evolve-sources.json:generic-api-key:1

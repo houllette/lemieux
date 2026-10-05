@@ -1,0 +1,13 @@
+{
+  "name": "Independent fixture agent",
+  "description": "Pinned A2A 1.0 JSON-RPC interoperability fixture",
+  "version": "2.1.0",
+  "supportedInterfaces": [
+    {"url": "https://example.org/grpc", "protocolBinding": "GRPC", "protocolVersion": "1.0"},
+    {"url": "https://example.org/rpc", "protocolBinding": "JSONRPC", "protocolVersion": "1.0"}
+  ],
+  "capabilities": {"streaming": true, "pushNotifications": false},
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [{"id": "ask", "name": "Answer", "description": "Source-backed answers", "tags": ["code"]}]
+}

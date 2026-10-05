@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "research-extension-deep-live-v4",
+    "exposure": "development",
+    "frozen_at": "2026-09-28",
+    "note": "Four multi-part, source-specific research questions. The grader checks exact facts; source support is audited separately. The BEAM case asks for the beam_lib module, matching the release note's scope. See bench/deep-live-sources.md."
+  },
+  "tasks": [
+    {
+      "id": "beam-maintenance",
+      "prompt": "Prepare a brief for an Elixir v1.20.4 and Erlang/OTP 29.1 upgrade. The Elixir release fixed a task-wait hang involving the :limit option; name the exact function. OTP changed the filename representation in a library's error tuples; name the library module and give the old and new types. Use the two official release notes, and cite sources if you can access them.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {"command": ["elixir", "deep_check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "postgres-logical-upgrade",
+      "prompt": "A team is moving a PostgreSQL 17 cluster with a custom logical-decoding slot to PostgreSQL 18.6. According to the 18.6 release notes, name the two output plugins permitted by default, explain exactly when pg_upgrade --check fails for this migration, and explain why 18.5 is absent. Cite the release notes if you can access them.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {"command": ["elixir", "deep_check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "kubernetes-136-upgrade",
+      "prompt": "For a Kubernetes v1.36 control-plane upgrade, compare Mixed Version Proxy with Service.spec.externalIPs. Give the proxy's feature gate, maturity and default setting. For externalIPs, distinguish what users see in v1.36 from the earliest planned kube-proxy opt-out and final removal versions. Use the official Kubernetes feature and deprecation posts; cite them if available.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {"command": ["elixir", "deep_check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "python-315-rc2",
+      "prompt": "As of 2026-09-28, advise a package maintainer about Python 3.15.0rc2. Give its release date and the final-release date scheduled in PEP 790, state the ABI promise for RC-built wheels, and say whether rc2 is recommended for production. Use the official release page and PEP; cite them if available.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {"command": ["elixir", "deep_check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    }
+  ]
+}

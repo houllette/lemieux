@@ -1,0 +1,8 @@
+# cli component dependencies (.deps format: name<TAB>constraint)
+
+retryable	^3.2.0
+fsync	^1.6.9
+tinyjson	^3.9.14
+cipherbox	^4.11.4
+ratelimit	^1.5.10
+metricsd	^3.7.5

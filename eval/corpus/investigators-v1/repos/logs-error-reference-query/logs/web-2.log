@@ -1,0 +1,5 @@
+2026-05-11T10:01:44Z INFO web-2 req=req-5c93 db_session=sess-4405 handler=reports.list ok 39ms
+2026-05-11T10:02:13Z ERROR web-2 req=req-8c1f db_session=sess-4471 handler=reports.monthly error=upstream timeout
+2026-05-11T10:02:29Z INFO web-2 req=req-9e25 db_session=sess-4415 handler=reports.list ok 44ms
+2026-05-11T10:03:07Z ERROR web-2 req=req-b247 db_session=sess-4422 handler=reports.export error=render failed
+2026-05-11T10:04:01Z INFO web-2 req=req-d469 db_session=sess-4430 handler=reports.list ok 35ms

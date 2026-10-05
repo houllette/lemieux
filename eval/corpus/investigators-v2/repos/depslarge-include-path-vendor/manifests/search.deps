@@ -1,0 +1,8 @@
+# search component dependencies (.deps format: name<TAB>constraint)
+
+tracekit	^4.1.8
+cipherbox	^0.11.14
+blobstore	^0.4.4
+retryable	^0.5.2
+pemparse	^4.0.2
+yamlish	^0.1.10

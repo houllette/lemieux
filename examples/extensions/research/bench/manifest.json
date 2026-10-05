@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "research-extension-grounding",
+    "exposure": "development",
+    "note": "Answers live in bench/fixtures/pages, served locally by bench/compare.exs."
+  },
+  "tasks": [
+    {
+      "id": "default-port",
+      "prompt": "What TCP port does Tidepool listen on by default?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 20000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "retention",
+      "prompt": "How long does Tidepool retain messages by default?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 20000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "reef-version",
+      "prompt": "Which Tidepool release introduced the reef compaction mode?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 20000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "drain-flag",
+      "prompt": "Which flag must be passed to the tidepool drain command?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 20000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "message-limit",
+      "prompt": "What is the maximum size of a single Tidepool message?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 20000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    }
+  ]
+}

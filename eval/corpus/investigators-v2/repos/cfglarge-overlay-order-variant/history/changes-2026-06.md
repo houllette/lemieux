@@ -1,0 +1,26 @@
+# Change log 2026-06
+
+Proposals as discussed; the tree is authoritative, not this log.
+
+- 2026-06-28: proposed features.beta_banner = on for prod/eu-west (reverted). See the runbook for the rollout procedure. The service keeps its state in an append-only journal and rebuilds the index on start. Operators should not edit generated files by hand.
+- 2026-06-08: proposed http.max_body_bytes = 2097152 for dev/eu-central (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. This section is kept for historical reasons and may be removed in a later revision. Operators should not edit generated files by hand.
+- 2026-06-19: proposed http.compression = off for canary/apac-south (applied). This section is kept for historical reasons and may be removed in a later revision. See the runbook for the rollout procedure. Operators should not edit generated files by hand.
+- 2026-06-08: proposed logging.sample_rate = 0.25 for dev/us-east (applied). A value set here applies only after the next reload. The reader tolerates trailing whitespace. Unknown keys are ignored with a warning.
+- 2026-06-27: proposed limits.upload_mb = 1024 for prod/eu-west (applied). Unknown keys are ignored with a warning. Unknown keys are ignored with a warning. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-06-05: proposed db.replica = off for dev/eu-west (withdrawn). Retries are bounded and jittered. See the runbook for the rollout procedure. See the runbook for the rollout procedure.
+- 2026-06-27: proposed db.pool_size = 20 for prod/eu-west (applied). Unknown keys are ignored with a warning. See the runbook for the rollout procedure. A value set here applies only after the next reload.
+- 2026-06-09: proposed tls.cert_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.pem for canary/us-east (superseded). Operators should not edit generated files by hand. The reader tolerates trailing whitespace. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-06-21: proposed tls.key_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.key for dev/us-east (applied). The reader tolerates trailing whitespace. Unknown keys are ignored with a warning. See the runbook for the rollout procedure.
+- 2026-06-27: proposed features.invoice_layout = compact for prod/eu-west (superseded). This section is kept for historical reasons and may be removed in a later revision. Operators should not edit generated files by hand. Operators should not edit generated files by hand.
+- 2026-06-05: proposed limits.burst = 96 for staging/apac-south (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning. Unknown keys are ignored with a warning.
+- 2026-06-05: proposed features.invoice_layout = detailed for dev/apac-south (applied). Keys are compared case-sensitively. The service keeps its state in an append-only journal and rebuilds the index on start. A value set here applies only after the next reload.
+- 2026-06-22: proposed features.invoice_layout = letter for prod/eu-west (reverted). The default is deliberately conservative. Retries are bounded and jittered. See the runbook for the rollout procedure.
+- 2026-06-21: proposed logging.sink = @sinks/us-collector for dev/eu-west (applied). The service keeps its state in an append-only journal and rebuilds the index on start. Keys are compared case-sensitively. Keys are compared case-sensitively.
+- 2026-06-21: proposed logging.sample_rate = 1.0 for canary/apac-south (applied). Unknown keys are ignored with a warning. See the runbook for the rollout procedure. Operators should not edit generated files by hand.
+- 2026-06-26: proposed logging.sample_rate = 0.5 for staging/eu-west (applied). The service keeps its state in an append-only journal and rebuilds the index on start. Retries are bounded and jittered. The default is deliberately conservative.
+- 2026-06-01: proposed queue.visibility_s = 120 for staging/us-east (reverted). See the runbook for the rollout procedure. Every entry is validated before it is written. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-06-14: proposed logging.format = text for dev/apac-south (withdrawn). The reader tolerates trailing whitespace. See the runbook for the rollout procedure. See the runbook for the rollout procedure.
+- 2026-06-17: proposed logging.sample_rate = 1.0 for dev/apac-south (reverted). See the runbook for the rollout procedure. Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-06-17: proposed cache.backend = tiered for canary/eu-west (applied). Unknown keys are ignored with a warning. The default is deliberately conservative. Unknown keys are ignored with a warning.
+- 2026-06-10: proposed db.retry_limit = 3 for canary/eu-central (withdrawn). The reader tolerates trailing whitespace. Unknown keys are ignored with a warning. Operators should not edit generated files by hand.
+- 2026-06-27: proposed limits.upload_mb = 4 for canary/us-east (superseded). Operators should not edit generated files by hand. Unknown keys are ignored with a warning. See the runbook for the rollout procedure.

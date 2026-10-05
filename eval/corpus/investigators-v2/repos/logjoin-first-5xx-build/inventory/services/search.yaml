@@ -1,0 +1,16 @@
+service: search
+owner: team-sterling
+hosts:
+  - h-8fc8
+  - h-d032
+  - h-2619
+  - h-97c3
+  - h-1404
+retired_hosts:
+  - h-bcad
+  - h-8fc8
+  - h-0208
+ports:
+  rowan: 3850
+  delta: 7292
+  blaze: 3039

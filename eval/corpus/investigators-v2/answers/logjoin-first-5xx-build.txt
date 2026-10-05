@@ -1,0 +1,1 @@
+The first 5xx on 2026-09-15 for /api/exports is at 2026-09-15T11:17:42Z from upstream h-fc5d (the 16:30 503 is the previous day and the 08:05 500 is /api/search). h-fc5d is api-use-01.example.test; logs/deploy shows rel-140 deployed there at 09:46 (after rel-141 at 15:12 comes later, rel-142 went to api-apacs-01.example.test), and releases/rel-140.yaml gives build b-43dfbdc.

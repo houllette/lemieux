@@ -1,0 +1,1 @@
+152 readings. site-meadow has sensors sn-ac847, sn-07c13, sn-74a28, sn-12120; readings are in tenths, sn-ac847 carries +8 and sn-07c13 -12 calibration from 2026-06-01, and the threshold is 70.0 until 2026-06-11 and 75.0 from then (thresholds/changes.csv). Without calibration the count is 150, with 70.0 all week 190, with neither 191.

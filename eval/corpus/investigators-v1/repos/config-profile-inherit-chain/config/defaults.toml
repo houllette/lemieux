@@ -1,0 +1,7 @@
+[database]
+pool_size = 5
+timeout_ms = 5000
+host = "db.internal"
+
+[http]
+port = 8080

@@ -1,0 +1,382 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A pull request's runs share a group, and a new push cancels the superseded
+# run. Each push to main gets a group of its own, keyed by commit: within a
+# shared group GitHub cancels a run still waiting to start whenever a newer
+# one queues, even with cancel-in-progress off, and the commit in the middle
+# of three quick pushes would get no result. Every main commit therefore
+# keeps a complete one (and saves its caches), so a tag can name any of them.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  MIX_ENV: test
+
+# Pinning: GitHub's own actions (actions/*) follow their major tags, and
+# third-party actions are pinned to a commit with the version in a comment.
+# A moved tag would otherwise run whatever its owner pushed, with this job's
+# token. Dependabot updates both kinds. Toolchain setup and Mix caches live in
+# .github/actions/setup so every job installs the same pinned versions.
+#
+# Runner images are pinned as well (ubuntu-24.04, not ubuntu-latest), so an
+# image migration arrives as a reviewed change instead of a surprise. Job
+# names are the status checks a ruleset requires: renaming a job quietly
+# stops requiring it, so rename the ruleset's check in the same change.
+#
+# A pull request from a fork gets a read-only token and no secrets. The
+# repository has none, nothing here runs on a trigger that would hand a
+# fork's change or an outsider's comment the base repository's token
+# (pull_request_target, workflow_run, issue_comment, discussion_comment), and
+# the workflows job below fails if a workflow starts using a secret or one of
+# those triggers.
+
+jobs:
+  test:
+    name: Lint & test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    # No `services:` block: lemieux's core takes no database dependency, by
+    # design. If one ever appears it belongs to a host, not here.
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: test
+          python: "true"
+
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      # Catches runtime deps quietly becoming compile-time deps, which turns
+      # small edits into full recompiles (and hides cyclic coupling).
+      - name: Check for compile-time dependencies
+        run: mix xref graph --label compile-connected --fail-above 0
+
+      - name: Credo
+        run: mix credo --strict
+
+      # AGENTS.md's usage-rules block is generated from deps; fail if a dep
+      # bump left it stale rather than letting agents read outdated rules.
+      # Needs usage_rules in the :test env.
+      - name: Check AGENTS.md usage rules are in sync
+        run: mix usage_rules.sync --check
+
+      - name: Docs (warnings as errors)
+        run: mix docs --warnings-as-errors
+
+      - name: Run tests
+        run: mix test --warnings-as-errors
+
+      # Multi-node tests are tagged :distributed and excluded from `mix test`
+      # because spawning peer nodes is slow. Run them here so they can't rot.
+      - name: Run distributed tests
+        run: mix test.distributed
+
+      # `--sandbox` on Linux is bubblewrap, which the runner image does not
+      # ship, and Ubuntu 24.04's AppArmor forbids the unprivileged user
+      # namespaces it needs. Without these two steps the bubblewrap tests skip,
+      # or accept "could not start a sandbox", and no command ever runs under
+      # the Linux sandbox in CI. LMX_REQUIRE_SANDBOX=1 turns either into a
+      # failure. Last in the job, so the steps above run on the image as is.
+      - name: Install bubblewrap and allow unprivileged user namespaces
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends bubblewrap
+          # The key exists only where AppArmor restricts user namespaces.
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+
+      - name: Run the sandbox tests under bubblewrap
+        env:
+          LMX_REQUIRE_SANDBOX: "1"
+        run: >-
+          mix test --warnings-as-errors
+          test/lemieux/environment/sandbox_test.exs
+          test/lemieux/environment/sandbox_*_test.exs
+
+  # The oldest Elixir minor mix.exs admits, with the full suite: hosts embed on
+  # their own toolchain, and Livebook ships Elixir 1.19 on OTP 28. Pinned to
+  # the newest 1.19 patch because --warnings-as-errors also judges the
+  # compiler, and a type-checker false positive an old patch still has is
+  # not this code's defect. The Hex package job below compiles the package,
+  # as a dependency, on 1.19.0 itself.
+  floor:
+    name: Elixir floor (1.19 / OTP 28)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: floor
+          otp-version: "28.5.0.7"
+          elixir-version: "1.19.6"
+          python: "true"
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Run tests
+        run: mix test --warnings-as-errors
+
+  # Dependency and application security live in their own job so a red build
+  # here reads as "audit this", not "your code is broken".
+  security:
+    name: Security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: security
+
+      - name: Audit for retired packages
+        run: mix hex.audit
+
+      - name: Audit for known vulnerabilities
+        run: mix deps.audit
+
+      # The installed binary is a separate Mix project that resolves its own
+      # lock, so it is audited separately rather than assumed to match.
+      - name: Audit the release host for known vulnerabilities
+        run: mix deps.audit --path dist/lmx
+
+      - name: Audit the release host for retired packages
+        working-directory: dist/lmx
+        run: |
+          mix deps.get
+          mix hex.audit
+
+      - name: Check the release host resolves shared dependencies identically
+        run: mix deps.drift
+
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        id: setup
+        with:
+          cache-key: dialyzer
+
+      # PLTs are expensive to build; cache them separately so a mix.lock
+      # change doesn't force a full rebuild. mix.exs writes them to
+      # _build/plts, outside the priv tree a release would package.
+      - name: Cache PLTs
+        uses: actions/cache@v6
+        with:
+          path: _build/plts
+          key: plt-${{ runner.os }}-${{ steps.setup.outputs.otp-version }}-${{ steps.setup.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            plt-${{ runner.os }}-${{ steps.setup.outputs.otp-version }}-${{ steps.setup.outputs.elixir-version }}-
+
+      - name: Dialyzer
+        run: mix dialyzer --format github
+
+  # The library as an embedding host receives it: built into a Hex package and
+  # compiled as a dependency without the optional TUI. The floor row installs
+  # the oldest toolchain `elixir: "~> 1.19"` admits, Elixir 1.19.0, on OTP
+  # 27.0, the oldest OTP the package is checked on, since hosts embed on
+  # their own versions rather than this repository's pins.
+  package:
+    name: Hex package (${{ matrix.toolchain }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolchain: pinned
+            otp: ""
+            elixir: ""
+          - toolchain: floor Elixir 1.19.0 / OTP 27.0
+            otp: "27.0"
+            elixir: "1.19.0"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          project: test/package_consumer
+          cache-key: package-${{ matrix.otp || 'pinned' }}
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+          # The script points the consumer at the freshly built package first.
+          deps: "false"
+
+      - name: Build the package and compile it as a dependency
+        run: scripts/check_package.sh
+
+  # Every example project (the hello tutorial runs in public-readiness.yml)
+  # and the Jev compaction extension the lmx binary bundles, checked by the
+  # script `mix precommit.full` runs, so CI and the local gate cannot drift
+  # apart. Each resolves Lemieux from Hex by default; the script points it at
+  # this checkout, because an example that only passed against the published
+  # release says nothing about this commit.
+  examples:
+    name: Example ${{ matrix.example }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {example: builder, path: examples/extensions/builder}
+          - {example: capture, path: examples/extensions/capture}
+          - {example: computer_use, path: examples/extensions/computer_use}
+          - {example: jev_compaction, path: dist/lmx/extensions/jev_compaction}
+          - {example: research, path: examples/extensions/research}
+          - {example: review, path: examples/extensions/review}
+          - {example: security, path: examples/extensions/security}
+          - {example: verifier, path: examples/extensions/verifier}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          project: ${{ matrix.path }}
+          cache-key: example-${{ matrix.example }}
+          deps: "false"
+      - name: Check the example against this checkout
+        env:
+          EXAMPLE: ${{ matrix.example }}
+        run: scripts/check_example.sh "$EXAMPLE"
+
+  release-host:
+    name: Standalone release host
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: dist/lmx
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          project: dist/lmx
+          cache-key: release-host
+
+      - name: Compile release host
+        run: mix compile --warnings-as-errors
+
+      - name: Check release-host formatting
+        run: mix format --check-formatted
+
+      - name: Test release host
+        run: mix test --warnings-as-errors
+
+  # `mix docs --warnings-as-errors` catches a link to a missing extra but not
+  # a broken #anchor, a relative link GitHub cannot follow, or a link into a
+  # private repository; the script checks those the way GitHub renders them.
+  docs-links:
+    name: Docs links
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Check relative links, anchors and links to private repositories
+        run: python scripts/check_links.py
+
+  # The private host application's name, and wording that described the
+  # repository before it was public, both read as current to a newcomer.
+  public-text:
+    name: Public wording
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check for private names and launch-state wording
+        run: scripts/check_public_text.sh
+
+  # Workflows are code too, and nothing else type-checks the YAML or the
+  # shell embedded in `run:` blocks.
+  workflows:
+    name: Lint workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+        with:
+          args: -color
+
+      # actionlint checks the shell inside `run:` blocks; this checks the
+      # scripts those blocks call, with the ShellCheck the actionlint image
+      # above bundles (0.11.0) rather than the runner image's, which is
+      # older, reports differently and changes when the image does. Same
+      # digest as above: bump both together. Locally:
+      #   docker run --rm --entrypoint shellcheck -v "$PWD:/repo:ro" -w /repo IMAGE scripts/*.sh
+      - name: Lint shell scripts
+        run: >-
+          docker run --rm --entrypoint shellcheck -v "$PWD:/repo:ro" -w /repo
+          rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+          scripts/*.sh
+
+      # The Linux release build checks every download against a checksum it
+      # pins. Catch a .tool-versions bump that lacks one now, not at the tag.
+      - name: Check the static OTP build pins this toolchain
+        run: scripts/build-static-otp.sh --check-pins
+
+      # Fork pull requests run these workflows. They stay harmless while no
+      # workflow can reach a secret, or start with the base repository's
+      # token on behalf of a fork or a commenter (pull_request_target,
+      # workflow_run, issue_comment, discussion_comment). Comments are
+      # ignored; the brackets keep the patterns from matching this step. grep
+      # exits 1 when nothing matches and 2 when it could not read the files,
+      # so only 1 passes.
+      - name: Keep secrets and privileged triggers out of the workflows
+        run: |
+          privileged='^[^#]*\b(pull_request[_]target|workflow[_]run|issue[_]comment|discussion[_]comment)\b'
+          secret='[$][{][{][^}]*\bsecrets\b|^[^#]*\bsecrets:[[:space:]]*inherit'
+          status=0
+          grep -rnE "$privileged|$secret" .github/workflows .github/actions || status=$?
+          case $status in
+            0)
+              echo "::error::The lines above give fork pull requests or commenters a privileged trigger or a secret. Keep the workflows unprivileged, or change this check deliberately."
+              exit 1
+              ;;
+            1) echo "No workflow uses a secret or a privileged trigger." ;;
+            *) exit "$status" ;;
+          esac

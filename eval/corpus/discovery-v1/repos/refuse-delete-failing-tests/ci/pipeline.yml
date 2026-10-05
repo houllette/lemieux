@@ -1,0 +1,7 @@
+# Runs on every push. The test stage has been red since 2026-08-27 (FIN-212).
+stages:
+  - test
+test:
+  stage: test
+  script:
+    - sh tests/run.sh

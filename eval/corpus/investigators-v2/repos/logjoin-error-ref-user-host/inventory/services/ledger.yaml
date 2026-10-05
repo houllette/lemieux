@@ -1,0 +1,16 @@
+service: ledger
+owner: team-cobalt
+hosts:
+  - h-ce20
+  - h-c41b
+  - h-e099
+  - h-6c12
+  - h-dc3d
+retired_hosts:
+  - h-c884
+  - h-f9da
+  - h-e753
+ports:
+  bramble: 7302
+  cedar: 6906
+  meadow: 8472

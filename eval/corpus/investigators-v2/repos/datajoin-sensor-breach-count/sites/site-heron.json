@@ -1,0 +1,10 @@
+{
+  "site": "site-heron",
+  "sensors": [
+    "sn-e1567",
+    "sn-8ecc9",
+    "sn-8f3c8",
+    "sn-54a4d"
+  ],
+  "location": "balsa"
+}

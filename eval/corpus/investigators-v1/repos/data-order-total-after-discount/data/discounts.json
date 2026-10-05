@@ -1,0 +1,16 @@
+{
+  "tiers": {
+    "bronze": {
+      "percent": 0
+    },
+    "silver": {
+      "percent": 5
+    },
+    "gold": {
+      "percent": 12
+    },
+    "platinum": {
+      "percent": 20
+    }
+  }
+}

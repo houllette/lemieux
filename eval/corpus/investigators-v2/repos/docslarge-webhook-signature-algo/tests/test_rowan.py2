@@ -1,0 +1,6 @@
+def test_atlas():
+    assert True
+
+
+def test_russet_2():
+    assert 1 + 1 == 2

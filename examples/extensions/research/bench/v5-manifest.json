@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "research-v5-four-arm",
+    "exposure": "development holdout; author selected sources and prompts before model runs",
+    "frozen_at": "2026-09-28",
+    "corpus_sha256": "a6b44dcd40c5b60e09fee8ede1b7495ae4150af90ebdbea28627cf8295541a80"
+  },
+  "tasks": [
+    {
+      "id": "go-methods-allocator",
+      "prompt": "A Go service team is planning a 1.27 migration and wants a short compatibility brief that separates language features from runtime changes. Explain what newly works for methods with type parameters and whether an interface method may itself declare type parameters. Also explain the small-allocation optimization's size boundary and the build-time opt-out. Use current Go project sources for each part.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "go-methods-leak",
+      "prompt": "A library maintainer says that Go 1.27 generic methods mean any instantiated concrete method automatically satisfies an interface with the same signature. Verify that assertion using the Go team's technical explanation, then give a production method for finding permanently blocked goroutines and the specific HTTP profile endpoint. Finally state a category of leaks that the new profiler can miss. Cite the official articles.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "go-simd-migration",
+      "prompt": "Write an upgrade note for an amd64 and arm64 team that has an experimental SIMD prototype from Go 1.26. Identify which architecture was first covered in 1.26 and what hardware families were added in 1.27, then name the portable package and the build opt-in. The later-version details matter more than generic SIMD background; use the Go team's own write-up and release notes.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "go-allocator-version",
+      "prompt": "A performance team has heard that size-specialized allocation shipped in Go 1.26 and that its emergency opt-out is permanent. Check both claims against official Go material. State when it actually shipped, why the team deferred it, which allocations it targets, and the version in which the release notes expect to remove the opt-out. Include the exact opt-out setting so an operator can reproduce it.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "go-profile-version",
+      "prompt": "An incident-response note still tells staff to enable GOEXPERIMENT=goroutineleakprofile before collecting Go 1.27 leak diagnostics. Compare the Go 1.26 experiment with the 1.27 release: state the old opt-in setting, whether that setting still exists in 1.27, and the supported HTTP profile endpoint. Explain the detection limit described by the technical article. Use the two versioned release notes and the article.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "go-simd-fallback",
+      "prompt": "A portability review assumes Go 1.27's new experimental portable SIMD package will fail to run on machines with no SIMD instructions. Evaluate that premise using the project's technical article. State the build opt-in and what happens on unsupported machines. Also distinguish that package from the architecture-specific package named in the release notes; give both package names.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "rust-198-patch",
+      "prompt": "For a Rust 1.98 upgrade review, describe one new feature of the original 1.98.0 release and evaluate the claim that staying on 1.98.0 is harmless because the later 1.98.1 patch only corrected diagnostics. Identify the specific compiler output defect and its possible runtime consequence. Use both official release announcements, and keep the difference between feature and patch clear.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "rust-buffer-patch",
+      "prompt": "A Rust library wants to adopt the new buffered primitive integer formatting from 1.98.0. Name the method, its buffer type, and the form of the returned formatted value. Then explain why the team should deploy 1.98.1 instead of pinning 1.98.0 for this feature, including the class of miscompilation fixed by the patch. Cite the original and patch announcements.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "node-header-removal",
+      "prompt": "A Node.js service still calls ServerResponse.writeHeader and an engineer says Node 26 only warns about it. Check the version transition: say what happened to the alias in Node 25, whether it remains in Node 26, and the replacement method. Use both official release announcements. Explain the difference between a runtime deprecation and end-of-life removal for this specific API.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "node-stream-removal",
+      "prompt": "A package loads node:_stream_wrap directly and its maintainer assumes the internal stream module still works under Node 26 because it was only documented as deprecated. Compare the Node 25 deprecation to the Node 26 removal. Name the old private module and the public node:stream replacement, and state the exact change from warning to removal. Use both official release announcements.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "k8s-workload-api",
+      "prompt": "A controller vendor wrote to the Kubernetes 1.35 alpha Workload API and wants a precise 1.36 migration note. Compare the old and new scheduling.k8s.io API versions, identify which object is now the static template and which holds runtime state, and state whether the 1.35 API remains the version to enable. Use the two Kubernetes project articles, not a generic release summary.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "k8s-scheduling-gates",
+      "prompt": "Compare Kubernetes 1.35's initial gang-scheduling setup with the revised 1.36 workload-aware scheduling setup. Identify the base feature gate and component placement common to both releases, the API version that operators must enable in each, and the extra scheduler gate needed for workload-aware preemption in 1.36. Also say whether that preemption gate depends on gang scheduling. Cite both project posts.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    }
+  ]
+}

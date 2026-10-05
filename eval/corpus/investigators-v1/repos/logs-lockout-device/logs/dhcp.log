@@ -1,0 +1,7 @@
+2026-06-02 07:10:05 DHCPACK on 10.8.4.17 to 3c:22:fb:10:aa:01 (kiosk-1) lease 3600
+2026-06-02 07:40:30 DHCPACK on 10.8.2.30 to 8c:85:90:2b:cc:19 (mkline-laptop) lease 3600
+2026-06-02 08:10:05 DHCPRELEASE of 10.8.4.17 from 3c:22:fb:10:aa:01 (kiosk-1)
+2026-06-02 08:15:12 DHCPACK on 10.8.2.41 to f0:18:98:44:de:02 (jortiz-laptop) lease 3600
+2026-06-02 08:50:21 DHCPACK on 10.8.4.17 to 00:1a:2b:3c:4d:5e (ws-ops-12) lease 3600
+2026-06-02 09:40:30 DHCPACK on 10.8.2.30 to 8c:85:90:2b:cc:19 (mkline-laptop) lease 3600
+2026-06-02 09:50:21 DHCPACK on 10.8.4.17 to 00:1a:2b:3c:4d:5e (ws-ops-12) lease 3600

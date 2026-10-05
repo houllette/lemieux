@@ -1,0 +1,8 @@
+# ledger component dependencies (.deps format: name<TAB>constraint)
+
+pemparse	^0.0.20
+httpkit	^0.5.10
+ratelimit	^0.8.12
+argsplit	^3.8.13
+tinyjson	^3.5.4
+blobstore	^0.4.14

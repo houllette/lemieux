@@ -1,0 +1,6 @@
+def test_badger():
+    assert True
+
+
+def test_flint_7():
+    assert 1 + 1 == 2

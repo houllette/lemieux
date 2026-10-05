@@ -1,0 +1,8 @@
+# ledger component dependencies (.deps format: name<TAB>constraint)
+
+fsync	^0.7.7
+blobstore	^2.9.13
+hashfold	^3.7.19
+yamlish	^1.2.18
+queuelet	^0.4.9
+httpkit	^3.10.8

@@ -1,0 +1,2 @@
+- The Mythical Man-Month
+- Working Effectively with Legacy Code

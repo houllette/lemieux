@@ -1,0 +1,1 @@
+The middleware sets X-RateLimit-Reset (the retry_header from config/headers.json), and its value is the time until the window resets in milliseconds (remaining_ms in middleware/ratelimit.py), not the documented Retry-After in seconds.

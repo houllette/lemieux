@@ -1,0 +1,1 @@
+The code signs with HMAC-SHA1 and sends it in X-Hook-Signature: sign.sh uses openssl dgst -$WEBHOOK_DIGEST where config.sh reads digest = sha1 from config/webhooks.ini, and deliver.sh sets the header returned by signature_header in headers.sh, X-Hook-Signature, rather than the documented HMAC-SHA256 in X-Signature.

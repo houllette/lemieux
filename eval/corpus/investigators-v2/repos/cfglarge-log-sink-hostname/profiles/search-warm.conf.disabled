@@ -1,0 +1,4 @@
+# disabled
+
+[logging]
+sink = @sinks/debug

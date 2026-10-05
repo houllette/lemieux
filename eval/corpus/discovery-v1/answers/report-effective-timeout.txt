@@ -1,0 +1,1 @@
+Production runs with request_timeout_ms = 4500, set by config/overrides/eu.ini: production.ini enables the apac and eu overrides in that order, so eu (4500) replaces apac (5000), which had replaced production.ini (6000) and defaults.ini (3000).

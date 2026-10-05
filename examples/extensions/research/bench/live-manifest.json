@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "research-extension-live",
+    "exposure": "development",
+    "note": "Four familiar-fact questions for the paired real-web comparison. First live run: 2026-09-28, ixway:gpt-6-luna at max effort. Expected-substring grading does not establish source quality or general research benefit."
+  },
+  "tasks": [
+    {
+      "id": "postgres-port",
+      "prompt": "What TCP port does PostgreSQL listen on by default?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 120000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "teapot-status",
+      "prompt": "Which HTTP status code is defined as \"I'm a teapot\"?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 120000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "elixir-package-manager",
+      "prompt": "What is the name of the package manager used by the Elixir language?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 120000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    },
+    {
+      "id": "too-many-requests",
+      "prompt": "Which HTTP status code means Too Many Requests?",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 120000,
+      "grader": {"command": ["elixir", "check.exs", "{task_id}", "{answer}"], "timeout_ms": 30000}
+    }
+  ]
+}

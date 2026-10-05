@@ -1,0 +1,2 @@
+# copy to bindings.local.conf to override
+audit = app.services.audit.sink_v1:AuditSink

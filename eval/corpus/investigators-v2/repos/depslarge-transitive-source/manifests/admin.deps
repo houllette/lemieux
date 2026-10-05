@@ -1,0 +1,8 @@
+# admin component dependencies (.deps format: name<TAB>constraint)
+
+httpkit	^0.6.17
+cipherbox	^4.4.6
+tabulate2	^4.10.7
+colorize	^0.5.0
+queuelet	^2.4.16
+retryable	^3.5.5

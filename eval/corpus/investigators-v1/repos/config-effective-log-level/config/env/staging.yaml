@@ -1,0 +1,6 @@
+# Staging stage.
+log_level: debug
+allow_env_override: true
+workers: 2
+queue:
+  name: notifications-staging

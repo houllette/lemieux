@@ -1,0 +1,14 @@
+# Benchmark repositories and reference solutions are inputs to the agent.
+# Keep the corpus generators counted as supporting source code.
+eval/corpus/*/repos/** linguist-vendored
+eval/corpus/*/solutions/** linguist-vendored
+
+# Executable test fixtures are also outside the implementation language mix.
+test/fixtures/** linguist-vendored
+examples/extensions/verifier/test/fixtures/** linguist-vendored
+
+# Every text file is checked out with LF line endings, on Windows too. The
+# installer's key line, signed fixtures and the notices templates are
+# compared byte for byte, and a Windows checkout's CRLF failed all of them in
+# the first release run (2026-10-05).
+* text=auto eol=lf

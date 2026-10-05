@@ -1,0 +1,11 @@
+0.7.15: Keys are compared case-sensitively. The reader tolerates trailing whitespace. Keys are compared case-sensitively.
+
+2.4.1: Operators should not edit generated files by hand. See the runbook for the rollout procedure. Every entry is validated before it is written.
+
+3.3.6: Retries are bounded and jittered. A value set here applies only after the next reload. Unknown keys are ignored with a warning.
+
+1.12.16: See the runbook for the rollout procedure. Retries are bounded and jittered. The default is deliberately conservative.
+
+0.0.5: The service keeps its state in an append-only journal and rebuilds the index on start. Operators should not edit generated files by hand. Unknown keys are ignored with a warning.
+
+2.8.17: The default is deliberately conservative. The reader tolerates trailing whitespace. Operators should not edit generated files by hand.

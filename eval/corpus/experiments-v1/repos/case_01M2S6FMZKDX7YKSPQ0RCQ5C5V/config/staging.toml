@@ -1,0 +1,2 @@
+[http]
+request_timeout_ms = 15000

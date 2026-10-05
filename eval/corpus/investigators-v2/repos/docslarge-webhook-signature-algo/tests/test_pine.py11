@@ -1,0 +1,6 @@
+def test_thistle():
+    assert True
+
+
+def test_cypress_11():
+    assert 1 + 1 == 2

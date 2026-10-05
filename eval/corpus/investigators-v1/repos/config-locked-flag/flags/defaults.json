@@ -1,0 +1,18 @@
+{
+  "checkout_variant": {
+    "value": "classic",
+    "locked": true
+  },
+  "search_ranking": {
+    "value": "bm25",
+    "locked": false
+  },
+  "dark_mode": {
+    "value": false,
+    "locked": false
+  },
+  "gift_cards": {
+    "value": true,
+    "locked": false
+  }
+}

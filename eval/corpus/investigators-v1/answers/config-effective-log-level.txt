@@ -1,0 +1,1 @@
+Production runs with log_level warn, set by config/env/production.local.yaml: production.yaml sets allow_env_override: false, so LOG_LEVEL=error in .env.production is ignored, and the local layer's warn replaces production.yaml's debug and base.yaml's info.

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Usage: with-env COMMAND [ARGS...]
+# Loads .env into the environment and runs COMMAND.
+root=$(cd "$(dirname "$0")/.." && pwd)
+if [ -f "$root/.env" ]; then
+  set -a
+  . "$root/.env"
+  set +a
+fi
+exec "$@"

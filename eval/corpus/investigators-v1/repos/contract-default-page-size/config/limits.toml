@@ -1,0 +1,6 @@
+[pagination]
+default = 25
+max = 100
+
+[uploads]
+max_bytes = 5242880

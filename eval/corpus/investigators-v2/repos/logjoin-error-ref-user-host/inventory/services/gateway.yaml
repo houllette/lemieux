@@ -1,0 +1,16 @@
+service: gateway
+owner: team-moss
+hosts:
+  - h-b8ad
+  - h-658b
+  - h-fa97
+  - h-c512
+  - h-e753
+retired_hosts:
+  - h-e753
+  - h-efaa
+  - h-22af
+ports:
+  vellum: 4710
+  fathom: 5123
+  iris: 3257

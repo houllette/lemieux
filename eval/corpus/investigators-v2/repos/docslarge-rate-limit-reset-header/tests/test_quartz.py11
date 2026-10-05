@@ -1,0 +1,6 @@
+def test_pine():
+    assert True
+
+
+def test_coral_11():
+    assert 1 + 1 == 2

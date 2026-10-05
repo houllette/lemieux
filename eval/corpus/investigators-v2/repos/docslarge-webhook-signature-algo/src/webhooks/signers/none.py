@@ -1,0 +1,2 @@
+def sign(body):
+    return ""

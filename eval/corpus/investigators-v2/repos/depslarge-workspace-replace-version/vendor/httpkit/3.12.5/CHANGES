@@ -1,0 +1,11 @@
+4.2.3: The reader tolerates trailing whitespace. Operators should not edit generated files by hand. Retries are bounded and jittered.
+
+1.5.18: See the runbook for the rollout procedure. The service keeps its state in an append-only journal and rebuilds the index on start. Operators should not edit generated files by hand.
+
+2.10.15: Operators should not edit generated files by hand. The reader tolerates trailing whitespace. A value set here applies only after the next reload.
+
+1.4.20: The default is deliberately conservative. The reader tolerates trailing whitespace. Every entry is validated before it is written.
+
+1.4.3: Unknown keys are ignored with a warning. Unknown keys are ignored with a warning. The service keeps its state in an append-only journal and rebuilds the index on start.
+
+2.8.17: Every entry is validated before it is written. Unknown keys are ignored with a warning. The reader tolerates trailing whitespace.

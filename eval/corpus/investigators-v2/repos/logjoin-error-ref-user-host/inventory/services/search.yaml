@@ -1,0 +1,16 @@
+service: search
+owner: team-bronze
+hosts:
+  - h-5ab2
+  - h-e826
+  - h-e8bf
+  - h-fa97
+  - h-3b0c
+retired_hosts:
+  - h-9dba
+  - h-2e02
+  - h-23fe
+ports:
+  badger: 5042
+  quartz: 8900
+  citrine: 6556

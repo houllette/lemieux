@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mix ci)",
+      "Bash(mix compile:*)",
+      "Bash(mix credo:*)",
+      "Bash(mix deps.audit)",
+      "Bash(mix deps.drift)",
+      "Bash(mix deps.get:*)",
+      "Bash(mix deps.tree:*)",
+      "Bash(mix deps.unlock --check-unused)",
+      "Bash(mix dialyzer:*)",
+      "Bash(mix docs:*)",
+      "Bash(mix format:*)",
+      "Bash(mix help:*)",
+      "Bash(mix hex.audit)",
+      "Bash(mix precommit)",
+      "Bash(mix precommit.full)",
+      "Bash(mix test.distributed)",
+      "Bash(mix test:*)",
+      "Bash(mix usage_rules.search_docs:*)",
+      "Bash(mix usage_rules.sync --check)",
+      "Bash(mix usage_rules.sync --yes)",
+      "Bash(mix xref:*)",
+      "Bash(scripts/check_example.sh:*)"
+    ],
+    "deny": [
+      "Bash(*mix*test*--only live*)",
+      "Bash(*mix*test*--only=live*)",
+      "Bash(*mix*test*--only eval_live*)",
+      "Bash(*mix*test*--only=eval_live*)",
+      "Bash(*mix*test*--include live*)",
+      "Bash(*mix*test*--include=live*)",
+      "Bash(*mix*test*--include eval_live*)",
+      "Bash(*mix*test*--include=eval_live*)",
+      "Bash(*mix*lemieux.eval*--approve-live*)",
+      "Bash(*--allow-live*)",
+      "Bash(*mix*lemieux.extension.eval*examples/experiments/*)",
+      "Bash(*mix*run*examples/experiments/soak.exs*)",
+      "Bash(*mix*run*jev_compaction_eval.exs*)",
+      "Bash(*run-live*)"
+    ]
+  }
+}

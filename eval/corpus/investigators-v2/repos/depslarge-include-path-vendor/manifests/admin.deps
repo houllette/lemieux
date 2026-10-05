@@ -1,0 +1,8 @@
+# admin component dependencies (.deps format: name<TAB>constraint)
+
+retryable	^0.12.12
+csvfast	^2.6.8
+yamlish	^2.5.17
+clockwork	^0.9.13
+tomlet	^4.8.7
+tabulate2	^3.12.14

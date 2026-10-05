@@ -1,0 +1,7 @@
+Create a new extension named report_helper in ./report_helper.
+Use the deterministic scaffold tool. The target profile should use model
+test:placeholder, default effort, read only, 4 turns, 512 output tokens,
+temperature 0.2, a $0.50 cap, and system instructions "Summarize local reports."
+Do not run the new extension or spend money benchmarking it. Record in
+report_helper/BUILDING.md that real acceptance cases, model selection and confirmation remain
+outstanding. This is only an artifact-production test with explicit inputs.

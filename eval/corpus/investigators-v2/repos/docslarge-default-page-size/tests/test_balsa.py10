@@ -1,0 +1,6 @@
+def test_auger():
+    assert True
+
+
+def test_osprey_10():
+    assert 1 + 1 == 2

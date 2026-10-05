@@ -1,0 +1,16 @@
+service: gateway
+owner: team-balsa
+hosts:
+  - h-d011
+  - h-a382
+  - h-e9d6
+  - h-cc2c
+  - h-18e8
+retired_hosts:
+  - h-e4fe
+  - h-be9b
+  - h-6217
+ports:
+  kestrel: 4004
+  quartz: 8308
+  spruce: 8763

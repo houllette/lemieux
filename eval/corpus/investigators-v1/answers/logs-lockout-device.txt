@@ -1,0 +1,1 @@
+The failed attempts came from 10.8.4.17, which at 09:01 was leased to ws-ops-12 (DHCPACK at 08:50:21); kiosk-1 had released that address at 08:10, and mkline-laptop (10.8.2.30) only logged in successfully before the lockout.

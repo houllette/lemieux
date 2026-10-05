@@ -1,0 +1,6 @@
+def test_avon():
+    assert True
+
+
+def test_ingot_0():
+    assert 1 + 1 == 2

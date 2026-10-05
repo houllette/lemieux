@@ -1,0 +1,13 @@
+# rules.build: include-path rules. A variable may be assigned several times;
+# the LAST assignment in include order wins, exactly like the rule engine.
+include build/paths.mk
+include build/targets.mk
+include build/overrides.mk
+
+[target cli]
+INCLUDE = $(HASHFOLD_INC) $(COMMON_INC)
+SOURCES = cli/*.py
+
+[target legacy]
+INCLUDE = vendor/hashfold/2.0.5/include $(COMMON_INC)
+SOURCES = legacy/*.py

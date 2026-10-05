@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/houllette/lemieux/discussions/categories/q-a
+    about: How-to questions and "is this expected?" belong in Discussions.
+  - name: Report a security vulnerability
+    url: https://github.com/houllette/lemieux/security/advisories/new
+    about: Report privately. Never put a vulnerability, credential or transcript in a public issue.
+  - name: Read the documentation
+    url: https://hexdocs.pm/lemieux
+    about: Guides for using lmx, embedding Lemieux and writing extensions, with troubleshooting.

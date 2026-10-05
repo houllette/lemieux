@@ -1,0 +1,16 @@
+service: catalog
+owner: team-delta
+hosts:
+  - h-6d46
+  - h-de37
+  - h-d3ec
+  - h-a385
+  - h-e847
+retired_hosts:
+  - h-823f
+  - h-ec88
+  - h-364e
+ports:
+  cedar: 8477
+  reed: 8927
+  slate: 3401

@@ -1,0 +1,1 @@
+The production image installs pnpm 9.1.0: deploy/build.sh passes the version from package.json's packageManager field (pnpm@9.1.0) as the PNPM_VERSION build arg, overriding the Dockerfile default 8.10.0; compose's 8.15.4 and CI's 8.15.4 are not used for production images.

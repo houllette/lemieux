@@ -1,0 +1,16 @@
+service: exporter
+owner: team-orchard
+hosts:
+  - h-99f1
+  - h-6767
+  - h-2407
+  - h-99a1
+  - h-db72
+retired_hosts:
+  - h-99f1
+  - h-59c8
+  - h-db72
+ports:
+  fennel: 3299
+  ember: 7845
+  birch: 7755

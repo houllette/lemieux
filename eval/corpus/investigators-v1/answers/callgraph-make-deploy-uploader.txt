@@ -1,0 +1,1 @@
+make deploy uploads with upload_gcs, defined in scripts/lib/storage.sh: the deploy target runs scripts/deploy.sh, which calls push_artifact (scripts/lib/registry.sh); push_artifact reads ARTIFACT_STORE=gcs from deploy/target.env and dispatches to upload_gcs, not upload_s3 (the example env) or upload_local.

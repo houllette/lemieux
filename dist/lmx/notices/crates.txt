@@ -1,0 +1,407 @@
+Rust crates in the ex_ratatui terminal NIF
+==========================================
+
+ex_ratatui: 0.16.0
+Cargo.lock sha256: c3bc4c992efcacd72297f21ecfcbd2215c0d9d05ed35dee53362518d002e8fe8
+Targets: aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc
+Licenses: Apache-2.0, ISC, MIT, Zlib
+
+The terminal library's native code (lib/ex_ratatui-0.16.0/priv/native)
+is compiled from these crates. Each entry gives the crate, its version and
+its declared license; where the crate offers a choice, the license lmx
+uses it under follows "used under". The copyright lines its license files
+carry are listed beneath it, and a crate linked on some targets only lists
+them. The full text of every license used here is in the License texts
+section of this file.
+
+adler2 2.0.1: 0BSD OR MIT OR Apache-2.0; used under MIT
+allocator-api2 0.2.21: MIT OR Apache-2.0; used under MIT
+ansi-to-tui 8.0.1: MIT
+    Copyright (c) 2021-2024 Uttarayan Mondal
+    Copyright (c) The Ratatui Developers
+arrayvec 0.7.6: MIT OR Apache-2.0; used under MIT
+    Copyright (c) Ulrik Sverdrup "bluss" 2015-2023
+base64 0.22.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 Alice Maz
+base64-simd 0.8.0: MIT
+bincode 1.3.3: MIT
+    Copyright (c) 2014 Ty Overby
+bitflags 2.13.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014 The Rust Project Developers
+bitvec 1.0.1: MIT
+    Copyright (c) 2018 myrrlyn (Alexander Payne)
+bytemuck 1.25.0: Zlib OR Apache-2.0 OR MIT; used under MIT
+    Copyright (c) 2019 Daniel "Lokathor" Gee.
+byteorder-lite 0.1.0: Unlicense OR MIT; used under MIT
+    Copyright (c) 2015 Andrew Gallant
+castaway 0.2.4: MIT
+    Copyright (c) 2021 Stephen M. Coakley
+cfg-if 1.0.4: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014 Alex Crichton
+color_quant 1.1.0: MIT
+    Copyright (c) 2016 PistonDevelopers
+compact_str 0.9.0: MIT
+    Copyright (c) 2021 Parker Timmerman
+crc32fast 1.5.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2018 Sam Rijs, Alex Crichton and contributors
+critical-section 1.2.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2022 The critical-section authors
+crossbeam-deque 0.8.6: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2019 The Crossbeam Project Developers
+crossbeam-epoch 0.9.18: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2019 The Crossbeam Project Developers
+crossbeam-utils 0.8.21: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2019 The Crossbeam Project Developers
+crossterm 0.29.0: MIT
+    Copyright (c) 2019 Timon
+crossterm_winapi 0.9.1: MIT  (x86_64-pc-windows-msvc)
+    Copyright (c) 2019 Timon
+deranged 0.5.8: MIT OR Apache-2.0; used under MIT
+    Copyright 2024 Jacob Pratt et al.
+    Copyright (c) 2024 Jacob Pratt et al.
+derive_builder 0.20.2: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 rust-derive-builder contributors
+derive_more 2.1.1: MIT
+    Copyright (c) 2016 Jelte Fennema
+diff 0.1.13: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 Utkarsh Kukreti
+either 1.15.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015
+equivalent 1.0.2: Apache-2.0 OR MIT; used under MIT
+    Copyright (c) 2016--2023
+errno 0.3.14: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright (c) 2014 Chris Wong
+ex_ratatui 0.16.0: MIT
+fast-srgb8 1.0.0: MIT OR Apache-2.0 OR CC0-1.0; used under MIT
+    Copyright 2016 The Miri Developers
+    Copyright (c) 2021 Thom Chiovoloni
+fdeflate 0.3.7: MIT OR Apache-2.0; used under MIT
+flate2 1.1.9: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014-2026 Alex Crichton
+fnv 1.0.7: Apache-2.0  OR  MIT; used under MIT
+    Copyright (c) 2017 Contributors
+foldhash 0.2.0: Zlib
+    Copyright (c) 2024 Orson Peters
+font8x8 0.3.1: MIT
+    Copyright (c) 2017 Joaquin Rosales <globojorro@gmail.com>
+funty 2.0.0: MIT
+    Copyright (c) 2020 myrrlyn (Alexander Payne)
+futures-core 0.3.32: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 Alex Crichton
+    Copyright (c) 2017 The Tokio Authors
+futures-task 0.3.32: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 Alex Crichton
+    Copyright (c) 2017 The Tokio Authors
+futures-timer 3.0.3: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014 Alex Crichton
+futures-util 0.3.32: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 Alex Crichton
+    Copyright (c) 2017 The Tokio Authors
+getopts 0.2.24: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014 The Rust Project Developers
+getrandom 0.2.17: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2018-2024 The rust-random Project Developers
+    Copyright (c) 2014 The Rust Project Developers
+gif 0.14.2: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 nwin
+glam 0.29.3: MIT OR Apache-2.0; used under MIT
+    Copyright 2020 Cameron Hart
+hashbrown 0.16.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 Amanieu d'Antras
+hashbrown 0.17.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 Amanieu d'Antras
+icy_sixel 0.5.0: MIT OR Apache-2.0; used under MIT
+image 0.25.10: MIT OR Apache-2.0; used under MIT
+image-webp 0.2.4: MIT OR Apache-2.0; used under MIT
+indexmap 2.14.0: Apache-2.0 OR MIT; used under MIT
+    Copyright (c) 2016--2017
+inventory 0.3.24: MIT OR Apache-2.0; used under MIT
+itertools 0.14.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015
+itertools 0.15.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015
+itoa 1.0.18: MIT OR Apache-2.0; used under MIT
+kasuari 0.4.12: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 Dylan Ede
+    Copyright (c) 2024 Josh McKinney
+libc 0.2.186: MIT OR Apache-2.0; used under MIT
+    Copyright (c) The Rust Project Developers
+libloading 0.9.0: ISC  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright © 2015, Simonas Kazlauskas
+libm 0.2.16: MIT
+    Copyright (c) 2018 Jorge Aparicio
+    Copyright © 2005-2020 Rich Felker, et al.
+    Copyright © 1993,2004 Sun Microsystems or
+    Copyright © 2003-2011 David Schultz or
+    Copyright © 2003-2009 Steven G. Kargl or
+    Copyright © 2003-2009 Bruce D. Evans or
+    Copyright © 2008 Stephen L. Moshier or
+    Copyright © 2017-2018 Arm Limited
+line-clipping 0.3.7: MIT OR Apache-2.0; used under MIT
+    Copyright 2024 Josh McKinney
+    Copyright (c) 2024 Josh McKinney
+linked-hash-map 0.5.6: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 The Rust Project Developers
+linux-raw-sys 0.12.1: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (x86_64-unknown-linux-gnu)
+linux-raw-sys 0.4.15: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (x86_64-unknown-linux-gnu)
+lock_api 0.4.14: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 The Rust Project Developers
+log 0.4.29: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright (c) 2014 The Rust Project Developers
+lru 0.18.0: MIT
+    Copyright (c) 2016 Jerome Froelich
+memchr 2.8.0: Unlicense OR MIT; used under MIT
+    Copyright (c) 2015 Andrew Gallant
+miniz_oxide 0.8.9: MIT OR Zlib OR Apache-2.0; used under MIT
+    Copyright 2013-2014 RAD Game Tools and Valve Software
+    Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
+    Copyright (c) 2017 Frommi
+    Copyright (c) 2017-2024 oyvindln
+    Copyright (c) 2020 Frommi
+mio 1.2.0: MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright (c) 2014 Carl Lerche and other MIO contributors
+moxcms 0.8.1: BSD-3-Clause OR Apache-2.0; used under Apache-2.0
+    Copyright 2024 Radzivon Bartoshyk
+nom 8.0.0: MIT
+    Copyright (c) 2014-2019 Geoffroy Couprie
+num-conv 0.2.2: MIT OR Apache-2.0; used under MIT
+num-traits 0.2.19: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014 The Rust Project Developers
+num_threads 0.1.7: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright 2021 Jacob Pratt
+    Copyright (c) 2021 Jacob Pratt
+once_cell 1.21.4: MIT OR Apache-2.0; used under MIT
+onig 6.5.3: MIT
+onig_sys 69.9.3: MIT
+ordered-float 5.3.0: MIT
+    Copyright (c) 2015 Jonathan Reem
+outref 0.5.2: MIT
+    Copyright (c) 2022 Nugine
+palette 0.7.6: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 Erik Hedvall
+parking_lot 0.12.5: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 The Rust Project Developers
+parking_lot_core 0.9.12: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 The Rust Project Developers
+pin-project-lite 0.2.17: Apache-2.0 OR MIT; used under MIT
+plist 1.9.0: MIT
+    Copyright (c) 2015 Edward Barnard
+png 0.18.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 nwin
+powerfmt 0.2.0: MIT OR Apache-2.0; used under MIT
+    Copyright 2023 Jacob Pratt et al.
+    Copyright (c) 2023 Jacob Pratt et al.
+ppv-lite86 0.2.21: MIT OR Apache-2.0; used under MIT
+    Copyright 2019 The CryptoCorrosion Contributors
+    Copyright (c) 2019 The CryptoCorrosion Contributors
+pretty_assertions 1.4.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016 rust-derive-builder contributors
+pulldown-cmark 0.13.3: MIT
+    Copyright 2015 Google Inc. All rights reserved.
+pulldown-cmark-escape 0.11.0: MIT
+    Copyright 2015 Google Inc. All rights reserved.
+pxfm 0.1.29: BSD-3-Clause OR Apache-2.0; used under Apache-2.0
+    Copyright 2024 Radzivon Bartoshyk
+quantette 0.5.1: MIT OR Apache-2.0; used under MIT
+quick-error 2.0.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 The quick-error Developers
+quick-xml 0.39.4: MIT
+    Copyright (c) 2016 Johann Tuffe
+radium 0.7.0: MIT
+    Copyright (c) 2019 kneecaw (Nika Layzell)
+rand 0.8.6: MIT OR Apache-2.0; used under MIT
+    Copyright 2018 Developers of the Rand project
+    Copyright (c) 2014 The Rust Project Developers
+rand 0.9.4: MIT OR Apache-2.0; used under MIT
+    Copyright 2018 Developers of the Rand project
+    Copyright (c) 2014 The Rust Project Developers
+rand_chacha 0.3.1: MIT OR Apache-2.0; used under MIT
+    Copyright 2018 Developers of the Rand project
+    Copyright (c) 2014 The Rust Project Developers
+rand_core 0.6.4: MIT OR Apache-2.0; used under MIT
+    Copyright 2018 Developers of the Rand project
+    Copyright (c) 2014 The Rust Project Developers
+rand_core 0.9.5: MIT OR Apache-2.0; used under MIT
+    Copyright 2018 Developers of the Rand project
+    Copyright (c) 2014 The Rust Project Developers
+rand_xoshiro 0.7.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2018 Developers of the Rand project
+ratatui 0.30.2: MIT
+    Copyright (c) 2016-2022 Florian Dehau
+    Copyright (c) 2023-2025 The Ratatui Developers
+ratatui-3d 0.1.0: MIT
+ratatui-core 0.1.2: MIT
+    Copyright (c) 2016-2022 Florian Dehau
+    Copyright (c) 2023-2025 The Ratatui Developers
+ratatui-crossterm 0.1.2: MIT
+    Copyright (c) 2016-2022 Florian Dehau
+    Copyright (c) 2023-2025 The Ratatui Developers
+ratatui-image 11.1.0: MIT
+    Copyright (c) 2022 Atanas Yankov (code and inspiration taken from https://github.com/atanunq/viuer)
+    Copyright (c) 2022 wooster0 (inspiration taken from https://github.com/wooster0/hanbun)
+    Copyright (c) 2023 Benjamin Große
+ratatui-macros 0.7.2: MIT
+    Copyright (c) 2024 Dheepak Krishnamurthy
+    Copyright (c) 2025 The Ratatui Developers
+ratatui-textarea 0.9.2: MIT
+    Copyright (c) 2022 rhysd
+    Copyright (c) The Ratatui Developers
+ratatui-widgets 0.3.2: MIT
+    Copyright (c) 2016-2022 Florian Dehau
+    Copyright (c) 2023-2025 The Ratatui Developers
+rayon 1.12.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2010 The Rust Project Developers
+rayon-core 1.13.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2010 The Rust Project Developers
+ref-cast 1.0.25: MIT OR Apache-2.0; used under MIT
+regex-syntax 0.8.10: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014 The Rust Project Developers
+render3d 0.1.0: MIT
+rstest 0.26.1: MIT OR Apache-2.0; used under MIT
+    Copyright 2018-19 Michele d'Amico
+rustix 0.38.44: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+rustix 1.1.4: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+rustler 0.38.0: MIT OR Apache-2.0; used under MIT
+ryu 1.0.23: Apache-2.0 OR BSL-1.0; used under Apache-2.0
+safe_arch 0.9.3: Zlib OR Apache-2.0 OR MIT; used under MIT
+    Copyright (c) 2023 Daniel "Lokathor" Gee.
+    Copyright (c) 2020 Daniel "Lokathor" Gee.
+same-file 1.0.6: Unlicense OR MIT; used under MIT
+    Copyright (c) 2017 Andrew Gallant
+scopeguard 1.2.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2016-2019 Ulrik Sverdrup "bluss" and scopeguard developers
+self_cell 1.2.2: Apache-2.0 OR GPL-2.0-only; used under Apache-2.0
+serde 1.0.228: MIT OR Apache-2.0; used under MIT
+serde_core 1.0.228: MIT OR Apache-2.0; used under MIT
+serde_json 1.0.149: MIT OR Apache-2.0; used under MIT
+signal-hook 0.3.18: Apache-2.0 OR MIT; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright (c) 2017 tokio-jsonrpc developers
+signal-hook-mio 0.2.5: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright (c) 2017 tokio-jsonrpc developers
+signal-hook-registry 1.4.8: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+    Copyright (c) 2017 tokio-jsonrpc developers
+simd-adler32 0.3.9: MIT
+    Copyright (c) [2021] [Marvin Countryman]
+simdutf8 0.1.5: MIT OR Apache-2.0; used under MIT
+slab 0.4.12: MIT
+    Copyright (c) 2019 Carl Lerche
+smallvec 1.15.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2018 The Servo Project Developers
+static_assertions 1.1.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2017 Nikolai Vazquez
+strum 0.28.0: MIT
+    Copyright (c) 2019 Peter Glotfelty
+syntect 5.3.0: MIT
+    Copyright (c) 2017 Tristan Hume, Keith Hall, Google Inc and other contributors
+tap 1.0.1: MIT
+    Copyright (c) 2017 Elliot Linder <darfink@gmail.com>
+thiserror 1.0.69: MIT OR Apache-2.0; used under MIT
+thiserror 2.0.18: MIT OR Apache-2.0; used under MIT
+throbber-widgets-tui 0.11.1: Zlib
+    Copyright (c) 2022 arkbig
+time 0.3.55: MIT OR Apache-2.0; used under MIT
+time-core 0.1.9: MIT OR Apache-2.0; used under MIT
+tracing 0.1.44: MIT
+    Copyright (c) 2019 Tokio Contributors
+tracing-core 0.1.36: MIT
+    Copyright (c) 2019 Tokio Contributors
+tui-big-text 0.8.9: MIT OR Apache-2.0; used under MIT
+tui-markdown 0.3.9: MIT OR Apache-2.0; used under MIT
+unicase 2.9.0: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2014-2026 Sean McArthur
+unicode-segmentation 1.13.2: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 The Rust Project Developers
+unicode-truncate 2.0.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2019 Aetf <aetf at unlimitedcodeworks dot xyz>
+unicode-width 0.2.2: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 The Rust Project Developers
+vsimd 0.8.0: MIT
+vte 0.15.0: Apache-2.0 OR MIT; used under MIT
+    Copyright (c) 2016 Joe Wilm
+walkdir 2.5.0: Unlicense OR MIT; used under MIT
+    Copyright (c) 2015 Andrew Gallant
+weezl 0.1.12: MIT OR Apache-2.0; used under MIT
+    Copyright (c) HeroicKatora 2020
+wide 0.8.3: Zlib OR Apache-2.0 OR MIT; used under MIT
+    Copyright (c) 2020 Daniel "Lokathor" Gee.
+winapi 0.3.9: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+    Copyright (c) 2015-2018 The winapi-rs Developers
+winapi-util 0.1.11: Unlicense OR MIT; used under MIT  (x86_64-pc-windows-msvc)
+    Copyright (c) 2017 Andrew Gallant
+windows 0.58.0: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+windows-core 0.58.0: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+windows-link 0.2.1: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+windows-result 0.2.0: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+windows-strings 0.1.0: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+windows-sys 0.61.2: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+windows-targets 0.52.6: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+windows_x86_64_msvc 0.52.6: MIT OR Apache-2.0; used under MIT  (x86_64-pc-windows-msvc)
+wyz 0.5.1: MIT
+    Copyright (c) 2018 myrrlyn (Alexander Payne)
+yaml-rust 0.4.5: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2015 Chen Yuheng
+yansi 1.0.1: MIT OR Apache-2.0; used under MIT
+    Copyright 2017 Sergio Benitez
+    Copyright (c) 2017 Sergio Benitez
+zerocopy 0.8.48: BSD-2-Clause OR Apache-2.0 OR MIT; used under MIT
+    Copyright 2023 The Fuchsia Authors
+    Copyright 2019 The Fuchsia Authors.
+zmij 1.0.21: MIT
+zune-core 0.5.1: MIT OR Apache-2.0 OR Zlib; used under MIT
+zune-jpeg 0.5.15: MIT OR Apache-2.0 OR Zlib; used under MIT
+
+Files these crates carry
+------------------------
+
+--- ex_ratatui 0.16.0: syntaxes/LICENSE ---
+
+MIT License
+
+Copyright (c) 2017 Po Chen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--- onig_sys 69.9.3: oniguruma/COPYING ---
+
+Oniguruma LICENSE
+-----------------
+
+Copyright (c) 2002-2021  K.Kosako  <kkosako0@gmail.com>
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.

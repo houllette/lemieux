@@ -1,0 +1,8 @@
+# cli component dependencies (.deps format: name<TAB>constraint)
+
+ledgercore	^3.6.10
+cipherbox	^3.5.13
+colorize	^3.11.15
+tomlet	^2.9.4
+tinyjson	^4.11.20
+clockwork	^0.10.13

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "research-v5-balanced-followup",
+    "exposure": "development holdout; author selected sources and prompts before model runs",
+    "frozen_at": "2026-09-28",
+    "corpus_sha256": "a6b44dcd40c5b60e09fee8ede1b7495ae4150af90ebdbea28627cf8295541a80",
+    "predeclared_task_ids": [
+      "go-methods-allocator",
+      "rust-198-patch",
+      "node-stream-removal",
+      "k8s-workload-api"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "go-methods-allocator",
+      "prompt": "A Go service team is planning a 1.27 migration and wants a short compatibility brief that separates language features from runtime changes. Explain what newly works for methods with type parameters and whether an interface method may itself declare type parameters. Also explain the small-allocation optimization's size boundary and the build-time opt-out. Use current Go project sources for each part.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "rust-198-patch",
+      "prompt": "For a Rust 1.98 upgrade review, describe one new feature of the original 1.98.0 release and evaluate the claim that staying on 1.98.0 is harmless because the later 1.98.1 patch only corrected diagnostics. Identify the specific compiler output defect and its possible runtime consequence. Use both official release announcements, and keep the difference between feature and patch clear.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "node-stream-removal",
+      "prompt": "A package loads node:_stream_wrap directly and its maintainer assumes the internal stream module still works under Node 26 because it was only documented as deprecated. Compare the Node 25 deprecation to the Node 26 removal. Name the old private module and the public node:stream replacement, and state the exact change from warning to removal. Use both official release announcements.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    },
+    {
+      "id": "k8s-workload-api",
+      "prompt": "A controller vendor wrote to the Kubernetes 1.35 alpha Workload API and wants a precise 1.36 migration note. Compare the old and new scheduling.k8s.io API versions, identify which object is now the static template and which holds runtime state, and state whether the 1.35 API remains the version to enable. Use the two Kubernetes project articles, not a generic release summary.",
+      "cwd": "fixtures/workspace",
+      "timeout_ms": 180000,
+      "grader": {
+        "command": [
+          "elixir",
+          "v5_check.exs",
+          "{task_id}",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      }
+    }
+  ]
+}

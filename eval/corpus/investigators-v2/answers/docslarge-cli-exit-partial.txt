@@ -1,0 +1,1 @@
+sync.run maps the partial outcome through exit_codes.status_for, which loads the table named by exit_table in config/cli.conf: strict. src/cli/tables/strict.py sets partial = 4. The docs' 2 is the default table, lenient gives 0, and cli.conf.example selects default.

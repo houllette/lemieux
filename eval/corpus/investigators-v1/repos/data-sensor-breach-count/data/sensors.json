@@ -1,0 +1,27 @@
+[
+  {
+    "id": "s-01",
+    "location": "loading-dock",
+    "threshold_c": 8.0
+  },
+  {
+    "id": "s-02",
+    "location": "cold-room-1",
+    "threshold_c": 4.0
+  },
+  {
+    "id": "s-03",
+    "location": "cold-room-2",
+    "threshold_c": 4.0
+  },
+  {
+    "id": "s-04",
+    "location": "packing-hall",
+    "threshold_c": 18.0
+  },
+  {
+    "id": "s-05",
+    "location": "server-closet",
+    "threshold_c": 27.0
+  }
+]

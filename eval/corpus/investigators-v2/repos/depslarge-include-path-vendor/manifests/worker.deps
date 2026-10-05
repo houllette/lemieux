@@ -1,0 +1,8 @@
+# worker component dependencies (.deps format: name<TAB>constraint)
+
+httpkit	^0.5.19
+tabulate2	^3.7.19
+retryable	^2.4.3
+argsplit	^3.9.10
+metricsd	^0.8.18
+blobstore	^4.11.5

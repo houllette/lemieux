@@ -1,0 +1,16 @@
+service: exporter
+owner: team-hollow
+hosts:
+  - h-e002
+  - h-ec88
+  - h-525a
+  - h-3c6d
+  - h-48a3
+retired_hosts:
+  - h-ad2d
+  - h-f31e
+  - h-c823
+ports:
+  gravel: 3488
+  thistle: 5224
+  falcon: 6310

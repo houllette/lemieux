@@ -1,0 +1,9 @@
+# toolchain pins; build/gen-versions.sh renders these into build/versions.env
+fmtcheck = 0.9.1
+lintkit = 0.0.5
+bundler = 2.10.7
+sigtool = 1.5.13
+compressor = 3.12.5
+minifier = 0.4.19
+schemagen = 2.6.6
+docgen = 3.3.1

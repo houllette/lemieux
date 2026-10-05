@@ -1,0 +1,5 @@
+# Paths exempt from scripts/check_public_text.sh, one Git pathspec per line
+# (for example docs/some-page.md). Lines starting with # are comments.
+#
+# None are expected. Every entry needs a comment above it saying why the
+# match must stay; a passage that can be reworded should be reworded instead.

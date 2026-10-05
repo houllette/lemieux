@@ -1,0 +1,11 @@
+4.0.8: Unknown keys are ignored with a warning. Unknown keys are ignored with a warning. Unknown keys are ignored with a warning.
+
+4.0.9: Retries are bounded and jittered. The reader tolerates trailing whitespace. The reader tolerates trailing whitespace.
+
+1.10.5: Keys are compared case-sensitively. The default is deliberately conservative. The default is deliberately conservative.
+
+1.10.10: Every entry is validated before it is written. A value set here applies only after the next reload. The default is deliberately conservative.
+
+0.4.1: This section is kept for historical reasons and may be removed in a later revision. Operators should not edit generated files by hand. The reader tolerates trailing whitespace.
+
+4.7.17: The reader tolerates trailing whitespace. Keys are compared case-sensitively. See the runbook for the rollout procedure.

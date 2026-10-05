@@ -1,0 +1,1 @@
+SKU-4471 (18 in EU, 9 in US) is in both inventory files but not in catalog.json and is not discontinued; SKU-6001 is also missing from the catalog but is listed in discontinued.json, so it is expected.

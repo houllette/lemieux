@@ -1,0 +1,8 @@
+# worker component dependencies (.deps format: name<TAB>constraint)
+
+tinyjson	^0.3.7
+yamlish	^2.11.8
+tabulate2	^4.10.15
+blobstore	^2.4.16
+retryable	^4.10.0
+queuelet	^4.2.16

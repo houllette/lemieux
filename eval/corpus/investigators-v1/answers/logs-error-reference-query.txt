@@ -1,0 +1,1 @@
+ERR-51A9 is request req-8c1f, served by web-2; that request used database session sess-4471, and db.log shows the query orders.summary_by_month timing out after 30000ms for that session.

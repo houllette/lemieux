@@ -1,0 +1,16 @@
+service: gateway
+owner: team-atlas
+hosts:
+  - h-3c6d
+  - h-f494
+  - h-976a
+  - h-5f30
+  - h-201a
+retired_hosts:
+  - h-2135
+  - h-364e
+  - h-5c23
+ports:
+  tundra: 3884
+  heron: 6135
+  tarn: 6786

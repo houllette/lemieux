@@ -1,0 +1,8 @@
+# ledger component dependencies (.deps format: name<TAB>constraint)
+
+ledgercore	^1.2.10
+metricsd	^0.1.5
+clockwork	^4.9.7
+pemparse	^2.6.0
+csvfast	^0.10.1
+argsplit	^2.6.7

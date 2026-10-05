@@ -1,0 +1,21 @@
+Lemieux
+Copyright 2026 Holden Oullette and contributors
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+Dependencies retain their own licenses and notices.
+
+Session names
+lmx and the Lemieux library name each session after a hockey player. The
+name lists in lib/lemieux/id/data/nhl_players.tsv and
+lib/lemieux/id/data/womens_players.tsv are derived from public NHL and PWHL
+roster listings (snapshot of 2026-09-25) and from Hockey Hall of Fame player
+pages for five CWHL players. Only lowercase name slugs are distributed: no
+names as published, no league player ids, no source URLs. Lemieux is not
+affiliated with or endorsed by the NHL, the PWHL or the Hockey Hall of Fame.
+
+Example code
+The example extension in examples/extensions/computer_use, which is in the
+source repository only (not in the Hex package or the lmx binary), adapts
+portions of jev-ultrafast (https://github.com/browser-use/jev-ultrafast),
+MIT License, Copyright (c) 2026 Browser Use. Its NOTICE file there carries
+that license.

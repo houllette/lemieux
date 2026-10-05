@@ -1,0 +1,4 @@
+2026-03-05 07:30:50 INFO web boot v5.1.0
+2026-03-05 07:42:01 ERROR web upstream 500 from api /price
+2026-03-05 07:42:03 ERROR web upstream 500 from api /price
+2026-03-05 09:15:27 WARN web asset cache stale

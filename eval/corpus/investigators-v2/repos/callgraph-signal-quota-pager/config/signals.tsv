@@ -1,0 +1,5 @@
+# signal	notifier key
+quota.exceeded	quota-critical
+quota.warning	quota-soft
+backup.failed	ops
+export.finished	digest

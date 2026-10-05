@@ -1,0 +1,8 @@
+# admin component dependencies (.deps format: name<TAB>constraint)
+
+tracekit	^0.5.13
+hashfold	^2.6.15
+cipherbox	^3.11.14
+csvfast	^0.11.2
+blobstore	^3.8.20
+yamlish	^3.3.7

@@ -1,0 +1,8 @@
+# cli component dependencies (.deps format: name<TAB>constraint)
+
+tomlet	^0.0.16
+blobstore	^2.5.2
+colorize	^1.6.19
+hashfold	^0.9.18
+argsplit	^0.2.20
+cipherbox	^0.3.20

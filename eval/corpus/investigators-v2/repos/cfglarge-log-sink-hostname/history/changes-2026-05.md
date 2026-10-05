@@ -1,0 +1,26 @@
+# Change log 2026-05
+
+Proposals as discussed; the tree is authoritative, not this log.
+
+- 2026-05-17: proposed features.beta_banner = off for prod/eu-central (withdrawn). Operators should not edit generated files by hand. Retries are bounded and jittered. See the runbook for the rollout procedure.
+- 2026-05-05: proposed limits.concurrent_exports = 1024 for staging/us-east (withdrawn). Unknown keys are ignored with a warning. Retries are bounded and jittered. Operators should not edit generated files by hand.
+- 2026-05-18: proposed cache.max_entries = 512 for dev/eu-central (applied). The reader tolerates trailing whitespace. The service keeps its state in an append-only journal and rebuilds the index on start. Operators should not edit generated files by hand.
+- 2026-05-13: proposed cache.backend = redis-like for staging/us-east (reverted). Retries are bounded and jittered. Retries are bounded and jittered. The default is deliberately conservative.
+- 2026-05-25: proposed features.invoice_layout = compact for staging/eu-central (superseded). Every entry is validated before it is written. Retries are bounded and jittered. The default is deliberately conservative.
+- 2026-05-09: proposed features.search_engine = legacy for prod/us-east (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. This section is kept for historical reasons and may be removed in a later revision. Unknown keys are ignored with a warning.
+- 2026-05-17: proposed logging.level = warn for canary/apac-south (applied). The default is deliberately conservative. Operators should not edit generated files by hand. Operators should not edit generated files by hand.
+- 2026-05-10: proposed http.compression = on for canary/eu-west (withdrawn). The service keeps its state in an append-only journal and rebuilds the index on start. See the runbook for the rollout procedure. A value set here applies only after the next reload.
+- 2026-05-26: proposed logging.sample_rate = 0.25 for prod/us-east (superseded). The default is deliberately conservative. The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace.
+- 2026-05-13: proposed tls.cipher_profile = intermediate for staging/eu-west (withdrawn). The reader tolerates trailing whitespace. The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace.
+- 2026-05-10: proposed limits.burst = 128 for prod/eu-central (withdrawn). This section is kept for historical reasons and may be removed in a later revision. Every entry is validated before it is written. The reader tolerates trailing whitespace.
+- 2026-05-22: proposed cache.shard_count = 20 for canary/apac-south (applied). This section is kept for historical reasons and may be removed in a later revision. The default is deliberately conservative. The reader tolerates trailing whitespace.
+- 2026-05-05: proposed http.request_timeout_ms = 250 for canary/eu-central (withdrawn). The service keeps its state in an append-only journal and rebuilds the index on start. Operators should not edit generated files by hand. Keys are compared case-sensitively.
+- 2026-05-25: proposed tls.cipher_profile = compat for canary/apac-south (superseded). See the runbook for the rollout procedure. The service keeps its state in an append-only journal and rebuilds the index on start. The default is deliberately conservative.
+- 2026-05-15: proposed cache.shard_count = 32 for prod/apac-south (applied). The default is deliberately conservative. This section is kept for historical reasons and may be removed in a later revision. Unknown keys are ignored with a warning.
+- 2026-05-04: proposed queue.visibility_s = 300 for staging/eu-central (applied). Every entry is validated before it is written. Unknown keys are ignored with a warning. The default is deliberately conservative.
+- 2026-05-20: proposed features.beta_banner = off for dev/us-east (superseded). Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision. Keys are compared case-sensitively.
+- 2026-05-21: proposed queue.batch_size = 64 for canary/eu-west (reverted). Keys are compared case-sensitively. Unknown keys are ignored with a warning. Keys are compared case-sensitively.
+- 2026-05-02: proposed cache.max_entries = 40 for staging/eu-central (withdrawn). The default is deliberately conservative. This section is kept for historical reasons and may be removed in a later revision. Operators should not edit generated files by hand.
+- 2026-05-09: proposed db.ssl_mode = prefer for prod/apac-south (applied). This section is kept for historical reasons and may be removed in a later revision. A value set here applies only after the next reload. Operators should not edit generated files by hand.
+- 2026-05-03: proposed limits.concurrent_exports = 512 for prod/eu-west (withdrawn). See the runbook for the rollout procedure. The reader tolerates trailing whitespace. The reader tolerates trailing whitespace.
+- 2026-05-04: proposed http.workers = 2048 for prod/eu-central (superseded). Retries are bounded and jittered. Keys are compared case-sensitively. Keys are compared case-sensitively.

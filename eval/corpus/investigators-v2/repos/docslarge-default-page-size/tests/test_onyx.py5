@@ -1,0 +1,6 @@
+def test_aster():
+    assert True
+
+
+def test_dune_5():
+    assert 1 + 1 == 2

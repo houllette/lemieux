@@ -1,0 +1,14 @@
+2026-07-09T10:58:02Z GET /api/search req=req-3001 status=200 latency_ms=84
+2026-07-09T10:59:10Z GET /api/search req=req-3002 status=200 latency_ms=91
+2026-07-09T10:59:55Z GET /api/search req=req-3003 status=200 latency_ms=88
+2026-07-09T11:00:12Z GET /api/items req=req-2999 status=200 latency_ms=44
+2026-07-09T11:00:40Z GET /api/search req=req-3004 status=200 latency_ms=95
+2026-07-09T11:02:05Z GET /api/search req=req-3005 status=200 latency_ms=1840
+2026-07-09T11:02:48Z GET /api/search req=req-3006 status=200 latency_ms=2210
+2026-07-09T11:03:30Z GET /api/search req=req-3007 status=200 latency_ms=1975
+2026-07-09T11:04:12Z GET /api/search req=req-3008 status=200 latency_ms=2050
+2026-07-09T11:05:58Z GET /api/search req=req-3009 status=200 latency_ms=1660
+2026-07-09T11:07:21Z GET /api/search req=req-3010 status=200 latency_ms=1420
+2026-07-09T11:08:44Z GET /api/search req=req-3011 status=200 latency_ms=310
+2026-07-09T11:09:59Z GET /api/search req=req-3012 status=200 latency_ms=97
+2026-07-09T11:11:15Z GET /api/search req=req-3013 status=200 latency_ms=90

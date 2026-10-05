@@ -1,0 +1,16 @@
+service: exporter
+owner: team-birch
+hosts:
+  - h-c315
+  - h-a382
+  - h-77a0
+  - h-0b2b
+  - h-be9b
+retired_hosts:
+  - h-6217
+  - h-a420
+  - h-55ce
+ports:
+  willow: 4000
+  linden: 5213
+  fathom: 3613

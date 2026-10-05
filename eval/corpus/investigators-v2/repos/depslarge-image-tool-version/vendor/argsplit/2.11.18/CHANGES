@@ -1,0 +1,11 @@
+0.1.15: The service keeps its state in an append-only journal and rebuilds the index on start. Keys are compared case-sensitively. Operators should not edit generated files by hand.
+
+2.1.16: Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision. Unknown keys are ignored with a warning.
+
+2.7.8: The reader tolerates trailing whitespace. Operators should not edit generated files by hand. The reader tolerates trailing whitespace.
+
+0.7.11: A value set here applies only after the next reload. Operators should not edit generated files by hand. The reader tolerates trailing whitespace.
+
+2.12.14: Keys are compared case-sensitively. The reader tolerates trailing whitespace. This section is kept for historical reasons and may be removed in a later revision.
+
+1.11.2: Every entry is validated before it is written. Keys are compared case-sensitively. See the runbook for the rollout procedure.

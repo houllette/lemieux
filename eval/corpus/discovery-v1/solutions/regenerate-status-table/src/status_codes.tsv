@@ -1,0 +1,10 @@
+200	OK
+201	Created
+204	No Content
+301	Moved Permanently
+400	Bad Request
+404	Not Found
+500	Internal Server Error
+503	Service Unavailable
+422	Unprocessable Content
+429	Too Many Requests

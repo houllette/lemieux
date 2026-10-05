@@ -1,0 +1,16 @@
+service: exporter
+owner: team-plover
+hosts:
+  - h-c64d
+  - h-028f
+  - h-8b02
+  - h-6d37
+  - h-ceff
+retired_hosts:
+  - h-1f5d
+  - h-0651
+  - h-a848
+ports:
+  walnut: 6234
+  hollow: 6454
+  slate: 6472

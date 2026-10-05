@@ -1,0 +1,12 @@
+# workspace.deps: members and workspace-wide replacements
+
+[members]
+api
+worker
+cli
+ledger
+gateway
+exporter
+search
+admin
+

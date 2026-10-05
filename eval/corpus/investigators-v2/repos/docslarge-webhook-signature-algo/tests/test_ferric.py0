@@ -1,0 +1,6 @@
+def test_birch():
+    assert True
+
+
+def test_spruce_0():
+    assert 1 + 1 == 2

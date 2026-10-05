@@ -1,0 +1,1125 @@
+{
+  "version": 1,
+  "metadata": {
+    "suite": "lemieux-investigators-v1",
+    "description": "Read-heavy, report-only questions whose answers span several files: config precedence, dependency versions, call graphs, log correlation, docs-versus-code contracts and CSV/JSON data. Built for the read-only investigator (delegate) evaluation.",
+    "tools": [
+      "read",
+      "bash"
+    ],
+    "clusters": [
+      "call-graph",
+      "config-precedence",
+      "contract-docs-code",
+      "data-files",
+      "dependency-versions",
+      "log-correlation"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "config-effective-log-level",
+      "prompt": "What log level does the production deployment actually run with once every configuration source under config/ and deploy/ is combined, and which file sets that value? Report back without changing any files.",
+      "cwd": "repos/config-effective-log-level",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-precedence",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "config",
+          "yaml",
+          "precedence"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 9,
+        "notes": "Wrong layers give info, debug, error or trace; only the local layer with the env override disabled gives warn.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "config-profile-inherit-chain",
+      "prompt": "For the EU deployment described under deploy/, what database pool_size is in effect once the profile chain is resolved, and which file supplies that number? Report back without changing any files.",
+      "cwd": "repos/config-profile-inherit-chain",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-precedence",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "config",
+          "toml",
+          "precedence"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 9,
+        "notes": "Stopping at web-eu.toml finds no pool_size; web.toml gives 20, defaults 5, worker 8. Only following the inherits chain gives 32 from web-hot.toml.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "config-locked-flag",
+      "prompt": "Which checkout_variant does tenant acme actually get once the flag files under flags/ are resolved, and which file determines that value? Report back without changing any files.",
+      "cwd": "repos/config-locked-flag",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-precedence",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "config",
+          "json",
+          "precedence"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 8,
+        "notes": "tenant-acme.json alone gives beta and region-eu.json gives express; only the locked rule in README plus defaults.json gives classic.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "config-ini-include-order",
+      "prompt": "What cache ttl_seconds does the application end up with after app.ini and everything it includes are applied, and which file sets that value? Report back without changing any files.",
+      "cwd": "repos/config-ini-include-order",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-precedence",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "config",
+          "ini",
+          "precedence"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 8,
+        "notes": "app.ini alone gives 120, the disabled file 1800, the earlier drop-ins 60 or 300; only the include order rule gives 900.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "config-port-precedence-script",
+      "prompt": "Which port does the service listen on when systemd starts it through deploy/app.service, and which file supplies that value? Report back without changing any files.",
+      "cwd": "repos/config-port-precedence-script",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "config-precedence",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "config",
+          "shell",
+          "precedence"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 6,
+        "notes": "service.conf gives 8080, local.conf 8081; only reading the script's precedence plus the unit and its env file gives 9090.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "deps-nested-lock-version",
+      "prompt": "After npm ci, which exact left-pad version does the code in packages/api load, and which version does packages/web load instead? Report back without changing any files.",
+      "cwd": "repos/deps-nested-lock-version",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "dependency-versions",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "deps",
+          "npm",
+          "lockfile"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 7,
+        "notes": "Reading only a package.json gives a range, not a version; only the lockfile's nested entry plus the two ranges gives 1.2.9 for api and 1.3.2 for web.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "deps-mix-lock-drift",
+      "prompt": "One dependency in mix.lock is locked at a version that does not satisfy the requirement declared for it in any mix.exs of this umbrella. Which package is it, and which locked version disagrees? Report back without changing any files.",
+      "cwd": "repos/deps-mix-lock-drift",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "dependency-versions",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "deps",
+          "elixir",
+          "lockfile"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 6,
+        "notes": "The lock alone shows nothing wrong (plug and bandit accept telemetry 0.4); only apps/core/mix.exs's ~> 1.2 requirement makes 0.4.3 the drifted entry.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "deps-pip-constraint-conflict",
+      "prompt": "pip install -r requirements.txt fails to resolve in this project. Which package has incompatible version requirements, and which two files disagree about it? Report back without changing any files.",
+      "cwd": "repos/deps-pip-constraint-conflict",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "dependency-versions",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "deps",
+          "python",
+          "constraints"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 7,
+        "notes": "requests and click are consistent everywhere; dev.txt is a decoy that is not pulled in. Only constraints.txt against prod.txt is unsatisfiable.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "deps-image-pnpm-version",
+      "prompt": "Which pnpm version ends up installed in the production container image, and which file is the source of that number? Report back without changing any files.",
+      "cwd": "repos/deps-image-pnpm-version",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "dependency-versions",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "deps",
+          "docker",
+          "build"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 6,
+        "notes": "Dockerfile alone gives 8.10.0, compose and CI give 8.15.4; only README plus build.sh plus package.json gives 9.1.0.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "deps-go-workspace-replace",
+      "prompt": "Which copy of github.com/acme/ratelimit is compiled into the binaries built from this checkout, and what version string does that copy carry? Report back without changing any files.",
+      "cwd": "repos/deps-go-workspace-replace",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "dependency-versions",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "deps",
+          "go",
+          "workspace"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 11,
+        "notes": "go.mod alone points at vendor-local (1.5.0-rc2) and go.sum at v1.4.0; only BUILD.md's workspace rule plus go.work gives forks/ratelimit-fast 1.4.3-fast.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-shell-sync-download",
+      "prompt": "When someone runs bin/cli sync, which shell function ultimately performs the HTTP download, and which file defines that function? Report back without changing any files.",
+      "cwd": "repos/callgraph-shell-sync-download",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "callgraph",
+          "shell"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 7,
+        "notes": "net.sh's http_get and transport.sh's download_with_wget are decoys; only following the chain from bin/cli through four files reaches download_with_curl.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-python-error-renderer",
+      "prompt": "When POST /orders receives a payload that fails validation, which function actually renders the HTTP error response, and which file defines it? Report back without changing any files.",
+      "cwd": "repos/callgraph-python-error-renderer",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "callgraph",
+          "python"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 8,
+        "notes": "errors.py alone suggests render_validation_error; only orders.py's re-raise plus the handler registration gives render_order_error.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-js-journal-writer",
+      "prompt": "When an order.paid event is processed, which function performs the actual write of the journal line to disk, and which file defines it? Report back without changing any files.",
+      "cwd": "repos/callgraph-js-journal-writer",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "callgraph",
+          "javascript"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 9,
+        "notes": "legacyJournal.js's writeJournal is the decoy on the cancellation path; only the chain index -> handlers -> payments -> settle -> journal reaches appendEntry.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-elixir-unauthorized-response",
+      "prompt": "A request to GET /api/orders carries an expired bearer token. Which function builds the 401 response it receives, and which file defines that function? Report back without changing any files.",
+      "cwd": "repos/callgraph-elixir-unauthorized-response",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "callgraph",
+          "elixir"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 8,
+        "notes": "errors.ex has a same-named unauthorized used by the admin guard; only the router, verify and token files together point at responses.ex.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "callgraph-make-deploy-uploader",
+      "prompt": "When make deploy runs with the checked-in deployment settings, which shell function uploads the built artifact, and which file defines it? Report back without changing any files.",
+      "cwd": "repos/callgraph-make-deploy-uploader",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "call-graph",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "callgraph",
+          "shell",
+          "make"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 9,
+        "notes": "target.example.env points at s3; only Makefile -> deploy.sh -> registry.sh -> target.env -> storage.sh gives upload_gcs.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logs-error-reference-query",
+      "prompt": "A customer reported error reference ERR-51A9. Which database query timed out behind that error, and on which web host did the request run? Report back without changing any files.",
+      "cwd": "repos/logs-error-reference-query",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-correlation",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "logs",
+          "correlation"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 5,
+        "notes": "The other timeout (reports.export_rows on web-1, ERR-7B44) is the decoy; only gateway -> web-2 -> db chaining on the ids gives orders.summary_by_month.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logs-deploy-regression-version",
+      "prompt": "Users started seeing NullPointerException in PriceCalculator. Which api version introduced it, judging by when the error first appears in the logs relative to the deploy history? Report back without changing any files.",
+      "cwd": "repos/logs-deploy-regression-version",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-correlation",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "logs",
+          "correlation",
+          "deploys"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 5,
+        "notes": "The web v5.1.0 deploy just before the first error and the v2.8.2 deploy shortly after are decoys; only deploys.log plus both api day logs gives v2.8.1.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logs-nightly-export-root-cause",
+      "prompt": "The nightly export failed on 2026-05-11. Which host ran the failing job, and what is the root cause according to the logs? Report back without changing any files.",
+      "cwd": "repos/logs-nightly-export-root-cause",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-correlation",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "logs",
+          "correlation",
+          "cron"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 5,
+        "notes": "export.log alone says token expired; only cron.log for the host plus auth.log (and ntp.log) gives batch-03 and the clock skew root cause.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logs-lockout-device",
+      "prompt": "User mkline was locked out of SSH this morning. Which device (hostname) generated the failed login attempts that triggered the lockout? Report back without changing any files.",
+      "cwd": "repos/logs-lockout-device",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-correlation",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "logs",
+          "correlation",
+          "auth"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 2,
+        "fixture_files": 4,
+        "notes": "kiosk-1 held the same address earlier and mkline-laptop appears later; only the lease active at 09:01 gives ws-ops-12.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "logs-search-latency-cache-node",
+      "prompt": "Latency on /api/search spiked between 11:00 and 11:10 on 2026-07-09. Which cache node's event explains the spike, and what happened to that node? Report back without changing any files.",
+      "cwd": "repos/logs-search-latency-cache-node",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "log-correlation",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "logs",
+          "correlation",
+          "latency"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 4,
+        "notes": "cache-c's maintenance at 09:30 and cache-a's compaction are decoys; only access -> app -> cache correlation on the window gives cache-b's OOM restart.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "contract-duplicate-email-code",
+      "prompt": "According to the implementation rather than the documentation, what error code string does the API return in the JSON body when POST /users is given an already-registered email? Report back without changing any files.",
+      "cwd": "repos/contract-duplicate-email-code",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "contract-docs-code",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "contract",
+          "python",
+          "docs-vs-code"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 7,
+        "notes": "docs/API.md and the test suggest user_exists / 409; only users.py plus errors.py gives email_taken.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "contract-rate-limit-header",
+      "prompt": "When a client is rate limited, which response header does the running middleware actually set, and in what unit is that header's value expressed? Report back without changing any files.",
+      "cwd": "repos/contract-rate-limit-header",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "contract-docs-code",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "contract",
+          "python",
+          "docs-vs-code"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 3,
+        "fixture_files": 7,
+        "notes": "docs/API.md says Retry-After in seconds; only ratelimit.py plus headers.json gives X-RateLimit-Reset in milliseconds.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "contract-webhook-signature",
+      "prompt": "Which digest algorithm and which HTTP header does the webhook delivery code actually use for the signature, as opposed to what the documentation claims? Report back without changing any files.",
+      "cwd": "repos/contract-webhook-signature",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "contract-docs-code",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "contract",
+          "shell",
+          "docs-vs-code"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 7,
+        "notes": "docs say sha256/X-Signature; sign.sh alone shows a variable, not sha1; only config.sh plus webhooks.ini plus headers.sh plus deliver.sh gives both facts.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "contract-default-page-size",
+      "prompt": "How many items does GET /items actually return when the client sends no page_size parameter, with the configuration as checked in? Report back without changing any files.",
+      "cwd": "repos/contract-default-page-size",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "contract-docs-code",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "contract",
+          "python",
+          "docs-vs-code"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 8,
+        "notes": "docs give 50, limits.toml 25 (or its max 100); only settings.py plus constants.py gives 15.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "contract-cli-exit-status",
+      "prompt": "What exit status does bin/sync actually return when only some records fail to sync, with the files exactly as checked in? Report back without changing any files.",
+      "cwd": "repos/contract-cli-exit-status",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "contract-docs-code",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "contract",
+          "shell",
+          "docs-vs-code"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 7,
+        "notes": "docs say 3 and codes.sh says 64; only exit.sh's override order plus codes.local.sh gives 75.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "data-top-emea-customer",
+      "prompt": "Which customer in the EMEA region has the highest total paid revenue once the rules in data/README.md are applied? Give the customer name. Report back without changing any files.",
+      "cwd": "repos/data-top-emea-customer",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-files",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "json"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 5,
+        "fixture_files": 5,
+        "notes": "Ignoring refunds.csv makes Veldt Agri win; ignoring status makes Kestrel Logistics win; only all five files give Halvorsen Marine.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "data-sku-missing-from-catalog",
+      "prompt": "Which SKU is present in the warehouse inventory files but missing from the product catalog, excluding SKUs that have been formally discontinued? Report back without changing any files.",
+      "cwd": "repos/data-sku-missing-from-catalog",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-files",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "json"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 5,
+        "notes": "Ignoring discontinued.json yields two SKUs (SKU-4471 and SKU-6001); the answer must single out SKU-4471.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "data-order-total-after-discount",
+      "prompt": "What is the total amount due for order O-1042 after the customer's tier discount is applied per data/README.md? Give the amount in the currency units used by prices.csv. Report back without changing any files.",
+      "cwd": "repos/data-order-total-after-discount",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-files",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "json"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 5,
+        "notes": "The list total is 2605.00 and other tiers give 2474.75 (silver) or 2084.00 (platinum); only the gold rate from customers.csv plus discounts.json gives 2292.40.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "data-skip-level-manager",
+      "prompt": "As of 2026-09-01, who is Priya Natarajan's skip-level manager (her manager's manager) once the reporting-line changes in data/ are applied? Report back without changing any files.",
+      "cwd": "repos/data-skip-level-manager",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-files",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "data",
+          "csv"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 2,
+        "fixture_files": 4,
+        "notes": "employees.csv alone gives Daniel Okafor and applying the future transfer gives Ines Fardal; only the two effective transfers give Amara Osei.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    },
+    {
+      "id": "data-sensor-breach-count",
+      "prompt": "Across both days of readings, which sensor location breached its configured threshold the most times, and how many breaches did it have? Follow the units described in data/README.md. Report back without changing any files.",
+      "cwd": "repos/data-sensor-breach-count",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "timeout_ms": 30000
+      },
+      "metadata": {
+        "cluster_id": "data-files",
+        "tags": [
+          "investigators",
+          "read",
+          "report",
+          "data",
+          "csv",
+          "json"
+        ],
+        "required_tools": [
+          "read"
+        ],
+        "forbidden_tools": [
+          "write",
+          "edit"
+        ],
+        "minimum_files": 4,
+        "fixture_files": 4,
+        "notes": "Comparing raw integers to the thresholds makes every reading a breach (a tie); day 1 alone puts cold-room-1 ahead; only both days in tenths give loading-dock 6.",
+        "safety": {
+          "allowed_changed_paths": []
+        }
+      }
+    }
+  ]
+}

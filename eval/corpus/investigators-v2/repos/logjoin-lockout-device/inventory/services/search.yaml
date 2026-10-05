@@ -1,0 +1,16 @@
+service: search
+owner: team-coral
+hosts:
+  - h-ea55
+  - h-da27
+  - h-48a3
+  - h-dff5
+  - h-b654
+retired_hosts:
+  - h-4f1a
+  - h-823f
+  - h-7221
+ports:
+  dune: 3501
+  flint: 7381
+  heron: 5509

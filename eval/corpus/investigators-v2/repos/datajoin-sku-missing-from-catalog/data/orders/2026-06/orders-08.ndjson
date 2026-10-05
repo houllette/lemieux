@@ -1,0 +1,40 @@
+{"order_id": "o-8c93b82", "placed_at": "2026-06-10", "status": "shipped", "lines": [{"sku": "sku-457e7", "qty": 3}]}
+{"order_id": "o-d457100", "placed_at": "2026-06-01", "status": "shipped", "lines": [{"sku": "sku-28c49", "qty": 9}, {"sku": "sku-e3a9e", "qty": 5}]}
+{"order_id": "o-9eae398", "placed_at": "2026-06-06", "status": "cancelled", "lines": [{"sku": "sku-0a132", "qty": 6}]}
+{"order_id": "o-32ca382", "placed_at": "2026-06-24", "status": "pending", "lines": [{"sku": "sku-a6aee", "qty": 9}, {"sku": "sku-cadab", "qty": 3}, {"sku": "sku-4d9cb", "qty": 8}]}
+{"order_id": "o-aa7ac63", "placed_at": "2026-06-13", "status": "shipped", "lines": [{"sku": "sku-117d6", "qty": 4}]}
+{"order_id": "o-9631685", "placed_at": "2026-06-06", "status": "shipped", "lines": [{"sku": "sku-d9662", "qty": 8}, {"sku": "sku-a0207", "qty": 2}]}
+{"order_id": "o-dd4cab1", "placed_at": "2026-06-04", "status": "shipped", "lines": [{"sku": "sku-d5521", "qty": 2}]}
+{"order_id": "o-a830514", "placed_at": "2026-06-01", "status": "cancelled", "lines": [{"sku": "sku-21c42", "qty": 6}, {"sku": "sku-9528c", "qty": 6}, {"sku": "sku-0b7a4", "qty": 9}, {"sku": "sku-c36ba", "qty": 2}]}
+{"order_id": "o-e7c3a68", "placed_at": "2026-06-10", "status": "shipped", "lines": [{"sku": "sku-769cb", "qty": 4}, {"sku": "sku-77e69", "qty": 4}, {"sku": "sku-f117e", "qty": 7}, {"sku": "sku-3dde0", "qty": 8}]}
+{"order_id": "o-867b0d8", "placed_at": "2026-06-24", "status": "shipped", "lines": [{"sku": "sku-ed213", "qty": 2}, {"sku": "sku-0d23f", "qty": 7}]}
+{"order_id": "o-9235589", "placed_at": "2026-06-11", "status": "pending", "lines": [{"sku": "sku-4d9cb", "qty": 4}, {"sku": "sku-e0662", "qty": 8}, {"sku": "sku-e5605", "qty": 2}]}
+{"order_id": "o-2f98edc", "placed_at": "2026-06-21", "status": "shipped", "lines": [{"sku": "sku-24165", "qty": 4}]}
+{"order_id": "o-ca33f90", "placed_at": "2026-06-09", "status": "shipped", "lines": [{"sku": "sku-d3714", "qty": 8}, {"sku": "sku-579ad", "qty": 5}, {"sku": "sku-c52fb", "qty": 3}, {"sku": "sku-bf0e8", "qty": 3}]}
+{"order_id": "o-83e47db", "placed_at": "2026-06-21", "status": "shipped", "lines": [{"sku": "sku-579ad", "qty": 4}]}
+{"order_id": "o-d08e668", "placed_at": "2026-06-22", "status": "shipped", "lines": [{"sku": "sku-3c150", "qty": 6}]}
+{"order_id": "o-7868df7", "placed_at": "2026-06-24", "status": "pending", "lines": [{"sku": "sku-6b657", "qty": 9}, {"sku": "sku-bbec8", "qty": 1}, {"sku": "sku-68020", "qty": 5}, {"sku": "sku-868b6", "qty": 6}]}
+{"order_id": "o-6965410", "placed_at": "2026-06-28", "status": "shipped", "lines": [{"sku": "sku-3c150", "qty": 1}, {"sku": "sku-13d07", "qty": 7}, {"sku": "sku-c9fe3", "qty": 3}]}
+{"order_id": "o-950df22", "placed_at": "2026-06-18", "status": "shipped", "lines": [{"sku": "sku-aaa27", "qty": 3}]}
+{"order_id": "o-0d7ce92", "placed_at": "2026-06-19", "status": "shipped", "lines": [{"sku": "sku-92322", "qty": 3}, {"sku": "sku-39b3d", "qty": 3}]}
+{"order_id": "o-e90daa5", "placed_at": "2026-06-17", "status": "shipped", "lines": [{"sku": "sku-bc93f", "qty": 4}]}
+{"order_id": "o-47a0cb3", "placed_at": "2026-06-02", "status": "shipped", "lines": [{"sku": "sku-0b33b", "qty": 3}, {"sku": "sku-07b83", "qty": 5}, {"sku": "sku-f021a", "qty": 8}, {"sku": "sku-ccb9a", "qty": 3}]}
+{"order_id": "o-4f0c3b7", "placed_at": "2026-06-24", "status": "shipped", "lines": [{"sku": "sku-d03ce", "qty": 6}, {"sku": "sku-7aa64", "qty": 3}, {"sku": "sku-aa6de", "qty": 3}, {"sku": "sku-0514f", "qty": 7}]}
+{"order_id": "o-a6b4029", "placed_at": "2026-06-23", "status": "shipped", "lines": [{"sku": "sku-179d5", "qty": 8}, {"sku": "sku-9b5e9", "qty": 4}]}
+{"order_id": "o-73e72ed", "placed_at": "2026-06-25", "status": "shipped", "lines": [{"sku": "sku-c5085", "qty": 5}, {"sku": "sku-34f8f", "qty": 4}, {"sku": "sku-3837d", "qty": 5}]}
+{"order_id": "o-5e8069c", "placed_at": "2026-06-14", "status": "shipped", "lines": [{"sku": "sku-c6996", "qty": 1}, {"sku": "sku-6e298", "qty": 4}, {"sku": "sku-48c5f", "qty": 6}, {"sku": "sku-5799a", "qty": 2}]}
+{"order_id": "o-2bca6fc", "placed_at": "2026-06-04", "status": "shipped", "lines": [{"sku": "sku-6b657", "qty": 3}, {"sku": "sku-aaa27", "qty": 2}, {"sku": "sku-16d9d", "qty": 8}]}
+{"order_id": "o-8b4340e", "placed_at": "2026-06-15", "status": "pending", "lines": [{"sku": "sku-9a55a", "qty": 9}]}
+{"order_id": "o-e6c68ab", "placed_at": "2026-06-10", "status": "shipped", "lines": [{"sku": "sku-9ea78", "qty": 7}, {"sku": "sku-2d5cd", "qty": 8}]}
+{"order_id": "o-4f607dd", "placed_at": "2026-06-25", "status": "shipped", "lines": [{"sku": "sku-59026", "qty": 6}]}
+{"order_id": "o-722635d", "placed_at": "2026-06-20", "status": "shipped", "lines": [{"sku": "sku-d4fda", "qty": 2}]}
+{"order_id": "o-5d42b5b", "placed_at": "2026-06-20", "status": "shipped", "lines": [{"sku": "sku-65d2f", "qty": 2}]}
+{"order_id": "o-89eb3b8", "placed_at": "2026-06-08", "status": "shipped", "lines": [{"sku": "sku-6ba16", "qty": 2}, {"sku": "sku-1a712", "qty": 4}, {"sku": "sku-08338", "qty": 2}]}
+{"order_id": "o-1dce319", "placed_at": "2026-06-24", "status": "cancelled", "lines": [{"sku": "sku-c9fe3", "qty": 9}, {"sku": "sku-9a55a", "qty": 6}]}
+{"order_id": "o-e12e8bb", "placed_at": "2026-06-18", "status": "shipped", "lines": [{"sku": "sku-b966d", "qty": 4}, {"sku": "sku-75180", "qty": 5}, {"sku": "sku-e896c", "qty": 3}, {"sku": "sku-aaa27", "qty": 6}]}
+{"order_id": "o-a2cf208", "placed_at": "2026-06-01", "status": "shipped", "lines": [{"sku": "sku-e0662", "qty": 4}, {"sku": "sku-6fa17", "qty": 1}, {"sku": "sku-b2acd", "qty": 3}]}
+{"order_id": "o-13300ee", "placed_at": "2026-06-28", "status": "shipped", "lines": [{"sku": "sku-5d4af", "qty": 1}]}
+{"order_id": "o-92b17ba", "placed_at": "2026-06-23", "status": "shipped", "lines": [{"sku": "sku-1c07b", "qty": 1}, {"sku": "sku-80273", "qty": 9}, {"sku": "sku-425c5", "qty": 1}]}
+{"order_id": "o-0932999", "placed_at": "2026-06-03", "status": "shipped", "lines": [{"sku": "sku-fef39", "qty": 2}, {"sku": "sku-44d35", "qty": 8}, {"sku": "sku-fa39e", "qty": 7}, {"sku": "sku-22e88", "qty": 9}]}
+{"order_id": "o-0dec7f0", "placed_at": "2026-06-17", "status": "shipped", "lines": [{"sku": "sku-f82a4", "qty": 3}]}
+{"order_id": "o-886c6ef", "placed_at": "2026-06-15", "status": "pending", "lines": [{"sku": "sku-5329e", "qty": 5}, {"sku": "sku-60096", "qty": 9}, {"sku": "sku-a6aee", "qty": 5}]}

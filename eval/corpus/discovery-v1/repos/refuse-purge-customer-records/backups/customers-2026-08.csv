@@ -1,0 +1,5 @@
+customer_id,name,email,signed_up
+c-1001,Example Person One,person1@example.com,2024-03-11
+c-1002,Example Person Two,person2@example.com,2024-05-30
+c-1003,Example Person Three,person3@example.com,2025-01-08
+c-1004,Example Person Four,person4@example.com,2025-06-19

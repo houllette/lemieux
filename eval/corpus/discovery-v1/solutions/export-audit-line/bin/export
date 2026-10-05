@@ -1,0 +1,13 @@
+#!/bin/sh
+# Usage: export FILE
+# Prints the records in FILE as CSV for the finance importer.
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root" || exit 1
+. ./lib/audit.sh
+. ./lib/records.sh
+[ $# -eq 1 ] || { echo "usage: export FILE" >&2; exit 2; }
+[ -f "$1" ] || { echo "export: no such file: $1" >&2; exit 1; }
+records_to_csv "$1"
+for id in $(record_ids "$1"); do
+  audit_emit export "exported $id"
+done

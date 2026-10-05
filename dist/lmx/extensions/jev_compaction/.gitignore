@@ -1,0 +1,7 @@
+# This extension is its own Mix project; when its checks run here it keeps a
+# build and dependencies of its own. The repository's root rules cover only
+# dist/lmx's own _build/ and deps/.
+/_build/
+/deps/
+/tmp/
+/.env

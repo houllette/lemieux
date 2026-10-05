@@ -1,0 +1,8 @@
+# cli component dependencies (.deps format: name<TAB>constraint)
+
+yamlish	^4.1.0
+queuelet	^1.8.13
+colorize	^2.5.4
+tabulate2	^1.11.13
+clockwork	^2.0.9
+ledgercore	^3.7.2

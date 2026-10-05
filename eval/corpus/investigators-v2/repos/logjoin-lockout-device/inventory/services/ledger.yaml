@@ -1,0 +1,16 @@
+service: ledger
+owner: team-thistle
+hosts:
+  - h-7b24
+  - h-823f
+  - h-ae74
+  - h-857b
+  - h-7f42
+retired_hosts:
+  - h-7221
+  - h-c763
+  - h-14d2
+ports:
+  plover: 4013
+  beacon: 4842
+  ferric: 5614

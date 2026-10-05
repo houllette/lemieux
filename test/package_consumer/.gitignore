@@ -1,0 +1,5 @@
+/_build/
+/deps/
+/mix.lock
+# scripts/check_package.sh and the release workflow write the contract store here.
+/tmp/

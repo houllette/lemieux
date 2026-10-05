@@ -1,0 +1,8 @@
+# search component dependencies (.deps format: name<TAB>constraint)
+
+cipherbox	^2.4.14
+pemparse	^1.4.13
+colorize	^0.5.8
+httpkit	^2.9.12
+csvfast	^0.8.4
+metricsd	^2.7.3

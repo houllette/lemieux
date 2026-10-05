@@ -1,0 +1,3 @@
+; disabled during the TTL experiment; do not load
+[cache]
+ttl_seconds = 1800

@@ -1,0 +1,5 @@
+release: rel-138-rc1
+build: b-8550795
+digest: sha-5a0865df0098ecfa55e6ecfce013c37a6a20a6c9
+status: candidate
+notes: canvas auger balsa cairn nettle tundra

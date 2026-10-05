@@ -1,0 +1,8 @@
+{
+  "acme": {
+    "region": "eu"
+  },
+  "globex": {
+    "region": "us"
+  }
+}

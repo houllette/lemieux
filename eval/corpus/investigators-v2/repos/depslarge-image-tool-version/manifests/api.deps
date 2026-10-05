@@ -1,0 +1,8 @@
+# api component dependencies (.deps format: name<TAB>constraint)
+
+retryable	^1.5.10
+tinyjson	^3.6.7
+argsplit	^0.11.8
+cipherbox	^2.10.12
+tomlet	^0.2.13
+colorize	^1.2.5

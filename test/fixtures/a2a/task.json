@@ -1,0 +1,7 @@
+{
+  "id": "independent-task",
+  "contextId": "independent-context",
+  "status": {"state": "TASK_STATE_COMPLETED", "timestamp": "2026-03-12T12:00:00Z"},
+  "artifacts": [{"artifactId": "answer", "parts": [{"text": "Independent response"}]}],
+  "history": [{"messageId": "question-1", "role": "ROLE_USER", "parts": [{"text": "Hello"}]}]
+}

@@ -1,0 +1,755 @@
+name: Release candidates
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  LMX_CONFIG: none
+
+# Third-party actions are pinned to a commit (version in the comment); see
+# ci.yml. Release jobs set up the toolchain without restoring Mix caches, so
+# an artifact is never built from a cache another branch could have written.
+# The one cache here holds the static OTP build, and only manual runs
+# (workflow_dispatch) restore it: any workflow on main can write a cache
+# entry a tag build is allowed to read, and that entry would ship inside the
+# binary. A tag build compiles OTP from checksum-verified sources instead.
+#
+# Nothing here signs or publishes. A tag builds a DRAFT release, never a
+# published one; the maintainer signs SHA256SUMS and update.json with the
+# offline key, verifies the draft and publishes it by hand, and the last step
+# of a tag run prints those commands. A manual run builds and qualifies every
+# archive and creates no release at all.
+#
+# Platforms: Linux x86-64 runs on glibc 2.34 or newer (a static-OpenSSL OTP
+# built in ubuntu:22.04, smoke-tested on six distributions); macOS arm64 and
+# x86-64 are unsigned; Windows x86-64 is experimental. Linux arm64 has no
+# archive yet: build from source there.
+
+jobs:
+  validate:
+    name: Validate release candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    outputs:
+      previous: ${{ steps.upgrade.outputs.previous }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # A tag builds the draft that gets signed and published. Without a
+      # committed signing key, the installer and lmx's updater would refuse
+      # every update from it, so a tag stops here rather than after an hour
+      # of platform builds. The key file holds UNSET until the maintainer
+      # generates the key offline.
+      - name: Require the release signing key
+        run: |
+          pub=dist/lmx/release-signing.pub
+          key=""
+          if [ -f "$pub" ]; then key=$(tr -d '[:space:]' < "$pub"); fi
+          if [ -z "$key" ] || [ "$key" = UNSET ]; then
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              echo "::error file=$pub::No release signing key is committed. Run mix lmx.release.keygen first (see RELEASING.md)."
+              exit 1
+            fi
+            echo "::warning file=$pub::No release signing key is committed, so a tag build would stop here. Run mix lmx.release.keygen first (see RELEASING.md)."
+            exit 0
+          fi
+          if ! printf '%s' "$key" | grep -Eq '^[A-Za-z0-9+/]{43}=$'; then
+            echo "::error file=$pub::$pub must hold the base64 of a raw 32-byte Ed25519 public key, or UNSET."
+            exit 1
+          fi
+          installer=$(sed -n 's/^RELEASE_PUBLIC_KEY = "\(.*\)"$/\1/p' scripts/install.py)
+          if [ "$installer" != "$key" ]; then
+            echo "::error file=scripts/install.py::RELEASE_PUBLIC_KEY differs from $pub, so the installer would reject what this key signs. Run mix lmx.release.keygen again (see RELEASING.md)."
+            exit 1
+          fi
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      # `mix ci` runs the suite, whose MCP and process fixtures are Python.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: mix deps.get
+      - name: Check release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+      # CI runs these on every push; a tag cut from a commit CI never passed
+      # still cannot publish a dead link or a private name. A manual run only
+      # reports them, so the platform builds can be qualified meanwhile.
+      - name: Check links and public wording
+        continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          python scripts/check_links.py
+          scripts/check_public_text.sh
+      # `ci` is the precommit gate in check mode. `precommit` itself formats
+      # and regenerates usage rules, so it would validate a tree it had just
+      # rewritten and pass a tag that was never formatted.
+      - run: mix ci
+      - name: Require reviewed release decision
+        id: upgrade
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/releases/latest" > "$RUNNER_TEMP/latest.json" 2> "$RUNNER_TEMP/latest-error"; then
+            latest=$(jq -r .tag_name "$RUNNER_TEMP/latest.json")
+            latest=${latest#v}
+          elif [[ $(cat "$RUNNER_TEMP/latest-error") == *"HTTP 404"* ]]; then
+            latest=none
+          else
+            cat "$RUNNER_TEMP/latest-error" >&2
+            exit 1
+          fi
+          cd dist/lmx
+          mix lmx.upgrade.check --latest "$latest" --github-output "$GITHUB_OUTPUT"
+      - run: mix test.distributed
+      - name: Recorded cutoff evaluation
+        env:
+          MIX_ENV: test
+        run: >-
+          mix lemieux.eval --suite eval/corpus/v1/manifest.json
+          --fixture-set eval/fixture_sets/v1.json --baseline eval/baselines/v1.json
+          --tag full --format console --output lemieux-eval.json
+      # The same check as CI's package job: the packaged source, LICENSE and
+      # NOTICE included, compiled as a dependency. Nothing is published.
+      - name: Build the Hex package and compile it as a dependency
+        run: scripts/check_package.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-evaluation
+          path: lemieux-eval.json
+          if-no-files-found: error
+
+  # The exact archives of the latest stable release, which each platform's
+  # upgrade path and qualification start from, and the release-signing key
+  # its own tag pins. Fetched once, here, because the Linux build runs in a
+  # container without the GitHub CLI.
+  previous:
+    name: Previous stable release
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download the previous stable archives and checksums
+        if: needs.validate.outputs.previous != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_VERSION: ${{ needs.validate.outputs.previous }}
+        run: |
+          gh release download "v$PREVIOUS_VERSION" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'lmx_*.tar.gz' --pattern 'SHA256SUMS*' --dir previous-download
+          # The previous release was signed with the key its own tag pins.
+          # After a key change (RELEASING.md) this checkout pins another one,
+          # and verifying with that failed every build, the emergency release
+          # after a leaked key included.
+          gh api -H "Accept: application/vnd.github.raw+json" \
+            "repos/$GITHUB_REPOSITORY/contents/dist/lmx/release-signing.pub?ref=v$PREVIOUS_VERSION" \
+            > previous-download/release-signing.pub
+      - name: First stable release
+        if: needs.validate.outputs.previous == ''
+        run: echo "No stable release precedes this candidate; every platform builds an initial, restart-only release."
+      - uses: actions/upload-artifact@v7
+        if: needs.validate.outputs.previous != ''
+        with:
+          name: previous-release
+          path: previous-download/
+          if-no-files-found: error
+
+  # The Linux archive carries its own OTP (scripts/build-static-otp.sh says
+  # why). Built in ubuntu:22.04 so it needs no glibc newer than 2.34; the
+  # archive is then exercised outside this container by the two jobs below.
+  # The image is pinned by digest: it is the release builder, so a moved tag
+  # would change what every Linux binary is compiled against. Bump it
+  # deliberately: `docker buildx imagetools inspect ubuntu:22.04` prints the
+  # current digest.
+  linux:
+    name: linux (static OTP, ubuntu:22.04)
+    needs: [validate, previous]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401
+    outputs:
+      mode: ${{ steps.decision.outputs.mode }}
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      STATIC_OTP: /opt/lmx-static-otp
+      PREVIOUS_VERSION: ${{ needs.validate.outputs.previous }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install the build tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential perl autoconf m4 ca-certificates curl git unzip binutils procps
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # The container runs as root over a checkout the runner user owns.
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Restore the static OTP build
+        id: otp-cache
+        if: github.ref_type != 'tag'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.STATIC_OTP }}
+          key: static-otp-linux-x86_64-${{ hashFiles('.tool-versions', 'scripts/build-static-otp.sh') }}
+      # The summary keeps the build's inputs and its OTP application digest.
+      # A hot Linux upgrade needs the same digest as the previous release's
+      # tag build; compare the two before an upgrade plan declares one (the
+      # script's header says why). Any two from-scratch builds compare the
+      # same way, such as a tag build and a manual run that reused no cache.
+      - name: Build the static OTP runtime
+        run: |
+          JOBS="$(nproc)" scripts/build-static-otp.sh "$STATIC_OTP" | tee "$RUNNER_TEMP/static-otp.log"
+          {
+            echo "### Static OTP runtime"
+            echo
+            echo '```'
+            cat "$STATIC_OTP/BUILD-INFO"
+            grep -E '^build-static-otp: (reusing|OTP )' "$RUNNER_TEMP/static-otp.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save the static OTP build
+        if: github.ref_type != 'tag' && steps.otp-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.STATIC_OTP }}
+          key: ${{ steps.otp-cache.outputs.cache-primary-key }}
+      - name: Use the static toolchain
+        run: |
+          echo "$STATIC_OTP/otp/bin" >> "$GITHUB_PATH"
+          echo "$STATIC_OTP/elixir/bin" >> "$GITHUB_PATH"
+      - name: Install Hex and rebar
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+      - name: Fetch release host dependencies
+        working-directory: dist/lmx
+        run: mix deps.get
+      - name: Test release host on the static runtime
+        working-directory: dist/lmx
+        env:
+          MIX_ENV: test
+        run: mix test --warnings-as-errors
+      - name: Check platform upgrade decision
+        id: decision
+        working-directory: dist/lmx
+        run: mix lmx.upgrade.check --latest "${PREVIOUS_VERSION:-none}" --target linux --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        if: needs.validate.outputs.previous != ''
+        with:
+          name: previous-release
+          path: dist/lmx/previous-download
+      - name: Verify and unpack the exact previous stable archive
+        if: needs.validate.outputs.previous != ''
+        working-directory: dist/lmx
+        run: |
+          # With the key pinned at the previous release's tag (the previous job says why).
+          key=$(tr -d '[:space:]' < previous-download/release-signing.pub)
+          if [ -z "$key" ] || [ "$key" = UNSET ]; then
+            echo "::error::v$PREVIOUS_VERSION pins no release-signing key, so its signature cannot be checked"
+            exit 1
+          fi
+          mix lmx.release.verify --public-key "$key" previous-download/SHA256SUMS
+          mix lmx.upgrade.unpack --archive previous-download/lmx_linux.tar.gz --checksums previous-download/SHA256SUMS --output previous-release
+      - name: Build native release
+        working-directory: dist/lmx
+        env:
+          LMX_TARGET: linux
+          MIX_ENV: prod
+          LMX_REQUIRE_UPGRADE_PLAN: '1'
+        run: |
+          if [ -n "$PREVIOUS_VERSION" ]; then export LMX_UPGRADE_FROM="$PWD/previous-release"; fi
+          mix release --overwrite
+          cp "_build/prod/lmx-$(cat ../../VERSION).tar.gz" lmx_linux.tar.gz
+      - name: Load the archive on the build image
+        working-directory: dist/lmx
+        run: |
+          mkdir smoke-release
+          tar -xzf lmx_linux.tar.gz -C smoke-release
+          smoke-release/bin/lmx --version 2> version.err
+          if [ -s version.err ]; then
+            cat version.err
+            echo "::error::lmx --version wrote to standard error"
+            exit 1
+          fi
+          # A release copies the library's whole priv tree. Dialyzer's PLT
+          # once lived there and shipped in every local archive.
+          if find smoke-release -path '*/priv/plts' | grep -q .; then
+            echo "::error::the release packages a Dialyzer PLT"
+            exit 1
+          fi
+          readelf -d smoke-release/erts-*/bin/beam.smp smoke-release/lib/crypto-*/priv/lib/crypto.so | grep -E '^File:|NEEDED'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-linux
+          path: dist/lmx/lmx_linux.tar.gz
+          if-no-files-found: error
+
+  # The installed behaviour, outside the build container and as an ordinary
+  # user, as people run it. The synthetic upgrade smoke builds its own
+  # releases with the pinned toolchain; the qualification runs the real
+  # previous and candidate archives.
+  linux-qualify:
+    name: linux (qualify the archive)
+    needs: [validate, previous, linux]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+        working-directory: dist/lmx
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: mix deps.get
+      - uses: actions/download-artifact@v8
+        with:
+          name: native-linux
+          path: dist/lmx
+      - name: Test installed behavior
+        run: |
+          mkdir smoke-release
+          tar -xzf lmx_linux.tar.gz -C smoke-release
+          python ../../test/release_extension_smoke.py smoke-release/bin/lmx
+          python ../../test/release_session_smoke.py smoke-release/bin/lmx
+          python ../../test/release_stdin_smoke.py smoke-release/bin/lmx
+      - name: Exercise live upgrade and restart fallback
+        run: python ../../test/release_upgrade_smoke.py
+      - uses: actions/download-artifact@v8
+        if: needs.validate.outputs.previous != ''
+        with:
+          name: previous-release
+          path: dist/lmx/previous-download
+      - name: Qualify actual previous and candidate archives
+        if: needs.validate.outputs.previous != ''
+        env:
+          UPGRADE_MODE: ${{ needs.linux.outputs.mode }}
+        run: |
+          extra=()
+          if [ "$UPGRADE_MODE" = hot ]; then extra+=(--expect-hot); fi
+          python ../../test/release_upgrade_smoke.py --from previous-download/lmx_linux.tar.gz --to lmx_linux.tar.gz "${extra[@]}" --report upgrade-report-linux.json
+      - uses: actions/upload-artifact@v7
+        if: needs.validate.outputs.previous != ''
+        with:
+          name: native-linux-qualification
+          path: dist/lmx/upgrade-report-linux.json
+          if-no-files-found: error
+
+  # The archive in pristine images of the distributions people run, without
+  # installing anything: the checks a Linux build without its own OpenSSL
+  # failed (crypto would not load on Fedora, RHEL rebuilds and Amazon Linux;
+  # beam.smp would not start on openSUSE; Debian slim had no libcrypto).
+  linux-distros:
+    name: linux on ${{ matrix.image }}
+    needs: linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - fedora:latest
+          # Rocky's own image; the Docker library's rockylinux:9 stopped
+          # updating at 9.3 (May 2024).
+          - rockylinux/rockylinux:9
+          - amazonlinux:2023
+          - opensuse/tumbleweed
+          - debian:12-slim
+          - ubuntu:24.04
+        include:
+          # The bare image has no awk, which the archive's start scripts use;
+          # every openSUSE system install has it, and docs/releases.md lists
+          # it among the Linux requirements. Without it each start printed
+          # "awk: command not found" and this check failed the release.
+          - image: opensuse/tumbleweed
+            prepare: zypper --non-interactive --quiet install --no-recommends gawk
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: native-linux
+      - name: Run lmx in ${{ matrix.image }}
+        env:
+          IMAGE: ${{ matrix.image }}
+          PREPARE: ${{ matrix.prepare }}
+        run: |
+          mkdir lmx
+          tar -xzf lmx_linux.tar.gz -C lmx
+          # Pulled first, so no download progress lands in the stderr checked below.
+          docker pull --quiet "$IMAGE"
+          # A documented runtime requirement the bare image lacks is added in
+          # a derived image, with network, before the checks run without it.
+          if [ -n "$PREPARE" ]; then
+            docker run --name lmx-prepare "$IMAGE" sh -c "$PREPARE"
+            docker commit lmx-prepare lmx-prepared:latest >/dev/null
+            docker rm lmx-prepare >/dev/null
+            IMAGE=lmx-prepared:latest
+          fi
+          in_image() {
+            docker run --rm --network none -e LMX_CONFIG=none -v "$PWD/lmx:/opt/lmx" "$IMAGE" "$@"
+          }
+          in_image cat /etc/os-release | sed -n 's/^PRETTY_NAME=//p'
+          in_image /opt/lmx/bin/lmx --version > version.out 2> version.err
+          cat version.out
+          if [ -s version.err ]; then
+            cat version.err
+            echo "::error::lmx --version wrote to standard error in $IMAGE"
+            exit 1
+          fi
+          grep -q '^lmx ' version.out
+          in_image /opt/lmx/bin/lmx help models > models.out 2> models.err
+          if [ -s models.err ]; then
+            echo "::warning::lmx help models wrote to standard error in $IMAGE"
+            cat models.err
+          fi
+          test -s models.out
+
+  build:
+    name: ${{ matrix.name }}
+    needs: [validate, previous]
+    runs-on: ${{ matrix.os }}
+    # The x86-64 macOS runner builds a release several times slower than the
+    # arm64 one, and the upgrade smoke builds five; 60 minutes left no margin
+    # (the first release run, 2026-10-05).
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+        working-directory: dist/lmx
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Apple silicon. State the archive's minimum macOS version in the
+          # release notes; the job summary records it.
+          - {name: macOS arm64 (unsigned), os: macos-15, target: macos_silicon, artifact: lmx_macos_silicon.tar.gz}
+          # GitHub-hosted x86-64 macOS, on the same macOS release as the arm64 build.
+          - {name: macOS x86-64 (unsigned), os: macos-15-intel, target: macos, artifact: lmx_macos.tar.gz}
+          # Experimental: lmx's bash tool needs Git for Windows' bash, and
+          # WSL2 users should run the Linux archive instead.
+          - {name: Windows x86-64 (experimental), os: windows-2025, target: windows, artifact: lmx_windows.tar.gz}
+    env:
+      TARGET: ${{ matrix.target }}
+      ARTIFACT: ${{ matrix.artifact }}
+      PREVIOUS_VERSION: ${{ needs.validate.outputs.previous }}
+      # Python on Windows reads files and command output in the ANSI code page
+      # unless told otherwise, and the smoke scripts read UTF-8: the notices,
+      # transcripts, release metadata. cp1252 failed on THIRD_PARTY_NOTICES in
+      # the first release run (2026-10-05).
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      # The smoke steps call `python`, which macOS images do not provide
+      # (they ship only Homebrew's `python3`); this puts it on every OS.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: mix deps.get
+      # On Windows, test_helper.exs excludes the tests tagged :unix (shell,
+      # signals, file modes, symbolic links).
+      - name: Test release host
+        env:
+          MIX_ENV: test
+        run: mix test --warnings-as-errors
+      - name: Check platform upgrade decision
+        id: decision
+        run: mix lmx.upgrade.check --latest "${PREVIOUS_VERSION:-none}" --target "$TARGET" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        if: needs.validate.outputs.previous != ''
+        with:
+          name: previous-release
+          path: dist/lmx/previous-download
+      - name: Verify and unpack the exact previous stable archive
+        if: needs.validate.outputs.previous != ''
+        run: |
+          # With the key pinned at the previous release's tag (the previous job says why).
+          key=$(tr -d '[:space:]' < previous-download/release-signing.pub)
+          if [ -z "$key" ] || [ "$key" = UNSET ]; then
+            echo "::error::v$PREVIOUS_VERSION pins no release-signing key, so its signature cannot be checked"
+            exit 1
+          fi
+          mix lmx.release.verify --public-key "$key" previous-download/SHA256SUMS
+          mix lmx.upgrade.unpack --archive "previous-download/$ARTIFACT" --checksums previous-download/SHA256SUMS --output previous-release
+      - name: Build native release
+        env:
+          LMX_TARGET: ${{ matrix.target }}
+          MIX_ENV: prod
+          LMX_REQUIRE_UPGRADE_PLAN: '1'
+        run: |
+          if [ -n "$PREVIOUS_VERSION" ]; then export LMX_UPGRADE_FROM="$PWD/previous-release"; fi
+          mix release --overwrite
+          cp "_build/prod/lmx-$(cat ../../VERSION).tar.gz" "$ARTIFACT"
+      - name: Load native runtime and test installed behavior
+        run: |
+          mkdir smoke-release
+          tar -xzf "$ARTIFACT" -C smoke-release
+          launcher=smoke-release/bin/lmx
+          if [ "$TARGET" = windows ]; then launcher=smoke-release/bin/lmx.cmd; fi
+          "$launcher" --version 2> version.err
+          if [ -s version.err ]; then
+            cat version.err
+            # Windows is experimental; its launcher's output is reported,
+            # not yet held to the same standard.
+            if [ "$TARGET" = windows ]; then
+              echo "::warning::lmx --version wrote to standard error on Windows"
+            else
+              echo "::error::lmx --version wrote to standard error"
+              exit 1
+            fi
+          fi
+          # A release copies the library's whole priv tree. Dialyzer's PLT
+          # once lived there and shipped in every local archive.
+          if find smoke-release -path '*/priv/plts' | grep -q .; then
+            echo "::error::the release packages a Dialyzer PLT"
+            exit 1
+          fi
+          python ../../test/release_extension_smoke.py "$launcher"
+          python ../../test/release_session_smoke.py "$launcher"
+          # The PowerShell launcher's input handling has not been qualified.
+          if [ "$TARGET" != windows ]; then
+            python ../../test/release_stdin_smoke.py "$launcher"
+          fi
+      - name: Start lmx.cmd from cmd.exe
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: smoke-release\bin\lmx.cmd --version
+      - name: Record the minimum macOS version
+        if: runner.os == 'macOS'
+        run: |
+          {
+            echo "### $TARGET: minimum macOS of the packaged binaries"
+            while IFS= read -r -d '' binary; do
+              minos=$(otool -l "$binary" | awk '/LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX/ {found = 1} found && ($1 == "minos" || $1 == "version") {print $2; exit}')
+              echo "- ${binary#smoke-release/}: ${minos:-unknown}"
+            done < <(find smoke-release \( -path '*/erts-*/bin/beam.smp' -o -name '*.so' \) -type f -print0)
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Exercise live upgrade and restart fallback
+        if: runner.os != 'Windows'
+        run: python ../../test/release_upgrade_smoke.py
+      - name: Qualify actual previous and candidate archives
+        if: needs.validate.outputs.previous != ''
+        env:
+          UPGRADE_MODE: ${{ steps.decision.outputs.mode }}
+        run: |
+          extra=()
+          if [ "$UPGRADE_MODE" = hot ]; then extra+=(--expect-hot); fi
+          python ../../test/release_upgrade_smoke.py --from "previous-download/$ARTIFACT" --to "$ARTIFACT" "${extra[@]}" --report "upgrade-report-$TARGET.json"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.target }}
+          path: |
+            dist/lmx/${{ matrix.artifact }}
+            dist/lmx/upgrade-report-${{ matrix.target }}.json
+          if-no-files-found: error
+
+  assemble:
+    name: Assemble complete candidate
+    needs: [validate, linux, linux-qualify, linux-distros, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: release
+      - name: Add license, release notes and checksums
+        env:
+          LMX_PREVIOUS_RELEASE: ${{ needs.validate.outputs.previous }}
+        run: |
+          # .github/release-notes.md is this release's body, rewritten for
+          # every version (RELEASING.md).
+          cp LICENSE NOTICE release/
+          cp .github/release-notes.md release/release-notes.md
+          cp scripts/install.py scripts/install.sh release/
+          cp "dist/lmx/upgrades/$(cat VERSION).exs" release/upgrade-plan.exs
+          python scripts/release_checksums.py release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: complete-release-candidate
+          path: release/
+          if-no-files-found: error
+      - name: Summarize a manual run
+        if: github.ref_type != 'tag'
+        run: |
+          {
+            echo "## Release candidate built; no release created"
+            echo
+            echo "Every archive was built and qualified, and the complete set is in the"
+            echo "complete-release-candidate artifact. To release, commit the signing key"
+            echo "(mix lmx.release.keygen, see RELEASING.md) and push a tag vX.Y.Z from a"
+            echo "green main; that run creates a draft for you to sign and publish."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Sigstore-signed statements that these exact files came from this workflow
+  # at this tag, so a download can be checked against the source:
+  #   gh attestation verify FILE --repo OWNER/REPO --source-ref refs/tags/vX.Y.Z \
+  #     --signer-workflow OWNER/REPO/.github/workflows/release.yml
+  # Tag builds only. A manual run can start from any branch, and its Linux
+  # archive may come from the static OTP cache, which is exactly what a tag
+  # build refuses to trust; attesting it would give such a build the same
+  # provenance as a release, and a check without --source-ref would accept
+  # it. So the first tag is where this job first runs; if it fails there,
+  # re-run the failed jobs. GitHub offers attestations to public
+  # repositories only, hence the visibility check. The action is pinned by
+  # commit although it is GitHub's own: it runs with a token that can mint
+  # signing certificates for this repository.
+  attest:
+    name: Attest build provenance
+    needs: assemble
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: No attestations for a private repository
+        if: github.event.repository.private
+        run: echo "::notice::The repository is private, where GitHub offers no attestations; the archives are not attested."
+      - uses: actions/download-artifact@v8
+        if: ${{ !github.event.repository.private }}
+        with:
+          name: complete-release-candidate
+          path: release
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-path: |
+            release/lmx_*.tar.gz
+            release/SHA256SUMS
+            release/update.json
+
+  # The only job with a write token, and all it does is create or refresh a
+  # draft. It never publishes, and it refuses to touch a release that is
+  # already published: rewriting one would replace the assets install.sh
+  # downloads and mark it a pre-release again, which drops it from
+  # releases/latest.
+  draft:
+    name: Draft release
+    needs: [assemble, attest]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: complete-release-candidate
+          path: release
+      - name: Create or refresh the draft release
+        run: |
+          repo=$GITHUB_REPOSITORY
+          if state=$(gh release view "$TAG" --repo "$repo" --json isDraft --jq .isDraft 2> "$RUNNER_TEMP/view.err"); then
+            if [ "$state" != true ]; then
+              echo "::error::$TAG is already published. A published release is never rebuilt; release a new version instead."
+              exit 1
+            fi
+            # A re-run replaces the draft's contents. Earlier assets go first,
+            # signatures included: they sign bytes this run no longer ships.
+            gh release view "$TAG" --repo "$repo" --json assets --jq '.assets[].name' |
+              while IFS= read -r asset; do
+                gh release delete-asset "$TAG" "$asset" --repo "$repo" --yes
+              done
+            gh release upload "$TAG" release/* --repo "$repo"
+            gh release edit "$TAG" --repo "$repo" --draft --prerelease --title "$TAG" --notes-file release/release-notes.md
+          elif grep -q 'release not found' "$RUNNER_TEMP/view.err"; then
+            gh release create "$TAG" release/* --repo "$repo" --draft --prerelease --verify-tag --title "$TAG" --notes-file release/release-notes.md
+          else
+            cat "$RUNNER_TEMP/view.err" >&2
+            exit 1
+          fi
+      # sign_draft cannot tell whether the draft holds what this run built
+      # (its moduledoc says so), so step 1 checks that before anything is
+      # signed, against this run's own artifact.
+      - name: Next steps for the maintainer
+        env:
+          PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          note=""
+          if [ "$PRIVATE" = true ]; then
+            note="The repository was private when this ran, so nothing was attested: skip the gh attestation lines in step 3."
+          fi
+          cat <<EOF | tee -a "$GITHUB_STEP_SUMMARY"
+          ## $TAG is a draft: check, sign, verify, then publish
+
+          Nothing is signed or published yet, and the installer and lmx's updater
+          refuse this release until its signatures are uploaded. Run these from a
+          checkout of $TAG, on the machine that holds the offline key.
+          $note
+
+          1. Check that the draft holds exactly what this run built:
+
+                 dir=\$(mktemp -d)
+                 gh run download $GITHUB_RUN_ID --repo $GITHUB_REPOSITORY --name complete-release-candidate --dir "\$dir/run"
+                 gh release download $TAG --repo $GITHUB_REPOSITORY --dir "\$dir/draft"
+                 diff -r "\$dir/run" "\$dir/draft" && echo "draft matches run $GITHUB_RUN_ID"
+
+          2. Sign:
+
+                 cd dist/lmx
+                 mix lmx.release.sign_draft --tag $TAG --private-key PATH
+
+             It downloads SHA256SUMS and update.json from the draft, signs them,
+             uploads SHA256SUMS.sig and update.json.sig, and verifies the result.
+             It never publishes.
+
+          3. Verify the signed draft independently, still in dist/lmx:
+
+                 gh release download $TAG --repo $GITHUB_REPOSITORY --dir "\$dir/signed"
+                 mix lmx.release.verify "\$dir/signed/SHA256SUMS" "\$dir/signed/update.json"
+                 (cd "\$dir/signed" && shasum -a 256 -c SHA256SUMS)
+                 for file in "\$dir"/signed/lmx_*.tar.gz "\$dir/signed/SHA256SUMS" "\$dir/signed/update.json"; do
+                   gh attestation verify "\$file" --repo $GITHUB_REPOSITORY --source-ref refs/tags/$TAG \\
+                     --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release.yml
+                 done
+
+          4. Publish it as the latest release, not a pre-release (install.sh and
+             the updater read releases/latest, which skips pre-releases):
+
+                 gh release edit $TAG --repo $GITHUB_REPOSITORY --draft=false --prerelease=false --latest
+
+          Re-running this workflow for $TAG replaces the draft's assets and deletes
+          their signatures; check and sign again afterwards, with the new run's ID
+          in step 1. Once published, $TAG is never rebuilt.
+          EOF

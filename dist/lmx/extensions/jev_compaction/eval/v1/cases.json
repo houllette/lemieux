@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "goal_switch",
+      "category": "irrelevant_old_read",
+      "files": [{"path": "archive.ex", "line_count": 450, "target_line": 390, "target_text": "RELEASE_CODE=EMBER42"}],
+      "seed_reads": ["archive.ex"],
+      "must_keep_by_path": {"archive.ex": false},
+      "followups": [
+        {"prompt": "We have switched tasks. Ignore the earlier file and reply exactly READY.", "expected": "READY"},
+        {"prompt": "For this new task, reply exactly SET.", "expected": "SET"}
+      ]
+    },
+    {
+      "id": "required_fact",
+      "category": "needed_old_read",
+      "files": [{"path": "release.txt", "line_count": 450, "target_line": 390, "target_text": "The release code is EMBER42."}],
+      "seed_reads": ["release.txt"],
+      "must_keep_by_path": {"release.txt": true},
+      "followups": [{"prompt": "What is the release code from release.txt? Reply with only the code.", "expected": "EMBER42"}]
+    },
+    {
+      "id": "mixed_reads",
+      "category": "selective_retention",
+      "files": [
+        {"path": "old_notes.txt", "line_count": 450, "target_line": 390, "target_text": "Old notes: ALTO17."},
+        {"path": "current.txt", "line_count": 450, "target_line": 390, "target_text": "Current approval code: CEDAR73."}
+      ],
+      "seed_reads": ["old_notes.txt", "current.txt"],
+      "must_keep_by_path": {"old_notes.txt": false, "current.txt": true},
+      "followups": [{"prompt": "Give the current approval code from current.txt. Reply with only the code.", "expected": "CEDAR73"}]
+    },
+    {
+      "id": "stale_read",
+      "category": "freshness",
+      "files": [{"path": "status.txt", "line_count": 450, "target_line": 390, "target_text": "Current status: PENDING."}],
+      "seed_reads": ["status.txt"],
+      "must_keep_by_path": {"status.txt": false},
+      "mutations": {"status.txt": "Current status: APPROVED."},
+      "followups": [{"prompt": "status.txt changed since the earlier read. Read it again, then reply with only its current status.", "expected": "APPROVED"}]
+    }
+  ]
+}

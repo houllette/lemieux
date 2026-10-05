@@ -1,0 +1,1 @@
+The failing nightly-export ran on batch-03 (cron.log exit=1 at 02:14:07). The upload token refresh for svc-export was refused because of clock skew: auth.log reports clock skew 1830s exceeds 300s for batch-03, matching ntp.log's +1830s unsynchronised offset, so the job saw 401 token expired and gave up.

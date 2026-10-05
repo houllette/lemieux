@@ -1,0 +1,1 @@
+list_items falls back to DEFAULTS['page_size'], which src/api/defaults.py loads from config/api.conf (40, overriding the compiled-in 100), then clamps to limit('max_page_size') from config/limits.conf = 25. The docs' 50 and limits.conf.dist's 20 are not used.

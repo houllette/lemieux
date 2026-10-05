@@ -1,0 +1,1 @@
+build/profiles/prod.env sets LOCK_DIR=locks/p2, so the authoritative lock is locks/p2/ledger.lock. There tinyjson 0.9.4 is requested_by httpkit, httpkit is requested_by ledgercore, and ledgercore is direct (listed in manifests/ledger.deps). locks/prod, dev and hardened show tinyjson 1.0.0 via metricsd, and vendor/tinyjson is 0.9.2 but nothing replaces to it.

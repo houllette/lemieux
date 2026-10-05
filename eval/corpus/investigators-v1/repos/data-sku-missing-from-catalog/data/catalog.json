@@ -1,0 +1,46 @@
+[
+  {
+    "sku": "SKU-1001",
+    "name": "Anchor bolt M12"
+  },
+  {
+    "sku": "SKU-1002",
+    "name": "Anchor bolt M16"
+  },
+  {
+    "sku": "SKU-1305",
+    "name": "Hex nut M12"
+  },
+  {
+    "sku": "SKU-1306",
+    "name": "Hex nut M16"
+  },
+  {
+    "sku": "SKU-2210",
+    "name": "Washer 12mm (retired)"
+  },
+  {
+    "sku": "SKU-2211",
+    "name": "Washer 16mm"
+  },
+  {
+    "sku": "SKU-3050",
+    "name": "Bracket L 40mm"
+  },
+  {
+    "sku": "SKU-3051",
+    "name": "Bracket L 60mm"
+  },
+  {
+    "sku": "SKU-4470",
+    "name": "Rail 1m"
+  },
+  {
+    "sku": "SKU-4472",
+    "name": "Rail 3m"
+  },
+  {
+    "sku": "SKU-5100",
+    "name": "End cap"
+  }
+]

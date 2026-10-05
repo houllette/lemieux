@@ -1,0 +1,26 @@
+# Change log 2026-07
+
+Proposals as discussed; the tree is authoritative, not this log.
+
+- 2026-07-04: proposed db.replica = on for staging/us-east (superseded). Unknown keys are ignored with a warning. The reader tolerates trailing whitespace. See the runbook for the rollout procedure.
+- 2026-07-04: proposed limits.burst = 1024 for staging/eu-central (superseded). A value set here applies only after the next reload. Keys are compared case-sensitively. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-07-21: proposed cache.ttl_seconds = 15 for dev/apac-south (reverted). The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning. Operators should not edit generated files by hand.
+- 2026-07-18: proposed http.max_body_bytes = 2097152 for prod/eu-central (reverted). The service keeps its state in an append-only journal and rebuilds the index on start. The service keeps its state in an append-only journal and rebuilds the index on start. A value set here applies only after the next reload.
+- 2026-07-02: proposed db.replica = on for staging/apac-south (withdrawn). Unknown keys are ignored with a warning. Keys are compared case-sensitively. Every entry is validated before it is written.
+- 2026-07-23: proposed limits.rps = 96 for staging/eu-west (reverted). The service keeps its state in an append-only journal and rebuilds the index on start. A value set here applies only after the next reload. A value set here applies only after the next reload.
+- 2026-07-25: proposed http.compression = on for prod/eu-central (superseded). The default is deliberately conservative. The reader tolerates trailing whitespace. The reader tolerates trailing whitespace.
+- 2026-07-26: proposed http.workers = 4096 for canary/eu-west (withdrawn). Unknown keys are ignored with a warning. Unknown keys are ignored with a warning. Unknown keys are ignored with a warning.
+- 2026-07-21: proposed logging.level = info for dev/us-east (applied). Keys are compared case-sensitively. The service keeps its state in an append-only journal and rebuilds the index on start. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-07-01: proposed logging.sample_rate = 0.01 for staging/eu-west (withdrawn). Retries are bounded and jittered. The reader tolerates trailing whitespace. Keys are compared case-sensitively.
+- 2026-07-18: proposed db.statement_timeout_ms = 250 for canary/eu-central (superseded). Every entry is validated before it is written. Operators should not edit generated files by hand. Every entry is validated before it is written.
+- 2026-07-11: proposed queue.dead_letter = on for staging/eu-west (withdrawn). The default is deliberately conservative. The default is deliberately conservative. Operators should not edit generated files by hand.
+- 2026-07-12: proposed cache.shard_count = 96 for prod/eu-central (withdrawn). The default is deliberately conservative. Every entry is validated before it is written. Every entry is validated before it is written.
+- 2026-07-26: proposed limits.burst = 8 for prod/apac-south (superseded). The reader tolerates trailing whitespace. Every entry is validated before it is written. Operators should not edit generated files by hand.
+- 2026-07-14: proposed db.statement_timeout_ms = 750 for canary/us-east (applied). The reader tolerates trailing whitespace. Every entry is validated before it is written. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-07-10: proposed tls.cert_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.pem for prod/eu-central (withdrawn). The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-07-24: proposed logging.sample_rate = 0.25 for prod/eu-west (reverted). See the runbook for the rollout procedure. The reader tolerates trailing whitespace. Every entry is validated before it is written.
+- 2026-07-11: proposed http.max_body_bytes = 4194304 for staging/eu-west (superseded). The reader tolerates trailing whitespace. A value set here applies only after the next reload. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-07-06: proposed db.replica = on for staging/apac-south (withdrawn). Every entry is validated before it is written. Keys are compared case-sensitively. The default is deliberately conservative.
+- 2026-07-14: proposed limits.upload_mb = 10 for prod/us-east (withdrawn). Keys are compared case-sensitively. See the runbook for the rollout procedure. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-07-19: proposed limits.concurrent_exports = 4 for canary/apac-south (reverted). See the runbook for the rollout procedure. Retries are bounded and jittered. Unknown keys are ignored with a warning.
+- 2026-07-10: proposed db.replica = on for dev/apac-south (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. Operators should not edit generated files by hand. The default is deliberately conservative.

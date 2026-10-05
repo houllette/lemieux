@@ -1,0 +1,5 @@
+{"order_id": "o-d3db8ff", "customer_id": "c-10097", "placed_at": "2026-03-22", "status": "shipped", "currency": "ZLT", "total": 1674.95}
+{"order_id": "o-918c316", "customer_id": "c-10052", "placed_at": "2026-03-13", "status": "pending", "currency": "USD", "total": 772.85}
+{"order_id": "o-fed320c", "customer_id": "c-10381", "placed_at": "2026-03-22", "status": "returned", "currency": "ZLT", "total": 496.43}
+{"order_id": "o-2a9e971", "customer_id": "c-10467", "placed_at": "2026-03-05", "status": "shipped", "currency": "GBP", "total": 1353.55}
+{"order_id": "o-338f3ee", "customer_id": "c-10417", "placed_at": "2026-03-26", "status": "shipped", "currency": "USD", "total": 256.2}

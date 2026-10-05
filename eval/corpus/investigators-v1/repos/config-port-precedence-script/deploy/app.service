@@ -1,0 +1,12 @@
+[Unit]
+Description=ping-service
+After=network.target
+
+[Service]
+EnvironmentFile=/srv/ping/deploy/service.env
+WorkingDirectory=/srv/ping
+ExecStart=/srv/ping/bin/start.sh --port=${OVERRIDE_PORT}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

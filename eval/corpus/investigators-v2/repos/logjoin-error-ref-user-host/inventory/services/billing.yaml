@@ -1,0 +1,16 @@
+service: billing
+owner: team-moss
+hosts:
+  - h-efe0
+  - h-c75e
+  - h-74f3
+  - h-2fb2
+  - h-e826
+retired_hosts:
+  - h-83ba
+  - h-e753
+  - h-2407
+ports:
+  gravel: 4733
+  aurora: 5422
+  lichen: 4100

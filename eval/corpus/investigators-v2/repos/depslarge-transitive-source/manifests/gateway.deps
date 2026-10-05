@@ -1,0 +1,8 @@
+# gateway component dependencies (.deps format: name<TAB>constraint)
+
+argsplit	^3.8.6
+colorize	^3.4.18
+tracekit	^3.10.0
+tinyjson	^0.10.15
+clockwork	^0.0.6
+tomlet	^3.0.4

@@ -1,0 +1,16 @@
+service: ledger
+owner: team-arbor
+hosts:
+  - h-34d1
+  - h-0651
+  - h-a72b
+  - h-ccf9
+  - h-f541
+retired_hosts:
+  - h-b0ef
+  - h-f40e
+  - h-56c9
+ports:
+  rowan: 3734
+  beacon: 7028
+  zephyr: 7141

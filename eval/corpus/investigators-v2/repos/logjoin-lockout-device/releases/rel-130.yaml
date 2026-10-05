@@ -1,0 +1,5 @@
+release: rel-130
+build: b-c7427ae
+digest: sha-3fa2ffc58635979306bf6bd2d0f4bd899a34776b
+status: promoted
+notes: cinder granite blaze onyx slate jasper

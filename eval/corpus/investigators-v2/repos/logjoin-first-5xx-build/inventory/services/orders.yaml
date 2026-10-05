@@ -1,0 +1,16 @@
+service: orders
+owner: team-quill
+hosts:
+  - h-c39f
+  - h-4568
+  - h-c407
+  - h-1d50
+  - h-9b9d
+retired_hosts:
+  - h-b049
+  - h-c34d
+  - h-9bac
+ports:
+  alder: 7506
+  ferric: 7278
+  cobalt: 7251

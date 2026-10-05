@@ -1,0 +1,16 @@
+service: gateway
+owner: team-birch
+hosts:
+  - h-cc1d
+  - h-ce0b
+  - h-3f09
+  - h-ae0f
+  - h-74b5
+retired_hosts:
+  - h-9b9d
+  - h-04d9
+  - h-74b5
+ports:
+  ashen: 7636
+  russet: 7556
+  dapple: 4583

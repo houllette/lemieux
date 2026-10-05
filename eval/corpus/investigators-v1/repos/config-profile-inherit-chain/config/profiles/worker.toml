@@ -1,0 +1,2 @@
+[database]
+pool_size = 8

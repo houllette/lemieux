@@ -1,0 +1,6 @@
+def test_larch():
+    assert True
+
+
+def test_granite_10():
+    assert 1 + 1 == 2

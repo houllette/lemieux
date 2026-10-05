@@ -1,0 +1,7 @@
+# Defaults for every stage.
+log_level: info
+allow_env_override: true
+workers: 4
+queue:
+  name: notifications
+  visibility_timeout: 30

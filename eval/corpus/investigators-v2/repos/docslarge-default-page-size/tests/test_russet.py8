@@ -1,0 +1,6 @@
+def test_hazel():
+    assert True
+
+
+def test_russet_8():
+    assert 1 + 1 == 2

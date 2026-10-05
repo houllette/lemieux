@@ -1,0 +1,5 @@
+[default]
+channel = mail
+
+[quota-critical]
+channel = pager

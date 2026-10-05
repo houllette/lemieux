@@ -1,0 +1,11 @@
+1.6.17: The reader tolerates trailing whitespace. Every entry is validated before it is written. Operators should not edit generated files by hand.
+
+0.7.10: Retries are bounded and jittered. Keys are compared case-sensitively. Operators should not edit generated files by hand.
+
+3.7.12: Every entry is validated before it is written. The default is deliberately conservative. Every entry is validated before it is written.
+
+1.1.0: Operators should not edit generated files by hand. Operators should not edit generated files by hand. The reader tolerates trailing whitespace.
+
+3.9.9: Keys are compared case-sensitively. Unknown keys are ignored with a warning. The service keeps its state in an append-only journal and rebuilds the index on start.
+
+2.7.0: The default is deliberately conservative. A value set here applies only after the next reload. A value set here applies only after the next reload.

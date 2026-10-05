@@ -1,0 +1,11 @@
+4.8.9: The reader tolerates trailing whitespace. Every entry is validated before it is written. Operators should not edit generated files by hand.
+
+2.3.18: This section is kept for historical reasons and may be removed in a later revision. Keys are compared case-sensitively. The reader tolerates trailing whitespace.
+
+3.10.20: Unknown keys are ignored with a warning. Retries are bounded and jittered. See the runbook for the rollout procedure.
+
+4.1.1: The default is deliberately conservative. Operators should not edit generated files by hand. Operators should not edit generated files by hand.
+
+0.1.9: Operators should not edit generated files by hand. Operators should not edit generated files by hand. The reader tolerates trailing whitespace.
+
+3.3.10: See the runbook for the rollout procedure. The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace.

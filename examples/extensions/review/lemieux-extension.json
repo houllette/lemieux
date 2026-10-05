@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "module": "ReviewExtension",
+  "files": [
+    ".formatter.exs",
+    "mix.exs",
+    "lib/review_extension.ex",
+    "test/test_helper.exs",
+    "test/review_extension_test.exs",
+    "README.md",
+    "bench/compare.exs",
+    "bench/freeze.exs",
+    "bench/manifest.json",
+    "bench/fixtures/division/calculator.ex"
+  ]
+}

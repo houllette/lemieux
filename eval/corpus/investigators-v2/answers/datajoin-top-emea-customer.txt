@@ -1,0 +1,1 @@
+Quillmere Freight (c-10041, r-07/EMEA): 96,000 EUR shipped minus a 6,000 refund = 90,000 EUR net. Brannock Foundry's 150,000 includes a cancelled 100,000; Velmoor Supply's 200,000 is ZLT (x0.2 = 40,000 EUR); Ashvale Europa Holdings is r-12 which regions.json groups as LATAM; Torgale Systems nets 57,000 after its 40,000 refund.

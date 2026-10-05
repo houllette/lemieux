@@ -1,0 +1,37 @@
+name: Dependency graph
+
+# GitHub's dependency graph does not read mix.lock, so without this the
+# public graph lists only the pip, npm and Go manifests inside eval/corpus
+# fixtures, and Dependabot alerts never cover a Hex package. This submits the
+# library's and the release host's locks (and the bundled Jev extension's,
+# under dist/lmx) after every push to main.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    name: Submit Mix dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The submission API needs a write token. Only pushes to main and manual
+    # runs reach this job, never a fork's pull request.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Benchmark fixtures, examples and the package consumer are not
+      # dependencies of anything this repository ships, so they leave this
+      # throwaway checkout before the scan. Not the action's `ignore` input:
+      # v1.3.4 passes it as one `--ignore` value, which must name a single
+      # existing directory, and `eval,examples,test` failed every run with
+      # "invalid path" (2026-10-05).
+      - name: Leave out projects nothing ships
+        run: rm -rf eval examples test
+      - uses: erlef/mix-dependency-submission@257b2df58056895d7a0f3f7dba5b0520d71d9a46 # v1.3.4

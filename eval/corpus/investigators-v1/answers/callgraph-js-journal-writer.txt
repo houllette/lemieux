@@ -1,0 +1,1 @@
+order.paid ends in appendEntry, defined in src/ledger/journal.js: index.js routes the event to handlers.onOrderPaid (src/handlers/payments.js), which calls settle (src/ledger/settle.js), which builds the entry and calls appendEntry; writeJournal in legacyJournal.js only serves order.cancelled.

@@ -1,0 +1,3 @@
+-r base.txt
+pytest>=8
+urllib3<2

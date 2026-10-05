@@ -1,0 +1,1 @@
+The response is rendered by render_order_error in app/errors.py: create_order in app/routes/orders.py catches ValidationError and re-raises it as OrderError, and register_error_handlers maps OrderError to render_order_error (422), so render_validation_error never runs for this route.

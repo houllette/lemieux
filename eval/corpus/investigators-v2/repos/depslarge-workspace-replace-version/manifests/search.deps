@@ -1,0 +1,8 @@
+# search component dependencies (.deps format: name<TAB>constraint)
+
+tabulate2	^3.9.19
+cipherbox	^1.10.9
+yamlish	^1.2.17
+clockwork	^1.11.8
+hashfold	^0.1.1
+fsync	^0.5.18

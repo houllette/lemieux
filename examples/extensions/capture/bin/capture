@@ -1,0 +1,19 @@
+#!/bin/sh
+# `lmx` sessionEnd command hook: hands the JSON on stdin to
+# CaptureExtension.Command, run from this extension's compiled Mix project.
+#
+# Run `mix deps.get && mix compile` in the extension directory once before
+# the first session; a hook that has to compile the world would not finish
+# inside its timeout, and compiler output on stdout is not the JSON the
+# protocol expects. MIX_QUIET keeps Mix's own chatter off stdout after that.
+set -eu
+
+here="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The in-tree example sits three levels below the Lemieux checkout it
+# depends on. An installed copy exports LEMIEUX_EXTENSION_BASE itself.
+export LEMIEUX_EXTENSION_BASE="${LEMIEUX_EXTENSION_BASE:-$(cd "$here/../../.." && pwd)}"
+export MIX_QUIET=1
+
+cd "$here"
+exec mix run --no-deps-check -e 'CaptureExtension.Command.main()'

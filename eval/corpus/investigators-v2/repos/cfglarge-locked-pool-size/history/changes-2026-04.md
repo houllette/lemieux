@@ -1,0 +1,26 @@
+# Change log 2026-04
+
+Proposals as discussed; the tree is authoritative, not this log.
+
+- 2026-04-21: proposed features.search_engine = hybrid for staging/apac-south (superseded). The default is deliberately conservative. Operators should not edit generated files by hand. See the runbook for the rollout procedure.
+- 2026-04-04: proposed cache.max_entries = 1024 for prod/eu-west (superseded). Unknown keys are ignored with a warning. Retries are bounded and jittered. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-04-01: proposed logging.sample_rate = 0.01 for staging/eu-west (reverted). Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision. A value set here applies only after the next reload.
+- 2026-04-27: proposed queue.batch_size = 2048 for staging/eu-west (reverted). Retries are bounded and jittered. A value set here applies only after the next reload. Every entry is validated before it is written.
+- 2026-04-18: proposed cache.backend = memory for prod/eu-central (withdrawn). The default is deliberately conservative. The reader tolerates trailing whitespace. See the runbook for the rollout procedure.
+- 2026-04-11: proposed cache.max_entries = 3 for dev/eu-west (applied). Operators should not edit generated files by hand. Every entry is validated before it is written. A value set here applies only after the next reload.
+- 2026-04-02: proposed db.replica = on for canary/us-east (withdrawn). Retries are bounded and jittered. Unknown keys are ignored with a warning. The default is deliberately conservative.
+- 2026-04-25: proposed limits.burst = 128 for staging/eu-central (withdrawn). The default is deliberately conservative. The default is deliberately conservative. The default is deliberately conservative.
+- 2026-04-26: proposed tls.cipher_profile = intermediate for canary/eu-west (applied). Retries are bounded and jittered. A value set here applies only after the next reload. The default is deliberately conservative.
+- 2026-04-07: proposed tls.cert_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.pem for prod/eu-central (superseded). The reader tolerates trailing whitespace. The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace.
+- 2026-04-22: proposed queue.dead_letter = off for dev/apac-south (superseded). Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision. The reader tolerates trailing whitespace.
+- 2026-04-19: proposed limits.burst = 3 for dev/apac-south (applied). The reader tolerates trailing whitespace. Unknown keys are ignored with a warning. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-04-09: proposed queue.prefetch = 512 for prod/eu-west (applied). The reader tolerates trailing whitespace. See the runbook for the rollout procedure. A value set here applies only after the next reload.
+- 2026-04-01: proposed queue.dead_letter = off for dev/eu-west (withdrawn). The service keeps its state in an append-only journal and rebuilds the index on start. Every entry is validated before it is written. See the runbook for the rollout procedure.
+- 2026-04-26: proposed tls.key_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.key for canary/apac-south (reverted). Every entry is validated before it is written. Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-04-22: proposed tls.key_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.key for prod/apac-south (reverted). Keys are compared case-sensitively. A value set here applies only after the next reload. Unknown keys are ignored with a warning.
+- 2026-04-22: proposed http.request_timeout_ms = 3000 for prod/eu-west (reverted). The reader tolerates trailing whitespace. Keys are compared case-sensitively. Every entry is validated before it is written.
+- 2026-04-01: proposed queue.dead_letter = on for staging/eu-west (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. Every entry is validated before it is written. Unknown keys are ignored with a warning.
+- 2026-04-15: proposed features.beta_banner = on for canary/us-east (applied). The reader tolerates trailing whitespace. Keys are compared case-sensitively. The reader tolerates trailing whitespace.
+- 2026-04-25: proposed limits.burst = 6 for canary/apac-south (reverted). A value set here applies only after the next reload. See the runbook for the rollout procedure. Unknown keys are ignored with a warning.
+- 2026-04-08: proposed http.max_body_bytes = 16777216 for canary/us-east (reverted). Every entry is validated before it is written. Retries are bounded and jittered. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-04-21: proposed limits.burst = 1024 for staging/eu-central (withdrawn). The service keeps its state in an append-only journal and rebuilds the index on start. Keys are compared case-sensitively. The reader tolerates trailing whitespace.

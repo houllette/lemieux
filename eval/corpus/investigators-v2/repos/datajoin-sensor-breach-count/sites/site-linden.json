@@ -1,0 +1,10 @@
+{
+  "site": "site-linden",
+  "sensors": [
+    "sn-1597d",
+    "sn-acb8a",
+    "sn-221f3",
+    "sn-1342a"
+  ],
+  "location": "kelp"
+}

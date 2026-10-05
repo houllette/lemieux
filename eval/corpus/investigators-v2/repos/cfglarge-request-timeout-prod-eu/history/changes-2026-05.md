@@ -1,0 +1,26 @@
+# Change log 2026-05
+
+Proposals as discussed; the tree is authoritative, not this log.
+
+- 2026-05-20: proposed cache.backend = redis-like for prod/eu-west (withdrawn). Retries are bounded and jittered. The default is deliberately conservative. Keys are compared case-sensitively.
+- 2026-05-21: proposed queue.prefetch = 4 for canary/eu-west (superseded). The default is deliberately conservative. The reader tolerates trailing whitespace. Operators should not edit generated files by hand.
+- 2026-05-07: proposed db.retry_limit = 8 for prod/eu-west (applied). Unknown keys are ignored with a warning. Every entry is validated before it is written. Keys are compared case-sensitively.
+- 2026-05-03: proposed limits.rps = 24 for prod/eu-west (reverted). Unknown keys are ignored with a warning. A value set here applies only after the next reload. The reader tolerates trailing whitespace.
+- 2026-05-11: proposed tls.min_version = 1.2 for prod/eu-west (withdrawn). Operators should not edit generated files by hand. A value set here applies only after the next reload. See the runbook for the rollout procedure.
+- 2026-05-14: proposed logging.sink = @sinks/eu-collector for canary/apac-south (withdrawn). Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision. Operators should not edit generated files by hand.
+- 2026-05-02: proposed logging.sample_rate = 0.05 for staging/eu-west (withdrawn). The service keeps its state in an append-only journal and rebuilds the index on start. Keys are compared case-sensitively. Retries are bounded and jittered.
+- 2026-05-11: proposed tls.min_version = 1.2 for prod/apac-south (reverted). Every entry is validated before it is written. Retries are bounded and jittered. A value set here applies only after the next reload.
+- 2026-05-08: proposed db.statement_timeout_ms = 6000 for staging/apac-south (applied). Unknown keys are ignored with a warning. See the runbook for the rollout procedure. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-05-24: proposed db.replica = off for canary/us-east (superseded). The default is deliberately conservative. The service keeps its state in an append-only journal and rebuilds the index on start. Keys are compared case-sensitively.
+- 2026-05-09: proposed cache.max_entries = 512 for dev/eu-central (reverted). Operators should not edit generated files by hand. Every entry is validated before it is written. Retries are bounded and jittered.
+- 2026-05-26: proposed tls.min_version = 1.3 for canary/eu-central (applied). Operators should not edit generated files by hand. See the runbook for the rollout procedure. Every entry is validated before it is written.
+- 2026-05-18: proposed cache.ttl_seconds = 900 for staging/us-east (withdrawn). Unknown keys are ignored with a warning. Operators should not edit generated files by hand. Every entry is validated before it is written.
+- 2026-05-09: proposed queue.prefetch = 12 for staging/eu-west (applied). Operators should not edit generated files by hand. Every entry is validated before it is written. Operators should not edit generated files by hand.
+- 2026-05-28: proposed features.invoice_layout = a4 for prod/apac-south (applied). This section is kept for historical reasons and may be removed in a later revision. The reader tolerates trailing whitespace. Operators should not edit generated files by hand.
+- 2026-05-27: proposed tls.cert_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.pem for staging/eu-central (superseded). The reader tolerates trailing whitespace. Unknown keys are ignored with a warning. See the runbook for the rollout procedure.
+- 2026-05-12: proposed limits.burst = 2 for staging/us-east (applied). Operators should not edit generated files by hand. The default is deliberately conservative. Every entry is validated before it is written.
+- 2026-05-14: proposed queue.dead_letter = on for prod/apac-south (superseded). Retries are bounded and jittered. The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace.
+- 2026-05-13: proposed logging.format = json for staging/us-east (withdrawn). Every entry is validated before it is written. A value set here applies only after the next reload. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-05-03: proposed logging.sink = @sinks/secondary for prod/eu-central (applied). This section is kept for historical reasons and may be removed in a later revision. This section is kept for historical reasons and may be removed in a later revision. A value set here applies only after the next reload.
+- 2026-05-16: proposed limits.concurrent_exports = 12 for staging/apac-south (withdrawn). This section is kept for historical reasons and may be removed in a later revision. Unknown keys are ignored with a warning. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-05-17: proposed http.request_timeout_ms = 2000 for canary/eu-central (superseded). Operators should not edit generated files by hand. The reader tolerates trailing whitespace. Operators should not edit generated files by hand.

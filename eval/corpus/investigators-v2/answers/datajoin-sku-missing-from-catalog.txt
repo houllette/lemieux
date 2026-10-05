@@ -1,0 +1,1 @@
+sku-8e078: shipped 2026-06-15 in order o-d500091, but its catalog rows cover 2026-01-01..2026-06-10 and 2026-06-20..2027-01-01, so it had no effective row on the ship date. sku-34b81 only appears in a cancelled order, sku-be0aa only in a pending one (and under catalog/pending/), and sku-69298's row ends 2026-06-16 so it was still effective on 2026-06-15.

@@ -1,0 +1,5 @@
+/_build/
+/deps/
+/artifacts/
+/.env
+/tmp/

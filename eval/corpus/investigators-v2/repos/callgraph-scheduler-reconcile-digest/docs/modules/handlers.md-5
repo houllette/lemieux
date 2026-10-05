@@ -1,0 +1,17 @@
+# Notes
+
+Keys are compared case-sensitively. The reader tolerates trailing whitespace. Retries are bounded and jittered. A value set here applies only after the next reload. A value set here applies only after the next reload.
+
+A value set here applies only after the next reload. Operators should not edit generated files by hand. The default is deliberately conservative. A value set here applies only after the next reload. See the runbook for the rollout procedure.
+
+A value set here applies only after the next reload. Unknown keys are ignored with a warning. Operators should not edit generated files by hand. The default is deliberately conservative. Operators should not edit generated files by hand.
+
+The reader tolerates trailing whitespace. Retries are bounded and jittered. Unknown keys are ignored with a warning. Keys are compared case-sensitively. A value set here applies only after the next reload.
+
+Unknown keys are ignored with a warning. The default is deliberately conservative. Keys are compared case-sensitively. The default is deliberately conservative. Keys are compared case-sensitively.
+
+Every entry is validated before it is written. Every entry is validated before it is written. The reader tolerates trailing whitespace. The default is deliberately conservative. Operators should not edit generated files by hand.
+
+A value set here applies only after the next reload. Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision. The default is deliberately conservative. The default is deliberately conservative.
+
+Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision. The reader tolerates trailing whitespace. Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision.

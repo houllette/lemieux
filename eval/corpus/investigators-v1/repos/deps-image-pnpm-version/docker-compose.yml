@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        PNPM_VERSION: "8.15.4"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app

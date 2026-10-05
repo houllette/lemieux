@@ -1,0 +1,8 @@
+# worker component dependencies (.deps format: name<TAB>constraint)
+
+ledgercore	^4.2.7
+csvfast	^3.3.11
+tabulate2	^3.9.19
+argsplit	^1.4.1
+colorize	^1.1.17
+hashfold	^2.11.3

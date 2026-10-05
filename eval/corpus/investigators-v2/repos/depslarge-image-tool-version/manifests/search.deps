@@ -1,0 +1,8 @@
+# search component dependencies (.deps format: name<TAB>constraint)
+
+blobstore	^2.11.2
+argsplit	^3.0.3
+cipherbox	^1.1.7
+colorize	^2.11.17
+httpkit	^4.2.4
+tomlet	^4.0.19

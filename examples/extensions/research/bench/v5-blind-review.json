@@ -1,0 +1,154 @@
+{
+  "method": "Reviewer saw shuffled answer IDs and cited/fetched source text, without arm labels. These overrides address wording misses in the automatic source-text pattern check; the source must have been fetched and cited in that attempt. Other unresolved claims remain unresolved.",
+  "overrides": [
+    {
+      "id": "B026",
+      "claim": "allocation-bound",
+      "status": "supported_primary",
+      "reason": "The cited Go 1.27 notes say small (<80 byte) allocations; the answer says smaller than 80 bytes."
+    },
+    {
+      "id": "B030",
+      "claim": "subset-limit",
+      "status": "supported_primary",
+      "reason": "The cited Go 1.26 notes explain reachability limits and the global-variable example."
+    },
+    {
+      "id": "B034",
+      "claim": "concrete-methods",
+      "status": "supported_primary",
+      "reason": "The cited Go 1.27 notes say method declarations may declare their own type parameters."
+    },
+    {
+      "id": "B034",
+      "claim": "allocation-bound",
+      "status": "supported_primary",
+      "reason": "The cited Go 1.27 notes say small (<80 byte) allocations; the answer says under 80 bytes."
+    },
+    {
+      "id": "B044",
+      "claim": "interface-limit",
+      "status": "supported_primary",
+      "reason": "The cited Go 1.27 notes say interface methods may not declare type parameters."
+    },
+    {
+      "id": "B044",
+      "claim": "allocation-bound",
+      "status": "supported_primary",
+      "reason": "The cited Go 1.27 notes say small (<80 byte) allocations; the answer says strictly under 80 bytes."
+    },
+    {
+      "id": "B046",
+      "claim": "subset-limit",
+      "status": "supported_primary",
+      "reason": "The cited Go 1.26 notes explain reachability limits and the global-variable example."
+    }
+  ],
+  "answer_overrides": [
+    {
+      "id": "B001",
+      "claim": "subset-limit",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer explicitly says not every leak and explains reachable globals; cited Go technical article supports it."
+    },
+    {
+      "id": "B003",
+      "claim": "software-emulation",
+      "presence": "present",
+      "support": "unresolved",
+      "reason": "Scalar fallback is equivalent to emulation; model-only answer had no fetched citation."
+    },
+    {
+      "id": "B007",
+      "claim": "stream-removed",
+      "presence": "present",
+      "support": "unresolved",
+      "reason": "Answer says Node 26 removes the private module; model-only answer had no fetched citation."
+    },
+    {
+      "id": "B008",
+      "claim": "header-removed",
+      "presence": "present",
+      "support": "unresolved",
+      "reason": "Answer says Node 26 removed writeHeader; cited fetched pages did not deliver the Node 26 removal evidence."
+    },
+    {
+      "id": "B013",
+      "claim": "gang-dependency",
+      "presence": "absent",
+      "support": "absent_after_review",
+      "reason": "Answer mentions GangScheduling but expressly says the sources do not establish the required dependency."
+    },
+    {
+      "id": "B015",
+      "claim": "runtime-state",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer says PodGroup holds runtime policy and state; cited Kubernetes 1.36 project post supports it."
+    },
+    {
+      "id": "B018",
+      "claim": "v127-arch",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer says arm64 NEON and WebAssembly; frozen regex only accepted wasm spelling."
+    },
+    {
+      "id": "B024",
+      "claim": "runtime-state",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer says PodGroup is runtime object with policy and status; cited Kubernetes 1.36 post supports it."
+    },
+    {
+      "id": "B025",
+      "claim": "header-removed",
+      "presence": "present",
+      "support": "unresolved",
+      "reason": "Answer says removed in Node 26; cited fetched pages did not deliver the Node 26 removal evidence."
+    },
+    {
+      "id": "B026",
+      "claim": "concrete-methods",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer says a method may introduce its own type parameters; cited Go 1.27 notes support it."
+    },
+    {
+      "id": "B026",
+      "claim": "interface-limit",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer says interface methods may not declare type parameters; cited Go 1.27 notes support it."
+    },
+    {
+      "id": "B034",
+      "claim": "interface-limit",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer says interface methods may not declare type parameters; cited Go 1.27 notes support it."
+    },
+    {
+      "id": "B044",
+      "claim": "concrete-methods",
+      "presence": "present",
+      "support": "supported_primary_manual",
+      "reason": "Answer says generic methods attach to a type; cited Go 1.27 notes support it."
+    },
+    {
+      "id": "B048",
+      "claim": "static-template",
+      "presence": "present",
+      "support": "supported_secondary_only",
+      "reason": "Answer says Workload is static template; cited current Kubernetes docs describe v1.37 and the 1.36 secondary source supports it."
+    },
+    {
+      "id": "B048",
+      "claim": "runtime-state",
+      "presence": "present",
+      "support": "supported_secondary_only",
+      "reason": "Answer says PodGroup holds runtime state; cited current Kubernetes docs describe v1.37 and the 1.36 secondary source supports it."
+    }
+  ]
+}

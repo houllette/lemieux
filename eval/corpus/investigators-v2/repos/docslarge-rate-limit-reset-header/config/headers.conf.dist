@@ -1,0 +1,4 @@
+[ratelimit]
+limit = X-RateLimit-Limit
+remaining = X-RateLimit-Remaining
+reset = X-RateLimit-Reset

@@ -1,0 +1,14 @@
+#!/bin/sh
+# Verifies that every required key resolves with .env loaded.
+root=$(cd "$(dirname "$0")/.." && pwd)
+status=0
+for key in database_url payments_endpoint payments_token batch_size; do
+  if value=$(sh "$root/bin/with-env" sh "$root/bin/resolve-config" "$key" 2>&1); then
+    echo "ok   $key"
+  else
+    echo "FAIL $key: $value"
+    status=1
+  fi
+done
+[ "$status" = 0 ] && echo "config ok"
+exit $status

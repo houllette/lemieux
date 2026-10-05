@@ -1,0 +1,11 @@
+1.10.5: Operators should not edit generated files by hand. Keys are compared case-sensitively. Keys are compared case-sensitively.
+
+3.9.2: The default is deliberately conservative. Operators should not edit generated files by hand. Operators should not edit generated files by hand.
+
+3.12.16: See the runbook for the rollout procedure. Retries are bounded and jittered. Keys are compared case-sensitively.
+
+3.1.3: Keys are compared case-sensitively. A value set here applies only after the next reload. The reader tolerates trailing whitespace.
+
+1.3.13: Operators should not edit generated files by hand. A value set here applies only after the next reload. This section is kept for historical reasons and may be removed in a later revision.
+
+4.1.11: A value set here applies only after the next reload. Unknown keys are ignored with a warning. See the runbook for the rollout procedure.

@@ -1,0 +1,144 @@
+name: Public readiness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# As in ci.yml: a pull request's newer push cancels its older run, and every
+# other run (each push to main, each manual run) has a group of its own, so
+# GitHub never cancels one that is still waiting to start.
+concurrency:
+  group: public-readiness-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  LMX_CONFIG: none
+
+jobs:
+  tutorials:
+    # Job names are the status-check contexts a ruleset requires; renaming
+    # one silently stops it from being required.
+    name: Tutorial and release helpers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          project: examples/extensions/hello
+          cache-key: tutorial-hello
+          deps: "false"
+          python: "true"
+      # The tutorial's steps, bundle build included, as `mix precommit.full`
+      # runs them.
+      - name: Run standalone extension tutorial
+        run: scripts/check_example.sh hello
+      - name: Release helper tests
+        run: python -m unittest discover -s test -p 'test_*.py'
+
+  # A commit's author and committer addresses become public once it is pushed
+  # here, and a pushed commit cannot be taken back, so an address meant to
+  # stay private is refused before it lands. Only the commits a push or pull
+  # request brings are checked: a rewritten or new history is checked whole,
+  # and a manual run checks the commit it ran on. Bots pass by address too:
+  # Dependabot authors as ID+dependabot[bot]@users.noreply.github.com, and
+  # GitHub commits merges and Dependabot's changes as noreply@github.com. A
+  # name is never trusted, since anyone can set any name.
+  identities:
+    name: Commit identities
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require GitHub noreply addresses on new commits
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          git cat-file -e "$HEAD^{commit}"
+          if [ -z "$BASE" ]; then
+            revisions=(-1 "$HEAD")
+          elif [ "$BASE" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            revisions=("$HEAD")
+          else
+            revisions=("$BASE..$HEAD")
+          fi
+          allowed() {
+            case $1 in
+              *@users.noreply.github.com | noreply@github.com) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+          checked=0
+          bad=0
+          while IFS=$'\t' read -r commit author_email committer_email; do
+            checked=$((checked + 1))
+            if ! allowed "$author_email"; then
+              echo "::error::$commit is authored by <$author_email>, not a GitHub noreply address"
+              bad=1
+            fi
+            if ! allowed "$committer_email"; then
+              echo "::error::$commit is committed by <$committer_email>, not a GitHub noreply address"
+              bad=1
+            fi
+          done < <(git log --format='%h%x09%ae%x09%ce' "${revisions[@]}")
+          if [ "$bad" -ne 0 ]; then
+            echo "Every author and committer address in this repository's history is public."
+            echo "Commit with your GitHub noreply address (github.com/settings/emails):"
+            echo "  git config user.email ID+USERNAME@users.noreply.github.com"
+            echo "then rewrite this change's commits, for example:"
+            echo "  git rebase --exec 'git commit --amend --no-edit --reset-author' origin/main"
+            exit 1
+          fi
+          echo "Every author and committer on the $checked commit(s) checked uses a GitHub noreply address."
+
+  secrets:
+    name: Secret scan (full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # The pull-request fetch below needs the token while the repository
+          # is private. It is read-only, nothing here runs repository code,
+          # and a pull request's run, which skips that fetch, keeps none.
+          persist-credentials: ${{ github.event_name != 'pull_request' }}
+      # Pull-request heads stay public, closed pull requests included, even
+      # after their branch is deleted or rewritten; a checkout fetches none of
+      # them. Pushes to main and manual runs scan them all. A pull request's
+      # own run scans only its own history: anyone can open a pull request
+      # and nobody can delete its head, so one secret-shaped string in it
+      # would otherwise fail this check on every other pull request until
+      # .gitleaksignore was edited. The pattern matches nothing in a
+      # repository without pull requests.
+      - name: Fetch every pull request's head
+        if: github.event_name != 'pull_request'
+        run: git fetch --no-tags origin '+refs/pull/*/head:refs/remotes/origin/pull/*'
+      # The archive's SHA-256 is pinned here rather than read from the
+      # release's checksums file: a file from the same release would vouch
+      # for a replaced archive just as well. Dependabot updates neither value,
+      # so bump both together, taking the new digest from the release's
+      # gitleaks_VERSION_checksums.txt.
+      - name: Download pinned scanner and verify archive
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}" -o "$RUNNER_TEMP/$archive"
+          cd "$RUNNER_TEMP"
+          echo "$GITLEAKS_SHA256  $archive" | sha256sum --check --strict
+          tar -xzf "$archive" gitleaks
+      - name: Scan all reachable history
+        run: '"$RUNNER_TEMP/gitleaks" git --log-opts="--all" --redact .'

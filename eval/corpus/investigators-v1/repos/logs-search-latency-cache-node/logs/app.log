@@ -1,0 +1,13 @@
+2026-07-09T10:58:02Z req=req-3001 cache hit node=cache-a key=search:q:shoes
+2026-07-09T10:59:10Z req=req-3002 cache hit node=cache-c key=search:q:jackets
+2026-07-09T10:59:55Z req=req-3003 cache hit node=cache-b key=search:q:boots
+2026-07-09T11:00:40Z req=req-3004 cache hit node=cache-a key=search:q:hats
+2026-07-09T11:02:05Z req=req-3005 cache miss node=cache-b key=search:q:boots -> index scan 1790ms
+2026-07-09T11:02:48Z req=req-3006 cache miss node=cache-b key=search:q:socks -> index scan 2160ms
+2026-07-09T11:03:30Z req=req-3007 cache miss node=cache-b key=search:q:gloves -> index scan 1920ms
+2026-07-09T11:04:12Z req=req-3008 cache miss node=cache-b key=search:q:scarves -> index scan 1990ms
+2026-07-09T11:05:58Z req=req-3009 cache miss node=cache-b key=search:q:belts -> index scan 1600ms
+2026-07-09T11:07:21Z req=req-3010 cache miss node=cache-b key=search:q:coats -> index scan 1370ms
+2026-07-09T11:08:44Z req=req-3011 cache hit node=cache-b key=search:q:boots
+2026-07-09T11:09:59Z req=req-3012 cache hit node=cache-a key=search:q:shoes
+2026-07-09T11:11:15Z req=req-3013 cache hit node=cache-c key=search:q:jackets

@@ -1,0 +1,10 @@
+<!doctype html><html><head><title>Rendered guide</title></head><body>
+<nav><a href="/help.html">Site navigation</a></nav>
+<main aria-busy="true">Loading...</main>
+<script>
+setTimeout(() => {
+  const main = document.querySelector('main');
+  main.innerHTML = '<article><h1>Hydrated guide</h1><p>The application rendered this paragraph after loading.</p><pre>if true do\n  :ok\nend</pre><div style="height:1800px"></div><p>Content below the viewport is included.</p><a href="/help.html">Next lesson</a><div style="display:none">Hidden secret</div></article>';
+  main.setAttribute('aria-busy','false');
+}, 350);
+</script></body></html>

@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+. lib/exit.sh
+. lib/sync.sh
+
+case "${1:-}" in
+  --dry-run) DRY_RUN=1 ;;
+  "") DRY_RUN=0 ;;
+  *) exit_usage ;;
+esac
+
+failed=$(sync_records "$DRY_RUN")
+if [ "$failed" -gt 0 ]; then
+  exit_partial
+fi
+exit_ok

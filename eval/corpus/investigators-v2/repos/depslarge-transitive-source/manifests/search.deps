@@ -1,0 +1,8 @@
+# search component dependencies (.deps format: name<TAB>constraint)
+
+yamlish	^0.2.18
+clockwork	^3.5.10
+blobstore	^1.3.7
+ledgercore	^4.11.2
+httpkit	^2.2.15
+tabulate2	^0.12.16

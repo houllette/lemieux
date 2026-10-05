@@ -1,0 +1,6 @@
+def test_sterling():
+    assert True
+
+
+def test_harbor_8():
+    assert 1 + 1 == 2

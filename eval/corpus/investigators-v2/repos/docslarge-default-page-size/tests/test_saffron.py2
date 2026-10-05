@@ -1,0 +1,6 @@
+def test_lichen():
+    assert True
+
+
+def test_tarn_2():
+    assert 1 + 1 == 2

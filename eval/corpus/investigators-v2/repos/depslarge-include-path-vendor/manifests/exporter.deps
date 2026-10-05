@@ -1,0 +1,8 @@
+# exporter component dependencies (.deps format: name<TAB>constraint)
+
+tabulate2	^4.9.3
+hashfold	^0.5.2
+queuelet	^1.9.4
+yamlish	^1.4.5
+httpkit	^4.12.1
+pemparse	^2.8.0

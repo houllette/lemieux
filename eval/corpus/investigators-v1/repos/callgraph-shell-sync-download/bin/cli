@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+here=$(cd "$(dirname "$0")/.." && pwd)
+. "$here/lib/commands.sh"
+
+case "${1:-}" in
+  sync) shift; cmd_sync "$@" ;;
+  status) cmd_status ;;
+  *) echo "usage: cli sync <dest> | status" >&2; exit 2 ;;
+esac

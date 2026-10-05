@@ -1,0 +1,8 @@
+# worker component dependencies (.deps format: name<TAB>constraint)
+
+cipherbox	~3.1
+blobstore	^2.0.4
+colorize	^2.7.7
+queuelet	^3.0.12
+fsync	^2.3.10
+csvfast	^3.2.11

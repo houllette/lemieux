@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "module": "VerifierExtension",
+  "files": [
+    "mix.exs",
+    ".formatter.exs",
+    "README.md",
+    "lib/verifier_extension.ex",
+    "lib/verifier_extension/check.ex",
+    "lib/verifier_extension/discovery.ex",
+    "lib/verifier_extension/totals.ex",
+    "bench/compare.exs",
+    "bench/manifest.json",
+    "bench/summarize.exs",
+    "test/test_helper.exs",
+    "test/check_test.exs",
+    "test/discovery_test.exs",
+    "test/totals_test.exs",
+    "test/verifier_extension_test.exs",
+    "test/fixtures/bare/app.conf",
+    "test/fixtures/ledger/README.md",
+    "test/fixtures/ledger/bin/receipt.sh",
+    "test/fixtures/ledger/bin/summary.sh",
+    "test/fixtures/ledger/check.sh",
+    "test/fixtures/ledger/tests/run.sh",
+    "test/fixtures/slow/tests/run.sh"
+  ]
+}

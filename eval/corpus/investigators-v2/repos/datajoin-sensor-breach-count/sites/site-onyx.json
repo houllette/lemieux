@@ -1,0 +1,10 @@
+{
+  "site": "site-onyx",
+  "sensors": [
+    "sn-1ae14",
+    "sn-9f90d",
+    "sn-68fb8",
+    "sn-1b61a"
+  ],
+  "location": "meadow"
+}

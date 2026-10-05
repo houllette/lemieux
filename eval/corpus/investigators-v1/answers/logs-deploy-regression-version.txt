@@ -1,0 +1,1 @@
+api v2.8.1 introduced it: the first NullPointerException at PriceCalculator.apply is logged at 2026-03-05 07:41:12, after the v2.8.1 deploy at 2026-03-04 21:45:10 and before v2.8.2 went out at 08:05:44 on 03-05; the 03-04 log under v2.8.0 has none.

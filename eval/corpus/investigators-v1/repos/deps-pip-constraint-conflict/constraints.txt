@@ -1,0 +1,5 @@
+# Shared pins across every service.
+urllib3==2.7.0
+requests==2.33.0
+click==8.1.7
+gunicorn==23.0.0

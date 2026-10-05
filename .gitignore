@@ -1,0 +1,96 @@
+# Build artifacts
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+
+# Crash dumps and compiled artifacts
+erl_crash.dump
+*.ez
+*.beam
+
+# Releases and generated standalone binaries
+*.tar
+/tmp/
+/dist/lmx/_build/
+/dist/lmx/deps/
+/dist/lmx/tmp/
+/dist/lmx/erl_crash.dump
+# Extensions bundled with the lmx release (Jev compaction) are Mix projects of
+# their own, built and fetched in place like the examples below.
+/dist/lmx/extensions/*/_build/
+/dist/lmx/extensions/*/deps/
+/dist/lmx/extensions/*/tmp/
+# The standalone research example resolves its own local build and keeps
+# credential-free but bulky live benchmark transcripts on the developer host.
+/examples/extensions/research/_build/
+/examples/extensions/research/deps/
+/examples/extensions/research/tmp/
+# Every example is its own Mix project with its own build, dependencies and
+# run output. Several examples shipped without an ignore file of their own, so
+# one `git add -A` swept megabytes of local reports into the index; ignoring
+# the whole class here keeps a new example from repeating it.
+/examples/**/_build/
+/examples/**/deps/
+/examples/extensions/*/tmp/
+# A stale artifact from the removed escript build path may still exist in a
+# developer checkout; it is never a source or release input.
+/lmx
+
+# Dialyzer PLTs are expensive to build, cached in CI and never committed. They
+# live in _build/plts (ignored with _build); priv/plts is their former home and
+# stays ignored so an older checkout's cache never shows up as untracked.
+/priv/plts/
+
+# Secrets / local-only config
+/config/*.secret.exs
+.env
+.env.*
+!.env.example
+# Other places provider keys end up on a contributor's machine: direnv and
+# mise's local overrides export them, and key material has no business in Git.
+.envrc
+mise.local.toml
+.mise.local.toml
+*.pem
+*.key
+# Project-level lmx state written while dogfooding lmx in this checkout:
+# `lmx harness` writes .lmx/harness.json, and capture drafts copy the whole
+# workspace under .lmx/drafts/.
+/.lmx/
+# Personal agent instructions. lmx and Claude Code both load CLAUDE.local.md,
+# and it is meant to stay on one machine.
+CLAUDE.local.md
+
+# ...except inside the benchmark corpus, where a fixture repository's dotfiles
+# are the case's content rather than this checkout's secrets. The rules above
+# reached in and silently dropped three of them, so a fresh clone had fixtures
+# with files missing and CI failed the corpus graders while every developer
+# checkout passed. A fixture that ships its own .gitignore still needs
+# `git add -f`: a nested ignore file wins over this one, by design.
+!/eval/corpus/**/repos/**
+
+# Language server / editor caches
+/.elixir_ls/
+/.lexical/
+/.elixir-tools/
+.DS_Store
+
+# Phoenix / asset pipeline (harmless for non-Phoenix projects)
+/assets/node_modules/
+/priv/static/assets/
+/priv/static/cache_manifest.json
+.claude/settings.local.json
+# Claude Code's isolated worktrees: whole checkouts of this repository, which
+# one `git add -A` in the main checkout would otherwise try to stage.
+/.claude/worktrees/
+
+# Case drafts are a staging area: `lmx corpus promote` copies the fixture into
+# the corpus and the manifest entry carries the feedback id and fixture digest,
+# so a promoted draft is a duplicate of both.
+eval/drafts/
+
+# Python release helper bytecode
+__pycache__/
+*.pyc

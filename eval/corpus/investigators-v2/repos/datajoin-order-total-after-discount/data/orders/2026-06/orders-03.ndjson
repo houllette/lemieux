@@ -1,0 +1,6 @@
+{"order_id": "o-1416339", "customer_id": "c-20226", "placed_at": "2026-06-02", "status": "shipped", "lines": [{"sku": "sku-6b650", "qty": 2, "unit_price": 196.81}, {"sku": "sku-622cf", "qty": 2, "unit_price": 188.77}, {"sku": "sku-80621", "qty": 6, "unit_price": 5.92}]}
+{"order_id": "o-4b5d3a3", "customer_id": "c-20142", "placed_at": "2026-06-06", "status": "shipped", "lines": [{"sku": "sku-feb06", "qty": 3, "unit_price": 52.36}, {"sku": "sku-f182f", "qty": 6, "unit_price": 16.5}, {"sku": "sku-9a87a", "qty": 1, "unit_price": 97.43}, {"sku": "sku-622cf", "qty": 5, "unit_price": 59.96}]}
+{"order_id": "o-00fd097", "customer_id": "c-20048", "placed_at": "2026-06-27", "status": "shipped", "lines": [{"sku": "sku-1b6df", "qty": 6, "unit_price": 10.67}]}
+{"order_id": "o-ba70675", "customer_id": "c-20288", "placed_at": "2026-06-05", "status": "shipped", "lines": [{"sku": "sku-ea82c", "qty": 4, "unit_price": 189.28}, {"sku": "sku-2030b", "qty": 2, "unit_price": 192.48}]}
+{"order_id": "o-55ec9eb", "customer_id": "c-20124", "placed_at": "2026-06-06", "status": "shipped", "lines": [{"sku": "sku-14f03", "qty": 4, "unit_price": 197.29}]}
+{"order_id": "o-7056531", "customer_id": "c-20008", "placed_at": "2026-06-22", "status": "shipped", "lines": [{"sku": "sku-1b6df", "qty": 5, "unit_price": 33.98}]}

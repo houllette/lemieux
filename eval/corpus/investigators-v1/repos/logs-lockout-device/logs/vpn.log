@@ -1,0 +1,3 @@
+2026-06-02 06:55:00 session up user=rpatel client=10.9.0.14
+2026-06-02 08:30:12 session up user=mkline client=10.9.0.22
+2026-06-02 09:05:44 session down user=mkline client=10.9.0.22

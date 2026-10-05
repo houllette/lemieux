@@ -1,0 +1,1 @@
+Order o-ccff6f0 (customer c-20144, Marrow Kestrel Ltd, placed 2026-05-14): lines 3 x 40.00 + 4 x 10.00 = 160.00 at the agreed line prices. The tier effective on 2026-05-14 in data/tiers/history is gold (12%), giving 140.80; refunds of 15.00 and 7.50 bring it to 118.30. Platinum (current) would give 105.50, no refunds 140.80, catalog prices 137.58.

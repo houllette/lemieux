@@ -1,0 +1,11 @@
+3.5.16: Retries are bounded and jittered. The reader tolerates trailing whitespace. The reader tolerates trailing whitespace.
+
+3.10.4: The service keeps its state in an append-only journal and rebuilds the index on start. Retries are bounded and jittered. The default is deliberately conservative.
+
+4.10.18: The default is deliberately conservative. The default is deliberately conservative. Every entry is validated before it is written.
+
+3.2.11: The reader tolerates trailing whitespace. Retries are bounded and jittered. See the runbook for the rollout procedure.
+
+4.3.15: See the runbook for the rollout procedure. The reader tolerates trailing whitespace. The reader tolerates trailing whitespace.
+
+4.12.3: The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning. The service keeps its state in an append-only journal and rebuilds the index on start.

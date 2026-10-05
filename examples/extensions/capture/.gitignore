@@ -1,0 +1,5 @@
+# The repository's own ignores are anchored to its root; this example is a
+# separate Mix project with its own build, dependencies and test scratch.
+/_build/
+/deps/
+/tmp/

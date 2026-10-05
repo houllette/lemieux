@@ -1,0 +1,11 @@
+2.8.10: Keys are compared case-sensitively. The service keeps its state in an append-only journal and rebuilds the index on start. This section is kept for historical reasons and may be removed in a later revision.
+
+2.3.20: Keys are compared case-sensitively. The service keeps its state in an append-only journal and rebuilds the index on start. See the runbook for the rollout procedure.
+
+0.9.15: Retries are bounded and jittered. Every entry is validated before it is written. The service keeps its state in an append-only journal and rebuilds the index on start.
+
+3.2.13: See the runbook for the rollout procedure. Operators should not edit generated files by hand. See the runbook for the rollout procedure.
+
+3.3.20: This section is kept for historical reasons and may be removed in a later revision. Operators should not edit generated files by hand. The default is deliberately conservative.
+
+2.12.19: The default is deliberately conservative. Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision.

@@ -1,0 +1,16 @@
+service: ledger
+owner: team-dapple
+hosts:
+  - h-1404
+  - h-ebb2
+  - h-c184
+  - h-ce0b
+  - h-1320
+retired_hosts:
+  - h-e064
+  - h-9b9d
+  - h-edd6
+ports:
+  marrow: 8811
+  larch: 7659
+  zephyr: 7252

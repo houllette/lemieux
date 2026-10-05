@@ -1,0 +1,16 @@
+service: search
+owner: team-dapple
+hosts:
+  - h-7dff
+  - h-568f
+  - h-475e
+  - h-09cf
+  - h-7060
+retired_hosts:
+  - h-56c9
+  - h-108f
+  - h-2715
+ports:
+  umber: 4091
+  hazel: 5610
+  larch: 8434

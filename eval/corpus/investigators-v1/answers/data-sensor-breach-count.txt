@@ -1,0 +1,1 @@
+loading-dock (s-01, threshold 8.0 C) breached 6 times across both days: 8.2 and 9.1 on day 1, then 8.4, 8.6, 8.3 and 8.8 on day 2. cold-room-1 has 5 (it leads day 1 alone with 4), packing-hall 3, server-closet 3, cold-room-2 2.

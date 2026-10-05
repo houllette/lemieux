@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "module": "CaptureExtension",
+  "files": [
+    ".formatter.exs",
+    "README.md",
+    "bin/capture",
+    "hooks.json",
+    "lib/capture_extension.ex",
+    "lib/capture_extension/command.ex",
+    "lib/capture_extension/config.ex",
+    "lib/capture_extension/draft.ex",
+    "lib/capture_extension/signals.ex",
+    "lib/capture_extension/snapshot.ex",
+    "mix.exs",
+    "test/capture_extension/capture_test.exs",
+    "test/capture_extension/command_test.exs",
+    "test/capture_extension/signals_test.exs",
+    "test/capture_extension/snapshot_test.exs",
+    "test/test_helper.exs"
+  ]
+}

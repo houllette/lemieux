@@ -1,0 +1,6 @@
+# Production stage.
+log_level: debug
+allow_env_override: false
+workers: 16
+queue:
+  name: notifications-prod

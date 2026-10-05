@@ -1,0 +1,5 @@
+{
+  "request_id_header": "X-Request-Id",
+  "retry_header": "X-RateLimit-Reset",
+  "tenant_header": "X-Tenant"
+}

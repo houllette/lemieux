@@ -1,0 +1,11 @@
+3.11.18: The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace. See the runbook for the rollout procedure.
+
+0.0.20: The default is deliberately conservative. See the runbook for the rollout procedure. Unknown keys are ignored with a warning.
+
+2.7.9: See the runbook for the rollout procedure. Keys are compared case-sensitively. Keys are compared case-sensitively.
+
+1.8.5: Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision. Operators should not edit generated files by hand.
+
+4.10.7: The service keeps its state in an append-only journal and rebuilds the index on start. A value set here applies only after the next reload. The reader tolerates trailing whitespace.
+
+3.0.4: The default is deliberately conservative. Every entry is validated before it is written. The reader tolerates trailing whitespace.

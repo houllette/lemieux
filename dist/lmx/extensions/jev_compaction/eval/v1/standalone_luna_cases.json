@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "standalone_long_goal_switch",
+      "category": "long_irrelevant_old_reads",
+      "files": [
+        {
+          "path": "archive_01.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_01=obsolete"
+        },
+        {
+          "path": "archive_02.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_02=obsolete"
+        },
+        {
+          "path": "archive_03.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_03=obsolete"
+        },
+        {
+          "path": "archive_04.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_04=obsolete"
+        },
+        {
+          "path": "archive_05.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_05=obsolete"
+        },
+        {
+          "path": "archive_06.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_06=obsolete"
+        },
+        {
+          "path": "archive_07.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_07=obsolete"
+        },
+        {
+          "path": "archive_08.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_08=obsolete"
+        },
+        {
+          "path": "archive_09.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_09=obsolete"
+        },
+        {
+          "path": "archive_10.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_10=obsolete"
+        },
+        {
+          "path": "archive_11.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_11=obsolete"
+        },
+        {
+          "path": "archive_12.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_12=obsolete"
+        },
+        {
+          "path": "archive_13.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_13=obsolete"
+        },
+        {
+          "path": "archive_14.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_14=obsolete"
+        },
+        {
+          "path": "archive_15.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_15=obsolete"
+        },
+        {
+          "path": "archive_16.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_16=obsolete"
+        },
+        {
+          "path": "archive_17.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_17=obsolete"
+        },
+        {
+          "path": "archive_18.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_18=obsolete"
+        },
+        {
+          "path": "archive_19.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_19=obsolete"
+        },
+        {
+          "path": "archive_20.ex",
+          "line_count": 2000,
+          "target_line": 1900,
+          "target_text": "ARCHIVE_MARKER_20=obsolete"
+        }
+      ],
+      "seed_reads": [
+        "archive_01.ex",
+        "archive_02.ex",
+        "archive_03.ex",
+        "archive_04.ex",
+        "archive_05.ex",
+        "archive_06.ex",
+        "archive_07.ex",
+        "archive_08.ex",
+        "archive_09.ex",
+        "archive_10.ex",
+        "archive_11.ex",
+        "archive_12.ex",
+        "archive_13.ex",
+        "archive_14.ex",
+        "archive_15.ex",
+        "archive_16.ex",
+        "archive_17.ex",
+        "archive_18.ex",
+        "archive_19.ex",
+        "archive_20.ex"
+      ],
+      "must_keep_by_path": {
+        "archive_01.ex": false,
+        "archive_02.ex": false,
+        "archive_03.ex": false,
+        "archive_04.ex": false,
+        "archive_05.ex": false,
+        "archive_06.ex": false,
+        "archive_07.ex": false,
+        "archive_08.ex": false,
+        "archive_09.ex": false,
+        "archive_10.ex": false,
+        "archive_11.ex": false,
+        "archive_12.ex": false,
+        "archive_13.ex": false,
+        "archive_14.ex": false,
+        "archive_15.ex": false,
+        "archive_16.ex": false,
+        "archive_17.ex": false,
+        "archive_18.ex": false,
+        "archive_19.ex": false,
+        "archive_20.ex": false
+      },
+      "followups": [
+        {
+          "prompt": "The task has changed. Ignore every earlier archive file. Reply with exactly READY.",
+          "expected": "READY"
+        }
+      ]
+    },
+    {
+      "id": "standalone_required_fact",
+      "category": "needed_old_read",
+      "files": [
+        {
+          "path": "release.txt",
+          "line_count": 450,
+          "target_line": 390,
+          "target_text": "The release code is EMBER42."
+        }
+      ],
+      "seed_reads": [
+        "release.txt"
+      ],
+      "must_keep_by_path": {
+        "release.txt": true
+      },
+      "followups": [
+        {
+          "prompt": "What is the release code from release.txt? Reply with only the code.",
+          "expected": "EMBER42"
+        }
+      ]
+    }
+  ]
+}

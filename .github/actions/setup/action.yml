@@ -1,0 +1,85 @@
+name: Set up Erlang, Elixir and Mix caches
+description: >-
+  Installs the toolchain pinned in .tool-versions (or explicit versions for a
+  compatibility job) and restores one Mix project's deps and _build.
+
+inputs:
+  project:
+    description: Mix project directory, relative to the repository root.
+    default: "."
+  otp-version:
+    description: Explicit Erlang/OTP version. Empty means .tool-versions.
+    default: ""
+  elixir-version:
+    description: Explicit Elixir version, required with otp-version.
+    default: ""
+  cache-key:
+    description: >-
+      Names the job's cache. Jobs that build different things must not share
+      one: the first job to finish saves the key, and a job that only fetched
+      dependencies would leave every later compile starting from nothing.
+    required: true
+  deps:
+    description: Run `mix deps.get` in the project after restoring caches.
+    default: "true"
+  python:
+    description: >-
+      Also install the pinned Python. Set it for every job whose commands run
+      Python: the ordinary suite starts its MCP and process fixtures with
+      `python3`, and the release helpers are Python scripts.
+    default: "false"
+
+outputs:
+  otp-version:
+    description: The installed Erlang/OTP version.
+    value: ${{ steps.pinned.outputs.otp-version || steps.explicit.outputs.otp-version }}
+  elixir-version:
+    description: The installed Elixir version.
+    value: ${{ steps.pinned.outputs.elixir-version || steps.explicit.outputs.elixir-version }}
+
+runs:
+  using: composite
+  steps:
+    # One pinned interpreter rather than whatever the image puts on PATH:
+    # the images disagree (macOS ships `python3` but no `python`), and a job
+    # that relied on the image's choice failed on the platform nobody ran.
+    # release.yml and the jobs that need no BEAM pin the same version.
+    - name: Set up Python
+      if: inputs.python == 'true'
+      uses: actions/setup-python@v7
+      with:
+        python-version: "3.13"
+
+    - name: Set up BEAM from .tool-versions
+      id: pinned
+      if: inputs.otp-version == ''
+      uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+      with:
+        version-file: .tool-versions
+        version-type: strict
+
+    - name: Set up BEAM ${{ inputs.otp-version }} / Elixir ${{ inputs.elixir-version }}
+      id: explicit
+      if: inputs.otp-version != ''
+      uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+      with:
+        otp-version: ${{ inputs.otp-version }}
+        elixir-version: ${{ inputs.elixir-version }}
+        version-type: strict
+
+    - name: Cache deps and build
+      uses: actions/cache@v6
+      with:
+        path: |
+          ${{ inputs.project }}/deps
+          ${{ inputs.project }}/_build
+        # Examples without a lockfile resolve from mix.exs, so it is hashed too.
+        key: mix-${{ inputs.cache-key }}-${{ runner.os }}-${{ steps.pinned.outputs.otp-version || steps.explicit.outputs.otp-version }}-${{ steps.pinned.outputs.elixir-version || steps.explicit.outputs.elixir-version }}-${{ hashFiles(format('{0}/mix.lock', inputs.project), format('{0}/mix.exs', inputs.project)) }}
+        restore-keys: |
+          mix-${{ inputs.cache-key }}-${{ runner.os }}-${{ steps.pinned.outputs.otp-version || steps.explicit.outputs.otp-version }}-${{ steps.pinned.outputs.elixir-version || steps.explicit.outputs.elixir-version }}-
+
+    - name: Install dependencies
+      if: inputs.deps == 'true'
+      shell: bash
+      working-directory: ${{ inputs.project }}
+      run: mix deps.get

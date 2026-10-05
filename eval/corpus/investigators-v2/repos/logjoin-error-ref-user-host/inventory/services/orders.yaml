@@ -1,0 +1,16 @@
+service: orders
+owner: team-quartz
+hosts:
+  - h-353f
+  - h-d6cd
+  - h-5128
+  - h-7746
+  - h-b8ad
+retired_hosts:
+  - h-8d69
+  - h-2dc0
+  - h-658b
+ports:
+  delta: 3664
+  falcon: 3682
+  thistle: 6408

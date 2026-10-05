@@ -1,0 +1,16 @@
+service: billing
+owner: team-granite
+hosts:
+  - h-4588
+  - h-34d7
+  - h-123b
+  - h-6417
+  - h-02ae
+retired_hosts:
+  - h-e9d6
+  - h-c315
+  - h-9cd4
+ports:
+  sedge: 8585
+  slate: 4213
+  lantern: 8691

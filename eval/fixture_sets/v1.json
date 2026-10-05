@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "baseline": "baseline-fixture",
+  "variants": [
+    {"name": "baseline-fixture", "observations": "../recordings/v1.json"},
+    {"name": "candidate-fixture", "observations": "../recordings/v1.json"}
+  ]
+}

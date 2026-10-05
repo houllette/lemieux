@@ -1,0 +1,26 @@
+# Change log 2026-08
+
+Proposals as discussed; the tree is authoritative, not this log.
+
+- 2026-08-02: proposed limits.concurrent_exports = 3 for staging/us-east (applied). A value set here applies only after the next reload. The default is deliberately conservative. Keys are compared case-sensitively.
+- 2026-08-09: proposed features.search_engine = vector for dev/apac-south (reverted). The default is deliberately conservative. Operators should not edit generated files by hand. Operators should not edit generated files by hand.
+- 2026-08-06: proposed db.ssl_mode = verify-full for dev/eu-west (withdrawn). Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision. Every entry is validated before it is written.
+- 2026-08-03: proposed http.keepalive_s = 900 for canary/us-east (reverted). Keys are compared case-sensitively. Every entry is validated before it is written. The reader tolerates trailing whitespace.
+- 2026-08-22: proposed logging.format = json for staging/eu-west (reverted). The reader tolerates trailing whitespace. Every entry is validated before it is written. Every entry is validated before it is written.
+- 2026-08-03: proposed http.workers = 8 for canary/eu-west (reverted). See the runbook for the rollout procedure. Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-08-21: proposed http.workers = 2 for canary/eu-central (reverted). Keys are compared case-sensitively. Operators should not edit generated files by hand. Retries are bounded and jittered.
+- 2026-08-18: proposed queue.dead_letter = on for staging/apac-south (reverted). Retries are bounded and jittered. See the runbook for the rollout procedure. Retries are bounded and jittered.
+- 2026-08-08: proposed queue.prefetch = 12 for canary/eu-central (superseded). The default is deliberately conservative. This section is kept for historical reasons and may be removed in a later revision. The default is deliberately conservative.
+- 2026-08-01: proposed http.request_timeout_ms = 9000 for staging/eu-central (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning.
+- 2026-08-03: proposed queue.visibility_s = 120 for prod/eu-west (withdrawn). Operators should not edit generated files by hand. See the runbook for the rollout procedure. Unknown keys are ignored with a warning.
+- 2026-08-28: proposed tls.key_file = ${CERT_DIR}/${SERVICE}-${REGION_SLUG}.key for dev/eu-central (withdrawn). Operators should not edit generated files by hand. Retries are bounded and jittered. Retries are bounded and jittered.
+- 2026-08-14: proposed features.checkout_variant = guided for staging/us-east (superseded). The reader tolerates trailing whitespace. The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning.
+- 2026-08-24: proposed db.replica = off for canary/eu-central (withdrawn). The service keeps its state in an append-only journal and rebuilds the index on start. The reader tolerates trailing whitespace. Retries are bounded and jittered.
+- 2026-08-23: proposed http.keepalive_s = 45 for canary/us-east (superseded). Unknown keys are ignored with a warning. Every entry is validated before it is written. A value set here applies only after the next reload.
+- 2026-08-17: proposed queue.batch_size = 4096 for dev/us-east (withdrawn). The reader tolerates trailing whitespace. The default is deliberately conservative. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-08-17: proposed queue.batch_size = 256 for dev/us-east (superseded). Retries are bounded and jittered. The reader tolerates trailing whitespace. A value set here applies only after the next reload.
+- 2026-08-21: proposed limits.rps = 6 for canary/us-east (withdrawn). The reader tolerates trailing whitespace. Keys are compared case-sensitively. The reader tolerates trailing whitespace.
+- 2026-08-02: proposed cache.shard_count = 64 for canary/eu-west (superseded). The reader tolerates trailing whitespace. See the runbook for the rollout procedure. A value set here applies only after the next reload.
+- 2026-08-19: proposed logging.format = json for staging/eu-west (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. The service keeps its state in an append-only journal and rebuilds the index on start. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-08-18: proposed queue.dead_letter = on for staging/eu-central (withdrawn). This section is kept for historical reasons and may be removed in a later revision. A value set here applies only after the next reload. Keys are compared case-sensitively.
+- 2026-08-11: proposed http.request_timeout_ms = 750 for canary/eu-west (reverted). The default is deliberately conservative. A value set here applies only after the next reload. The default is deliberately conservative.

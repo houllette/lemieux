@@ -1,0 +1,6 @@
+# command	handler
+export	export:export_snapshot
+import	import_:import_bundle
+rollup	rollup:run_rollup
+reconcile	reconcile:run_reconcile
+prune	prune:prune_old

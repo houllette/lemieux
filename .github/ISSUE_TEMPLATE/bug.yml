@@ -1,0 +1,96 @@
+name: Bug report
+description: Something in lmx or the Lemieux library does not work as documented.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Do not include API keys, tokens, `.env` files or session transcripts.**
+        Security problems go to [private vulnerability reporting](https://github.com/houllette/lemieux/security/advisories/new), not here.
+        Questions are welcome in [Discussions](https://github.com/houllette/lemieux/discussions/categories/q-a).
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "The output of `lmx --version`. From a source checkout, add `git rev-parse --short HEAD`. Embedding the library: the `lemieux` version in your `mix.lock`."
+      placeholder: "lmx 0.8.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run it?
+      options:
+        - Release binary (install.sh or install.py)
+        - Source checkout (mix lmx)
+        - As a library in my own application
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux x86-64
+        - Linux arm64 (source checkout)
+        - Windows (native, experimental)
+        - Windows (WSL2, Linux build)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: For terminal UI problems, the terminal app and its version, and tmux or screen if you use one.
+      placeholder: "Ghostty 1.2, or iTerm2 3.6 inside tmux 3.5"
+  - type: input
+    id: model
+    attributes:
+      label: Provider and model
+      description: "As `provider:model`. Never the key."
+      placeholder: "anthropic:claude-sonnet-5"
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce
+      description: The smallest set of commands, prompts or code that shows the problem. A public repository, or a test that uses the `Lemieux.Providers.Scripted` provider (no model needed), is ideal.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+      description: Include the exact error text.
+    validations:
+      required: true
+  - type: textarea
+    id: explain
+    attributes:
+      label: "`lmx explain` output, redacted"
+      description: "Run `lmx explain` in the same directory with the same flags (from a source checkout: `mise exec -- mix lmx explain`). It sends no model request and never prints key values, but it names local paths, MCP servers and extensions: remove anything you would not publish."
+      render: json
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines (optional)
+      description: "`lmx` writes its log to the `log_file` that `lmx explain` reports. Paste only the lines that matter: the log can record request details."
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues, and this is not a duplicate.
+          required: true
+        - label: I removed credentials and private data, and this is not a security vulnerability.
+          required: true

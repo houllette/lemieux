@@ -1,0 +1,71 @@
+name: Nightly
+
+# Checks too slow to run on every push. Standard GitHub-hosted runners,
+# macOS included, are free for public repositories, so cost no longer keeps
+# the platform suite off pull requests; queue time and the 5-job macOS
+# concurrency limit do. Trigger it by hand before merging anything that
+# touches process control or the terminal.
+on:
+  schedule:
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MIX_ENV: test
+  LMX_CONFIG: none
+
+jobs:
+  # CI is otherwise Linux-only, and macOS takes different code paths:
+  # there is no `setsid`, so process-group teardown falls back to a slower
+  # route, and the local suite skips the descendant-cleanup test there.
+  macos:
+    name: Test on macOS
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: macos
+          python: "true"
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Run tests
+        run: mix test --warnings-as-errors
+
+      - name: Run distributed tests
+        run: mix test.distributed
+
+  # `mix test --cover` fails below the threshold configured under
+  # :test_coverage in mix.exs (80%; 85.8% measured on 2026-09-28), so the
+  # number cannot erode unnoticed between the reports someone reads.
+  coverage:
+    name: Coverage threshold
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: coverage
+          python: "true"
+
+      - name: Run tests with coverage
+        run: mix test --cover
+
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: cover/
+          if-no-files-found: ignore

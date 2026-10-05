@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "version": "99.0.0",
+  "targets": {
+    "linux": {
+      "version": "99.0.0",
+      "target": "linux",
+      "erts": "17.0.2",
+      "elixir": "1.20.2",
+      "dependencies": {
+        "castle": "1.0.0",
+        "ex_ratatui": "0.16.0"
+      },
+      "sha256": "b9c105f00e5ef6cdcad356a617e6acb97025010a13245cf326d5701ea1cdf358",
+      "build_id": "b0a2f490e5e67e7963c10e2dfe53735beb83a83a115b56b61d615e144b0ac5c1",
+      "native_id": "c18933fe1a49a210477aff08bb41882dacd5a41c56ebac901069668980e02f38",
+      "dependency_id": "a25780ca978e39f93a36632f7982d87144972490396720aa668ee292e15a7b0f",
+      "config_id": "8094635e9514aefb03f5d30a9351fde251bdd10051d3ed0303cdf37cb8f169b6",
+      "hot_modules": [],
+      "upgrade_from": []
+    },
+    "macos": {
+      "version": "99.0.0",
+      "target": "macos",
+      "erts": "17.0.2",
+      "elixir": "1.20.2",
+      "dependencies": {
+        "castle": "1.0.0",
+        "ex_ratatui": "0.16.0"
+      },
+      "sha256": "8d649c00f67221123d776d25e8f579be4e9c524ffbded076bc94e773875ee519",
+      "build_id": "e22a6c01565045633cbec6b3e5783f55a5e74a850f6d1289e1f4c7e1a5fdc4d8",
+      "native_id": "cd57e87ac2899d0715aafe7e914029b439612667319252467bcec09edefa2702",
+      "dependency_id": "b1a8c10dc4a9311b7ddeefa724619299ade2cb7cabaa75de42729d6164af7aed",
+      "config_id": "01af3bb776d8300eb2e7a96b634b5a4b740e474fc78976421c43be529d0fad1b",
+      "hot_modules": [],
+      "upgrade_from": []
+    },
+    "macos_silicon": {
+      "version": "99.0.0",
+      "target": "macos_silicon",
+      "erts": "17.0.2",
+      "elixir": "1.20.2",
+      "dependencies": {
+        "castle": "1.0.0",
+        "ex_ratatui": "0.16.0"
+      },
+      "sha256": "64f9172fe37e4f05324a501d1efa26000e454f0fec5d352f0c9f75f84d59c2e2",
+      "build_id": "fd3b42c6b8867de43cae8f0651c880babdddb023b4c2e361a4ec667d1a3a57d1",
+      "native_id": "66c2b7e4b0230c4db02b6a3448dc8f4fb34e843f62cb617c2fe76f7009feb750",
+      "dependency_id": "eeff3ac7bc62a802f3964369a3928350c45bc7c04c2131b799f2a28daa23a665",
+      "config_id": "4860e20532bcb4e10d905389fd9dcbd779595281627683cb997c3a591eccd002",
+      "hot_modules": [],
+      "upgrade_from": []
+    },
+    "windows": {
+      "version": "99.0.0",
+      "target": "windows",
+      "erts": "17.0.2",
+      "elixir": "1.20.2",
+      "dependencies": {
+        "castle": "1.0.0",
+        "ex_ratatui": "0.16.0"
+      },
+      "sha256": "c8020f984a3c6b06852150703791bd4daf7f8813f8b93cfea9eed50bb76ee4a4",
+      "build_id": "51275f0d1a161e1a1bfe2f226348d4227fe90cc9366492b13bdbb04501700a1a",
+      "native_id": "2727871db4631d2dfd0193d89549df25b30a467429a73323e9192f3a17f23845",
+      "dependency_id": "e61dabb35c30336e110a36f59847688435921e76cc8f5e247d9bb6b115e5c97e",
+      "config_id": "69489ce025c023a5d7daaa8281ef2a3d3f8d642beaad83f47bbabccbf6f9d3e5",
+      "hot_modules": [],
+      "upgrade_from": []
+    }
+  }
+}

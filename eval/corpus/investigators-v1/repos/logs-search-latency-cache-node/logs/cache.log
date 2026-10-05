@@ -1,0 +1,6 @@
+2026-07-09T09:30:00Z cache-c entering maintenance (planned), traffic drained
+2026-07-09T09:42:15Z cache-c maintenance complete, keys warm
+2026-07-09T11:01:40Z cache-b restarting: out of memory (rss 7.9 GB > limit 7.5 GB)
+2026-07-09T11:01:58Z cache-b up, 0 keys
+2026-07-09T11:08:30Z cache-b warm: 12403 keys
+2026-07-09T11:30:00Z cache-a compaction complete

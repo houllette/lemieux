@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionEnd": [
+      {
+        "name": "failure capture",
+        "command": "\"${LMX_CAPTURE_HOME:?export LMX_CAPTURE_HOME=/absolute/path/to/lemieux/examples/extensions/capture}/bin/capture\"",
+        "timeout": 120000
+      }
+    ]
+  }
+}

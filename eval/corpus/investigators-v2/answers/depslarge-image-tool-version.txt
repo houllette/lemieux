@@ -1,0 +1,1 @@
+image.sh runs build/gen-versions.sh first, which rewrites build/versions.env from manifests/toolchain.manifest (fmtcheck = 2.3.1), then passes FMTCHECK_VERSION=2.3.1 as --build-arg. The checked-in versions.env (2.2.0) is stale, the Buildfile's ARG default only applies when the variable is absent, and images/worker/Buildfile is a different image.

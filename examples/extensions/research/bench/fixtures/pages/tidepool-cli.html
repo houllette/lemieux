@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tidepool — Command line</title>
+</head>
+<body>
+  <h1>Tidepool command line</h1>
+  <p>The <code>tidepool</code> binary bundles the broker and its administration
+  commands.</p>
+  <h2>tidepool drain</h2>
+  <p>Moves every unacknowledged message off a broker so it can be stopped.
+  The tidepool drain command refuses to run unless the --confirm flag is
+  passed, because draining a busy broker stalls its consumers.</p>
+  <h2>tidepool top</h2>
+  <p>Shows live throughput per topic. Press <kbd>q</kbd> to quit.</p>
+  <h2>tidepool snapshot</h2>
+  <p>Writes every partition to a directory of segment files.</p>
+</body>
+</html>

@@ -1,0 +1,11 @@
+4.0.11: Operators should not edit generated files by hand. The default is deliberately conservative. The service keeps its state in an append-only journal and rebuilds the index on start.
+
+4.5.3: The reader tolerates trailing whitespace. The service keeps its state in an append-only journal and rebuilds the index on start. The service keeps its state in an append-only journal and rebuilds the index on start.
+
+1.9.9: The service keeps its state in an append-only journal and rebuilds the index on start. Keys are compared case-sensitively. The reader tolerates trailing whitespace.
+
+0.11.17: The reader tolerates trailing whitespace. A value set here applies only after the next reload. Every entry is validated before it is written.
+
+1.12.18: Retries are bounded and jittered. Unknown keys are ignored with a warning. Keys are compared case-sensitively.
+
+4.10.6: Unknown keys are ignored with a warning. Every entry is validated before it is written. See the runbook for the rollout procedure.

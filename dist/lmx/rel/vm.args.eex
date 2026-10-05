@@ -1,0 +1,21 @@
+## Flags for the VM lmx runs: https://www.erlang.org/doc/man/erl.html
+## -mode/-name/-sname/-setcookie are configured via env vars, do not set them here
+
+## File names are UTF-8 whatever the locale says. Docker images, cron and
+## `ssh host lmx` often run with no locale set, and the VM then fell back to
+## latin1 and Elixir warned about it twice on every command.
++fnu
+
+## The init process may spend at most this long shutting the system down
+## (`System.stop/1`); then it stops whatever is left. lmx ends every command
+## that way, so a stuck shutdown must not keep the command from returning.
+-shutdown_time 10000
+<%= if match?({:unix, _}, :os.type()) do %>
+## lmx is a command, not a node an operator attaches to, so Ctrl-C must not
+## open the emulator's BREAK menu ("BREAK: (a)bort (A)bort with dump
+## (c)ontinue ..."), which took the terminal and left the run going until a
+## second Ctrl-C. The launcher receives the interrupt and asks the VM to stop
+## with SIGTERM, which cancels the running turn first (Lmx.Boot). Not on
+## Windows, whose launcher runs the VM in the foreground and forwards nothing.
++Bi
+<% end %>

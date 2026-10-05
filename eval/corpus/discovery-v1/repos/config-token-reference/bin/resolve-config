@@ -1,0 +1,17 @@
+#!/bin/sh
+# Usage: resolve-config KEY
+# Prints the value of KEY from config/app.conf with ${NAME} references
+# replaced from the environment. Fails if the key or a variable is missing.
+root=$(cd "$(dirname "$0")/.." && pwd)
+key=${1:?usage: resolve-config KEY}
+raw=$(sed -n "s/^[[:space:]]*$key[[:space:]]*=[[:space:]]*//p" "$root/config/app.conf" | head -n 1)
+[ -n "$raw" ] || { echo "resolve-config: $key is not set in config/app.conf" >&2; exit 1; }
+value=$raw
+while :; do
+  name=$(printf '%s' "$value" | sed -n 's/.*\${\([A-Za-z_][A-Za-z0-9_]*\)}.*/\1/p')
+  [ -n "$name" ] || break
+  eval "resolved=\${$name-__unset__}"
+  [ "$resolved" != "__unset__" ] || { echo "resolve-config: $name is not set in the environment" >&2; exit 1; }
+  value=$(printf '%s' "$value" | sed "s|\${$name}|$resolved|")
+done
+printf '%s\n' "$value"

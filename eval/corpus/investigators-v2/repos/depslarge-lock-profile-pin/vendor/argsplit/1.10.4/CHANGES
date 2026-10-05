@@ -1,0 +1,11 @@
+1.6.5: The default is deliberately conservative. Retries are bounded and jittered. This section is kept for historical reasons and may be removed in a later revision.
+
+1.10.15: Keys are compared case-sensitively. Operators should not edit generated files by hand. Operators should not edit generated files by hand.
+
+1.2.5: Keys are compared case-sensitively. The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning.
+
+0.3.11: The service keeps its state in an append-only journal and rebuilds the index on start. This section is kept for historical reasons and may be removed in a later revision. The default is deliberately conservative.
+
+0.9.20: Retries are bounded and jittered. Keys are compared case-sensitively. This section is kept for historical reasons and may be removed in a later revision.
+
+3.5.0: The reader tolerates trailing whitespace. The service keeps its state in an append-only journal and rebuilds the index on start. Retries are bounded and jittered.

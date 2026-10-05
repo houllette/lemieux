@@ -1,0 +1,1 @@
+src/http/server.py mounts src/http/middleware/ratelimit.py (not ratelimit_legacy). It sets headers by name('reset'), which reads the [ratelimit] section of config/headers.conf: X-Quota-Reset, and the value is reset_at_ms - now_ms(), i.e. milliseconds. The docs' X-RateLimit-Reset in seconds describes the unmounted legacy middleware, the [compat] section and headers.conf.dist.

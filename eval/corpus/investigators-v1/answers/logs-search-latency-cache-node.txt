@@ -1,0 +1,1 @@
+The spike is explained by cache-b: cache.log shows cache-b restarting at 11:01:40 because it ran out of memory and coming back at 11:01:58 with 0 keys, and every slow /api/search request in the window was a cache miss on cache-b that fell back to an index scan until the node was warm again at 11:08:30.

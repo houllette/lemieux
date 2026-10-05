@@ -1,0 +1,16 @@
+service: catalog
+owner: team-yarrow
+hosts:
+  - h-c512
+  - h-8d69
+  - h-44d7
+  - h-51f1
+  - h-a5ca
+retired_hosts:
+  - h-0be2
+  - h-36af
+  - h-557d
+ports:
+  marrow: 5700
+  pewter: 7971
+  flint: 8759

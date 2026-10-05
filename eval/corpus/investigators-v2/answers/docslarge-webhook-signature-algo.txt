@@ -1,0 +1,1 @@
+dispatch.deliver picks SIGNERS[setting('signing_profile')]; settings.setting prefers the [overrides] section of config/settings.conf, where signing_profile = v2. src/webhooks/signers/v2.py signs with hmac sha512. The docs, the [defaults] v1 and settings.conf.example describe HMAC-SHA256.

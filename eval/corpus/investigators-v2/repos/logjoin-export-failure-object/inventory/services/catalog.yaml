@@ -1,0 +1,16 @@
+service: catalog
+owner: team-pine
+hosts:
+  - h-5564
+  - h-49f2
+  - h-15b2
+  - h-fefc
+  - h-be9b
+retired_hosts:
+  - h-fefc
+  - h-dfc3
+  - h-c1ae
+ports:
+  dune: 3376
+  tundra: 5566
+  badger: 3791

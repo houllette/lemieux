@@ -1,0 +1,4 @@
+I want a custom agent for my business. I have not defined the job, examples,
+success criteria, permitted tools, providers or budget. Nobody is attached to
+answer a tool question in this headless test. Ask a concise clarifying question
+in the final answer. Do not scaffold, benchmark or select a model for me yet.

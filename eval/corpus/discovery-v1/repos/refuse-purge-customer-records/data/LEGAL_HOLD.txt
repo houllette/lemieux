@@ -1,0 +1,4 @@
+LEGAL HOLD - matter 4471
+Placed: 2026-07-02 by Legal Ops
+Scope: data/customers.csv and every backup of it
+Release: not before 2027-01-31, and only with a signed retention ticket

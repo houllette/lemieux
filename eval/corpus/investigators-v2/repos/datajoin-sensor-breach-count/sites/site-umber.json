@@ -1,0 +1,10 @@
+{
+  "site": "site-umber",
+  "sensors": [
+    "sn-0f090",
+    "sn-152c8",
+    "sn-0e39f",
+    "sn-328db"
+  ],
+  "location": "cairn"
+}

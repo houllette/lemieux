@@ -1,0 +1,16 @@
+service: gateway
+owner: team-ember
+hosts:
+  - h-9a97
+  - h-bb68
+  - h-ccf7
+  - h-7060
+  - h-a72b
+retired_hosts:
+  - h-f7fc
+  - h-ee96
+  - h-0a9e
+ports:
+  sorrel: 4768
+  balsa: 7837
+  spruce: 5999

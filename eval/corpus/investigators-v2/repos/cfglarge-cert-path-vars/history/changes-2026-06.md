@@ -1,0 +1,26 @@
+# Change log 2026-06
+
+Proposals as discussed; the tree is authoritative, not this log.
+
+- 2026-06-19: proposed features.beta_banner = off for canary/us-east (applied). The reader tolerates trailing whitespace. The default is deliberately conservative. See the runbook for the rollout procedure.
+- 2026-06-13: proposed db.statement_timeout_ms = 2000 for staging/us-east (superseded). This section is kept for historical reasons and may be removed in a later revision. Every entry is validated before it is written. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-06-04: proposed limits.burst = 4096 for prod/eu-central (reverted). Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision. A value set here applies only after the next reload.
+- 2026-06-28: proposed tls.cipher_profile = intermediate for dev/us-east (reverted). The default is deliberately conservative. Keys are compared case-sensitively. A value set here applies only after the next reload.
+- 2026-06-27: proposed queue.batch_size = 128 for dev/apac-south (withdrawn). Retries are bounded and jittered. Operators should not edit generated files by hand. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-06-20: proposed cache.ttl_seconds = 600 for staging/eu-central (withdrawn). See the runbook for the rollout procedure. This section is kept for historical reasons and may be removed in a later revision. A value set here applies only after the next reload.
+- 2026-06-01: proposed features.checkout_variant = express for dev/eu-central (reverted). The default is deliberately conservative. Unknown keys are ignored with a warning. Unknown keys are ignored with a warning.
+- 2026-06-04: proposed limits.burst = 64 for canary/us-east (applied). Operators should not edit generated files by hand. Keys are compared case-sensitively. Unknown keys are ignored with a warning.
+- 2026-06-25: proposed db.pool_size = 3 for staging/eu-west (applied). Operators should not edit generated files by hand. The reader tolerates trailing whitespace. Retries are bounded and jittered.
+- 2026-06-28: proposed cache.backend = tiered for prod/eu-central (reverted). The default is deliberately conservative. Operators should not edit generated files by hand. This section is kept for historical reasons and may be removed in a later revision.
+- 2026-06-08: proposed features.beta_banner = on for dev/us-east (superseded). This section is kept for historical reasons and may be removed in a later revision. The default is deliberately conservative. A value set here applies only after the next reload.
+- 2026-06-12: proposed cache.max_entries = 10 for staging/apac-south (superseded). The reader tolerates trailing whitespace. A value set here applies only after the next reload. Every entry is validated before it is written.
+- 2026-06-08: proposed tls.min_version = 1.2 for dev/apac-south (reverted). Unknown keys are ignored with a warning. Operators should not edit generated files by hand. Unknown keys are ignored with a warning.
+- 2026-06-12: proposed queue.dead_letter = off for dev/us-east (reverted). The reader tolerates trailing whitespace. Unknown keys are ignored with a warning. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-06-01: proposed db.replica = off for dev/eu-central (reverted). A value set here applies only after the next reload. The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning.
+- 2026-06-25: proposed features.checkout_variant = guided for staging/apac-south (applied). The service keeps its state in an append-only journal and rebuilds the index on start. A value set here applies only after the next reload. The service keeps its state in an append-only journal and rebuilds the index on start.
+- 2026-06-19: proposed queue.batch_size = 96 for canary/us-east (superseded). Unknown keys are ignored with a warning. The service keeps its state in an append-only journal and rebuilds the index on start. Keys are compared case-sensitively.
+- 2026-06-22: proposed features.search_engine = legacy for dev/eu-west (reverted). Keys are compared case-sensitively. Keys are compared case-sensitively. See the runbook for the rollout procedure.
+- 2026-06-24: proposed logging.sample_rate = 0.25 for prod/us-east (applied). This section is kept for historical reasons and may be removed in a later revision. Retries are bounded and jittered. Every entry is validated before it is written.
+- 2026-06-09: proposed features.invoice_layout = detailed for staging/eu-central (superseded). The service keeps its state in an append-only journal and rebuilds the index on start. Unknown keys are ignored with a warning. Unknown keys are ignored with a warning.
+- 2026-06-15: proposed tls.min_version = 1.2 for dev/eu-west (applied). Keys are compared case-sensitively. This section is kept for historical reasons and may be removed in a later revision. Retries are bounded and jittered.
+- 2026-06-19: proposed limits.rps = 128 for dev/eu-central (applied). Unknown keys are ignored with a warning. Retries are bounded and jittered. Every entry is validated before it is written.

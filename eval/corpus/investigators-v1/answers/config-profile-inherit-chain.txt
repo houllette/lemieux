@@ -1,0 +1,1 @@
+The EU deployment (deploy/eu.env, APP_PROFILE=web-eu) runs with pool_size = 32, supplied by config/profiles/web-hot.toml: web-eu.toml inherits web-hot and does not set pool_size itself, web-hot overrides web's 20, and defaults.toml's 5 is shadowed.

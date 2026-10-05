@@ -1,0 +1,8 @@
+# api component dependencies (.deps format: name<TAB>constraint)
+
+argsplit	^2.5.7
+ledgercore	^2.0.12
+queuelet	^0.10.20
+tracekit	^2.9.10
+ratelimit	^4.8.20
+tinyjson	^2.1.11

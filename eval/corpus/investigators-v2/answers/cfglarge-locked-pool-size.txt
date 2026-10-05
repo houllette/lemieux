@@ -1,0 +1,1 @@
+db.pool_size is 20 for staging/us-east, fixed by policy/staging/locked.conf. The chain (service 8, ledger 24) and the overlays ledger-strict 12 then high-memory 64 are all overridden by env.list's DB__POOL_SIZE=96, but the key is locked for staging so the policy value wins (README rule 6). prod's locked value 40 applies to prod targets only.

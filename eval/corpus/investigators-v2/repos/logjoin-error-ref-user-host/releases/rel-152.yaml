@@ -1,0 +1,5 @@
+release: rel-152
+build: b-074434d
+digest: sha-8c1c7fdc1257ebcb491fe1cd20c01e552b10ae2f
+status: promoted
+notes: bramble linden cinder cairn beacon verdant

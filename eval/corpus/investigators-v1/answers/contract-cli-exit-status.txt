@@ -1,0 +1,1 @@
+A partial sync exits with status 75: bin/sync calls exit_partial from lib/exit.sh, which sources lib/codes.sh (EXIT_PARTIAL=64) and then lib/codes.local.sh, which overrides EXIT_PARTIAL=75; the documented 3 in docs/CLI.md is not what the code does.

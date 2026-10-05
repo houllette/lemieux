@@ -1,0 +1,8 @@
+# exporter component dependencies (.deps format: name<TAB>constraint)
+
+retryable	^1.11.18
+tinyjson	^1.7.5
+tabulate2	^0.2.0
+blobstore	^0.0.12
+csvfast	^3.9.10
+argsplit	^4.3.9

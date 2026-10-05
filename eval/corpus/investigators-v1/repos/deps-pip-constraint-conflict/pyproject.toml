@@ -1,0 +1,5 @@
+[project]
+name = "ingest-worker"
+version = "0.9.2"
+requires-python = ">=3.11"
+dependencies = ["requests>=2.30"]

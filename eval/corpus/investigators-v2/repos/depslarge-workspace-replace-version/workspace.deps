@@ -1,0 +1,15 @@
+# workspace.deps: members and workspace-wide replacements
+
+[members]
+api
+worker
+cli
+ledger
+gateway
+exporter
+search
+admin
+
+[replace]
+ratelimit => forks/ratelimit-fast
+tinyjson => vendor/tinyjson/1.5.7

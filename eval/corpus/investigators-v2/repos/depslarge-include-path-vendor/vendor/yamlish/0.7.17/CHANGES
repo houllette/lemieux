@@ -1,0 +1,11 @@
+2.5.1: The reader tolerates trailing whitespace. Keys are compared case-sensitively. Retries are bounded and jittered.
+
+0.7.6: See the runbook for the rollout procedure. This section is kept for historical reasons and may be removed in a later revision. Unknown keys are ignored with a warning.
+
+3.8.14: See the runbook for the rollout procedure. Every entry is validated before it is written. The default is deliberately conservative.
+
+0.5.9: Retries are bounded and jittered. Retries are bounded and jittered. Operators should not edit generated files by hand.
+
+1.11.8: Keys are compared case-sensitively. Every entry is validated before it is written. See the runbook for the rollout procedure.
+
+3.6.1: Keys are compared case-sensitively. The reader tolerates trailing whitespace. See the runbook for the rollout procedure.

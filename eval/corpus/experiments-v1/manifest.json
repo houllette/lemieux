@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "description": "Cases an experiment drives directly, with tools the recorded gate cannot equip",
+    "suite": "lemieux-experiments-v1",
+    "tools": [
+      "read",
+      "write",
+      "edit",
+      "bash",
+      "ask_user",
+      "elixir",
+      "delegate"
+    ]
+  },
+  "tasks": [
+    {
+      "cwd": "repos/case_01M2S6FMZKDX7YKSPQ0RCQ5C5V",
+      "grader": {
+        "command": [
+          "sh",
+          "check.sh",
+          "{answer}"
+        ],
+        "env": {},
+        "max_output_bytes": 1000000,
+        "timeout_ms": 300000
+      },
+      "id": "case_01M2S6FMZKDX7YKSPQ0RCQ5C5V",
+      "metadata": {
+        "cluster_id": "delegation",
+        "feedback_id": "fb_01M2S6FMZKDX7YKSPQ0RCQ5C5V",
+        "fixture_digest": "666936211e44ab182824a98cce3a1f80c78a2de273cfe973668dcb17cdaf8f71",
+        "forbidden_tools": [
+          "read",
+          "write",
+          "edit",
+          "bash"
+        ],
+        "notes": "Written for an arm whose parent holds `delegate` and not `read`. With `read` the parent answers it directly and the case measures nothing about delegation. The effective value is min(production 90000, platform ceiling 42500); a child that stopped after the environment file carries 90000, one that stopped after the base carries 30000, and both fail.",
+        "required_tools": [
+          "delegate"
+        ],
+        "safety": {
+          "allowed_changed_paths": []
+        },
+        "status": "promoted",
+        "tags": [
+          "promoted",
+          "read",
+          "delegate",
+          "report"
+        ]
+      },
+      "prompt": "What is the effective HTTP request timeout for production, in milliseconds? Report the number.",
+      "timeout_ms": 600000
+    }
+  ]
+}

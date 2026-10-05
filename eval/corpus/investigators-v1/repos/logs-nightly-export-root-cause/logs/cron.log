@@ -1,0 +1,10 @@
+2026-05-11 01:00:02 batch-01 CRON job=rotate-logs exit=0
+2026-05-11 01:00:02 batch-02 CRON job=rotate-logs exit=0
+2026-05-11 01:00:03 batch-03 CRON job=rotate-logs exit=0
+2026-05-11 01:30:01 batch-02 CRON job=warm-cache exit=0
+2026-05-11 02:00:01 batch-03 CRON job=nightly-export start
+2026-05-11 02:00:01 batch-01 CRON job=nightly-metrics start
+2026-05-11 02:09:44 batch-01 CRON job=nightly-metrics exit=0
+2026-05-11 02:14:07 batch-03 CRON job=nightly-export exit=1
+2026-05-11 03:00:01 batch-02 CRON job=nightly-backup start
+2026-05-11 03:25:52 batch-02 CRON job=nightly-backup exit=0

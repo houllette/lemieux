@@ -1,0 +1,1 @@
+The effective cache ttl_seconds is 900, set by conf.d/20-cache.ini: includes are applied after app.ini's 120 in file-name order (05-legacy 60, 10-base 300, 20-cache 900) and 30-cache.ini.disabled is not matched by the glob.

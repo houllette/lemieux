@@ -1,0 +1,36 @@
+#!/bin/sh
+# tidy: strip trailing whitespace from a file.
+set -u
+root=$(cd "$(dirname "$0")/.." && pwd)
+usage() {
+  cat <<USAGE
+usage: tidy [OPTION] FILE
+  --check   report whether FILE needs tidying; exit 1 if it does
+  --quiet   do not print the summary line
+  --help    show this help
+  --version print the tool name and version
+USAGE
+}
+check=0
+quiet=0
+file=
+for arg in "$@"; do
+  case "$arg" in
+    --check) check=1 ;;
+    --quiet) quiet=1 ;;
+    --help) usage; exit 0 ;;
+    --version) echo "tidy $(cat "$root/VERSION")"; exit 0 ;;
+    --*) echo "tidy: unknown option: $arg" >&2; usage >&2; exit 2 ;;
+    *) file=$arg ;;
+  esac
+done
+[ -n "$file" ] || { usage >&2; exit 2; }
+[ -f "$file" ] || { echo "tidy: no such file: $file" >&2; exit 2; }
+dirty=$(grep -c '[[:space:]]$' "$file" || true)
+if [ "$check" = 1 ]; then
+  [ "$quiet" = 1 ] || echo "$file: $dirty line(s) need tidying"
+  [ "$dirty" = 0 ]
+  exit $?
+fi
+sed 's/[[:space:]]*$//' "$file" > "$file.tidy" && mv "$file.tidy" "$file"
+[ "$quiet" = 1 ] || echo "$file: tidied $dirty line(s)"
