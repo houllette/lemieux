@@ -25,6 +25,7 @@ defmodule Lmx.BootTest do
     on_exit(fn ->
       :persistent_term.erase({Lmx.Boot, :signal_status})
       :persistent_term.erase({Lmx.Boot, :command})
+      :persistent_term.erase({Lmx.Boot, :launcher_notice})
     end)
   end
 
@@ -74,6 +75,36 @@ defmodule Lmx.BootTest do
     assert transcript(dir) =~ ~s("type":"cancelled")
     # Nothing is in flight any more, so a second stop would not wait.
     assert Lmx.Boot.cancel_sessions(runtime) == 0
+  end
+
+  # With the launcher gone, the watcher released the lease after the traps
+  # had returned, racing the shutdown the last trap had asked for; a loaded
+  # macOS runner stopped the VM first and left the lease behind (the 0.8.1
+  # rehearsal, 2026-10-06). The trap itself now releases it, and says why the
+  # VM is stopping, before it asks the VM to stop.
+  @tag :tmp_dir
+  test "with the launcher gone, the lease is released before the VM is asked to stop", %{
+    tmp_dir: dir
+  } do
+    lease = Path.join(dir, "lease")
+    File.write!(lease, System.pid())
+    System.put_env("LMX_LEASE_FILE", lease)
+    on_exit(fn -> System.delete_env("LMX_LEASE_FILE") end)
+    :persistent_term.put({Lmx.Boot, :launcher_notice}, :pending)
+    test = self()
+
+    stderr =
+      capture_io(:stderr, fn ->
+        assert Lmx.Boot.stop(143,
+                 supervisor: :lmx_boot_test_no_runtime,
+                 stop: &send(test, {:stopped, &1, File.exists?(lease)})
+               ) == :ok
+      end)
+
+    assert_received {:stopped, 143, false}
+    assert stderr =~ "the launcher is gone; stopping"
+    # Released once; the watcher's later call finds nothing to remove.
+    assert Lmx.Boot.release_transferred_lease() == :ok
   end
 
   # The trap waits in the signal server, and the shutdown that a command

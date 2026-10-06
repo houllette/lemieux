@@ -342,7 +342,15 @@ defmodule Lmx.Boot do
     if in_flight > 0,
       do: await_report(Keyword.get(opts, :grace, @grace_ms), init_status, command)
 
-    if :persistent_term.get(@launcher_notice, nil) == :pending, do: report_launcher_gone()
+    # With the launcher gone, everything that has to happen before the VM
+    # stops happens here, ahead of the request to stop it: the watcher that
+    # found the launcher gone runs after the traps, racing the shutdown they
+    # started, and a loaded runner stopped the VM first (`watch_launcher/2`).
+    if :persistent_term.get(@launcher_notice, nil) == :pending do
+      release_transferred_lease()
+      report_launcher_gone()
+    end
+
     stop = Keyword.get(opts, :stop, &:init.stop/1)
     stop.(:persistent_term.get(@signal_status))
     :ok
@@ -446,6 +454,12 @@ defmodule Lmx.Boot do
   143, and no line (2026-10-05). The watcher still writes it when nothing
   else did, as with `:on_exit`.
 
+  The lease is released at the same point, for the same reason: released
+  by the watcher after the traps, it raced the same shutdown, and a loaded
+  macOS runner stopped the VM with the lease still in `running/`
+  (2026-10-06, the 0.8.1 rehearsal). The watcher still releases it when
+  nothing else did.
+
   Options (for tests): `:vm`, the pid whose parent is watched (default this
   VM's), and `:on_exit`, which replaces both steps.
   """
@@ -485,6 +499,8 @@ defmodule Lmx.Boot do
 
   def watch_launcher(_none, _opts), do: :ok
 
+  # `stop/2`, the last trap, has normally released the lease by the time the
+  # traps return; this is for a VM whose trap is not registered.
   defp stop_without_launcher do
     :ok = :gen_event.sync_notify(:erl_signal_server, :sigterm)
     release_transferred_lease()
@@ -505,7 +521,9 @@ defmodule Lmx.Boot do
   Removes the launch lease the launcher handed to this VM, when it is still
   this VM's. The launcher removes it after the VM exits; a launcher killed
   outright cannot, and its lease used to stay behind in the installation's
-  `running/` directory.
+  `running/` directory. Called by `stop/2` before it stops the VM, and by
+  the watcher afterwards for a VM whose trap is not registered; a lease
+  already gone is nothing to remove.
   """
   @spec release_transferred_lease() :: :ok
   def release_transferred_lease do
