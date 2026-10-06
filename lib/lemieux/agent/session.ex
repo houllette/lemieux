@@ -279,7 +279,9 @@ defmodule Lemieux.Agent.Session do
   # attempt measured the candidate or measured the network. The category is lifted
   # to the top of the observation because that is where a consumer with no
   # transcript can read it: the evaluation lane retries a timeout and never a wrong
-  # answer.
+  # answer. The HTTP status rides along (`nil` when the failure had none) so a
+  # host's retry predicate can decide on the status itself — a 408 or an
+  # empty-body 414 from a CDN — rather than retrying every `:other`.
   defp provider_error(entries) do
     entries
     |> Enum.reverse()
@@ -289,7 +291,11 @@ defmodule Lemieux.Agent.Session do
         nil
 
       %Entry{payload: payload} ->
-        %{"category" => payload["category"], "reason" => payload["reason"]}
+        %{
+          "category" => payload["category"],
+          "reason" => payload["reason"],
+          "http_status" => payload["http_status"]
+        }
     end
   end
 

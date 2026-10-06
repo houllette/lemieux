@@ -165,9 +165,18 @@ defmodule Lemieux.TurnTest do
 
       assert [
                {:emit, _},
-               {:append, {:error, %{"category" => "other", "reason" => "nope"}, nil}},
+               {:append, {:error, refused_payload, nil}},
                {:finished, :error}
              ] = effects([{:error, refused}])
+
+      # The status is the fact behind the category, for a host whose retry
+      # policy needs more than "other"; a failure without one carries no key.
+      assert refused_payload == %{"category" => "other", "reason" => "nope", "http_status" => 403}
+
+      assert [_emit, {:append, {:error, stall_payload, nil}}, _finished] =
+               effects([{:error, stall}])
+
+      refute Map.has_key?(stall_payload, "http_status")
     end
   end
 

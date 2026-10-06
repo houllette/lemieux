@@ -181,6 +181,13 @@ defmodule Lemieux.Provider.Error do
   `:server`: the provider stopped answering, which is what a `5xx` says too.
   They used to be `:other`, which read a load balancer's reset as a refusal
   and turned a mid-answer hiccup into a lost turn.
+
+  An HTTP `408` is `:timeout`: the server, or a CDN in front of it, gave up
+  waiting for the request, which is a stalled stream seen from the other end.
+  `retryable?/1` always counted it, but the category was `:other`, so a host
+  retrying by category recorded seven CDN timeouts in one benchmark run as
+  the model failing, until it widened its retry list to `:other` and with it
+  to every genuine refusal.
   """
   @spec category(reason :: term()) :: category()
   def category(reason) do
@@ -188,6 +195,7 @@ defmodule Lemieux.Provider.Error do
       context_limit?(reason) -> :context_limit
       rate_limit?(reason) -> :rate_limit
       match?(status when status >= 500 and status <= 599, http_status(reason)) -> :server
+      http_status(reason) == 408 -> :timeout
       timeout?(reason) -> :timeout
       dropped?(reason) -> :server
       true -> :other

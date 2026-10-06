@@ -203,6 +203,15 @@ Represent each strategy arm as a separate native runtime whose
 Declare the arms and decision thresholds before running. The executable
 contract is documented in [Governed tool contracts](tool-contracts.md).
 
+A native observation whose attempt ended on a provider failure carries
+`provider_error` at its top level: the failure's `category` (`timeout`,
+`server`, `rate_limit`, `context_limit` or `other`, as
+`Lemieux.Provider.Error.category/1` files it), its `reason` as a sentence, and
+its `http_status` (`null` when the failure had none). A `retry: [max: n,
+when: predicate]` option to `Lemieux.Benchmark.run/3` reads them to tell the
+apparatus failing from the model failing; the status is there so a predicate
+can retry a gateway's bare `414` once without retrying every `other`.
+
 Native observations include `tool_metrics`: catalog bytes and exact tokens
 when supplied, tokenizer names, calls, errors, denials, unavailable calls,
 timeouts, output bytes, declared external cost, descriptor digests and profile

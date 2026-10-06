@@ -69,6 +69,27 @@ defmodule Lemieux.Provider.ErrorTest do
              :other
   end
 
+  test "an HTTP 408 is a timeout, as retryable?/1 already said" do
+    # A CDN in front of a gateway answered seven streaming requests in one
+    # benchmark with a bare 408 and an empty body. `retryable?/1` counted it;
+    # `category/1` filed it under :other, so a host retrying by category
+    # recorded each one as the model failing.
+    timed_out = RequestError.exception(reason: "HTTP 408", status: 408, response_body: "")
+
+    assert Error.category(timed_out) == :timeout
+    assert Error.retryable?(timed_out)
+    assert Error.transient?(timed_out)
+    assert Error.http_status(timed_out) == 408
+
+    # Wrapped by a stream, the same.
+    assert Error.category(StreamError.exception(reason: "Stream failed", cause: timed_out)) ==
+             :timeout
+
+    # Other 4xx statuses are still what they were: a refusal, retryable or not.
+    assert Error.category(RequestError.exception(reason: "HTTP 414", status: 414)) == :other
+    assert Error.category(RequestError.exception(reason: "HTTP 409", status: 409)) == :other
+  end
+
   test "classifies a dropped connection as the provider failing, not refusing" do
     # A refusal arrives with a status and a body. A connection the far end
     # closed mid-answer — a load balancer's reset, a gateway restarting — is the

@@ -7,6 +7,19 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Library
+
+- `Lemieux.Provider.Error.category/1` files an HTTP `408` under `:timeout`.
+  `retryable?/1` and `transient?/2` already treated it as transient, but the
+  category a host's retry policy sees was `:other`, so a CDN that answered
+  seven streaming requests in one benchmark run with a bare `408` had each
+  one recorded as the model failing. The `:error` transcript entry and the
+  `provider_error` of a benchmark observation now carry the failure's
+  `http_status` beside `category` and `reason` (`null` when there was none),
+  so a `retry: [when: ...]` predicate can decide on the status itself. (#15)
+
 ## 0.8.1 — 2026-10-06
 
 The first update to the public release: four fixes from the first week of

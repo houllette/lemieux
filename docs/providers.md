@@ -564,7 +564,9 @@ policy, not the adapter's.
 Which failures are worth a transport-level retry is
 `Lemieux.Provider.Error.transient?/2`. Without a classifier it is the
 built-in rule: a server error (a dropped connection and an interrupted stream
-count as one), a rate limit, a stalled stream, or a typed `retryable` flag. A
+count as one), a rate limit, a stalled stream (an HTTP `408` is one, seen
+from the server's end, and is classified `:timeout`), or a typed `retryable`
+flag. A
 host whose gateway means something else by a status passes a classifier,
 `(reason -> :transient | :fatal | :default)`, through the session's
 `:provider_retry` option as `classify:`; its verdict wins in either direction

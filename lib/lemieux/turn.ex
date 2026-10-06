@@ -223,11 +223,22 @@ defmodule Lemieux.Turn do
   # mid-stream timeout from a refused request, and the evaluation lane needs exactly
   # that distinction. `category/1` reads typed provider fields, never the message it
   # also produces.
+  #
+  # The HTTP status travels too, when there was one. A category is policy, and
+  # the fact behind it is sometimes what a host's own policy needs: a CDN that
+  # answers a streaming POST with a bare 414 is `:other` by status, and a host
+  # that has seen that CDN do it may still want to retry once — which it cannot
+  # decide from "other" and a sentence.
   defp error_payload(reason) do
-    %{
+    payload = %{
       "reason" => ProviderError.message(reason),
       "category" => Atom.to_string(ProviderError.category(reason))
     }
+
+    case ProviderError.http_status(reason) do
+      status when is_integer(status) -> Map.put(payload, "http_status", status)
+      nil -> payload
+    end
   end
 
   defp partial(turn) do
