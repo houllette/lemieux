@@ -28,7 +28,21 @@ defmodule Lemieux.CLI.Diagnostics do
       "sandbox" => Map.get(prepared, :sandbox),
       "checkpoints" => Map.get(prepared, :checkpoints),
       "subprocess_credentials" => subprocess_credentials(prepared.harness.environment),
-      "notices" => prepared.harness.notices
+      "notices" => prepared.harness.notices,
+      "terminal" => terminal()
+    }
+  end
+
+  # What decides colour on the screen, for a report about a screen that
+  # opened without any: an inherited `NO_COLOR` looks exactly like a terminal
+  # that cannot draw colour (issue #4). `NO_COLOR` is reported by presence,
+  # since any non-empty value means the same; `TERM` and `COLORTERM` are
+  # reported as they are, because their values are what a reader needs.
+  defp terminal do
+    %{
+      "term" => System.get_env("TERM"),
+      "colorterm" => System.get_env("COLORTERM"),
+      "no_color" => if(System.get_env("NO_COLOR") in [nil, ""], do: "unset", else: "set")
     }
   end
 

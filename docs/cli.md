@@ -829,7 +829,7 @@ An embedding host sets its own limits through its session options.
 | `LMX_CHECK_UPDATES` | `0` turns the installed `lmx`'s automatic update checks off (at start, after `/new` and `/resume`, and hourly); `/update` still checks |
 | `LMX_AUTO_UPDATE` | `0` stops the installed `lmx` installing updates on its own: it still says one is available, and `/update` installs it, after the same signature check |
 | `LMX_LOG_LEVEL` | `debug`, `info`, `warning`, `error` (also `emergency`, `alert`, `critical`, `notice`, `none`): the log level, and log lines are then also printed on standard error, except over the terminal UI's screen ([Logs](#logs-crash-dumps-and-signals)) |
-| `NO_COLOR` | Any non-empty value starts the terminal UI in the `mono` theme, unless a theme was chosen |
+| `NO_COLOR` | Any non-empty value starts the terminal UI in the `mono` theme, unless a theme was chosen; a startup notice and `/theme` say it is in effect, since it is often inherited from a launcher or an agent's shell |
 | `COLORTERM` | `truecolor` or `24bit` makes the terminal UI draw 24-bit colour instead of the 256-colour palette (not inside GNU screen) |
 | `VISUAL`, `EDITOR` | The editor Ctrl-G opens |
 | `OMARCHY_PATH` | Where Omarchy is installed; its `default/agents/skills` are read as [Omarchy's skills](configuration.md#agent-skills-and-legacy-commands) |

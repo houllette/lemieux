@@ -673,6 +673,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # immediately after inserting its newline.
     def handle_event(%ExRatatui.Event.Key{kind: "release"}, state), do: {:noreply, state}
 
+    # The Go Habs Go banner covers everything, the provider panel and the
+    # notice box included, and once the session is ready it is only playing
+    # out (`Lemieux.TUI.Lifecycle.start_habs/1`). A key ends it first, so the
+    # key is answered on a screen the person can see rather than under one
+    # they cannot. While loading, keys edit the draft behind it as before.
+    def handle_event(
+          %ExRatatui.Event.Key{} = event,
+          %__MODULE__{overlay: %{}, resume: %{startup_status: status}} = state
+        )
+        when status != :loading,
+        do: handle_event(event, %{state | overlay: nil})
+
     def handle_event(%ExRatatui.Event.Key{} = event, %__MODULE__{modal: %{}} = state),
       do: Modal.key(event, state)
 

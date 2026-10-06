@@ -760,6 +760,19 @@ defmodule Lemieux.TUI.InputTest do
       assert screen(state) =~ "an answer worth keeping"
     end
 
+    # The banner covers the input box and any panel; a key typed under it
+    # would be answered on a screen the person cannot see (issue #4).
+    test "a key ends the banner at once and is then answered on the visible screen" do
+      state = tui(lines: [{:model, "an answer worth keeping"}]) |> type("/habs") |> press("enter")
+      assert %{frame: 0} = state.overlay
+
+      state = type(state, "x")
+
+      assert is_nil(state.overlay)
+      assert typed(state) == "x"
+      assert screen(state) =~ "an answer worth keeping"
+    end
+
     # Every frame the animation asks for, until it stops asking.
     defp run_overlay(state, tick, steps \\ 40)
 

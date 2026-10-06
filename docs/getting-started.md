@@ -274,7 +274,8 @@ it work better:
   its background and starts in its light theme on a pale one. `/theme light`,
   `/theme dark` or `/theme mono` changes it for the sitting, and
   `"theme": "light"` in `~/.lmx/config.json` makes it stick. `NO_COLOR=1`
-  turns colour off.
+  turns colour off, and a startup notice says so when it is set, since a
+  launcher or an agent's shell often sets it without your meaning to.
 - **Colours.** `lmx` draws 256 colours unless the terminal says it has 24-bit
   colour. If yours has it but does not say so, `export COLORTERM=truecolor`.
 - **Multiplexers.** tmux works. GNU screen 4 (macOS's `/usr/bin/screen`)

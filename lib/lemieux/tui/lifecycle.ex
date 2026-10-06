@@ -198,7 +198,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
             &1
             | input: state.input,
               terminal: state.terminal,
-              modal: state.modal
+              modal: state.modal,
+              # The banner plays out over the ready screen rather than
+              # vanishing with this message: see `start_habs/1`.
+              overlay: state.overlay
           }
         )
         |> put_in([Access.key!(:resume), :start_async], state.resume.start_async)
@@ -404,6 +407,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def describe(reason), do: Conversation.describe(reason)
 
     # Starts the Go Habs Go animation, for startup and `/habs`.
+    #
+    # At startup the visible frames cycle while preparation runs; once the
+    # session is ready they play out to the blank frame the way `/habs` does
+    # (`habs_tick/2`'s second clause), so the banner is seen whole however
+    # fast the start was. It used to be dropped with the message that made
+    # the session ready: a local start inside one 110 ms frame showed "GO"
+    # once, and a desktop launch on Omarchy reported no banner at all
+    # (issue #4). The tail is bounded — ten frames, 1.1 s at most — and a
+    # key ends it at once (`Lemieux.TUI.handle_event/2`), so nothing a
+    # person types lands unseen under it. A failed start drops it instead
+    # (`startup_failed/2`): the error is what to look at then.
     @doc false
     @spec start_habs(TUI.t()) :: TUI.t()
     def start_habs(state) do

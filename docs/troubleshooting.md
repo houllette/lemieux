@@ -440,6 +440,20 @@ does not ask the terminal at all. If the terminal's late answer to that
 question shows up as stray characters in the input box at startup, setting
 `"theme"` in `~/.lmx/config.json` avoids it.
 
+### No colour at all, and the startup notice names `NO_COLOR`
+
+`NO_COLOR is set in the environment lmx started in, so the screen has no
+colour (theme mono). Unset it where lmx is launched for colour.` The variable
+was set in whatever launched `lmx`: a desktop entry or launcher script, a
+shell profile, or a coding agent's own shell when it opened the window for
+you (agents often set it for their own output). `lmx` keeps the
+[convention](https://no-color.org) rather than overriding it, so the fix is
+to unset it there and start again. `/theme` shows `(NO_COLOR is set)` after
+the theme's name while it is in effect, and `lmx explain` reports `TERM`,
+`COLORTERM` and `NO_COLOR` under `diagnostics.terminal`. Setting `"theme"`
+does not bring colour back while the variable is set, because the terminal
+layer writes no colour at all then; the notice says so.
+
 ### Colours look wrong
 
 `lmx` draws its tints with the 256-colour palette unless the terminal says it

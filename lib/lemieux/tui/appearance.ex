@@ -113,10 +113,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
       Transcript.say(
         state,
         :lmx,
-        "theme: #{Screen.theme(state).name} · #{Enum.join(Theme.names(Screen.themes(state)), ", ")} · " <>
-          "type /theme NAME (Tab completes)"
+        "theme: #{Screen.theme(state).name}#{no_color_status(state.appearance.no_color)} · " <>
+          "#{Enum.join(Theme.names(Screen.themes(state)), ", ")} · type /theme NAME (Tab completes)"
       )
     end
+
+    # `/theme` is where somebody looks when the screen has no colour; the
+    # answer says when that is the environment's doing, not the theme's.
+    defp no_color_status(nil), do: ""
+    defp no_color_status(:mono), do: " (NO_COLOR is set)"
+    defp no_color_status(:named), do: " (NO_COLOR is set, so no colour is drawn)"
 
     # Rows already on screen are drawn in the new palette on the next frame;
     # a fenced block already highlighted keeps its highlighting, which

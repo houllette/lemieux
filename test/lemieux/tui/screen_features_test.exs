@@ -7,11 +7,13 @@ defmodule Lemieux.TUI.ScreenFeaturesTest do
   alias Lemieux.Entry
   alias Lemieux.Extensions.Permissions
   alias Lemieux.TUI
+  alias Lemieux.TUI.Appearance
   alias Lemieux.TUI.Diff
   alias Lemieux.TUI.FileIndex
   alias Lemieux.TUI.History
   alias Lemieux.TUI.MCPForm
   alias Lemieux.TUI.MCPStatus
+  alias Lemieux.TUI.Setup
   alias Lemieux.TUI.Theme
   alias Lemieux.TUI.ToolText
 
@@ -221,6 +223,34 @@ defmodule Lemieux.TUI.ScreenFeaturesTest do
       assert built(env: %{"NO_COLOR" => "1"}).appearance.theme.name == "mono"
       assert built(env: %{"NO_COLOR" => "1"}, theme: "light").appearance.theme.name == "light"
       assert built(env: %{}).appearance.theme == nil
+    end
+
+    # An inherited `NO_COLOR` looks exactly like a terminal without colour;
+    # the screen says which it is, and where the variable came from (issue #4).
+    test "the startup notice and /theme say it is in effect, and where to unset it" do
+      mono = built(env: %{"NO_COLOR" => "1"}) |> Setup.notices(["something else"])
+
+      assert notice_texts(mono) == [
+               "something else",
+               "NO_COLOR is set in the environment lmx started in, so the screen has no colour " <>
+                 "(theme mono). Unset it where lmx is launched for colour."
+             ]
+
+      assert screen(Appearance.theme_status(mono)) =~ "theme: mono (NO_COLOR is set)"
+
+      named = built(env: %{"NO_COLOR" => "1"}, theme: "light") |> Setup.notices(nil)
+
+      assert notice_texts(named) == [
+               "NO_COLOR is set in the environment lmx started in, so the terminal draws no " <>
+                 "colour whatever the theme. Unset it where lmx is launched for colour."
+             ]
+
+      assert screen(Appearance.theme_status(named)) =~
+               "theme: light (NO_COLOR is set, so no colour is drawn)"
+
+      quiet = built(env: %{}) |> Setup.notices(nil)
+      assert notice_box(quiet) == nil
+      refute screen(Appearance.theme_status(quiet)) =~ "NO_COLOR"
     end
   end
 
@@ -567,6 +597,18 @@ defmodule Lemieux.TUI.ScreenFeaturesTest do
   # reads, so they go straight to it.
   defp built(opts),
     do: TUI.new([id: "01SESSION", model: "test:model", test_mode: {80, 24}] ++ opts)
+
+  # The notice box as one line of text per notice: the box wraps a long
+  # sentence over several rows, so rows are joined back and the warning glyph
+  # that opens each notice is where one ends and the next begins.
+  defp notice_texts(state) do
+    {%ExRatatui.Widgets.Paragraph{text: lines}, _rect} = notice_box(state)
+
+    lines
+    |> Enum.map_join(" ", fn line -> Enum.map_join(line.spans, & &1.content) end)
+    |> String.split("⚠ ", trim: true)
+    |> Enum.map(&(&1 |> String.split() |> Enum.join(" ")))
+  end
 
   # A screen told that `name` is connecting, and nothing since.
   defp connecting(state, name) do

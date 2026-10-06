@@ -59,7 +59,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
           name: nil,
           colour: nil,
           theme: theme_option(Keyword.get(opts, :theme) || no_color_theme(opts), themes),
-          themes: themes
+          themes: themes,
+          no_color: no_color(opts)
         },
         input: ExRatatui.textarea_new(),
         tools: no_tools(jev_setup(Keyword.get(opts, :harness))),
@@ -223,7 +224,36 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # sitting; see `Lemieux.TUI.Notices`.
     @doc false
     @spec notices(state :: TUI.t(), notices :: [String.t()] | nil) :: TUI.t()
-    def notices(state, notices), do: Notices.say_all(state, :warning, notices)
+    def notices(state, notices),
+      do:
+        Notices.say_all(
+          state,
+          :warning,
+          List.wrap(notices) ++ colour_notice(state.appearance.no_color)
+        )
+
+    # An inherited `NO_COLOR` — from a desktop entry, or the shell of an
+    # agent that set it for its own output — looks exactly like a terminal
+    # that cannot draw colour, and nothing on the screen said which it was
+    # (issue #4). The sentence names the variable and where to unset it,
+    # and respects the choice: https://no-color.org is a convention `lmx`
+    # keeps, so this only says it is in effect. The renderer (crossterm,
+    # under `ExRatatui`) writes no colour at all while the variable is set,
+    # so a theme named over it is drawn without its colours too; the second
+    # sentence says so rather than letting the named theme look broken.
+    defp colour_notice(nil), do: []
+
+    defp colour_notice(:mono),
+      do: [
+        "NO_COLOR is set in the environment lmx started in, so the screen has no colour " <>
+          "(theme mono). Unset it where lmx is launched for colour."
+      ]
+
+    defp colour_notice(:named),
+      do: [
+        "NO_COLOR is set in the environment lmx started in, so the terminal draws no colour " <>
+          "whatever the theme. Unset it where lmx is launched for colour."
+      ]
 
     # A terminal that is never resized never sends an event, so the size arrives as
     # an option: `ExRatatui.terminal_size/0` talks to the tty and hangs mounting
@@ -311,6 +341,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
       case Map.get(env, "NO_COLOR") do
         value when is_binary(value) and value != "" -> "mono"
         _unset -> nil
+      end
+    end
+
+    # What `NO_COLOR` did to this screen, for the startup notice
+    # (`notices/2`) and `/theme`: `:mono` when it chose the theme, `:named`
+    # when a theme chosen by name won but the terminal layer still draws no
+    # colour while the variable is set, `nil` when it is unset.
+    defp no_color(opts) do
+      case {no_color_theme(opts), Keyword.get(opts, :theme)} do
+        {nil, _theme} -> nil
+        {"mono", nil} -> :mono
+        {"mono", _named} -> :named
       end
     end
 

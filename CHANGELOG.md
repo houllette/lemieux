@@ -24,6 +24,14 @@ API.
   refused start; `--web-search brave` and `LMX_WEB_SEARCH=brave` without a
   key stay errors. An Ixway route without a key says where the key goes in
   both the environment and the file. (#3)
+- The Go Habs Go banner plays out its frames once the session is ready
+  rather than vanishing with the ready message, so a start that took a
+  single frame still shows the whole banner; any key ends it at once. When
+  `NO_COLOR` is set in the environment `lmx` started in — a desktop launcher
+  or an agent's shell often sets it — a startup notice names the variable
+  and where to unset it, `/theme` shows `(NO_COLOR is set)` after the
+  theme's name, and `lmx explain` reports `TERM`, `COLORTERM` and `NO_COLOR`
+  under `diagnostics.terminal`. The convention is kept, not overridden. (#4)
 
 ## 0.8.0 — 2026-10-05
 

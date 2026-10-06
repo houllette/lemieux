@@ -522,14 +522,32 @@ defmodule Lemieux.TUI.SessionsTest do
       assert ready.status.line == HostStatus
       assert ready.status.words == ["Deking"]
       assert is_reference(ready.terminal.cursor_blink.tick)
-      assert ready.overlay == nil
-      assert screen(ready) =~ "ready"
-      assert screen(ready) =~ "version 0.2.0 available"
-      assert "ollama:local" in ready.catalog.discovered
-      refute screen(ready) =~ "Starting session"
 
-      assert {:noreply, ^ready} =
-               TUI.handle_info({:habs_tick, loading.overlay.tick}, ready)
+      # The banner is not dropped with the message that made the session
+      # ready: it plays out to its blank frame over the ready screen, as
+      # `/habs` does, and only then hands the screen back — so a start that
+      # took one frame still shows it whole (issue #4). The frame it holds
+      # here depends on how long preparation took.
+      assert %{frame: frame, tick: tick} = ready.overlay
+      assert tick == loading.overlay.tick
+      assert frame in 0..8
+      assert {:noreply, playing} = TUI.handle_info({:habs_tick, tick}, ready)
+      assert playing.overlay.frame == frame + 1
+      assert [{%Clear{}, _area}, {%BigText{}, _banner_area}] = TUI.render(playing, @frame)
+
+      finished =
+        Enum.reduce(1..10, playing, fn _tick, state ->
+          assert {:noreply, state} = TUI.handle_info({:habs_tick, tick}, state)
+          state
+        end)
+
+      assert finished.overlay == nil
+      assert screen(finished) =~ "ready"
+      assert screen(finished) =~ "version 0.2.0 available"
+      assert "ollama:local" in finished.catalog.discovered
+      refute screen(finished) =~ "Starting session"
+
+      assert {:noreply, ^finished} = TUI.handle_info({:habs_tick, tick}, finished)
     end
 
     test "shows preparation errors without accepting a prompt into a missing session" do
