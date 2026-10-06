@@ -188,7 +188,11 @@ session worked in another directory).
 Besides the conversation, the terminal UI gives you:
 
 - completion for slash commands, providers, models, effort levels, sessions,
-  tool names and BEAM nodes. Lists of names are alphabetical; `/model` puts
+  tool names and BEAM nodes. A bare `/` lists `lmx`'s own commands; when you
+  have skills from elsewhere, the menu has a tab per place they came from
+  (Project, Personal, Claude, Codex, Agents, System, Plugins, `--skill-dir`),
+  switched with Shift-Tab or a click, and typing a skill's name jumps to its
+  tab. Lists of names are alphabetical; `/model` puts
   preferred and recent models first, then the rest by release date, with
   deprecated models marked near the end;
 - the model's plan (its `todo` tool) above the input while a task is open;
@@ -206,8 +210,10 @@ Besides the conversation, the terminal UI gives you:
 - the repository's instructions, skills and legacy slash commands, and the
   plugins you selected ([Workspace discovery](configuration.md#workspace-discovery)).
   A user-invocable skill is another slash command (`/NAME [ARGUMENTS]`, or
-  `/PLUGIN:NAME` for a plugin's); the bundled `/create-extension` and
-  `/evaluate-extension` skills help you write and check an extension;
+  `/PLUGIN:NAME` for a plugin's), on the completion menu's tab for where it
+  came from; the bundled `/create-extension` and `/evaluate-extension`
+  skills sit with `lmx`'s own commands and help you write and check an
+  extension;
 - local models: when an Ollama daemon is running, its models that can call
   tools appear under `/provider ollama` and `/model`. `/provider ollama`
   switches to the Ollama model you pinned or used recently, else to the one
@@ -253,7 +259,7 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 | Shift-Up / Shift-Down | Scroll the transcript three rows |
 | Esc | Clear the input, the selection and the completion menu, and close the notice box |
 | Ctrl-C | Cancel the running turn; when idle, press it twice to quit |
-| Shift-Tab | Cycle the permission mode (ask → accept edits → auto → read only; never full auto) when permissions are on; when they are off it says how to turn them on. In the Ixway model picker it cycles through Ixway and qualified route tabs |
+| Shift-Tab | Cycle the permission mode (ask → accept edits → auto → read only; never full auto) when permissions are on; when they are off it says how to turn them on. In the Ixway model picker it cycles through Ixway and qualified route tabs, and in the slash menu through the tabs for where skills came from |
 | Alt-1 to Alt-9 | Select a queued message |
 | Alt-E / Alt-U | Revise / discard the selected queued message |
 | Alt-Z | Take back the steer waiting for the next model request, as `/unsteer` does |

@@ -60,7 +60,8 @@ defmodule Lemieux.TUI.Keys do
       terminal's own paste carries text only. See `Lemieux.TUI.ImagePaste`.
     * `:cycle_mode` — step the permission mode, when the host enabled
       permissions: ask, accept edits, auto, read-only. `shift-tab`. With
-      the model picker open it steps the picker's tabs instead.
+      the model picker open, or the slash menu showing its tabs, it steps
+      those tabs instead.
     * `:toggle_notifications` — turn the finished/waiting notifications off
       or back on for the sitting. `alt-n`.
 

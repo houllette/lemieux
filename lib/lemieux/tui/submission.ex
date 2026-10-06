@@ -120,6 +120,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           command_menu?: true,
           command_index: 0,
           model_tab: "Automatic",
+          command_tab: "Commands",
           history: state.history |> History.record(typed) |> History.browsing(nil)
       }
       |> echo_input(typed, effects)

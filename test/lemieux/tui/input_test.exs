@@ -817,22 +817,18 @@ defmodule Lemieux.TUI.InputTest do
 
     # A menu nobody can see all of at once is a menu somebody scans, and the
     # order `@commands` happens to be written in is not one anybody can
-    # predict. Skills sort in with the rest rather than after them: a skill is
+    # predict. The skills that share a tab with the commands — lmx's own,
+    # bundled ones — sort in with the rest rather than after them: a skill is
     # a command to whoever typed the slash, and a second alphabet starting
     # halfway down is worse than no alphabet at all.
-    test "commands and skills are one alphabetical list" do
+    test "commands and the skills on their tab are one alphabetical list" do
       skills = [
-        %Skill{
-          name: "zamboni",
-          description: "resurface",
-          source: :project,
-          path: "z.md",
-          root: "."
-        },
-        %Skill{name: "audit", description: "check", source: :project, path: "a.md", root: "."}
+        skill("zamboni", "resurface", {:bundled, "/lib/lemieux/priv/skills"}),
+        skill("audit", "check", {:bundled, "/lib/lemieux/priv/skills"})
       ]
 
       state = tui(skills: skills) |> type("/")
+      assert tab_row(state) == nil
       [_, total] = Regex.run(~r/\/(\d+)/, suggestions(state).block.title)
 
       {items, _state} =
@@ -841,7 +837,7 @@ defmodule Lemieux.TUI.InputTest do
           {Enum.at(menu.items, menu.selected), press(state, "down")}
         end)
 
-      names = Enum.map(items, &(&1 |> String.split(" — ") |> hd()))
+      names = names(items)
 
       assert names == Enum.sort(names)
       assert "/audit" in names
@@ -849,6 +845,129 @@ defmodule Lemieux.TUI.InputTest do
 
       assert Enum.find_index(names, &(&1 == "/audit")) <
                Enum.find_index(names, &(&1 == "/cancel"))
+    end
+
+    # A machine with skill packs installed for another agent showed dozens of
+    # them before the first of lmx's own commands (issue #1). The default tab
+    # is lmx's commands and nothing else; each other tab is one place skills
+    # came from, named for it.
+    test "a bare slash lists lmx's commands; skills wait on tabs named for where they came from" do
+      skills = [
+        skill("zamboni", "resurface", {:repository, "/repo/.agents/skills"}),
+        skill("audit", "check", {:repository, "/repo/.claude/skills"}),
+        skill("aws-cdk", "cdk", {:personal, "/home/me/.claude/skills"}),
+        skill("aws-iam", "iam", {:personal, "/home/me/.claude/skills"}),
+        skill("notes", "mine", {:personal, "/home/me/.lmx/skills"}),
+        skill("create-extension", "bundled", {:bundled, "/lib/lemieux/priv/skills"}),
+        %{skill("review", "the plugin's", {:plugin, "quality"}) | namespace: "quality"}
+      ]
+
+      titles = ["Commands", "Project", "Personal", "Claude", "Plugins"]
+      state = tui(skills: skills) |> type("/")
+      assert tab_row(state) == {titles, 0}
+
+      names = names(suggestions(state).items)
+      assert "/help" in names
+      assert "/create-extension" in names
+
+      refute Enum.any?(
+               names,
+               &(&1 in ["/zamboni", "/audit", "/aws-cdk", "/aws-iam", "/notes", "/quality:review"])
+             )
+
+      assert suggestions(state).block.title =~ "commands"
+      assert suggestions(state).block.title =~ "shift-tab switches tabs"
+
+      project = press(state, "back_tab")
+      assert tab_row(project) == {titles, 1}
+      assert names(suggestions(project).items) == ["/audit", "/zamboni"]
+      assert suggestions(project).block.title =~ "skills"
+      assert typed(project) == "/"
+
+      personal = press(project, "back_tab")
+      assert names(suggestions(personal).items) == ["/notes"]
+
+      claude = press(personal, "back_tab")
+      assert tab_row(claude) == {titles, 3}
+      assert names(suggestions(claude).items) == ["/aws-cdk", "/aws-iam"]
+      # One menu height across tabs, as the model picker keeps.
+      assert suggestion_rect(claude).height == suggestion_rect(state).height
+
+      plugins = press(claude, "back_tab")
+      assert names(suggestions(plugins).items) == ["/quality:review"]
+      assert tab_row(press(plugins, "back_tab")) == {titles, 0}
+    end
+
+    test "typing a skill's name from the default tab jumps to its tab, and a chosen tab holds while typing" do
+      skills = [
+        skill("zamboni", "resurface", {:repository, "/repo/.agents/skills"}),
+        skill("audit", "check", {:personal, "/home/me/.claude/skills"})
+      ]
+
+      titles = ["Commands", "Project", "Claude"]
+      jumped = tui(skills: skills) |> type("/zam")
+      assert tab_row(jumped) == {titles, 1}
+      assert names(suggestions(jumped).items) == ["/zamboni"]
+      assert jumped |> press("tab") |> typed() == "/zamboni "
+
+      claude = tui(skills: skills) |> type("/") |> press("back_tab") |> press("back_tab")
+      assert tab_row(claude) == {titles, 2}
+
+      narrowed = type(claude, "au")
+      assert tab_row(narrowed) == {titles, 2}
+      assert names(suggestions(narrowed).items) == ["/audit"]
+
+      # A name nothing anywhere matches: the chosen tab stays, and the menu
+      # says so rather than jumping.
+      nothing = type(claude, "zzz")
+      assert tab_row(nothing) == {titles, 2}
+      assert suggestions(nothing).items == ["No matching skills"]
+      assert suggestions(nothing).block.title == " no matches "
+    end
+
+    test "a slash tab can be clicked, and Esc or a completion puts the menu back on the default" do
+      skills = [skill("zamboni", "resurface", {:repository, "/repo/.agents/skills"})]
+      state = tui(skills: skills) |> type("/") |> sized()
+
+      {%Tabs{}, area} =
+        Enum.find(TUI.render(state, @frame), fn {widget, _rect} -> match?(%Tabs{}, widget) end)
+
+      # "Commands" with a space each side, then the divider: Project starts at 11.
+      {:noreply, clicked} =
+        TUI.handle_event(%Mouse{kind: "down", button: "left", x: area.x + 12, y: area.y}, state)
+
+      assert clicked.command_tab == "Project"
+      assert names(suggestions(clicked).items) == ["/zamboni"]
+      assert typed(clicked) == "/"
+
+      completed = clicked |> type("zam") |> press("tab")
+      assert typed(completed) == "/zamboni "
+      assert completed.command_tab == "Commands"
+
+      # A fresh screen, because the input box is one native widget: an Esc on
+      # `clicked` would have emptied it under `completed` too.
+      escaped = tui(skills: skills) |> type("/") |> press("back_tab") |> press("esc")
+      assert escaped.command_tab == "Commands"
+      assert typed(escaped) == ""
+    end
+
+    defp skill(name, description, source),
+      do: %Skill{
+        name: name,
+        description: description,
+        source: source,
+        path: "#{name}.md",
+        root: "."
+      }
+
+    defp names(items), do: Enum.map(items, &(&1 |> String.split(" — ") |> hd()))
+
+    # The tab row the menu drew, as its titles and the selected index, or nil.
+    defp tab_row(state) do
+      Enum.find_value(TUI.render(state, @frame), fn
+        {%Tabs{titles: titles, selected: selected}, _rect} -> {titles, selected}
+        _other -> nil
+      end)
     end
 
     test "/mcp has one completion and no argument menu" do

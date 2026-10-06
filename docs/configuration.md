@@ -872,6 +872,14 @@ UI:
 /quality:review lib/example.ex
 ```
 
+A bare `/` lists `lmx`'s own commands, the bundled skills among them. Skills
+from anywhere else sit on the completion menu's tabs, one per place they came
+from: Project (the repository's), Personal (`~/.lmx`), Claude, Codex and
+Agents (the other harnesses' personal directories), System (Omarchy's),
+Plugins, and `--skill-dir`. Shift-Tab or a click switches tabs, and typing a
+skill's name from the default tab jumps to the tab that has it. With no skill
+outside `lmx`'s own, the menu has no tabs.
+
 `$ARGUMENTS`, `$ARGUMENTS[N]` and `$N` are substituted when one is invoked;
 `argument-hint`, `user-invocable` and `disable-model-invocation` are honoured;
 `${CLAUDE_SKILL_DIR}` is expanded for every skill and `${CLAUDE_PLUGIN_ROOT}`

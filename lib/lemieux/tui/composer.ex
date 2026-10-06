@@ -79,21 +79,30 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def blink(state, _tick), do: {:noreply, state}
 
     # Shift-Tab steps the model picker's route tabs while the picker is open,
-    # and the permission mode otherwise; a host that bound it to something
-    # else keeps its binding everywhere but the picker.
+    # the slash menu's tabs while that has them, and the permission mode
+    # otherwise; a host that bound it to something else keeps its binding
+    # everywhere but those menus.
     @doc false
-    @spec cycle_model_tab_or_edit(ExRatatui.Event.Key.t(), TUI.t()) :: reply()
-    def cycle_model_tab_or_edit(event, state) do
-      tabs = model_picker_tabs(state)
+    @spec cycle_tab_or_edit(ExRatatui.Event.Key.t(), TUI.t()) :: reply()
+    def cycle_tab_or_edit(event, state) do
+      action = Keys.action(state.status.keys, event)
 
-      if tabs != [] and Keys.action(state.status.keys, event) in [:forward, :cycle_mode] do
-        index = Enum.find_index(tabs, &(&1 == state.model_tab)) || 0
+      if action in [:forward, :cycle_mode],
+        do: cycle_tab(state, model_picker_tabs(state), command_tabs(state), action, event),
+        else: act(action, event, state)
+    end
 
-        {:noreply,
-         %{state | model_tab: Enum.at(tabs, rem(index + 1, length(tabs))), command_index: 0}}
-      else
-        act(Keys.action(state.status.keys, event), event, state)
-      end
+    defp cycle_tab(state, [_ | _] = tabs, _command_tabs, _action, _event),
+      do: {:noreply, %{state | model_tab: next_tab(tabs, state.model_tab), command_index: 0}}
+
+    defp cycle_tab(state, [], %{tabs: tabs, tab: tab}, _action, _event),
+      do: {:noreply, %{state | command_tab: next_tab(tabs, tab), command_index: 0}}
+
+    defp cycle_tab(state, [], nil, action, event), do: act(action, event, state)
+
+    defp next_tab(tabs, tab) do
+      index = Enum.find_index(tabs, &(&1 == tab)) || 0
+      Enum.at(tabs, rem(index + 1, length(tabs)))
     end
 
     # One clause per action in `Lemieux.TUI.Keys.actions/0`, then `:forward`.
@@ -146,6 +155,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
          | command_menu?: false,
            command_index: 0,
            model_tab: "Automatic",
+           command_tab: "Commands",
            selection: nil,
            history: History.browsing(state.history, nil)
        }}
@@ -445,16 +455,19 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec edited(TUI.t()) :: TUI.t()
     def edited(state) do
-      model_tab =
-        if String.starts_with?(typed_value(state), "/model "),
-          do: state.model_tab,
-          else: "Automatic"
+      typed = typed_value(state)
+      model_tab = if String.starts_with?(typed, "/model "), do: state.model_tab, else: "Automatic"
+      # The chosen slash tab holds while the name is still being typed, so
+      # narrowing within it works; a completed command, or anything else,
+      # puts the next menu back on the default tab.
+      command_tab = if command_prefix?(typed), do: state.command_tab, else: "Commands"
 
       %{
         state
         | command_menu?: true,
           command_index: 0,
           model_tab: model_tab,
+          command_tab: command_tab,
           history: History.browsing(state.history, nil)
       }
       |> listed()
@@ -606,15 +619,39 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def autocomplete(state, panes) do
       matches = completions(state)
 
-      CompletionMenu.render(matches, panes,
-        tabs: model_picker_tabs(state),
-        tab: state.model_tab,
-        tab_rows: state.catalog.model_tab_rows,
-        selected: state.command_index,
-        gap_after: model_completion_gap_after(state, matches),
-        accent: Screen.accent(state),
-        theme: Screen.theme(state)
+      CompletionMenu.render(
+        matches,
+        panes,
+        tab_options(state) ++
+          [
+            selected: state.command_index,
+            gap_after: model_completion_gap_after(state, matches),
+            accent: Screen.accent(state),
+            theme: Screen.theme(state)
+          ]
       )
+    end
+
+    # The tab row the menu draws, if any: the model picker's routes while
+    # `/model ` is typed, the slash menu's sources while a bare `/NAME` is.
+    defp tab_options(state) do
+      case {model_picker_tabs(state), command_tabs(state)} do
+        {[_ | _] = tabs, _commands} ->
+          [tabs: tabs, tab: state.model_tab, tab_rows: state.catalog.model_tab_rows]
+
+        {[], %{tabs: tabs, tab: tab, rows: rows}} ->
+          [
+            tabs: tabs,
+            tab: tab,
+            tab_rows: rows,
+            tab_label: & &1,
+            noun: if(tab == "Commands", do: "commands", else: "skills"),
+            tab_hint: "shift-tab switches tabs"
+          ]
+
+        {[], nil} ->
+          [tabs: [], tab: nil, tab_rows: 0]
+      end
     end
 
     @doc false
@@ -631,6 +668,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       %{
         catalog: state.catalog,
         model_tab: state.model_tab,
+        command_tab: state.command_tab,
         conversation: state.conversation,
         skills: state.skills,
         references: state.references,
@@ -651,6 +689,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
         else: []
     end
 
+    # The slash menu's tabs (`Lemieux.TUI.CompletionSources.command_tabs/2`)
+    # while the box holds a bare `/NAME` and nothing after it.
+    defp command_tabs(%TUI{command_menu?: false}), do: nil
+
+    defp command_tabs(state) do
+      value = typed_value(state)
+
+      if command_prefix?(value),
+        do: CompletionSources.command_tabs(completion_context(state), value),
+        else: nil
+    end
+
+    defp command_prefix?(value), do: Regex.match?(~r/^\s*\/[^\s]*$/, value)
+
     defp model_completion_gap_after(state, matches) do
       if ExRatatui.textarea_get_value(state.input) == "/model " do
         matches
@@ -661,26 +713,36 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    # The model picker's route tab under a click, if the click was on the tab
-    # row the completion menu drew.
+    # The tab under a click, if the click was on the tab row the completion
+    # menu drew: the model picker's route, or the slash menu's source.
     @doc false
-    @spec model_tab_at(TUI.t(), ExRatatui.Event.Mouse.t()) :: {:ok, String.t()} | nil
-    def model_tab_at(state, %ExRatatui.Event.Mouse{x: x, y: y}) do
+    @spec tab_at(TUI.t(), ExRatatui.Event.Mouse.t()) ::
+            {:ok, :model_tab | :command_tab, String.t()} | nil
+    def tab_at(state, %ExRatatui.Event.Mouse{x: x, y: y}) do
       state
       |> Screen.panes()
       |> then(&autocomplete(state, &1))
       |> Enum.find_value(fn
         {%Tabs{}, %Rect{} = area} when y == area.y and x >= area.x ->
-          model_tab_at_x(model_picker_tabs(state), x - area.x)
+          case {model_picker_tabs(state), command_tabs(state)} do
+            {[_ | _] = tabs, _commands} ->
+              tab_at_x(tabs, &ModelChoices.tab_label/1, x - area.x, :model_tab)
+
+            {[], %{tabs: tabs}} ->
+              tab_at_x(tabs, & &1, x - area.x, :command_tab)
+
+            {[], nil} ->
+              nil
+          end
 
         _other ->
           nil
       end)
     end
 
-    defp model_tab_at_x(tabs, x) do
+    defp tab_at_x(tabs, label, x, field) do
       Enum.reduce_while(tabs, {0, nil}, fn tab, {offset, _selected} ->
-        width = String.length(ModelChoices.tab_label(tab)) + 2
+        width = String.length(label.(tab)) + 2
 
         if x >= offset and x < offset + width,
           do: {:halt, {offset, tab}},
@@ -689,7 +751,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       |> elem(1)
       |> case do
         nil -> nil
-        tab -> {:ok, tab}
+        tab -> {:ok, field, tab}
       end
     end
   end

@@ -32,6 +32,16 @@ API.
   and where to unset it, `/theme` shows `(NO_COLOR is set)` after the
   theme's name, and `lmx explain` reports `TERM`, `COLORTERM` and `NO_COLOR`
   under `diagnostics.terminal`. The convention is kept, not overridden. (#4)
+- A bare `/` in the terminal UI lists `lmx`'s own commands and nothing else.
+  Skills from anywhere else — the repository's, your `~/.lmx/skills`, the
+  ones Claude Code, Codex or another agent keep under your home directory,
+  Omarchy's, a plugin's, a `--skill-dir` — sit on tabs named for where they
+  came from (Project, Personal, Claude, Codex, Agents, System, Plugins,
+  `--skill-dir`), switched with Shift-Tab or a click; typing a skill's name
+  from the default tab jumps to the tab that has it. A machine with skill
+  packs installed for another agent used to show dozens of them before the
+  first of `lmx`'s commands. With no skill outside `lmx`'s own, the menu is
+  the one list it was. (#1)
 
 ## 0.8.0 — 2026-10-05
 
