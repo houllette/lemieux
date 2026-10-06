@@ -1,1 +1,1 @@
-urllib3: constraints.txt pins urllib3==2.7.0 while requirements/prod.txt requires urllib3>=2.8, so no version satisfies both (base.txt's urllib3<3 and dev.txt's urllib3<2 are not the conflict; dev.txt is not even included).
+urllib3: constraints.txt pins urllib3==2.7.0 while requirements/prod.txt requires urllib3>=2.8, so no version satisfies both (base.txt's urllib3<3 and dev.txt's urllib3>=2.5 are not the conflict; dev.txt is not even included).

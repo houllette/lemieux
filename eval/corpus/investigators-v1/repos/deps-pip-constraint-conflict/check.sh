@@ -22,7 +22,7 @@ verify constraints.txt 2957794329
 verify pyproject.toml 1229804781
 verify requirements.txt 2447536053
 verify requirements/base.txt 1883578395
-verify requirements/dev.txt 749537145
+verify requirements/dev.txt 3282485041
 verify requirements/prod.txt 859086588
 [ -n "$answer" ] || fail "no answer was reported"
 expect 1 '\165\162\154\154\151\142\063'
