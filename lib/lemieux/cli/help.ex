@@ -209,7 +209,8 @@ defmodule Lemieux.CLI.Help do
     Settings a new session starts from; flags and LMX_* variables win.
     A field this build does not know is named and ignored, unless it is a
     likely misspelling of a routing field (model, providers, base_url,
-    ixway), which is refused.
+    ixway), which is refused. A wrong value names its field and what it
+    takes. An empty api_key is a placeholder: named at startup, ignored.
 
       model                 the model new sessions start with
       providers.NAME        api_key, model, effort for one provider

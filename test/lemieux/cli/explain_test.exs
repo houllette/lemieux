@@ -137,4 +137,46 @@ defmodule Lemieux.CLI.ExplainTest do
     # `inspect/1` of the sentence used to print it in quotes.
     refute result.stderr =~ ~s(lmx explain: ")
   end
+
+  # Issue #3: the file from the report, an empty placeholder in every key
+  # field. It used to be refused as `Invalid lmx config field:
+  # web_search_providers.` Now the file loads, and what stops the report is
+  # the one thing that does stop a session — the gateway key the route it
+  # enables needs — named by both places it can be put.
+  test "empty key placeholders name the missing key rather than refusing the file", %{
+    tmp_dir: dir
+  } do
+    path = Path.join(dir, "config.json")
+
+    File.write!(
+      path,
+      JSON.encode!(%{
+        "version" => 1,
+        "providers" => %{},
+        "ixway" => %{
+          "enabled" => true,
+          "endpoint" => "https://gateway.example.com",
+          "api_key" => "",
+          "model" => "ixway:gpt-6-luna",
+          "effort" => "max"
+        },
+        "jev_compaction" => %{"api_key" => ""},
+        "web_search" => "brave",
+        "web_search_providers" => %{"brave" => %{"api_key" => ""}},
+        "web_fetch" => true,
+        "theme" => "dark"
+      })
+    )
+
+    File.chmod!(path, 0o600)
+
+    result = explain(["explain", "--config", path], cwd: dir)
+
+    assert result.result == {:error, 1}
+    refute result.stderr =~ "Invalid lmx config field"
+
+    assert result.stderr =~
+             "lmx explain: Ixway requires a gateway model key: set IXWAY_API_KEY, " <>
+               "or save it as ixway.api_key in the lmx config file."
+  end
 end

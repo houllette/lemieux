@@ -335,8 +335,6 @@ defmodule Lemieux.CLI.ConfigTest do
           %{"private-invalid-key!" => %{"api_key" => "private-invalid-key"}},
           %{"brave" => "private-invalid-key"},
           %{"brave" => %{"token" => "private-invalid-key"}},
-          %{"brave" => %{"api_key" => ""}},
-          %{"brave" => %{"api_key" => "   "}},
           %{"brave" => %{"api_key" => "private-invalid-key\n"}},
           %{"brave" => %{"api_key" => "private-invalid-key\r"}},
           %{"brave" => %{"api_key" => 123}}
@@ -353,6 +351,90 @@ defmodule Lemieux.CLI.ConfigTest do
     File.chmod!(path, 0o644)
     assert {:ok, config} = Config.load(path)
     assert Config.web_search_api_key(config, "brave") == nil
+  end
+
+  # Issue #3: a file set up with an empty placeholder in every key field used
+  # to be refused with `Invalid lmx config field: web_search_providers.`,
+  # which named neither the key nor what was wrong with it, and kept the
+  # screen that saves a real key from opening.
+  test "an empty api_key is a placeholder: named at startup, ignored, and not a reason to refuse the file",
+       %{tmp_dir: dir} do
+    path =
+      write_config(dir, %{
+        "version" => 1,
+        "providers" => %{"openai" => %{"api_key" => ""}},
+        "ixway" => %{
+          "enabled" => true,
+          "endpoint" => "https://gateway.example.com",
+          "api_key" => "",
+          "model" => "ixway:gpt-6-luna",
+          "effort" => "max"
+        },
+        "jev_compaction" => %{"api_key" => "   "},
+        "web_search" => "brave",
+        "web_search_providers" => %{"brave" => %{"api_key" => ""}},
+        "web_fetch" => true,
+        "theme" => "dark"
+      })
+
+    assert {:ok, config} = Config.load(path)
+
+    assert Config.warnings(config) ==
+             Enum.map(
+               ~w(ixway.api_key jev_compaction.api_key providers.openai.api_key web_search_providers.brave.api_key),
+               &"Empty field #{inspect(&1)} in the lmx config; it is ignored. Supply the key there, or remove the placeholder."
+             )
+
+    assert Config.api_keys(config) == %{}
+    assert Config.web_search_api_key(config, "brave") == nil
+    assert Config.get(config, "ixway")["api_key"] == nil
+    assert Config.get(config, "ixway")["enabled"] == true
+    assert Config.get(config, "jev_compaction") == %{}
+
+    # Nothing left in the file is a secret, so its mode need not be private.
+    File.chmod!(path, 0o644)
+    assert {:ok, _config} = Config.load(path)
+
+    # What a session would start with: the Ixway route it asked for, and no
+    # search until a key arrives, said so in the warnings rather than as an
+    # error.
+    assert {:ok, options} = Options.parse(["--config", path])
+    assert options.ixway == "https://gateway.example.com"
+    assert options.web_search == nil
+
+    assert Enum.count(
+             Config.warnings(options.config),
+             &(&1 =~ "web_search_providers.brave.api_key")
+           ) == 2
+  end
+
+  test "a value that is wrong names its field and what the field takes", %{tmp_dir: dir} do
+    for {settings, path, expectation} <- [
+          {%{"ixway" => %{"enabled" => "private-key"}}, "ixway.enabled", "true or false"},
+          {%{"ixway" => %{"api_key" => "private\nkey"}}, "ixway.api_key", "one line of text"},
+          {%{"ixway" => %{"model" => "openai:gpt-6-sol"}}, "ixway.model", "ixway:ID"},
+          {%{"ixway" => %{"endpoint" => "gateway"}}, "ixway.endpoint", "http(s) origin"},
+          {%{"jev_compaction" => %{"mode" => "sometimes"}}, "jev_compaction.mode",
+           "auto, apply, shadow or off"},
+          {%{"jev_compaction" => %{"api_key" => 123}}, "jev_compaction.api_key",
+           "one line of text"},
+          {%{"jev_compaction" => %{"max_cost_usd" => 1, "reservation_per_call_usd" => 2}},
+           "jev_compaction.reservation_per_call_usd", "no more than max_cost_usd"},
+          {%{"providers" => %{"openai" => %{"model" => "anthropic:claude-sonnet-5"}}},
+           "providers.openai.model", "openai:MODEL"},
+          {%{"providers" => %{"openai" => %{"api_key" => "private\rkey"}}},
+           "providers.openai.api_key", "one line of text"},
+          {%{"providers" => %{"openai" => "private-key"}}, "providers.openai", "an object"},
+          {%{"web_search_providers" => %{"brave" => %{"api_key" => 123}}},
+           "web_search_providers.brave.api_key", "one line of text"},
+          {%{"web_search_providers" => %{"brave" => []}}, "web_search_providers.brave",
+           "an object"}
+        ] do
+      assert {:error, reason} = Config.load(write_config(dir, settings))
+      assert reason =~ "Invalid lmx config field: #{path}. "
+      assert reason =~ expectation
+      refute reason =~ "private"
+    end
   end
 
   test "disabled_extensions accepts unique shipped names only", %{tmp_dir: dir} do

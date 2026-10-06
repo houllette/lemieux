@@ -7,6 +7,24 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### lmx
+
+- A config file with an empty `api_key` placeholder (`"api_key": ""`) under
+  `providers`, `ixway`, `jev_compaction` or `web_search_providers` now loads:
+  the field counts as no key, is named in the startup notices (`Empty field
+  "ixway.api_key" in the lmx config; it is ignored`), and the terminal UI
+  opens so a real key can be saved. It used to stop every command with
+  `Invalid lmx config field: web_search_providers.` A value a field cannot
+  take now names the field down to its key and what it takes
+  (`Invalid lmx config field: ixway.enabled. It must be true or false.`),
+  where the sentence used to name only the section. `"web_search": "brave"`
+  saved with no Brave key is a startup warning and no search rather than a
+  refused start; `--web-search brave` and `LMX_WEB_SEARCH=brave` without a
+  key stay errors. An Ixway route without a key says where the key goes in
+  both the environment and the file. (#3)
+
 ## 0.8.0 — 2026-10-05
 
 The first public release of an open-source coding agent you can take apart:

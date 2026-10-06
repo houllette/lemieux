@@ -626,6 +626,34 @@ Other), review the set and choose Submit answers. An embedding host receives
 `{:question, question}` and must answer through the session's API. `lmx run`
 offers no `ask_user` tool, because nobody may be there to answer.
 
+### `Invalid lmx config field: …` or `Unknown field … in lmx … section`
+
+`~/.lmx/config.json`, or the file `--config` named, holds a value a field
+cannot take, or a key its section does not know. The message names the field
+down to its key and what it takes:
+
+```text
+lmx: Invalid lmx config field: web_search_providers.brave.api_key. A key is one line of text.
+lmx: Unknown field "modle" in lmx providers.openai section (did you mean "model"?).
+```
+
+Fix that field and start again, or start with `--config none` while you do
+([Running with no configuration](configuration.md#running-with-no-configuration)).
+Two things that look like mistakes are not refused:
+
+- An `api_key` left empty (`"api_key": ""`) counts as no key. The startup
+  notices say `Empty field "ixway.api_key" in the lmx config; it is ignored`,
+  the terminal UI opens, and `lmx explain` lists the notice under
+  `diagnostics.notices`. Supply the key, or remove the placeholder.
+- `"web_search": "brave"` with no Brave key turns search off, with a notice
+  that names `BRAVE_SEARCH_API_KEY` and `web_search_providers.brave.api_key`.
+
+A file that enables the Ixway route (`"ixway": {"enabled": true}`) with no
+key for it still cannot start a session on that route: `Ixway requires a
+gateway model key: set IXWAY_API_KEY, or save it as ixway.api_key in the lmx
+config file.` In the terminal UI, `/provider NAME` starts on a direct provider
+instead, and `/quit` leaves.
+
 ### `lmx explain` exits 1: two tools share a name
 
 `lmx explain: the tool catalog offers 2 tools named NAME (A, B); leave all but
