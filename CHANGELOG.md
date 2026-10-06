@@ -7,7 +7,7 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## 0.8.1 — unreleased
+## 0.8.1 — 2026-10-06
 
 The first update to the public release: four fixes from the first week of
 reports, and a way to update from a terminal.
