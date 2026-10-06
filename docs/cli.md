@@ -37,6 +37,7 @@ harness-learning commands) and `desktop` (`lmx desktop`).
 | `lmx extension new\|list` | Write or list your own Elixir extensions |
 | `lmx skills` | List the Agent Skills a session finds, where each came from, and whether it is enabled |
 | `lmx desktop install\|uninstall\|status` | On Linux, add `lmx` to the desktop's application launcher, or remove it ([Desktop launchers and Omarchy](desktop.md)) |
+| `lmx update [--check]` | Install a newer verified release from a terminal, or say whether one is available ([Updates](releases.md#updates-from-the-tui)) |
 | `lmx help [TOPIC]` | Print the help, or one topic |
 | `lmx feedback`, `lmx corpus`, `lmx harness` | Experimental [harness-learning commands](#harness-learning-and-feedback-commands) |
 | `lmx --version` | Print the version |
@@ -223,8 +224,11 @@ Besides the conversation, the terminal UI gives you:
   routes and `/model` shows models for the selected provider. Ixway models
   open in the Ixway tab, with qualified provider routes in separate tabs.
 
-**Updates.** On macOS and Linux, the installed binary checks the project's
-GitHub releases when the terminal UI opens, after `/new` and `/resume`, and
+**Updates.** `lmx update` installs a newer verified release from a terminal,
+without a session, a key or a readable config file; `lmx update --check` only
+reports ([Updates](releases.md#updates-from-the-tui)). On macOS and Linux,
+the installed binary also checks the project's GitHub releases when the
+terminal UI opens, after `/new` and `/resume`, and
 hourly while it is open. It installs an update only after the release's
 signed manifest verifies against the Ed25519 public key built into the
 binary; a release whose signature is missing or does not verify is reported

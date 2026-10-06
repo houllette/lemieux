@@ -43,6 +43,21 @@ API.
   first of `lmx`'s commands. With no skill outside `lmx`'s own, the menu is
   the one list it was. (#1)
 
+### Installing and updating
+
+- `lmx update` installs a newer verified release from a terminal, through
+  the same signature, checksum and archive checks as the terminal UI's
+  `/update`; `lmx update --check` only says whether one is available. It
+  needs no session, model key or readable config file, exits 0 when `lmx` is
+  up to date or an update was installed, and says that a terminal UI that is
+  open keeps running its version until restarted. From a source checkout,
+  `mix lmx update` fast-forwards the checkout from its Git upstream. (#5)
+- The installer recognises the launcher it wrote and upgrades its own
+  installation without `--replace`, which is now only for installing over a
+  `PREFIX/bin/lmx` that is something else: another program, or a launcher
+  written for another prefix. It used to be needed for every upgrade, and
+  read as permission to overwrite an unrelated program. (#5)
+
 ## 0.8.0 — 2026-10-05
 
 The first public release of an open-source coding agent you can take apart:

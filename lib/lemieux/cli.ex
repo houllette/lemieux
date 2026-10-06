@@ -43,11 +43,12 @@ defmodule Lemieux.CLI do
   alias Lemieux.CLI.Run
   alias Lemieux.CLI.Skills
   alias Lemieux.CLI.TUI
+  alias Lemieux.CLI.Update
 
   # The subcommands, so a help flag after one of them is recognised as a
   # request for the manual rather than passed on as an option.
   @commands ~w(tui run log request fork feedback harness corpus explain help plugin extension mcp
-                skills desktop)
+                skills desktop update)
 
   @doc """
   The command words `lmx` routes, so a command that was given one where it
@@ -345,6 +346,7 @@ defmodule Lemieux.CLI do
   defp route(["mcp" | argv], opts), do: MCPCommands.run(argv, opts)
   defp route(["skills" | argv], opts), do: Skills.run(argv, opts)
   defp route(["desktop" | argv], opts), do: Desktop.run(argv, opts)
+  defp route(["update" | argv], opts), do: Update.run(argv, opts)
 
   # Options with no command belong to the default TUI — `lmx --mcp-config f`
   # opens the full-screen session with those servers attached.

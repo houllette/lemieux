@@ -75,14 +75,26 @@ class ReleaseToolsTest(unittest.TestCase):
             current = root / "install/share/lmx/current"
             old = current.resolve()
             self.assertEqual((old / "bin/lmx").read_bytes(), b"#!/bin/sh\nexit 99\n")
-            self.assertTrue((root / "install/bin/lmx").is_file())
-            refused = subprocess.run(command, capture_output=True, text=True)
-            self.assertNotEqual(refused.returncode, 0)
-            self.assertIn("--replace", refused.stderr)
+            launcher = root / "install/bin/lmx"
+            self.assertTrue(launcher.is_file())
+            # Running the installer again upgrades its own installation without
+            # --replace (issue #5): the launcher it wrote is how it knows.
             self.archive(root, target, "0.1.1")
-            subprocess.run(command + ["--replace"], check=True, capture_output=True)
+            subprocess.run(command, check=True, capture_output=True)
             self.assertNotEqual(old, current.resolve())
             self.assertTrue(old.is_dir())
+            # A launcher it did not write — another program, or its own wrapper
+            # for another prefix — is left alone until --replace says otherwise.
+            for foreign in (b"#!/bin/sh\necho someone else's lmx\n",
+                            installer.wrapper(Path("/elsewhere/share/lmx")).encode()):
+                launcher.write_bytes(foreign)
+                refused = subprocess.run(command, capture_output=True, text=True)
+                self.assertNotEqual(refused.returncode, 0)
+                self.assertIn("--replace", refused.stderr)
+                self.assertEqual(launcher.read_bytes(), foreign)
+            subprocess.run(command + ["--replace"], check=True, capture_output=True)
+            # The installer resolves the prefix (macOS keeps /var under /private).
+            self.assertEqual(launcher.read_text(), installer.wrapper((root / "install").resolve() / "share/lmx"))
 
     def test_complete_candidate_manifest_binds_every_target_to_its_archive(self):
         import io

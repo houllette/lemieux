@@ -15,13 +15,14 @@ defmodule Lemieux.CLI.HelpTest do
   describe "lmx --help" do
     # It was 172 lines. About fifty now — not one screen of a 24-row
     # terminal, but nothing on it is there by accident (`Help.usage/0`) —
-    # and a line added to it should have to move this number.
+    # and a line added to it should have to move this number (`lmx update`
+    # did, 2026-10).
     test "opens with the tagline, stays within 80 columns and about fifty lines" do
       usage = Help.usage()
       lines = String.split(usage, "\n")
 
       assert hd(lines) == "lmx — an open-source terminal coding agent, built on Lemieux"
-      assert length(lines) <= 53
+      assert length(lines) <= 54
 
       for line <- lines,
           do: assert(String.length(line) <= 80, "longer than 80 columns: #{inspect(line)}")
@@ -30,7 +31,7 @@ defmodule Lemieux.CLI.HelpTest do
     test "lists the everyday commands before anything else, and no research commands" do
       usage = Help.usage()
 
-      for command <- ~w(run log fork explain mcp plugin extension skills help),
+      for command <- ~w(run log fork explain mcp plugin extension skills update help),
           do: assert(usage =~ "lmx #{command}")
 
       for research <- [

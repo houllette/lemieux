@@ -120,13 +120,15 @@ notice box says why:
 - `The update carried no verified signature, so it was not installed` (after
   `/update`) — `/update` checks again.
 
-`LMX_AUTO_UPDATE=0` keeps the notices but installs only when you run
-`/update`; `LMX_CHECK_UPDATES=0` turns the automatic checks off, and
-`/update` still checks. An `lmx` you unpacked by hand, and the experimental
-Windows build, say when an update is available but never install one
-themselves; `/update` then says `Download an update from
-https://github.com/houllette/lemieux/releases and restart lmx. On macOS and
-Linux, install lmx with install.sh to get automatic updates.`
+`lmx update` installs from a terminal, and works while a mistake in the
+config file keeps the screen from opening. `LMX_AUTO_UPDATE=0` keeps the
+notices but installs only when you run `lmx update` or `/update`;
+`LMX_CHECK_UPDATES=0` turns the automatic checks off, and both still check.
+An `lmx` you unpacked by hand, and the experimental Windows build, say when an
+update is available but never install one themselves; `/update` then says
+`Download an update from https://github.com/houllette/lemieux/releases and
+restart lmx. On macOS and Linux, install lmx with install.sh to get automatic
+updates.`
 
 ### `lmx: this installation belongs to another user`
 
