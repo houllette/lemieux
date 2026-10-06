@@ -693,3 +693,16 @@ Pricing every byte as a token and reserving the model's whole output limit
 would cost about a dollar a request on a Sonnet-class model, which would stop
 a `$5` session after two or three turns. Unknown pricing answers `nil`, and
 the gate refuses rather than treating it as free.
+
+When ReqLLM cannot resolve the model's catalog tariff for the request — a
+tariff with service-tier modifiers (flex, priority, data residency) that no
+pricing context answers, as `openai:gpt-6-luna`'s is — the estimate falls
+back to the model's flat list rates (`cost` in the catalog: what the standard
+tier charges, and what the first tier of a long-context tariff charges), and
+the usage a direct request reports is priced the same way, with
+`pricing.status` set to `"list_rates"` so a host can tell it from ReqLLM's own
+`"priced"`. The assumption is the standard tier: a request on a batch or
+priority tier, or past a long-context threshold, is estimated at list price
+rather than refused. A model with no rates at all still answers `nil`, and
+the budget stop names it (`no price is known for ollama:some-model`). Routed
+requests are left as the route priced them.

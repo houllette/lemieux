@@ -1397,8 +1397,42 @@ defmodule Lemieux.Providers.ReqLLMTest do
       override = %{ordinary | params: [max_tokens: 100, pricing_context: %{api: "realtime"}]}
       assert Provider.estimate_cost(provider, override) == realtime
 
+      # A context the tariff cannot be resolved for is priced at list rates,
+      # which for this model are its realtime rates.
       unknown = %{ordinary | params: [max_tokens: 100, pricing_context: %{}]}
-      assert Provider.estimate_cost(provider, unknown) == nil
+      assert_in_delta Provider.estimate_cost(provider, unknown), realtime, 2.0e-6
+    end
+
+    test "falls back to the model's list rates when ReqLLM cannot resolve its tariff" do
+      # gpt-6-luna's catalog tariff carries service-tier modifiers (flex,
+      # priority, data residency) that no pricing context resolves, so the
+      # calculator answers nil and a metered session stopped before its first
+      # request. The flat `cost` rates are the list price. If a ReqLLM or
+      # llm_db update learns to price this tariff, move the test to a model it
+      # still cannot: the fallback is what is under test.
+      model = "openai:gpt-6-luna"
+      {:ok, %{cost: %{input: input_rate, output: output_rate}} = catalog} = ReqLLM.model(model)
+
+      probe = %{
+        input_tokens: 10,
+        output_tokens: 10,
+        cached_tokens: 0,
+        cache_creation_tokens: 0,
+        input_includes_cached: true
+      }
+
+      assert {:ok, nil} = ReqLLM.Billing.calculate(probe, catalog, %{api: "realtime"})
+
+      request =
+        Request.new(model,
+          entries: [Entry.new(:user, %{"text" => "hello"})],
+          params: [max_tokens: 4_096]
+        )
+
+      input_tokens = max(div(Request.input_bytes(request), 4), 1)
+      expected = (input_tokens * input_rate + 4_096 * output_rate) / 1_000_000
+
+      assert_in_delta Provider.estimate_cost(ReqLLMProvider.new(), request), expected, 1.0e-9
     end
   end
 

@@ -150,6 +150,7 @@ defmodule Lemieux.Providers.ReqLLM do
   alias Lemieux.Providers.ReqLLM.ResponseMetadata
   alias Lemieux.Request
   alias Lemieux.Tool
+  alias Lemieux.Usage
   alias ReqLLM.Context
   alias ReqLLM.Message
   alias ReqLLM.Message.ContentPart
@@ -445,24 +446,127 @@ defmodule Lemieux.Providers.ReqLLM do
     options = state |> normalize_state() |> Map.fetch!(:options) |> Keyword.merge(request.params)
 
     with {:ok, model} <- model(request.model),
-         output when is_integer(output) and output >= 0 <- output_reservation(request, model),
-         {input, cached} = input_estimate(request),
-         {:ok, %{total: total}} <-
-           ReqLLM.Billing.calculate(
-             %{
-               input_tokens: input,
-               output_tokens: output,
-               cached_tokens: cached,
-               cache_creation_tokens: 0,
-               input_includes_cached: true
-             },
-             model,
-             pricing_context(options)
-           ) do
-      total
+         output when is_integer(output) and output >= 0 <- output_reservation(request, model) do
+      {input, cached} = input_estimate(request)
+
+      usage = %{
+        input_tokens: input,
+        output_tokens: output,
+        cached_tokens: cached,
+        cache_creation_tokens: 0,
+        input_includes_cached: true
+      }
+
+      case ReqLLM.Billing.calculate(usage, model, pricing_context(options)) do
+        {:ok, %{total: total}} ->
+          total
+
+        {:ok, nil} ->
+          list_rate_cost(model, %{
+            input: input - cached,
+            cached: cached,
+            written: 0,
+            output: output
+          })
+      end
     else
       _unknown -> nil
     end
+  end
+
+  # A model's catalog tariff is a list of conditional components — tiers by
+  # input size, a batch or flex or priority rate, a data-residency surcharge —
+  # and `ReqLLM.Billing` prices a request only when it can resolve every
+  # component that could apply. For `openai:gpt-6-luna` it cannot: the
+  # service-tier modifiers have no condition any pricing context answers, so
+  # the calculator answers `nil`, and a session under `:max_cost_usd` stopped
+  # before its first request — every metered attempt in a twelve-task
+  # benchmark — against a model the catalog does price.
+  #
+  # The model's flat `cost` rates are its list price: what the standard tier
+  # charges, and what the first tier of a long-context tariff charges. When
+  # the full tariff cannot be resolved, a request is priced at list rates
+  # instead, for the estimate and for the usage a direct request reports
+  # (which says so: `pricing.status` is `"list_rates"`), so the gate can run
+  # and the measured cost column stays filled. The assumption is the standard
+  # tier: a request on a tier priced differently (batch at half, priority at
+  # twice) or past a long-context threshold is estimated at list price rather
+  # than refused. A model with no rates at all still answers `nil`.
+  defp list_rate_cost(%{cost: %{input: input_rate, output: output_rate} = rates}, tokens)
+       when is_number(input_rate) and is_number(output_rate) do
+    cache_read_rate = rate_or(Map.get(rates, :cache_read), input_rate)
+    cache_write_rate = rate_or(Map.get(rates, :cache_write), input_rate)
+
+    cost =
+      max(tokens.input, 0) * input_rate + tokens.cached * cache_read_rate +
+        tokens.written * cache_write_rate + tokens.output * output_rate
+
+    Float.round(cost / 1_000_000, 6)
+  end
+
+  defp list_rate_cost(_model, _tokens), do: nil
+
+  defp rate_or(rate, _fallback) when is_number(rate), do: rate
+  defp rate_or(_rate, fallback), do: fallback
+
+  # `req_llm` prices the usage it reports from the same tariff and leaves the
+  # cost out (`pricing.status` `"unknown"`) when it cannot resolve it. A direct
+  # request to a model with list rates is priced here from those instead, for
+  # the reason the estimate is: a session that cannot price what it just spent
+  # has unknown spend, and the gate stops it before the next request. Usage
+  # `req_llm` did price, and every routed request, is left exactly as reported;
+  # a gateway owns its own tariff.
+  defp price_usage(emit, request, nil) do
+    fn
+      {:usage, usage} -> emit.({:usage, list_priced(usage, request)})
+      event -> emit.(event)
+    end
+  end
+
+  defp price_usage(emit, _request, _route), do: emit
+
+  defp list_priced(usage, request) when is_map(usage) do
+    if is_number(Usage.cost_usd(usage)) do
+      usage
+    else
+      with {:ok, model} <- ReqLLM.model(request.model),
+           cost when is_number(cost) <- list_rate_cost(model, measured_tokens(usage)) do
+        usage
+        |> Map.put("cost_usd", cost)
+        |> Map.put("pricing", %{"status" => "list_rates", "currency" => "USD", "total" => cost})
+      else
+        _unpriced -> usage
+      end
+    end
+  end
+
+  defp list_priced(usage, _request), do: usage
+
+  # The counts as `json/1` left them: string keys, in the names `req_llm` and
+  # the providers use. Output is `output_tokens` alone, as `ReqLLM.Billing`
+  # prices it; OpenAI already counts reasoning inside it.
+  defp measured_tokens(usage) do
+    input = usage_count(usage, ["input_tokens"])
+    cached = usage_count(usage, ["cache_read_tokens", "cached_tokens", "cache_read_input_tokens"])
+
+    written =
+      usage_count(usage, [
+        "cache_write_tokens",
+        "cache_creation_tokens",
+        "cache_creation_input_tokens"
+      ])
+
+    uncached =
+      if Map.get(usage, "input_includes_cached") in [true, "true"],
+        do: max(input - cached - written, 0),
+        else: input
+
+    %{
+      input: uncached,
+      cached: cached,
+      written: written,
+      output: usage_count(usage, ["output_tokens"])
+    }
   end
 
   @doc """
@@ -1577,6 +1681,7 @@ defmodule Lemieux.Providers.ReqLLM do
   # `served`, also direct-only, asks what window the answer was served with.
   defp stream_at(request, target, options, emit, route, metadata_options, served \\ nil) do
     options = with_prompt_cache(options, target, route)
+    emit = price_usage(emit, request, route)
     # Private to this request: a route's own stream bookkeeping uses another
     # reference, and must never receive these messages as its own.
     facts = make_ref()

@@ -28,6 +28,17 @@ API.
   every retry with the sentence naming credit, quota and request validity,
   while a gateway that dropped the stream before the first token is answered
   on the next try instead of being recorded as the model failing. (#16)
+- A session under `max_cost_usd` runs against a model whose catalog tariff
+  ReqLLM cannot resolve (`openai:gpt-6-luna` and `openai:gpt-6.1-sol`: their
+  service-tier modifiers resolve under no pricing context, so ReqLLM's
+  billing calculator answers no price). The estimate, and the cost of
+  the usage a direct request reports, fall back to the model's flat list
+  rates, and the usage says so (`pricing.status` is `"list_rates"`). Every
+  metered attempt in a twelve-task benchmark used to stop before its first
+  request with `its cost cannot be estimated`, and dropping the cap lost the
+  measured cost column too. A model with no rates at all still stops, and
+  the message now names it (`no price is known for ollama:some-model`); the
+  `{:budget, payload}` finish carries `model`. (#17)
 
 ## 0.8.1 — 2026-10-06
 

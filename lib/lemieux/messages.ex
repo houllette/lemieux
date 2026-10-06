@@ -63,9 +63,12 @@ defmodule Lemieux.Messages do
   cost gate stopped it, with the measured spend so far, the estimate for what
   was about to run, and the cap. `spent` is `nil` when earlier spend could
   not be measured, `estimate` when the next step could not be priced.
+  `:model` names the model the stopped request was for, when the session
+  knows it; a tool call refused under the cap carries none.
   """
   @type budget :: %{
           optional(:kind) => :requests,
+          optional(:model) => String.t(),
           spent: number() | nil,
           estimate: number() | nil,
           cap: number()
@@ -206,6 +209,14 @@ defmodule Lemieux.Messages do
 
   def budget_stopped(%{spent: nil, cap: cap}),
     do: "stopped before the request because prior spend is unknown; cap is $#{cap}"
+
+  # Named, because "cannot be estimated" alone reads as the model's fault: a
+  # benchmark host saw every metered attempt stop this way and could not tell
+  # that the gate, not the model, had ended them.
+  def budget_stopped(%{estimate: nil, cap: cap, model: model}) when is_binary(model),
+    do:
+      "stopped before the request because its cost cannot be estimated: " <>
+        "no price is known for #{model}; cap is $#{cap}"
 
   def budget_stopped(%{estimate: nil, cap: cap}),
     do: "stopped before the request because its cost cannot be estimated; cap is $#{cap}"

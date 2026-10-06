@@ -21,7 +21,14 @@ defmodule Lemieux.Session.Accounting do
     requests = state.request_count
 
     if is_integer(state.max_requests) and requests >= state.max_requests do
-      {:error, %{kind: :requests, spent: requests, estimate: 1, cap: state.max_requests}}
+      {:error,
+       %{
+         kind: :requests,
+         spent: requests,
+         estimate: 1,
+         cap: state.max_requests,
+         model: request.model
+       }}
     else
       cost_budget(state, request)
     end
@@ -29,10 +36,14 @@ defmodule Lemieux.Session.Accounting do
 
   defp cost_budget(%{max_cost_usd: nil}, _request), do: :ok
 
+  # The model rides along so the stop can name it: a session whose first
+  # request stops on `estimate: nil` is otherwise told only that its cost
+  # cannot be estimated, with nothing to say whether the model is unknown,
+  # unpriced, or served by a route that does not estimate.
   defp cost_budget(state, request) do
     spent = state.spent_usd
     estimate = Provider.estimate_cost(state.provider, request)
-    payload = %{spent: spent, estimate: estimate, cap: state.max_cost_usd}
+    payload = %{spent: spent, estimate: estimate, cap: state.max_cost_usd, model: request.model}
 
     if is_number(spent) and is_number(estimate) and spent + estimate <= state.max_cost_usd,
       do: :ok,
