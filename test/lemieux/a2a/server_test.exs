@@ -76,6 +76,10 @@ defmodule Lemieux.A2A.ServerTest do
     [request] = Scripted.requests(provider)
     assert request.tools == []
     refute inspect(request.entries) =~ "private operator"
+    # The server stops the task's session before it answers, but the registry
+    # drops the name only once it has seen the exit; on a slow runner the
+    # lookup came first and found the pid (CI, Elixir floor, 2026-10-06).
+    :ok = LemieuxTest.Sync.unregistered(Lemieux.Supervisor.registry(context.runtime), task.id)
     assert :error = Lemieux.session(context.runtime, task.id)
   end
 

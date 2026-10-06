@@ -27,7 +27,19 @@ defmodule LemieuxTest.Sync do
 
       :ok
     after
-      :sys.remove(server, ref)
+      # The state was reached, or the wait above has already failed; taking
+      # the hook off again must not turn either into a timeout of its own. A
+      # screen starting a session on a loaded runner answered this system
+      # message late once (CI, Elixir floor, 2026-10-06), and the test failed
+      # here after its state had been observed. A hook left on a server the
+      # test is finished with sends to a process that is gone, which is
+      # harmless.
+      try do
+        :sys.remove(server, ref, 30_000)
+      catch
+        :exit, _reason -> :ok
+      end
+
       flush(ref)
     end
   end
