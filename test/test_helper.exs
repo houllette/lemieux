@@ -256,13 +256,27 @@ end
 # timing out (2026-10-03). `--max-cases` on the command line still overrides
 # it.
 #
+# On a CI runner, half that again, and no fewer than two. One case per
+# scheduler was measured on a workstation whose cores were its own; a hosted
+# runner's four schedulers are shares of a busy host, and the 0.8.1 release
+# rehearsals (2026-10-06) lost three runs to three different tests, each a
+# five-second wait that a stalled scheduler let expire, on code that passed
+# the same job minutes before. Fewer cases at once is fewer of the suite's
+# own subprocesses and timers competing for those shares. `CI` is the
+# variable GitHub Actions sets; a developer's machine keeps one per scheduler.
+#
 # Logs are kept per test and shown with its failure. A passing run used to
 # print some 160 Logger lines between the dots, which taught people that a red
 # word in the output means nothing.
+max_cases =
+  if System.get_env("CI") == "true",
+    do: max(div(System.schedulers_online(), 2), 2),
+    else: System.schedulers_online()
+
 ExUnit.start(
   exclude: [:live, :eval_live, :distributed],
   assert_receive_timeout: 5_000,
-  max_cases: System.schedulers_online(),
+  max_cases: max_cases,
   capture_log: true
 )
 
