@@ -87,4 +87,8 @@ against `25`, `50`, `100`, `200`; `75` against `3`, `64`).
    vulnerable pins even though nothing installs them; the pip case pinned
    `urllib3==1.26.18` and drew 13 alerts before it was moved to 2.7.0. A
    fixture only needs the constraints to disagree, so choose versions that
-   disagree without pinning anything vulnerable.
+   disagree without pinning anything vulnerable. Every fixture file's
+   `cksum` is in its `check.sh`, so a changed file needs its new checksum
+   there too, and the reference answer updating where it quotes the old
+   line; step 5 fails with "FILE was modified" until both are done (a
+   Dependabot fix merged without them broke `main`, 2026-10-06).
