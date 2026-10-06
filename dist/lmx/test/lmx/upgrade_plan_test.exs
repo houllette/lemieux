@@ -188,4 +188,53 @@ defmodule Lmx.UpgradePlanTest do
     assert_raise Mix.Error, ~r/unsafe/, fn -> UpgradePlan.unpack!(archive, sums, destination) end
     refute File.exists?(destination)
   end
+
+  # The 0.8.1 release's Windows job stopped here: the published 0.8.0 Windows
+  # archive carries the 0666 and 0777 modes Windows reports, and the gate
+  # judged it by the updater's Unix rule (2026-10-06). The same bytes under a
+  # Unix target's name are still refused.
+  @tag :tmp_dir
+  @tag :unix
+  test "the previous Windows archive unpacks with the modes Windows reports", %{tmp_dir: tmp} do
+    root = Path.join(tmp, "release")
+    File.mkdir_p!(Path.join(root, "releases/0.1.0"))
+    File.write!(Path.join(root, "releases/start_erl.data"), "17 0.1.0\n")
+    info = %{"version" => "0.1.0", "target" => "windows", "build_id" => String.duplicate("a", 64)}
+    File.write!(Path.join(root, "releases/0.1.0/release.json"), JSON.encode!(info))
+    File.chmod!(Path.join(root, "releases/0.1.0/release.json"), 0o666)
+    File.chmod!(Path.join(root, "releases/0.1.0"), 0o777)
+
+    for name <- ["lmx_windows.tar.gz", "lmx_linux.tar.gz"] do
+      archive = Path.join(tmp, name)
+
+      :ok =
+        :erl_tar.create(
+          to_charlist(archive),
+          [{~c"releases", to_charlist(Path.join(root, "releases"))}],
+          [:compressed]
+        )
+
+      digest = :crypto.hash(:sha256, File.read!(archive)) |> Base.encode16(case: :lower)
+      File.write!(Path.join(tmp, "SHA256SUMS-#{name}"), digest <> "  " <> name)
+    end
+
+    windows = Path.join(tmp, "unpacked-windows")
+
+    assert :ok =
+             UpgradePlan.unpack!(
+               Path.join(tmp, "lmx_windows.tar.gz"),
+               Path.join(tmp, "SHA256SUMS-lmx_windows.tar.gz"),
+               windows
+             )
+
+    assert UpgradePlan.metadata!(windows)["target"] == "windows"
+
+    assert_raise Mix.Error, ~r/unsafe/, fn ->
+      UpgradePlan.unpack!(
+        Path.join(tmp, "lmx_linux.tar.gz"),
+        Path.join(tmp, "SHA256SUMS-lmx_linux.tar.gz"),
+        Path.join(tmp, "unpacked-linux")
+      )
+    end
+  end
 end
