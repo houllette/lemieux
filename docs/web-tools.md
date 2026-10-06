@@ -55,7 +55,11 @@ refuses to read a config file that holds a key when anyone else has access
 to it. Search-provider credentials are separate from model `providers` and never
 enter transcripts or tool descriptors. Credential sections for other backend
 names add no backend. `BRAVE_SEARCH_API_KEY` overrides the saved key, and an
-explicitly empty `BRAVE_SEARCH_API_KEY` switches the saved key off.
+explicitly empty `BRAVE_SEARCH_API_KEY` switches the saved key off. An empty
+saved key (`"api_key": ""`) is a placeholder: named at startup and read as no
+key. `"web_search": "brave"` saved with no key is a startup warning and no
+search; `--web-search brave` or `LMX_WEB_SEARCH=brave` without one is an
+error.
 
 When nothing says otherwise, search is on whenever a Brave key is set. To
 choose explicitly:

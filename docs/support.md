@@ -224,10 +224,11 @@ installer waits up to 150 seconds for the lock by itself, saying so, and then
 stops with "installation is busy: an lmx update or another install is
 running".
 
-If one was interrupted, run the installer again with `--replace`. It reuses a
-version directory already on disk only when its files match the verified
-archive exactly, and it reclaims a lock whose recorded process is gone; it
-never takes a lock from a live process, or an empty one.
+If one was interrupted, run `lmx update` or the installer again; `--replace`
+is needed only when `PREFIX/bin/lmx` is not a launcher the installer wrote.
+The installer reuses a version directory already on disk only when its files
+match the verified archive exactly, and it reclaims a lock whose recorded
+process is gone; it never takes a lock from a live process, or an empty one.
 
 An interrupted recovery can leave `.update-lock.recovery` beside the lock. In
 that case, stop every `lmx` and installer process, check that none is left,

@@ -33,12 +33,15 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     `opts` carries what the caller already decided — `:tabs`, `:tab`,
     `:tab_rows`, `:selected`, `:gap_after` and `:accent` — and `:theme`, the
     palette a deprecated model's badge is drawn from: the dark one when
-    absent.
+    absent. With tabs, `:tab_label` turns a tab into its title (the model
+    picker's route labels by default), `:noun` is what the list holds
+    (`"models"`) and `:tab_hint` says how to switch (`"shift-tab routes"`).
     """
     @spec render(matches :: [map()], panes :: map(), opts :: keyword()) :: [{term(), Rect.t()}]
     def render(matches, %{transcript: pane, input: input}, opts) do
       tabs = Keyword.fetch!(opts, :tabs)
       tab_rows = if tabs == [], do: 0, else: 1
+      noun = Keyword.get(opts, :noun, "models")
 
       if (matches == [] and tabs == []) or pane.height < 3 + tab_rows do
         []
@@ -65,7 +68,8 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
             selected,
             content_height,
             gap_after,
-            Keyword.get_lazy(opts, :theme, &Theme.default/0)
+            Keyword.get_lazy(opts, :theme, &Theme.default/0),
+            noun
           )
 
         area = %Rect{x: pane.x, y: y, width: pane.width, height: height}
@@ -81,7 +85,15 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
           highlight_style: completion_highlight(accent, Enum.at(matches, selected || 0)),
           scroll_padding: 0,
           block: %Block{
-            title: completion_title(selected, length(items), total, tabs),
+            title:
+              completion_title(
+                selected,
+                length(items),
+                total,
+                tabs,
+                noun,
+                Keyword.get(opts, :tab_hint, "shift-tab routes")
+              ),
             titles: completion_overflow_titles(above, below),
             borders: [:all],
             border_type: :rounded
@@ -89,7 +101,14 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         }
 
         [{%Clear{}, area}] ++
-          completion_tabs(tabs, Keyword.fetch!(opts, :tab), accent, pane, y) ++
+          completion_tabs(
+            tabs,
+            Keyword.fetch!(opts, :tab),
+            Keyword.get(opts, :tab_label, &ModelChoices.tab_label/1),
+            accent,
+            pane,
+            y
+          ) ++
           [{list, list_area}]
       end
     end
@@ -106,10 +125,10 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       |> Enum.map(fn {match, index} -> completion_item(match, index == gap_after, theme) end)
     end
 
-    defp completion_window([], _selected, _rows, _gap_after, _theme),
-      do: {["No matching models"], nil, 0, 0}
+    defp completion_window([], _selected, _rows, _gap_after, _theme, noun),
+      do: {["No matching #{noun}"], nil, 0, 0}
 
-    defp completion_window(matches, selected, rows, gap_after, theme) do
+    defp completion_window(matches, selected, rows, gap_after, theme, _noun) do
       total = length(matches)
 
       heights =
@@ -174,14 +193,14 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     defp option_word(1), do: "option"
     defp option_word(_count), do: "options"
 
-    defp completion_tabs([], _tab, _accent, _pane, _y), do: []
+    defp completion_tabs([], _tab, _label, _accent, _pane, _y), do: []
 
-    defp completion_tabs(tabs, tab, accent, pane, y) do
+    defp completion_tabs(tabs, tab, label, accent, pane, y) do
       tab_area = %Rect{x: pane.x + 1, y: y, width: max(pane.width - 2, 1), height: 1}
 
       [
         {%Tabs{
-           titles: Enum.map(tabs, &ModelChoices.tab_label/1),
+           titles: Enum.map(tabs, label),
            selected: Enum.find_index(tabs, &(&1 == tab)),
            highlight_style: %Style{fg: accent, modifiers: [:bold]},
            divider: "│"
@@ -189,16 +208,16 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       ]
     end
 
-    defp completion_title(_selected, _shown, 0, _tabs), do: " no matches "
+    defp completion_title(_selected, _shown, 0, _tabs, _noun, _hint), do: " no matches "
 
-    defp completion_title(selected, shown, total, []),
+    defp completion_title(selected, shown, total, [], _noun, _hint),
       do: completions_title(selected, shown, total)
 
-    defp completion_title(_selected, shown, total, _tabs) when shown >= total,
-      do: " models · shift-tab routes "
+    defp completion_title(_selected, shown, total, _tabs, noun, hint) when shown >= total,
+      do: " #{noun} · #{hint} "
 
-    defp completion_title(selected, _shown, total, _tabs),
-      do: " models #{selected + 1}/#{total} · shift-tab routes "
+    defp completion_title(selected, _shown, total, _tabs, noun, hint),
+      do: " #{noun} #{selected + 1}/#{total} · #{hint} "
 
     defp completion_item(match, false, theme), do: completion_label(match, theme)
 

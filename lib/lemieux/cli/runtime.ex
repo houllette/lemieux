@@ -606,9 +606,22 @@ defmodule Lemieux.CLI.Runtime do
   end
 
   defp prepare_provider({ProviderMux, _state} = provider, model),
-    do: ProviderMux.prepare(provider, model)
+    do: provider |> ProviderMux.prepare(model) |> named_key()
 
-  defp prepare_provider(provider, model), do: Lemieux.Ixway.prepare(provider, model)
+  defp prepare_provider(provider, model),
+    do: provider |> Lemieux.Ixway.prepare(model) |> named_key()
+
+  # The library names the variable it reads the gateway key from. This host
+  # also reads it from its config file, and the person most likely to meet
+  # this error left an empty placeholder there (issue #3), so the sentence
+  # says where the key goes in both.
+  @ixway_key_needed "Ixway requires a gateway model key: set IXWAY_API_KEY, or save it as " <>
+                      "ixway.api_key in the lmx config file."
+
+  defp named_key({:error, %Lemieux.Ixway.Error{reason: :api_key_required}}),
+    do: {:error, @ixway_key_needed}
+
+  defp named_key(result), do: result
 
   defp interactive?(opts), do: Keyword.get(opts, :interactive?, false)
 
@@ -1552,7 +1565,7 @@ defmodule Lemieux.CLI.Runtime do
   @spec discover_tui_provider(provider :: Lemieux.Provider.t()) ::
           {:ok, Lemieux.Provider.t()} | {:error, term()}
   def discover_tui_provider({ProviderMux, _state} = provider),
-    do: ProviderMux.discover(provider)
+    do: provider |> ProviderMux.discover() |> named_key()
 
   def discover_tui_provider(provider), do: {:ok, provider}
 

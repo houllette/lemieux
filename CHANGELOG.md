@@ -7,6 +7,60 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## 0.8.1 — 2026-10-06
+
+The first update to the public release: four fixes from the first week of
+reports, and a way to update from a terminal.
+
+### lmx
+
+- A config file with an empty `api_key` placeholder (`"api_key": ""`) under
+  `providers`, `ixway`, `jev_compaction` or `web_search_providers` now loads:
+  the field counts as no key, is named in the startup notices (`Empty field
+  "ixway.api_key" in the lmx config; it is ignored`), and the terminal UI
+  opens so a real key can be saved. It used to stop every command with
+  `Invalid lmx config field: web_search_providers.` A value a field cannot
+  take now names the field down to its key and what it takes
+  (`Invalid lmx config field: ixway.enabled. It must be true or false.`),
+  where the sentence used to name only the section. `"web_search": "brave"`
+  saved with no Brave key is a startup warning and no search rather than a
+  refused start; `--web-search brave` and `LMX_WEB_SEARCH=brave` without a
+  key stay errors. An Ixway route without a key says where the key goes in
+  both the environment and the file. (#3)
+- The Go Habs Go banner plays out its frames once the session is ready
+  rather than vanishing with the ready message, so a start that took a
+  single frame still shows the whole banner; any key ends it at once. When
+  `NO_COLOR` is set in the environment `lmx` started in — a desktop launcher
+  or an agent's shell often sets it — a startup notice names the variable
+  and where to unset it, `/theme` shows `(NO_COLOR is set)` after the
+  theme's name, and `lmx explain` reports `TERM`, `COLORTERM` and `NO_COLOR`
+  under `diagnostics.terminal`. The convention is kept, not overridden. (#4)
+- A bare `/` in the terminal UI lists `lmx`'s own commands and nothing else.
+  Skills from anywhere else — the repository's, your `~/.lmx/skills`, the
+  ones Claude Code, Codex or another agent keep under your home directory,
+  Omarchy's, a plugin's, a `--skill-dir` — sit on tabs named for where they
+  came from (Project, Personal, Claude, Codex, Agents, System, Plugins,
+  `--skill-dir`), switched with Shift-Tab or a click; typing a skill's name
+  from the default tab jumps to the tab that has it. A machine with skill
+  packs installed for another agent used to show dozens of them before the
+  first of `lmx`'s commands. With no skill outside `lmx`'s own, the menu is
+  the one list it was. (#1)
+
+### Installing and updating
+
+- `lmx update` installs a newer verified release from a terminal, through
+  the same signature, checksum and archive checks as the terminal UI's
+  `/update`; `lmx update --check` only says whether one is available. It
+  needs no session, model key or readable config file, exits 0 when `lmx` is
+  up to date or an update was installed, and says that a terminal UI that is
+  open keeps running its version until restarted. From a source checkout,
+  `mix lmx update` fast-forwards the checkout from its Git upstream. (#5)
+- The installer recognises the launcher it wrote and upgrades its own
+  installation without `--replace`, which is now only for installing over a
+  `PREFIX/bin/lmx` that is something else: another program, or a launcher
+  written for another prefix. It used to be needed for every upgrade, and
+  read as permission to overwrite an unrelated program. (#5)
+
 ## 0.8.0 — 2026-10-05
 
 The first public release of an open-source coding agent you can take apart:

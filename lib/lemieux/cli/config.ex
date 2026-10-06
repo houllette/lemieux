@@ -51,6 +51,25 @@ defmodule Lemieux.CLI.Config do
   are small and a misspelt key there silently disables what it configured.
   `warnings/1` returns what was ignored; the hosts show it at startup.
 
+  A value that is wrong names the field it is in, down to the key —
+  `ixway.api_key`, `web_search_providers.brave.api_key` — and what the field
+  takes, because a sentence that names only the section
+  (`Invalid lmx config field: web_search_providers.`) sends the person
+  through every key in it, one start at a time (issue #3).
+
+  ## An empty key is a placeholder, not a credential
+
+  An `api_key` that is empty or blank — `"api_key": ""`, left in the file
+  while setting things up — is read as no key at all: named at startup like
+  an unknown field, and dropped, so every later check sees the file without
+  it. The runtime already treats an empty key as absent wherever it looks for
+  one (`Lemieux.CLI.Models`, `Lemieux.CLI.Runtime`, the Jev route), so
+  refusing the file for it protected nothing; it only kept the screen that
+  saves a real key from opening. A key that spans lines, or is not text, is
+  still an error, since that is never a placeholder. `put_provider_key/3`
+  still refuses to save an empty key: writing a placeholder is not saving a
+  credential.
+
   ## Writing
 
   `put_provider_key/3` and `put_model/2` are how the first-run screen saves
@@ -252,6 +271,7 @@ defmodule Lemieux.CLI.Config do
          {:ok, content} <- File.read(path),
          {:ok, settings} <- decode(content),
          {:ok, settings, warnings} <- without_unknown(settings),
+         {settings, warnings} = without_empty_keys(settings, warnings),
          :ok <- validate(settings),
          :ok <- permissions(stat, settings) do
       {:ok, %__MODULE__{settings: settings, path: path, warnings: warnings, personal: true}}
@@ -612,6 +632,45 @@ defmodule Lemieux.CLI.Config do
     end
   end
 
+  # The module documentation's "An empty key is a placeholder": every
+  # `api_key` that is an empty or blank string, wherever the file keeps one,
+  # becomes a warning naming its path and leaves the settings. Only the four
+  # places the runtime reads a key from are looked at, and only when the
+  # section around it is the object it should be; a section that is not is
+  # left for `validate/1` to name.
+  defp without_empty_keys(settings, warnings) do
+    Enum.reduce(empty_key_paths(settings), {settings, warnings}, fn path, {settings, warnings} ->
+      warning =
+        "Empty field #{inspect(Enum.join(path, "."))} in the lmx config; it is ignored. " <>
+          "Supply the key there, or remove the placeholder."
+
+      {drop_path(settings, path), warnings ++ [warning]}
+    end)
+  end
+
+  defp empty_key_paths(settings) do
+    settings
+    |> Enum.flat_map(fn
+      {section, %{"api_key" => key}} when section in ~w(ixway jev_compaction) ->
+        [{[section, "api_key"], key}]
+
+      {section, providers}
+      when section in ~w(providers web_search_providers) and is_map(providers) ->
+        for {name, %{"api_key" => key}} <- providers, do: {[section, name, "api_key"], key}
+
+      _other ->
+        []
+    end)
+    |> Enum.filter(fn {_path, key} -> is_binary(key) and String.trim(key) == "" end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sort()
+  end
+
+  defp drop_path(settings, path) do
+    {parents, [key]} = Enum.split(path, -1)
+    update_in(settings, parents, &Map.delete(&1, key))
+  end
+
   defp refused_field(key) do
     case Map.fetch(@retired_fields, key) do
       {:ok, moved} ->
@@ -665,6 +724,7 @@ defmodule Lemieux.CLI.Config do
          :ok <- validate_skills(Map.get(settings, "skills", %{})),
          :ok <- validate_mcp_servers(Map.get(settings, "mcp_servers", %{})),
          :ok <- validate_extension_options(Map.get(settings, "extension_options", %{})),
+         :ok <- validate_web_search_providers(Map.get(settings, "web_search_providers", %{})),
          :ok <- validate_ixway(Map.get(settings, "ixway", %{})) do
       validate_jev(Map.get(settings, "jev_compaction", %{}))
     end
@@ -864,7 +924,9 @@ defmodule Lemieux.CLI.Config do
   defp valid_field?("jev_compaction", value), do: is_map(value)
   defp valid_field?("base_url", value), do: valid_base_url?(value)
   defp valid_field?("web_search", value), do: value in ["brave", "none"]
-  defp valid_field?("web_search_providers", value), do: valid_web_search_providers?(value)
+  # What each section holds is checked after the field pass, naming the
+  # section and key: see `validate_web_search_providers/1`.
+  defp valid_field?("web_search_providers", value), do: is_map(value)
   defp valid_field?("web_fetch", value), do: is_boolean(value)
   defp valid_field?("mouse", value), do: is_boolean(value)
   defp valid_field?("project_mcp", value), do: is_boolean(value)
@@ -947,18 +1009,41 @@ defmodule Lemieux.CLI.Config do
 
   defp valid_rate?(value), do: is_number(value) and value >= 0
 
-  defp valid_web_search_providers?(providers) when is_map(providers) do
-    Enum.all?(providers, fn {name, settings} ->
-      is_binary(name) and Regex.match?(~r/^[a-z][a-z0-9_]*$/, name) and
-        is_map(settings) and
-        Enum.all?(settings, fn
-          {"api_key", key} -> valid_key?(key)
-          _unknown -> false
-        end)
+  # The four sections that hold credentials are checked key by key, so the
+  # sentence names the field and what it takes (the module documentation's
+  # "Unknown fields are named"). Each `*_field/2` returns `:ok` or the
+  # expectation for one key; `each_field/3` turns the first miss into the
+  # sentence. The keys themselves were checked by `known_fields/3` first, so
+  # no clause needs a fallback.
+  @key_expectation "A key is one line of text."
+  @endpoint_expectation "It must be an http(s) origin without /v1, credentials, query or fragment."
+  @effort_expectation "It must be a lowercase name such as low, medium or high."
+
+  defp validate_web_search_providers(providers) do
+    Enum.reduce_while(providers, :ok, fn {name, settings}, :ok ->
+      case validate_web_search_provider(name, settings) do
+        :ok -> {:cont, :ok}
+        {:error, _reason} = error -> {:halt, error}
+      end
     end)
   end
 
-  defp valid_web_search_providers?(_providers), do: false
+  # The name is not echoed: what sits in a key's place in a mistyped file
+  # may be the key.
+  defp validate_web_search_provider(name, settings) do
+    with :ok <-
+           expect(
+             is_binary(name) and Regex.match?(~r/^[a-z][a-z0-9_]*$/, name),
+             "web_search_providers",
+             "A search provider's name is lowercase letters, digits and underscores."
+           ),
+         :ok <- object(settings, "web_search_providers.#{name}"),
+         :ok <- known_fields(settings, ["api_key"], "web_search_providers.#{name} section") do
+      each_field(settings, "web_search_providers.#{name}", fn "api_key", key ->
+        expect(key_text?(key), @key_expectation)
+      end)
+    end
+  end
 
   defp validate_providers(providers) do
     Enum.reduce_while(providers, :ok, fn {provider, settings}, :ok ->
@@ -971,13 +1056,9 @@ defmodule Lemieux.CLI.Config do
 
   defp validate_provider(provider, settings) do
     with :ok <- validate_provider_name(provider),
-         true <- is_map(settings),
-         :ok <- known_fields(settings, @provider_fields, "providers.#{provider} section"),
-         true <- Enum.all?(settings, &valid_provider_entry?(provider, &1)) do
-      :ok
-    else
-      {:error, _reason} = error -> error
-      false -> {:error, "Invalid lmx providers.#{provider} setting."}
+         :ok <- object(settings, "providers.#{provider}"),
+         :ok <- known_fields(settings, @provider_fields, "providers.#{provider} section") do
+      each_field(settings, "providers.#{provider}", &provider_field(provider, &1, &2))
     end
   end
 
@@ -990,78 +1071,126 @@ defmodule Lemieux.CLI.Config do
   defp valid_provider_name?(name),
     do: is_binary(name) and name != "ixway" and Regex.match?(~r/^[a-z][a-z0-9_]*$/, name)
 
-  defp valid_provider_entry?(_provider, {"api_key", key}), do: valid_key?(key)
+  defp provider_field(_provider, "api_key", key), do: expect(key_text?(key), @key_expectation)
 
-  defp valid_provider_entry?(provider, {"model", model}),
-    do: valid_model?(model) and ModelSpec.provider(model) == provider
+  defp provider_field(provider, "model", model),
+    do:
+      expect(
+        valid_model?(model) and ModelSpec.provider(model) == provider,
+        "It must be a model specification for that provider (#{provider}:MODEL)."
+      )
 
-  defp valid_provider_entry?(_provider, {"effort", effort}), do: valid_effort?(effort)
-  defp valid_provider_entry?(_provider, _entry), do: false
+  defp provider_field(_provider, "effort", effort),
+    do: expect(valid_effort?(effort), @effort_expectation)
 
   defp valid_effort?(value),
     do: is_binary(value) and Regex.match?(~r/^[a-z][a-z0-9_-]*$/, value)
 
   defp validate_ixway(ixway) do
     with :ok <- known_fields(ixway, @ixway_fields, "ixway section") do
-      if Enum.all?(ixway, &valid_ixway_entry?/1),
-        do: :ok,
-        else: {:error, "Invalid lmx ixway setting."}
+      each_field(ixway, "ixway", &ixway_field/2)
     end
   end
 
-  defp validate_jev(jev) do
-    with :ok <- known_fields(jev, @jev_fields, "jev_compaction section") do
-      if Enum.all?(jev, &valid_jev_entry?/1) and valid_jev_budget?(jev),
-        do: :ok,
-        else: {:error, "Invalid lmx jev_compaction setting."}
-    end
-  end
+  defp ixway_field("enabled", value), do: expect(is_boolean(value), "It must be true or false.")
 
-  defp valid_jev_budget?(%{"max_cost_usd" => cap} = jev),
+  defp ixway_field("endpoint", value),
+    do: expect(Ixway.valid_endpoint?(value), @endpoint_expectation)
+
+  defp ixway_field("api_key", value), do: expect(key_text?(value), @key_expectation)
+
+  defp ixway_field("model", value),
     do:
-      is_number(jev["reservation_per_call_usd"]) and
-        jev["reservation_per_call_usd"] > 0 and jev["reservation_per_call_usd"] <= cap
+      expect(
+        match?("ixway:" <> id when id != "", value),
+        "It must name a gateway model as ixway:ID."
+      )
 
-  defp valid_jev_budget?(_jev), do: true
+  defp ixway_field("effort", value), do: expect(valid_effort?(value), @effort_expectation)
 
-  defp valid_jev_entry?({"mode", value}), do: value in ~w(auto apply shadow off)
-  defp valid_jev_entry?({"route", value}), do: value in ~w(auto ixway typesafe)
-  defp valid_jev_entry?({"model", value}), do: is_binary(value) and value != ""
-  defp valid_jev_entry?({"endpoint", value}), do: Ixway.valid_endpoint?(value)
-  defp valid_jev_entry?({"api_key", value}), do: valid_key?(value)
-  defp valid_jev_entry?({"max_evaluations", value}), do: is_integer(value) and value > 0
+  defp ixway_field("headers", value),
+    do: expect(valid_headers?(value), "It must be an object of header names to values.")
 
-  defp valid_jev_entry?({key, value})
-       when key in ~w(max_cost_usd reservation_per_call_usd input_per_million output_per_million),
-       do: is_number(value) and value >= 0
-
-  defp valid_jev_entry?(_entry), do: false
-
-  defp valid_ixway_entry?({key, value}), do: valid_ixway_field?(key, value)
-
-  defp valid_ixway_field?("enabled", value), do: is_boolean(value)
-  defp valid_ixway_field?("endpoint", value), do: Ixway.valid_endpoint?(value)
-  defp valid_ixway_field?("api_key", value), do: valid_key?(value)
-  defp valid_ixway_field?("model", "ixway:" <> id), do: id != ""
-  defp valid_ixway_field?("model", _value), do: false
-  defp valid_ixway_field?("effort", value), do: valid_effort?(value)
-
-  defp valid_ixway_field?("headers", headers) when is_map(headers) do
+  defp valid_headers?(headers) when is_map(headers) do
     _connection = Ixway.new(endpoint: "http://localhost", headers: Map.to_list(headers))
     true
   rescue
     ArgumentError -> false
   end
 
-  defp valid_ixway_field?("headers", _value), do: false
+  defp valid_headers?(_value), do: false
+
+  defp validate_jev(jev) do
+    with :ok <- known_fields(jev, @jev_fields, "jev_compaction section"),
+         :ok <- each_field(jev, "jev_compaction", &jev_field/2) do
+      jev_budget(jev)
+    end
+  end
+
+  defp jev_field("mode", value),
+    do: expect(value in ~w(auto apply shadow off), "It must be auto, apply, shadow or off.")
+
+  defp jev_field("route", value),
+    do: expect(value in ~w(auto ixway typesafe), "It must be auto, ixway or typesafe.")
+
+  defp jev_field("model", value),
+    do: expect(is_binary(value) and value != "", "It must name a model.")
+
+  defp jev_field("endpoint", value),
+    do: expect(Ixway.valid_endpoint?(value), @endpoint_expectation)
+
+  defp jev_field("api_key", value), do: expect(key_text?(value), @key_expectation)
+
+  defp jev_field("max_evaluations", value),
+    do: expect(is_integer(value) and value > 0, "It must be a whole number above zero.")
+
+  defp jev_field(key, value)
+       when key in ~w(max_cost_usd reservation_per_call_usd input_per_million output_per_million),
+       do: expect(is_number(value) and value >= 0, "It must be a number, zero or more.")
+
+  defp jev_budget(%{"max_cost_usd" => cap} = jev) do
+    reservation = jev["reservation_per_call_usd"]
+
+    expect(
+      is_number(reservation) and reservation > 0 and reservation <= cap,
+      "jev_compaction.reservation_per_call_usd",
+      "With max_cost_usd set, it must be a number above zero and no more than max_cost_usd."
+    )
+  end
+
+  defp jev_budget(_jev), do: :ok
+
+  defp each_field(settings, path, check) do
+    Enum.reduce_while(settings, :ok, fn {key, value}, :ok ->
+      case check.(key, value) do
+        :ok -> {:cont, :ok}
+        {:error, expectation} -> {:halt, invalid("#{path}.#{key}", expectation)}
+      end
+    end)
+  end
+
+  defp expect(true, _expectation), do: :ok
+  defp expect(false, expectation), do: {:error, expectation}
+
+  defp expect(true, _path, _expectation), do: :ok
+  defp expect(false, path, expectation), do: invalid(path, expectation)
+
+  defp invalid(path, expectation),
+    do: {:error, "Invalid lmx config field: #{path}. #{expectation}"}
+
+  defp object(settings, _path) when is_map(settings), do: :ok
+  defp object(_settings, path), do: invalid(path, "It must be an object.")
 
   # An environment variable name, or one with `*` wildcards (`NPM_*`).
   defp valid_env_pattern?(value),
     do: is_binary(value) and Regex.match?(~r/^[A-Za-z_*][A-Za-z0-9_*]*$/, value)
 
-  defp valid_key?(value),
-    do:
-      is_binary(value) and String.trim(value) != "" and not String.contains?(value, ["\r", "\n"])
+  # What a key field may hold: one line of text, the empty line included,
+  # since `without_empty_keys/2` reads that as a placeholder. What may be
+  # saved as a key is `valid_key?/1`, which also wants something in it.
+  defp key_text?(value), do: is_binary(value) and not String.contains?(value, ["\r", "\n"])
+
+  defp valid_key?(value), do: key_text?(value) and String.trim(value) != ""
 
   defp valid_model?(value) when is_binary(value), do: match?({:ok, _}, ModelSpec.split(value))
   defp valid_model?(_value), do: false

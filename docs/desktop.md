@@ -142,6 +142,13 @@ StartupWMClass=org.omarchy.lemieux
 `omarchy-launch-tui` opens your configured terminal with Omarchy's styling.
 Window rules can match `lmx` windows by the app id.
 
+The entry carries no environment of its own: `lmx` inherits the session's,
+or that of whatever ran the launcher. A window opened for you by a coding
+agent inherits the agent's shell, which often sets `NO_COLOR` for its own
+output; `lmx` then starts without colour and says so in a startup notice
+([No colour at all](troubleshooting.md#no-colour-at-all-and-the-startup-notice-names-no_color)).
+A window opened from the keybinding or the menu does not have that problem.
+
 The examples below use that same command. They assume the default
 installation prefix: `lmx desktop status` prints the path your entry runs
 (`runs:`), and you can use `lmx` instead when it is on your session's

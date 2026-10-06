@@ -416,6 +416,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             },
             command_index: non_neg_integer(),
             model_tab: String.t(),
+            command_tab: String.t(),
             command_menu?: boolean(),
             history: history(),
             exit_armed: {reference(), integer()} | nil,
@@ -568,6 +569,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               },
               command_index: 0,
               model_tab: "Automatic",
+              command_tab: "Commands",
               command_menu?: true,
               # Input history, where you are in it, and the staged queue. One
               # field: `draft` exists only while `index` does, and the queue is
@@ -673,6 +675,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # immediately after inserting its newline.
     def handle_event(%ExRatatui.Event.Key{kind: "release"}, state), do: {:noreply, state}
 
+    # The Go Habs Go banner covers everything, the provider panel and the
+    # notice box included, and once the session is ready it is only playing
+    # out (`Lemieux.TUI.Lifecycle.start_habs/1`). A key ends it first, so the
+    # key is answered on a screen the person can see rather than under one
+    # they cannot. While loading, keys edit the draft behind it as before.
+    def handle_event(
+          %ExRatatui.Event.Key{} = event,
+          %__MODULE__{overlay: %{}, resume: %{startup_status: status}} = state
+        )
+        when status != :loading,
+        do: handle_event(event, %{state | overlay: nil})
+
     def handle_event(%ExRatatui.Event.Key{} = event, %__MODULE__{modal: %{}} = state),
       do: Modal.key(event, state)
 
@@ -710,12 +724,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def handle_event(%ExRatatui.Event.Key{code: "back_tab"} = event, state),
-      do: Composer.cycle_model_tab_or_edit(event, state)
+      do: Composer.cycle_tab_or_edit(event, state)
 
     def handle_event(%ExRatatui.Event.Key{code: "tab", modifiers: modifiers} = event, state)
         when is_list(modifiers) do
       if "shift" in modifiers,
-        do: Composer.cycle_model_tab_or_edit(event, state),
+        do: Composer.cycle_tab_or_edit(event, state),
         else: Composer.key(event, state)
     end
 

@@ -451,10 +451,11 @@ check on their own.
 - **What it does:** installation is automatic. A compatible update loads
   into the running terminal UI, with a health check and rollback; otherwise
   it applies at the next start.
-- **Opting out:** `LMX_CHECK_UPDATES=0` stops the automatic checks; `/update`
-  still checks when you type it. `LMX_AUTO_UPDATE=0` keeps the notices but
-  installs only when you type `/update`, after the same verification.
-  Selecting your own extensions also turns automatic installation off.
+- **Opting out:** `LMX_CHECK_UPDATES=0` stops the automatic checks;
+  `lmx update` and `/update` still check when you run them.
+  `LMX_AUTO_UPDATE=0` keeps the notices but installs only when you run
+  `lmx update` or `/update`, after the same verification. Selecting your own
+  extensions also turns automatic installation off.
 
 The maintainer keeps the signing key offline, and the release workflow never
 signs, so a compromised workflow, token or account that can upload release

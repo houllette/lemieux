@@ -98,7 +98,8 @@ The installer needs `curl` and Python 3.8 or newer. It checks the release's
 signature and checksums before it installs anything, runs nothing from the
 archive, and prints where it put `lmx`: add `~/.local/bin` to your `PATH` if
 it is not there already. Options go after `sh -s --`: `--prefix DIR`,
-`--release X.Y.Z` and `--replace`.
+`--release X.Y.Z`, and `--replace` to install over a `PREFIX/bin/lmx` the
+installer did not write. To upgrade, run `lmx update`.
 
 | Platform | Status |
 | --- | --- |
@@ -108,9 +109,10 @@ it is not there already. Options go after `sh -s --`: `--prefix DIR`,
 | Windows x86-64 | Experimental. Unpack `lmx_windows.tar.gz` from the [latest release](https://github.com/houllette/lemieux/releases/latest) into a new directory and run `bin\lmx.cmd` there ([the steps](docs/releases.md#windows-experimental)); update by downloading the new archive. Needs Git for Windows: its Git Bash runs the agent's commands, and WSL's bash is never used. Under WSL2, install the Linux build inside WSL instead. |
 
 An installed `lmx` checks for new releases and installs one only after its
-signature verifies against the key built into it.
-`LMX_AUTO_UPDATE=0` keeps the notices but installs only on `/update`, and
-`LMX_CHECK_UPDATES=0` turns the checks off. The first download trusts HTTPS
+signature verifies against the key built into it; `lmx update` does the same
+from a terminal. `LMX_AUTO_UPDATE=0` keeps the notices but installs only on
+`lmx update` or `/update`, and `LMX_CHECK_UPDATES=0` turns the automatic
+checks off. The first download trusts HTTPS
 and GitHub; to check a release yourself, follow
 [Verify a download](docs/releases.md#verify-a-download). The release-signing
 public key is `X7aGNLOgOV+bz13CuG4x4AVnhKmsPIH8eYvBrajsiG8=`. On Linux,

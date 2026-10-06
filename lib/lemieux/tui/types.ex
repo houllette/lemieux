@@ -211,12 +211,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
         over the shipped three, or `nil` for the shipped three alone. A value
         here rather than anything global, so two screens in one VM can be
         given different palettes under the same name.
+      * `:no_color` — what `NO_COLOR` did to this screen: `:mono` when it
+        chose the theme, `:named` when a theme chosen by name won but the
+        terminal layer still draws no colour while the variable is set, `nil`
+        when it is unset. The startup notice and `/theme` say so, because an
+        inherited `NO_COLOR` looks exactly like a terminal without colour.
     """
     @type appearance :: %{
             name: String.t() | nil,
             colour: ExRatatui.Style.color() | nil,
             theme: Theme.t() | nil,
-            themes: Theme.registry() | nil
+            themes: Theme.registry() | nil,
+            no_color: :mono | :named | nil
           }
 
     @typedoc """

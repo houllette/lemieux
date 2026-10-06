@@ -53,6 +53,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
           resume: %{state.resume | busy?: false},
           command_index: 0,
           model_tab: "Automatic",
+          command_tab: "Commands",
           command_menu?: true,
           scroll: 0,
           selection: nil,

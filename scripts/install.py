@@ -447,11 +447,37 @@ def current_target():
     return target
 
 
+def wrapper(home):
+    """The launcher this installer writes at PREFIX/bin/lmx, and what marks an installation as its own."""
+    return ("#!/bin/sh\nset -eu\nexport LMX_INSTALL_HOME=" + shlex.quote(str(home)) +
+            "\nexec \"$LMX_INSTALL_HOME/current/bin/lmx\" \"$@\"\n")
+
+
+def managed(launcher, home):
+    """Whether `launcher` is the wrapper this installer wrote for `home`, so upgrading it needs no --replace.
+
+    Only an exact match counts. A wrapper written for another prefix, a
+    symlink, or any other executable is somebody else's, or an installation
+    whose ownership is in doubt, and --replace is the explicit choice to
+    install over it. Upgrading used to need --replace too, which read as
+    permission to overwrite an unrelated program rather than as the normal way
+    to update (issue #5).
+    """
+    try:
+        if launcher.is_symlink() or not launcher.is_file() or launcher.stat().st_size > 4096:
+            return False
+        return launcher.read_text() == wrapper(home)
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
 def install(archive, sums, prefix, replace=False):
     """Installs `archive` after checking it against `sums`; the caller vouches for `sums`.
 
     The whole archive becomes the version directory, so its LICENSE, NOTICE and
-    THIRD_PARTY_NOTICES stay with the runtime they describe.
+    THIRD_PARTY_NOTICES stay with the runtime they describe. An existing
+    PREFIX/bin/lmx that this installer wrote is upgraded in place; any other
+    is left alone unless `replace` says to install over it.
     """
     target = current_target()
     name = f"lmx_{target}.tar.gz"
@@ -465,8 +491,9 @@ def install(archive, sums, prefix, replace=False):
     prefix = prefix.expanduser().resolve()
     home = prefix / "share/lmx"
     launcher = prefix / "bin/lmx"
-    if os.path.lexists(launcher) and not replace:
-        raise ValueError(f"{launcher} exists; use --replace after reviewing the upgrade guide")
+    if os.path.lexists(launcher) and not replace and not managed(launcher, home):
+        raise ValueError(f"{launcher} exists and is not an lmx launcher this installer wrote; "
+                         "use --replace to install over it")
     home.mkdir(parents=True, exist_ok=True, mode=0o700)
     with lock(home), tempfile.TemporaryDirectory(prefix=".stage-", dir=home) as scratch:
         scratch = Path(scratch)
@@ -504,8 +531,7 @@ def install(archive, sums, prefix, replace=False):
         switched = False
         try:
             with os.fdopen(fd, "w") as output:
-                output.write("#!/bin/sh\nset -eu\nexport LMX_INSTALL_HOME=" + shlex.quote(str(home)) +
-                             "\nexec \"$LMX_INSTALL_HOME/current/bin/lmx\" \"$@\"\n")
+                output.write(wrapper(home))
             os.chmod(temporary, 0o755)
             select(home, destination)
             switched = True

@@ -163,7 +163,13 @@ stop startup. An unknown key is named at startup, with a suggestion, and
 ignored, except a likely misspelling of a routing or credential field
 (`model`, `providers`, `base_url`, `ixway`) and the retired `api_keys` and
 `preferred_models` maps, which stop startup. Inside a section such as
-`providers`, `ixway` or `permissions`, any unknown key stops startup.
+`providers`, `ixway` or `permissions`, any unknown key stops startup. So does
+a value a field cannot take, and the message names the field down to its key
+and what it takes: `Invalid lmx config field: ixway.enabled. It must be true
+or false.` An `api_key` left empty (`"api_key": ""`) is a placeholder, not a
+mistake: it is named at startup (`Empty field "ixway.api_key" in the lmx
+config; it is ignored`) and read as no key, so the file loads and the panel
+that saves a real key can open. Supply the key, or remove the placeholder.
 
 **Routing** is chosen at the highest layer that makes a choice: `--router`,
 `--ixway` or `--base-url`; then `LMX_ROUTER`, `LMX_IXWAY_URL` or
@@ -866,6 +872,14 @@ UI:
 /quality:review lib/example.ex
 ```
 
+A bare `/` lists `lmx`'s own commands, the bundled skills among them. Skills
+from anywhere else sit on the completion menu's tabs, one per place they came
+from: Project (the repository's), Personal (`~/.lmx`), Claude, Codex and
+Agents (the other harnesses' personal directories), System (Omarchy's),
+Plugins, and `--skill-dir`. Shift-Tab or a click switches tabs, and typing a
+skill's name from the default tab jumps to the tab that has it. With no skill
+outside `lmx`'s own, the menu has no tabs.
+
 `$ARGUMENTS`, `$ARGUMENTS[N]` and `$N` are substituted when one is invoked;
 `argument-hint`, `user-invocable` and `disable-model-invocation` are honoured;
 `${CLAUDE_SKILL_DIR}` is expanded for every skill and `${CLAUDE_PLUGIN_ROOT}`
@@ -1331,7 +1345,10 @@ or in the config file:
 ```
 
 The environment variable wins, and setting it to empty ignores the saved key.
-Search keys are kept apart from model `providers`, and Brave is the only
+`"web_search": "brave"` saved with no key for it is a warning at startup and
+no search, so a half-finished file still opens the screen; `--web-search
+brave` or `LMX_WEB_SEARCH=brave` without a key is an error that names the
+key. Search keys are kept apart from model `providers`, and Brave is the only
 shipped search backend. `--web-search none`, `LMX_WEB_SEARCH=none` or
 `"web_search": "none"` turns search off without deleting the key;
 `--no-web-fetch`, `LMX_WEB_FETCH=0` or `"web_fetch": false` keeps search but

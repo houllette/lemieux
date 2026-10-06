@@ -60,7 +60,9 @@ defmodule Lemieux.TUI.InitialPromptTest do
     state = :sys.get_state(screen.app).user_state
     assert state.history.queued == []
     assert ready.id == "02FIRSTPROMPT"
-    assert screen(state) =~ "fix the failing test"
+    # The Go Habs Go banner is still playing out over the ready screen
+    # (`Lemieux.TUI.Lifecycle.start_habs/1`); the echo is underneath it.
+    assert screen(%{state | overlay: nil}) =~ "fix the failing test"
     assert "fix the failing test" in state.history.entries
   end
 

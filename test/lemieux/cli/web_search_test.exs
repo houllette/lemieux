@@ -1,6 +1,7 @@
 defmodule Lemieux.CLI.WebSearchTest do
   use ExUnit.Case, async: false
 
+  alias Lemieux.CLI.Config
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
   alias Lemieux.Extension.Profile
@@ -145,10 +146,48 @@ defmodule Lemieux.CLI.WebSearchTest do
 
     File.chmod!(path, 0o600)
     assert {:ok, options} = Options.parse(["--config", path])
-    assert {:error, reason} = Runtime.standard_tools(options, [])
+    # The file chose Brave with no Brave key: search stays off, and the
+    # startup warning names the field, never what sits in the other sections.
+    assert options.web_search == nil
+    assert [warning] = Config.warnings(options.config)
+    assert warning =~ "web_search_providers.brave.api_key"
+    refute warning =~ "model-provider-key"
+    refute warning =~ "other-search-key"
+    assert {:ok, tools} = Runtime.standard_tools(options, [])
+    refute "web_search" in Enum.map(tools, &Tool.name/1)
+  end
+
+  # Issue #3: refusing to start over an optional tool kept a person whose
+  # file held an empty placeholder out of the screen altogether. The file's
+  # choice is a default; the flag and the variable are orders.
+  test "Brave chosen in the file without a key is a warning and no search; by flag or variable it is an error",
+       %{tmp_dir: dir} do
+    path = Path.join(dir, "config.json")
+    File.write!(path, JSON.encode!(%{"web_search" => "brave"}))
+    File.chmod!(path, 0o600)
+
+    assert {:ok, options} = Options.parse(["--config", path])
+    assert options.web_search == nil
+    assert [warning] = Config.warnings(options.config)
+    assert warning =~ "BRAVE_SEARCH_API_KEY"
+    assert warning =~ ~s(set web_search to "none")
+
+    # An explicitly empty variable is no key either.
+    System.put_env("BRAVE_SEARCH_API_KEY", "")
+    assert {:ok, %{web_search: nil}} = Options.parse(["--config", path])
+
+    System.put_env("BRAVE_SEARCH_API_KEY", "ambient-brave-key")
+    assert {:ok, %{web_search: "brave", config: keyed}} = Options.parse(["--config", path])
+    assert Config.warnings(keyed) == []
+
+    System.delete_env("BRAVE_SEARCH_API_KEY")
+    assert {:ok, flagged} = Options.parse(["--config", path, "--web-search", "brave"])
+    assert flagged.web_search == "brave"
+    assert {:error, reason} = Runtime.standard_tools(flagged, [])
     assert reason =~ "web_search_providers.brave.api_key"
-    refute reason =~ "model-provider-key"
-    refute reason =~ "other-search-key"
+
+    System.put_env("LMX_WEB_SEARCH", "brave")
+    assert {:ok, %{web_search: "brave"}} = Options.parse(["--config", path])
   end
 
   # The Elixir profile is applied over the standard catalog, so what it keeps

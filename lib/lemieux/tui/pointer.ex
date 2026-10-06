@@ -68,9 +68,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
         in_notices?(state, event) ->
           {:noreply, open_notice_link(state, event)}
 
-        tab = Composer.model_tab_at(state, event) ->
-          {:ok, tab} = tab
-          {:noreply, %{state | model_tab: tab, command_index: 0}}
+        tab = Composer.tab_at(state, event) ->
+          {:ok, field, tab} = tab
+          {:noreply, %{Map.put(state, field, tab) | command_index: 0}}
 
         # A link opens on release, whatever modifier the press reports, so a
         # drag that starts on one still selects. Super+click once opened on

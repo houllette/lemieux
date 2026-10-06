@@ -58,9 +58,12 @@ entries it missed.
 
 The screen opens with a short full-screen animation (Go Habs Go) while
 workspace discovery, Ixway discovery and the recent-session list run in
-supervised tasks. The animation gives way to the conversation as soon as the
-session and its skills, commands and status settings are ready; a selected
-Ixway model still needs its key-scoped catalogue first. The screen never
+supervised tasks. Once the session and its skills, commands and status
+settings are ready, the animation plays out its last frames (about a second)
+and gives way to the conversation; a start that took a single frame still
+shows the whole banner, and any key ends it at once. A selected Ixway model
+still needs its key-scoped catalogue first, and a start that fails shows the
+error instead. The hidden `/habs` plays it again. The screen never
 waits on MCP servers: they connect in the background, and the session's
 `{:mcp_server, …}` and `{:ready, …}` events drive a `connecting NAME…` status
 and one line in the notice box when they settle (a failed server, or one that
@@ -226,6 +229,19 @@ A light answer starts the screen in the `light` theme; anything else keeps
 `/theme`, or a host's `:theme`. A screen that opens with a chosen theme is
 drawn in it from the first frame and asks the terminal nothing. `NO_COLOR`
 starts in `mono` unless a theme was chosen by name.
+
+`NO_COLOR` is read from the environment `lmx` started in, so a desktop entry,
+a launcher or an agent's shell that sets it for its own output passes it on,
+and the screen then looks exactly like one on a terminal that cannot draw
+colour. The screen says which it is: a startup notice names the variable
+(`NO_COLOR is set in the environment lmx started in, so the screen has no
+colour (theme mono). Unset it where lmx is launched for colour.`), `/theme`
+appends `(NO_COLOR is set)` to the theme's name, and `lmx explain` reports
+`TERM`, `COLORTERM` and whether `NO_COLOR` is set under
+`diagnostics.terminal`. The convention is kept, not overridden: unset the
+variable where `lmx` is launched. A theme named while it is set is still
+drawn without colour, because the terminal layer writes none while the
+variable is set, and the notice says so.
 
 The light palette takes its colours from the fixed 256-colour cube rather than
 the terminal's named colours, which light profiles rarely pick for reading

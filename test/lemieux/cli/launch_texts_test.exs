@@ -33,12 +33,14 @@ defmodule Lemieux.CLI.LaunchTextsTest do
   end
 
   describe "lmx help environment" do
-    # Only the installed lmx checks on its own, and `/update` still checks
-    # with LMX_CHECK_UPDATES=0 (`Lemieux.TUI.Updates`).
-    test "LMX_CHECK_UPDATES stops the automatic checks, not /update" do
+    # Only the installed lmx checks on its own, and `lmx update` and `/update`
+    # still check with LMX_CHECK_UPDATES=0 (`Lemieux.CLI.Update`,
+    # `Lemieux.TUI.Updates`).
+    test "LMX_CHECK_UPDATES stops the automatic checks, not lmx update or /update" do
       assert topic("environment") =~
                "LMX_CHECK_UPDATES 0 stops the installed lmx checking for a new version on its " <>
-                 "own (at start, after /new and /resume, and hourly); /update still checks"
+                 "own (at start, after /new and /resume, and hourly); lmx update and /update " <>
+                 "still check"
     end
   end
 

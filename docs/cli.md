@@ -37,6 +37,7 @@ harness-learning commands) and `desktop` (`lmx desktop`).
 | `lmx extension new\|list` | Write or list your own Elixir extensions |
 | `lmx skills` | List the Agent Skills a session finds, where each came from, and whether it is enabled |
 | `lmx desktop install\|uninstall\|status` | On Linux, add `lmx` to the desktop's application launcher, or remove it ([Desktop launchers and Omarchy](desktop.md)) |
+| `lmx update [--check]` | Install a newer verified release from a terminal, or say whether one is available ([Updates](releases.md#updates-from-the-tui)) |
 | `lmx help [TOPIC]` | Print the help, or one topic |
 | `lmx feedback`, `lmx corpus`, `lmx harness` | Experimental [harness-learning commands](#harness-learning-and-feedback-commands) |
 | `lmx --version` | Print the version |
@@ -188,7 +189,11 @@ session worked in another directory).
 Besides the conversation, the terminal UI gives you:
 
 - completion for slash commands, providers, models, effort levels, sessions,
-  tool names and BEAM nodes. Lists of names are alphabetical; `/model` puts
+  tool names and BEAM nodes. A bare `/` lists `lmx`'s own commands; when you
+  have skills from elsewhere, the menu has a tab per place they came from
+  (Project, Personal, Claude, Codex, Agents, System, Plugins, `--skill-dir`),
+  switched with Shift-Tab or a click, and typing a skill's name jumps to its
+  tab. Lists of names are alphabetical; `/model` puts
   preferred and recent models first, then the rest by release date, with
   deprecated models marked near the end;
 - the model's plan (its `todo` tool) above the input while a task is open;
@@ -206,8 +211,10 @@ Besides the conversation, the terminal UI gives you:
 - the repository's instructions, skills and legacy slash commands, and the
   plugins you selected ([Workspace discovery](configuration.md#workspace-discovery)).
   A user-invocable skill is another slash command (`/NAME [ARGUMENTS]`, or
-  `/PLUGIN:NAME` for a plugin's); the bundled `/create-extension` and
-  `/evaluate-extension` skills help you write and check an extension;
+  `/PLUGIN:NAME` for a plugin's), on the completion menu's tab for where it
+  came from; the bundled `/create-extension` and `/evaluate-extension`
+  skills sit with `lmx`'s own commands and help you write and check an
+  extension;
 - local models: when an Ollama daemon is running, its models that can call
   tools appear under `/provider ollama` and `/model`. `/provider ollama`
   switches to the Ollama model you pinned or used recently, else to the one
@@ -217,8 +224,11 @@ Besides the conversation, the terminal UI gives you:
   routes and `/model` shows models for the selected provider. Ixway models
   open in the Ixway tab, with qualified provider routes in separate tabs.
 
-**Updates.** On macOS and Linux, the installed binary checks the project's
-GitHub releases when the terminal UI opens, after `/new` and `/resume`, and
+**Updates.** `lmx update` installs a newer verified release from a terminal,
+without a session, a key or a readable config file; `lmx update --check` only
+reports ([Updates](releases.md#updates-from-the-tui)). On macOS and Linux,
+the installed binary also checks the project's GitHub releases when the
+terminal UI opens, after `/new` and `/resume`, and
 hourly while it is open. It installs an update only after the release's
 signed manifest verifies against the Ed25519 public key built into the
 binary; a release whose signature is missing or does not verify is reported
@@ -253,7 +263,7 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 | Shift-Up / Shift-Down | Scroll the transcript three rows |
 | Esc | Clear the input, the selection and the completion menu, and close the notice box |
 | Ctrl-C | Cancel the running turn; when idle, press it twice to quit |
-| Shift-Tab | Cycle the permission mode (ask → accept edits → auto → read only; never full auto) when permissions are on; when they are off it says how to turn them on. In the Ixway model picker it cycles through Ixway and qualified route tabs |
+| Shift-Tab | Cycle the permission mode (ask → accept edits → auto → read only; never full auto) when permissions are on; when they are off it says how to turn them on. In the Ixway model picker it cycles through Ixway and qualified route tabs, and in the slash menu through the tabs for where skills came from |
 | Alt-1 to Alt-9 | Select a queued message |
 | Alt-E / Alt-U | Revise / discard the selected queued message |
 | Alt-Z | Take back the steer waiting for the next model request, as `/unsteer` does |
@@ -829,7 +839,7 @@ An embedding host sets its own limits through its session options.
 | `LMX_CHECK_UPDATES` | `0` turns the installed `lmx`'s automatic update checks off (at start, after `/new` and `/resume`, and hourly); `/update` still checks |
 | `LMX_AUTO_UPDATE` | `0` stops the installed `lmx` installing updates on its own: it still says one is available, and `/update` installs it, after the same signature check |
 | `LMX_LOG_LEVEL` | `debug`, `info`, `warning`, `error` (also `emergency`, `alert`, `critical`, `notice`, `none`): the log level, and log lines are then also printed on standard error, except over the terminal UI's screen ([Logs](#logs-crash-dumps-and-signals)) |
-| `NO_COLOR` | Any non-empty value starts the terminal UI in the `mono` theme, unless a theme was chosen |
+| `NO_COLOR` | Any non-empty value starts the terminal UI in the `mono` theme, unless a theme was chosen; a startup notice and `/theme` say it is in effect, since it is often inherited from a launcher or an agent's shell |
 | `COLORTERM` | `truecolor` or `24bit` makes the terminal UI draw 24-bit colour instead of the 256-colour palette (not inside GNU screen) |
 | `VISUAL`, `EDITOR` | The editor Ctrl-G opens |
 | `OMARCHY_PATH` | Where Omarchy is installed; its `default/agents/skills` are read as [Omarchy's skills](configuration.md#agent-skills-and-legacy-commands) |

@@ -107,16 +107,16 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
       do: tool_action_completions(value, state.command_policy)
 
     defp command_completions(state, value) do
-      {:command, prefix} = SlashCommands.parse(value)
-      definitions = command_definitions(state)
+      %{tab: tab, definitions: definitions, prefix: prefix} = command_menu(state, value)
       by_name = Map.new(definitions, &{&1.name, &1})
 
       definitions
-      |> Enum.map(&struct!(Command, Map.take(&1, [:name, :aliases, :description])))
-      |> SlashCommands.match_commands(prefix)
-      # One list rather than the built-ins followed by the skills. A skill is a
-      # command to whoever typed the slash, and a second alphabet starting
-      # halfway down the menu is worse than no alphabet at all.
+      |> Enum.filter(&(&1.tab == tab))
+      |> matched(prefix)
+      # One list within a tab rather than the built-ins followed by the
+      # skills. A skill is a command to whoever typed the slash, and a second
+      # alphabet starting halfway down the menu is worse than no alphabet at
+      # all.
       |> Enum.sort_by(&String.downcase(&1.name))
       |> Enum.map(fn command ->
         accepts_arguments? =
@@ -132,9 +132,91 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
       end)
     end
 
+    # The slash menu's tabs. Every skill a person has — their own, the ones
+    # other harnesses keep under `~/.claude` or `~/.codex`, a repository's,
+    # a plugin's — used to land in the one list a bare `/` opened, and a
+    # machine with a few skill packs installed for another agent showed
+    # dozens of them before the first of lmx's own commands (issue #1). The
+    # default tab is lmx's commands and nothing else; each other tab is one
+    # place skills came from, named for it. With no skill outside the
+    # default tab there are no tabs, and the menu is the one list it was.
+    @commands_tab "Commands"
+    # The default first, then where a person is likely to look: the
+    # repository they are in, their own skills, the other harnesses', the
+    # system's, the plugins', and the directories a flag added.
+    @tab_order ~w(Commands Project Personal Claude Codex Agents System Plugins --skill-dir)
+
+    @doc """
+    The slash menu's tabs for `value`, a bare `/NAME` prefix, or `nil` when
+    every slash command is one of Lemieux's own.
+
+    `:tabs` are the labels in order, `:tab` is the one the menu shows — the
+    one chosen with Shift-Tab or a click, or, when nothing on it matches the
+    prefix, the first tab with a match, so a skill's name typed from the
+    default tab still finds it — and `:rows` is the tallest tab's row count,
+    the one height the menu keeps across tabs.
+    """
+    @spec command_tabs(map(), String.t()) ::
+            %{tabs: [String.t()], tab: String.t(), rows: pos_integer()} | nil
+    def command_tabs(state, value) do
+      case command_menu(state, value) do
+        %{tabs: []} ->
+          nil
+
+        %{tabs: tabs, tab: tab, definitions: definitions} ->
+          rows =
+            tabs |> Enum.map(fn t -> Enum.count(definitions, &(&1.tab == t)) end) |> Enum.max()
+
+          %{tabs: tabs, tab: tab, rows: rows}
+      end
+    end
+
+    defp command_menu(state, value) do
+      {:command, prefix} = SlashCommands.parse(value)
+      definitions = command_definitions(state)
+      tabs = tabs_of(definitions)
+      chosen = Map.get(state, :command_tab, @commands_tab)
+
+      %{
+        definitions: definitions,
+        prefix: prefix,
+        tabs: tabs,
+        tab: shown_tab(tabs, chosen, definitions, prefix)
+      }
+    end
+
+    defp tabs_of(definitions) do
+      case definitions |> Enum.map(& &1.tab) |> Enum.uniq() do
+        [] -> []
+        [@commands_tab] -> []
+        tabs -> Enum.sort_by(tabs, &tab_rank/1)
+      end
+    end
+
+    defp tab_rank(tab), do: Enum.find_index(@tab_order, &(&1 == tab)) || {length(@tab_order), tab}
+
+    defp shown_tab([], _chosen, _definitions, _prefix), do: @commands_tab
+
+    defp shown_tab(tabs, chosen, definitions, prefix) do
+      match? = fn tab -> matched(Enum.filter(definitions, &(&1.tab == tab)), prefix) != [] end
+
+      cond do
+        chosen in tabs and match?.(chosen) -> chosen
+        chosen in tabs -> Enum.find(tabs, chosen, match?)
+        true -> Enum.find(tabs, hd(tabs), match?)
+      end
+    end
+
+    defp matched(definitions, prefix) do
+      definitions
+      |> Enum.map(&struct!(Command, Map.take(&1, [:name, :aliases, :description])))
+      |> SlashCommands.match_commands(prefix)
+    end
+
     # The conversation's registry — host commands included — and then the
     # skills, which are data rather than modules and merge after: a skill
-    # can never take a command's name.
+    # can never take a command's name. Each carries the tab it is listed
+    # under (`command_tabs/2`).
     @doc "Lists visible slash commands and skills under the host command policy."
     @spec command_definitions(map()) :: [map()]
     def command_definitions(state) do
@@ -148,13 +230,41 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
             name: Skill.qualified_name(skill),
             aliases: [],
             description: skill_description(skill),
-            accepts_arguments?: true
+            accepts_arguments?: true,
+            tab: skill_tab(skill)
           }
         end)
         |> Enum.reject(&MapSet.member?(reserved, &1.name))
 
-      builtins ++ skills
+      Enum.map(builtins, &Map.put(&1, :tab, @commands_tab)) ++ skills
     end
+
+    # Where a skill came from, as a tab. The sources are the ones
+    # `Lemieux.Extensions.Workspace.Discovery` records; a bundled skill is
+    # lmx's own and sits with its commands, and a personal root is named for
+    # the harness whose directory it is in (`~/.claude/skills` is "Claude"),
+    # which is the distinction the person asked for. A source this build does
+    # not know — `Skill.read/2` records the bare `:workspace` — is the
+    # repository's.
+    defp skill_tab(%Skill{source: {:bundled, _root}}), do: @commands_tab
+    defp skill_tab(%Skill{source: {:repository, _root}}), do: "Project"
+    defp skill_tab(%Skill{source: {:skill_dir, _root}}), do: "--skill-dir"
+    defp skill_tab(%Skill{source: {:plugin, _id}}), do: "Plugins"
+    defp skill_tab(%Skill{source: {:system, _root}}), do: "System"
+    defp skill_tab(%Skill{source: {:personal, root}}), do: personal_tab(root)
+    defp skill_tab(%Skill{}), do: "Project"
+
+    defp personal_tab(root) when is_binary(root) do
+      case root |> Path.dirname() |> Path.basename() do
+        ".lmx" -> "Personal"
+        ".claude" -> "Claude"
+        ".codex" -> "Codex"
+        ".agents" -> "Agents"
+        other -> other |> String.trim_leading(".") |> String.capitalize()
+      end
+    end
+
+    defp personal_tab(_root), do: "Personal"
 
     # Every other menu whose list is a set of names — commands, skills,
     # providers, tools, servers, colours — is alphabetical. A catalog arrives in

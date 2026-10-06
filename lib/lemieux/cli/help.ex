@@ -31,7 +31,7 @@ defmodule Lemieux.CLI.Help do
   alias Lemieux.Environment.Sandbox
 
   @topics ~w(config models permissions sandbox mcp plugins skills extensions sessions environment
-             options learning desktop)
+             options learning desktop update)
 
   @links [
     {"Docs", "https://hexdocs.pm/lemieux"},
@@ -64,6 +64,7 @@ defmodule Lemieux.CLI.Help do
   def command("mcp"), do: topic("mcp")
   def command("skills"), do: topic("skills")
   def command("desktop"), do: topic("desktop")
+  def command("update"), do: topic("update")
   def command(command) when command in ~w(log fork request), do: topic("sessions")
   def command(command) when command in ~w(feedback corpus harness), do: topic("learning")
   def command(_command), do: :none
@@ -107,6 +108,7 @@ defmodule Lemieux.CLI.Help do
       lmx extension new|list        Write or list your own Elixir extensions
       lmx skills [--json]           List the skills a session finds, and from where
       lmx desktop install|uninstall Linux app launcher entry (lmx help desktop)
+      lmx update [--check]          Install a newer release (lmx help update)
       lmx help [TOPIC]              This message, or one topic (list below)
 
     Common options:
@@ -209,7 +211,8 @@ defmodule Lemieux.CLI.Help do
     Settings a new session starts from; flags and LMX_* variables win.
     A field this build does not know is named and ignored, unless it is a
     likely misspelling of a routing field (model, providers, base_url,
-    ixway), which is refused.
+    ixway), which is refused. A wrong value names its field and what it
+    takes. An empty api_key is a placeholder: named at startup, ignored.
 
       model                 the model new sessions start with
       providers.NAME        api_key, model, effort for one provider
@@ -444,11 +447,13 @@ defmodule Lemieux.CLI.Help do
                             from there (lmx help skills)
       LMX_CHECK_UPDATES     0 stops the installed lmx checking for a new
                             version on its own (at start, after /new and
-                            /resume, and hourly); /update still checks
+                            /resume, and hourly); lmx update and /update
+                            still check
       LMX_AUTO_UPDATE       0 stops the installed lmx installing updates on its
                             own, which it does only once their Ed25519
                             signature verifies, and not on Windows or with
-                            extensions selected
+                            extensions selected; lmx update and /update
+                            still install
       LMX_LOG_LEVEL         log lines go to logs/lmx.log in the state
                             directory (LMX_HOME, else beside the config file:
                             ~/.lmx/logs/lmx.log; none for --config none),
@@ -457,6 +462,35 @@ defmodule Lemieux.CLI.Help do
                             that level, which the terminal UI does only when
                             standard error is not the terminal (2> FILE),
                             and on Windows not at all
+    """
+  end
+
+  defp text("update") do
+    """
+    Usage: lmx update [--check]
+
+    Checks the project's GitHub releases for a newer stable lmx and installs
+    it, after the checks the terminal UI's /update makes: the release's
+    update manifest must carry a valid Ed25519 signature from the key built
+    into this lmx, and the archive must match it. Nothing from the archive
+    runs while it installs. --check only says whether one is available.
+
+    The new version runs the next time lmx starts. A terminal UI that is open
+    keeps running the version it started on until you restart it; it is never
+    stopped from here, and the two never install at once.
+
+    No session, model key or personal config file is needed, so lmx update
+    works while a mistake in the config file keeps the screen from opening.
+
+    Only an lmx that install.sh or install.py installed can update itself; an
+    archive unpacked by hand, and the Windows build, are updated by
+    downloading the new archive. From a source checkout, mix lmx update
+    fast-forwards the checkout from its Git upstream instead, as its /update
+    does. Running the installer again also upgrades its own installation;
+    --replace is only for installing over an lmx it did not write.
+
+    Exit status: 0 up to date, installed, or --check reported; 1 the check or
+    the installation failed; 2 usage.
     """
   end
 

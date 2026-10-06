@@ -38,6 +38,11 @@ defmodule Lemieux.CLI.DiagnosticsTest do
     assert report["diagnostics"]["route"] == "provider_compatible_gateway"
     assert report["diagnostics"]["credentials"]["status"] == "present_not_verified"
     assert report["diagnostics"]["versions"]["lemieux"] == Lemieux.version()
+    # What decides colour on the screen, so a report about a colourless one
+    # shows whether `NO_COLOR` was inherited (the suite runs with it unset).
+    assert %{"no_color" => "unset", "term" => _term, "colorterm" => _colorterm} =
+             report["diagnostics"]["terminal"]
+
     refute output =~ secret
     refute output =~ "private-path"
     refute output =~ "gateway.example"

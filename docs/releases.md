@@ -74,11 +74,17 @@ followed by the paths of the license files. Pass options after `sh -s --`:
 | --- | --- |
 | `--prefix DIR` | Install under `DIR` instead of `~/.local` |
 | `--release X.Y.Z` | Install that release instead of the latest |
-| `--replace` | Install over an existing `lmx`; needed when `PREFIX/bin/lmx` exists |
+| `--replace` | Install over a `PREFIX/bin/lmx` that this installer did not write |
 
 ```sh
-curl -fsSL https://github.com/houllette/lemieux/releases/latest/download/install.sh | sh -s -- --prefix ~/tools --replace
+curl -fsSL https://github.com/houllette/lemieux/releases/latest/download/install.sh | sh -s -- --prefix ~/tools
 ```
+
+To upgrade, run `lmx update` ([Updating](#updates-from-the-tui)), or run the
+installer again: it recognises the launcher it wrote and upgrades its own
+installation without `--replace`. `--replace` is for a `PREFIX/bin/lmx` that
+is something else — another program, or a launcher written for another
+prefix — and says so when it is needed.
 
 What goes where:
 
@@ -278,9 +284,25 @@ trusts HTTPS and GitHub unless you verify as above.
 
 ## Updates from the TUI
 
-An `lmx` installed with `install.sh` or `install.py` checks for updates from
-its terminal UI and, on macOS and Linux, installs them too. An archive you
-unpacked yourself, and the Windows build, only announce a new release.
+From a terminal:
+
+```sh
+lmx update            # install a newer release, after the checks below
+lmx update --check    # only say whether one is available
+```
+
+`lmx update` needs no session, model key or readable config file, so it works
+while a mistake in `~/.lmx/config.json` keeps the screen from opening. It
+exits 0 when `lmx` is up to date or an update was installed, 1 when the check
+or the installation failed, and 2 for a usage error. The new version runs the
+next time `lmx` starts: a terminal UI that is open keeps running the version
+it started on until you restart it, is never stopped by the update, and the
+two never install at once. `/update` in the terminal UI does the same from
+inside a session.
+
+An `lmx` installed with `install.sh` or `install.py` also checks for updates
+from its terminal UI and, on macOS and Linux, installs them too. An archive
+you unpacked yourself, and the Windows build, only announce a new release.
 `lmx run` and embedding applications never check.
 
 The terminal UI checks after its first session is ready, after `/new` and
@@ -328,18 +350,19 @@ A verified update installs on its own:
   for an update. Save an unsent draft, quit, and start `lmx -c` to resume
   where you were.
 
-`/update` checks now and, in an installation the installer made, installs a
-verified update. To change the defaults:
+`lmx update` and `/update` check now and, in an installation the installer
+made, install a verified update. To change the defaults:
 
 | Setting | Effect |
 | --- | --- |
-| `LMX_CHECK_UPDATES=0` | No automatic checks; `/update` still checks when you type it |
-| `LMX_AUTO_UPDATE=0` | Notices only; `/update` installs, after the same verification |
-| Selecting your own extensions | Turns automatic installation off, because a new version can break a bundle built for the old one; see [upgrading extensions](support.md#upgrading-lemieux-and-extensions) |
+| `LMX_CHECK_UPDATES=0` | No automatic checks; `lmx update` and `/update` still check when you run them |
+| `LMX_AUTO_UPDATE=0` | Notices only; `lmx update` and `/update` install, after the same verification |
+| Selecting your own extensions | Turns automatic installation off, because a new version can break a bundle built for the old one; `lmx update` and `/update` still install, and say to rebuild them; see [upgrading extensions](support.md#upgrading-lemieux-and-extensions) |
 
-A source checkout checks nothing on its own. There, `/update` fetches the
-configured Git upstream and fast-forwards a clean branch, then asks you to run
-`mix deps.get` and restart. It refuses local changes, a detached `HEAD`, a
+A source checkout checks nothing on its own. There, `mix lmx update` and
+`/update` fetch the configured Git upstream and fast-forward a clean branch,
+then ask you to run `mix deps.get` and restart. They refuse local changes, a
+detached `HEAD`, a
 missing upstream, a Git operation in progress, and a branch that is ahead of
 or diverged from its upstream. It never stashes or resets your work.
 

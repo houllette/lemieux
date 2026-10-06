@@ -294,7 +294,7 @@ defmodule Lemieux.CLI.Options do
          {:ok, limits} <- Limits.parse(parsed, config),
          {:ok, clients} <- oauth_clients(parsed),
          {:ok, inference} <- Config.inference(config, parsed, @default_model),
-         {:ok, web_search} <- web_search(parsed, config),
+         {:ok, web_search, config} <- web_search(parsed, config),
          {:ok, web_fetch} <- web_fetch(parsed, config, web_search),
          {:ok, extensions} <- extensions(parsed, config) do
       {:ok,
@@ -488,20 +488,50 @@ defmodule Lemieux.CLI.Options do
     end
   end
 
+  @brave_unkeyed "The lmx config selects Brave web search but has no key for it, so web " <>
+                   "search is off. Set BRAVE_SEARCH_API_KEY or web_search_providers.brave.api_key, " <>
+                   "or set web_search to \"none\"."
+
+  # Returns the backend and the configuration, which gains a warning when the
+  # file's choice could not be honoured.
   defp web_search(parsed, config) do
-    selected =
-      parsed[:web_search] || env("LMX_WEB_SEARCH") || Config.get(config, "web_search")
+    case parsed[:web_search] || env("LMX_WEB_SEARCH") do
+      nil ->
+        configured_web_search(Config.get(config, "web_search"), config)
 
-    resolve_web_search(selected, config)
-  end
-
-  defp resolve_web_search(nil, config) do
-    case System.get_env("BRAVE_SEARCH_API_KEY") ||
-           Config.web_search_api_key(config, "brave") do
-      key when is_binary(key) and key != "" -> {:ok, "brave"}
-      _missing -> {:ok, nil}
+      selected ->
+        with {:ok, backend} <- resolve_web_search(selected, config), do: {:ok, backend, config}
     end
   end
+
+  # The file's choice is a default, not an order for this process: `"brave"`
+  # saved with no key for it is a warning at startup and no search, where the
+  # same choice typed as a flag or set in `LMX_WEB_SEARCH` stays an error
+  # (`Lemieux.CLI.Runtime` names the missing key then). Refusing to start
+  # over an optional tool kept a person whose file held an empty placeholder
+  # out of the screen altogether (issue #3); a script that needs search says
+  # so with the flag.
+  defp configured_web_search("brave", config) do
+    if brave_key?(config),
+      do: {:ok, "brave", config},
+      else: {:ok, nil, Config.warn(config, @brave_unkeyed)}
+  end
+
+  defp configured_web_search(selected, config) do
+    with {:ok, backend} <- resolve_web_search(selected, config), do: {:ok, backend, config}
+  end
+
+  # An explicitly empty variable disables the saved key, as it does for model
+  # providers (`Lemieux.CLI.Runtime.web_search_api_key/3`).
+  defp brave_key?(config) do
+    case System.get_env("BRAVE_SEARCH_API_KEY") || Config.web_search_api_key(config, "brave") do
+      key when is_binary(key) and key != "" -> true
+      _missing -> false
+    end
+  end
+
+  defp resolve_web_search(nil, config),
+    do: if(brave_key?(config), do: {:ok, "brave"}, else: {:ok, nil})
 
   defp resolve_web_search(backend, _config) do
     case String.downcase(backend) do

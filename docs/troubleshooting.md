@@ -120,13 +120,15 @@ notice box says why:
 - `The update carried no verified signature, so it was not installed` (after
   `/update`) — `/update` checks again.
 
-`LMX_AUTO_UPDATE=0` keeps the notices but installs only when you run
-`/update`; `LMX_CHECK_UPDATES=0` turns the automatic checks off, and
-`/update` still checks. An `lmx` you unpacked by hand, and the experimental
-Windows build, say when an update is available but never install one
-themselves; `/update` then says `Download an update from
-https://github.com/houllette/lemieux/releases and restart lmx. On macOS and
-Linux, install lmx with install.sh to get automatic updates.`
+`lmx update` installs from a terminal, and works while a mistake in the
+config file keeps the screen from opening. `LMX_AUTO_UPDATE=0` keeps the
+notices but installs only when you run `lmx update` or `/update`;
+`LMX_CHECK_UPDATES=0` turns the automatic checks off, and both still check.
+An `lmx` you unpacked by hand, and the experimental Windows build, say when an
+update is available but never install one themselves; `/update` then says
+`Download an update from https://github.com/houllette/lemieux/releases and
+restart lmx. On macOS and Linux, install lmx with install.sh to get automatic
+updates.`
 
 ### `lmx: this installation belongs to another user`
 
@@ -440,6 +442,20 @@ does not ask the terminal at all. If the terminal's late answer to that
 question shows up as stray characters in the input box at startup, setting
 `"theme"` in `~/.lmx/config.json` avoids it.
 
+### No colour at all, and the startup notice names `NO_COLOR`
+
+`NO_COLOR is set in the environment lmx started in, so the screen has no
+colour (theme mono). Unset it where lmx is launched for colour.` The variable
+was set in whatever launched `lmx`: a desktop entry or launcher script, a
+shell profile, or a coding agent's own shell when it opened the window for
+you (agents often set it for their own output). `lmx` keeps the
+[convention](https://no-color.org) rather than overriding it, so the fix is
+to unset it there and start again. `/theme` shows `(NO_COLOR is set)` after
+the theme's name while it is in effect, and `lmx explain` reports `TERM`,
+`COLORTERM` and `NO_COLOR` under `diagnostics.terminal`. Setting `"theme"`
+does not bring colour back while the variable is set, because the terminal
+layer writes no colour at all then; the notice says so.
+
 ### Colours look wrong
 
 `lmx` draws its tints with the 256-colour palette unless the terminal says it
@@ -625,6 +641,34 @@ An `ask_user` question waits for you. In the terminal UI, choose an answer (or
 Other), review the set and choose Submit answers. An embedding host receives
 `{:question, question}` and must answer through the session's API. `lmx run`
 offers no `ask_user` tool, because nobody may be there to answer.
+
+### `Invalid lmx config field: …` or `Unknown field … in lmx … section`
+
+`~/.lmx/config.json`, or the file `--config` named, holds a value a field
+cannot take, or a key its section does not know. The message names the field
+down to its key and what it takes:
+
+```text
+lmx: Invalid lmx config field: web_search_providers.brave.api_key. A key is one line of text.
+lmx: Unknown field "modle" in lmx providers.openai section (did you mean "model"?).
+```
+
+Fix that field and start again, or start with `--config none` while you do
+([Running with no configuration](configuration.md#running-with-no-configuration)).
+Two things that look like mistakes are not refused:
+
+- An `api_key` left empty (`"api_key": ""`) counts as no key. The startup
+  notices say `Empty field "ixway.api_key" in the lmx config; it is ignored`,
+  the terminal UI opens, and `lmx explain` lists the notice under
+  `diagnostics.notices`. Supply the key, or remove the placeholder.
+- `"web_search": "brave"` with no Brave key turns search off, with a notice
+  that names `BRAVE_SEARCH_API_KEY` and `web_search_providers.brave.api_key`.
+
+A file that enables the Ixway route (`"ixway": {"enabled": true}`) with no
+key for it still cannot start a session on that route: `Ixway requires a
+gateway model key: set IXWAY_API_KEY, or save it as ixway.api_key in the lmx
+config file.` In the terminal UI, `/provider NAME` starts on a direct provider
+instead, and `/quit` leaves.
 
 ### `lmx explain` exits 1: two tools share a name
 

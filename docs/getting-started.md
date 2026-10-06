@@ -50,8 +50,10 @@ lmx --version
 ```
 
 Pass options after `sh -s --`: `--prefix DIR` installs under `DIR`,
-`--release X.Y.Z` picks a release, and `--replace` installs over an existing
-`lmx`. The previous version stays on disk for rollback.
+`--release X.Y.Z` picks a release, and `--replace` installs over a
+`PREFIX/bin/lmx` the installer did not write. To upgrade later, run
+`lmx update`, or run the installer again: it upgrades its own installation
+without `--replace`. The previous version stays on disk for rollback.
 
 Platform notes:
 
@@ -80,9 +82,11 @@ when the terminal UI starts, after `/new` and `/resume`, and hourly while it
 is open. It installs an update only after its manifest's signature verifies
 against the public key built into `lmx`; a compatible update may load into
 the running terminal UI, otherwise it applies at the next start.
-`LMX_AUTO_UPDATE=0` keeps the notices but installs only when you type
-`/update`, and `LMX_CHECK_UPDATES=0` turns the automatic checks off;
-`/update` still checks. `lmx run` never checks. An archive you unpacked
+`lmx update` installs one from a terminal, and `lmx update --check` only
+says whether one is available. `LMX_AUTO_UPDATE=0` keeps the notices but
+installs only when you run `lmx update` or `/update`, and
+`LMX_CHECK_UPDATES=0` turns the automatic checks off; both still check.
+`lmx run` never checks. An archive you unpacked
 yourself, and the Windows build, only say when a release is out: update them
 by downloading the new archive.
 
@@ -274,7 +278,8 @@ it work better:
   its background and starts in its light theme on a pale one. `/theme light`,
   `/theme dark` or `/theme mono` changes it for the sitting, and
   `"theme": "light"` in `~/.lmx/config.json` makes it stick. `NO_COLOR=1`
-  turns colour off.
+  turns colour off, and a startup notice says so when it is set, since a
+  launcher or an agent's shell often sets it without your meaning to.
 - **Colours.** `lmx` draws 256 colours unless the terminal says it has 24-bit
   colour. If yours has it but does not say so, `export COLORTERM=truecolor`.
 - **Multiplexers.** tmux works. GNU screen 4 (macOS's `/usr/bin/screen`)
