@@ -861,6 +861,12 @@ defmodule Lemieux.Providers.ReqLLMTest do
       assert {:unanswered, "openai:gpt-4o-mini", :incomplete} = reason
       assert ProviderError.message(reason) =~ "answered nothing"
       assert ProviderError.message(reason) =~ "credit"
+
+      # Indistinguishable, from the response, from a stream cut before the
+      # first token — so it is the provider failing, and the session asks
+      # again. A refusal that repeats fails the retries with this sentence.
+      assert ProviderError.category(reason) == :server
+      assert ProviderError.transient?(reason)
     end
 
     test "is allowed when the model simply stopped" do

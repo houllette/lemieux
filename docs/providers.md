@@ -595,6 +595,17 @@ whether or not the answer finished. A dropped connection (`:closed`,
 `:econnreset` and their kin) is classified `:server` too; a refusal arrives
 with a status and a body, a reset does not.
 
+A `200` stream that carries nothing at all — no content, no tool call, no
+usage — and ends `:incomplete` is the same cut one step earlier, before the
+first token. The adapter reports it as `{:unanswered, model, :incomplete}`
+rather than a finished turn (a session would otherwise answer with a blank
+line and go idle), and `Lemieux.Provider.Error` classifies it `:server`, so
+the session's bounded retry asks again. OpenAI refuses a request on an
+account with no credit in exactly this shape; that refusal repeats, and
+after the retries the failure's sentence still says to check credit, quota
+and request validity. An empty stream that ends `:length` or
+`:content_filter` stays `:other`: the provider finished on purpose.
+
 ### Replaying a transcript
 
 `Lemieux.Providers.ReqLLM.context/2` applies two rules on top of translating

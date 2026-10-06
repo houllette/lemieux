@@ -1761,7 +1761,9 @@ defmodule Lemieux.Providers.ReqLLM do
 
   # ReqLLM calls a stream that ended without its terminal event `:incomplete`.
   # For Claude that is the dropped error event; elsewhere it is left to
-  # `check_answered/2`, which knows an empty `:incomplete` as a refusal.
+  # `check_answered/2`, which turns an empty `:incomplete` into an
+  # `{:unanswered, model, finish}` failure that `Lemieux.Provider.Error`
+  # files, like this one, under `:server`.
   defp interruption(%{finish_reason: finish}, %{terminal?: false}, target)
        when finish in [nil, :unknown, :incomplete] do
     if claude_wire?(target),
@@ -1849,6 +1851,18 @@ defmodule Lemieux.Providers.ReqLLM do
 
   Deliberately narrow. A model that stops with `:stop` and says nothing is odd
   but not broken; a truncated answer has content, and keeps it.
+
+  The failure is `{:unanswered, model, finish_reason}`, which
+  `Lemieux.Provider.Error.category/1` files under `:server` when the finish is
+  `:incomplete` or `:unknown`, so the session's bounded retry asks again. It
+  was `:other` — the OpenAI case above is a refusal, and a refusal is not
+  retried — until a gateway behind a CDN closed a `200` stream with nothing
+  in it, once in an 89-task benchmark, and the attempt was recorded as the
+  model failing. The response does not say which of the two happened. A
+  refusal that repeats fails every retry with the same sentence, which still
+  names credit, quota and request validity; a cut stream is answered on the
+  next try. `:length` and `:content_filter` with nothing in them stay
+  `:other`: the provider finished on purpose and said so.
   """
   @spec check_answered(result :: map(), model :: String.t()) ::
           :ok | {:error, {:unanswered, String.t(), term()}}

@@ -19,6 +19,15 @@ API.
   `provider_error` of a benchmark observation now carry the failure's
   `http_status` beside `category` and `reason` (`null` when there was none),
   so a `retry: [when: ...]` predicate can decide on the status itself. (#15)
+- A `200` stream that carried nothing at all and ended `:incomplete` — the
+  adapter's `{:unanswered, model, :incomplete}` failure — is classified
+  `:server`, so `transient?/2` is true and the session's bounded retry asks
+  again, the same as for a stream cut mid-answer. It was `:other`, because
+  OpenAI refuses a request on an account with no credit in the same shape;
+  nothing in the response tells the two apart, and that refusal still fails
+  every retry with the sentence naming credit, quota and request validity,
+  while a gateway that dropped the stream before the first token is answered
+  on the next try instead of being recorded as the model failing. (#16)
 
 ## 0.8.1 — 2026-10-06
 

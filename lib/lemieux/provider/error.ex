@@ -52,6 +52,12 @@ defmodule Lemieux.Provider.Error do
   # arrives with a status and a body.
   @dropped_transport_reasons [:closed, :econnreset, :econnaborted, :epipe, :enetreset]
 
+  # The finish reasons `req_llm` gives a stream that ended without its terminal
+  # event. An `{:unanswered, model, finish}` with one of these and nothing in it
+  # is a stream cut before the first token; with `:length` or `:content_filter`
+  # the provider finished on purpose and said so.
+  @unanswered_cut_finishes [:incomplete, :unknown]
+
   @rate_limit_codes MapSet.new([
                       "rate_limit_exceeded",
                       "rate_limited",
@@ -101,7 +107,8 @@ defmodule Lemieux.Provider.Error do
 
   defp projection({:unanswered, model, finish_reason}) do
     "#{model} answered nothing at all and ended with #{inspect(finish_reason)} rather than a normal stop. " <>
-      "The streaming interface did not carry the reason; check provider credit, quota, and request validity."
+      "The streaming interface did not carry the reason: the stream may have been cut off before " <>
+      "the first token, or the request refused; check provider credit, quota, and request validity."
   end
 
   defp projection({:context_limit, reason}), do: message(reason)
@@ -188,6 +195,16 @@ defmodule Lemieux.Provider.Error do
   retrying by category recorded seven CDN timeouts in one benchmark run as
   the model failing, until it widened its retry list to `:other` and with it
   to every genuine refusal.
+
+  A stream that carried nothing at all — no content, no tool call, no usage —
+  and ended `:incomplete` (the adapter's `{:unanswered, model, finish}`) is
+  `:server` as well: it is the interrupted stream one step earlier, the
+  connection cut before the first token rather than mid-sentence. The same
+  shape is also how OpenAI refuses a request on an account with no credit,
+  which is why it was `:other` for a while; but nothing in the response tells
+  the two apart, and a refusal that repeats fails the bounded retries with
+  the same sentence, while a gateway that dropped the stream is answered on
+  the second try instead of being recorded as the model failing.
   """
   @spec category(reason :: term()) :: category()
   def category(reason) do
@@ -336,6 +353,9 @@ defmodule Lemieux.Provider.Error do
   @spec retryable?(reason :: term()) :: boolean()
   def retryable?(%{retryable: retryable}) when is_boolean(retryable), do: retryable
 
+  def retryable?({:unanswered, _model, finish}) when finish in @unanswered_cut_finishes,
+    do: true
+
   def retryable?(reason) do
     case http_status(reason) do
       status when status in [408, 409, 425, 429] -> true
@@ -412,6 +432,7 @@ defmodule Lemieux.Provider.Error do
   defp timeout?(_reason), do: false
 
   defp dropped?(%Interrupted{}), do: true
+  defp dropped?({:unanswered, _model, finish}) when finish in @unanswered_cut_finishes, do: true
   defp dropped?(reason) when reason in @dropped_transport_reasons, do: true
   defp dropped?(%{reason: reason}) when reason in @dropped_transport_reasons, do: true
   defp dropped?(%{cause: cause}) when not is_nil(cause), do: dropped?(cause)

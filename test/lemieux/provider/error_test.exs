@@ -112,6 +112,33 @@ defmodule Lemieux.Provider.ErrorTest do
     assert Error.category(%Mint.TransportError{reason: :econnrefused}) == :other
   end
 
+  test "a stream that carried nothing and ended :incomplete is the provider failing, not refusing" do
+    # A gateway behind a CDN answered 200 and closed the stream with no delta,
+    # no tool call, no usage and no finish reason. That is the interrupted
+    # stream one step earlier — cut before the first token — and a host that
+    # retries :server, :timeout and :rate_limit recorded it as the model
+    # failing while it was :other.
+    for finish <- [:incomplete, :unknown] do
+      cut = {:unanswered, "ixway:gpt-6-luna", finish}
+
+      assert Error.category(cut) == :server
+      assert Error.transient?(cut)
+      assert Error.retryable?(cut)
+      assert Error.http_status(cut) == nil
+      assert Error.message(cut) =~ "answered nothing at all"
+      assert Error.message(cut) =~ "cut off before the first token"
+    end
+
+    # A provider that finished on purpose and said so is not a cut stream.
+    for finish <- [:length, :content_filter] do
+      ended = {:unanswered, "openai:gpt-5", finish}
+
+      assert Error.category(ended) == :other
+      refute Error.transient?(ended)
+      refute Error.retryable?(ended)
+    end
+  end
+
   test "an interrupted stream is a retryable server failure with the provider's sentence" do
     interrupted = %Lemieux.Provider.Interrupted{provider: "openai", detail: "upstream overloaded"}
 
