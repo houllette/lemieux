@@ -449,6 +449,37 @@ defmodule Lmx.UpdateTest do
     assert {:error, :unsafe_archive} = Archive.validate(path)
   end
 
+  # The modes the published Windows archive carries (0.8.0: every file 0666
+  # or 0777, its one directory 0777), which the release gate must unpack to
+  # inspect, and the updater's Unix rule must still refuse.
+  @tag :tmp_dir
+  @tag :unix
+  test "admits modes writable by others only when told to, and setuid never", %{tmp_dir: tmp} do
+    windows = Path.join(tmp, "windows.tar.gz")
+    file = Path.join(tmp, "file")
+    directory = Path.join(tmp, "dir")
+    File.write!(file, "packaged file")
+    File.chmod!(file, 0o666)
+    File.mkdir!(directory)
+    File.chmod!(directory, 0o777)
+
+    :ok =
+      :erl_tar.create(
+        to_charlist(windows),
+        [{~c"bin/lmx", to_charlist(file)}, {~c"lib/include", to_charlist(directory)}],
+        [:compressed]
+      )
+
+    assert {:error, :unsafe_archive} = Archive.validate(windows)
+    assert :ok = Archive.validate(windows, writable_by_others: true)
+
+    setuid = Path.join(tmp, "setuid.tar.gz")
+    File.chmod!(file, 0o4755)
+    :ok = :erl_tar.create(to_charlist(setuid), [{~c"bin/lmx", to_charlist(file)}], [:compressed])
+    assert {:error, :unsafe_archive} = Archive.validate(setuid)
+    assert {:error, :unsafe_archive} = Archive.validate(setuid, writable_by_others: true)
+  end
+
   @tag :tmp_dir
   @tag :unix
   test "restart activation leaves the running release intact and switches the pointer", %{

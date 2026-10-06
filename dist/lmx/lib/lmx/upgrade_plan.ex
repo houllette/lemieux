@@ -252,7 +252,15 @@ defmodule Lmx.UpgradePlan do
     expected = for [sha, ^name] <- entries, do: sha
     digest = :crypto.hash(:sha256, File.read!(archive)) |> Base.encode16(case: :lower)
     require!(expected == [digest], "previous archive checksum mismatch or duplicate")
-    require!(Archive.validate(archive) == :ok, "unsafe previous release archive")
+
+    # The Windows archive carries the 0666 and 0777 modes Windows reports,
+    # which nothing installs (`Lmx.Update.Archive`); the archive's name is
+    # how the release's own tooling tells the targets apart.
+    require!(
+      Archive.validate(archive, writable_by_others: name == "lmx_windows.tar.gz") == :ok,
+      "unsafe previous release archive"
+    )
+
     File.mkdir_p!(destination)
 
     require!(
