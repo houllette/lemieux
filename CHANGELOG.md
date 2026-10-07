@@ -107,8 +107,8 @@ API.
 - **A long task keeps going.** A model that ends its turn while the plan it
   wrote with `todo` during the prompt still has open tasks is sent back to
   them with a message listing what is left, at most five times a prompt; an
-  answer that calls no tool is taken as its decision to stop (blocked, or
-  needing something only you can give). An answer cut off at the output-token
+  answer that calls no tool is taken as its decision to stop (you asked it to
+  stop there, or it is blocked or needs something only you can give). An answer cut off at the output-token
   limit is picked up again, at most three times. A plan left from an earlier prompt does
   not count, and asides such as a reflection are never sent back. It runs
   before the check after edits, so the check runs once the plan is finished,

@@ -436,8 +436,8 @@ goes back with that undo too; `/redo` takes the undo back.
 A model that ends its turn while the plan it wrote with `todo` during this
 prompt still has open tasks is sent back to them, with a message listing what
 is left, at most five times per prompt. It can still stop: an answer that
-calls no tool is taken as its decision (it is blocked, or needs something only
-you can give) and ends the prompt. An answer cut off at the output-token limit
+calls no tool is taken as its decision (you asked it to stop there, or it is
+blocked or needs something only you can give) and ends the prompt. An answer cut off at the output-token limit
 is picked up again, at most three times; a second cut-off with nothing done in
 between ends the prompt, and `lmx` says so. A plan left from an earlier prompt
 does not count, and neither rule touches a reflection or another aside.

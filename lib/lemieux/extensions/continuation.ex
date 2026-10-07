@@ -36,12 +36,19 @@ defmodule Lemieux.Extensions.Continuation do
     * the model called a tool since the last time it was sent back.
 
   The last rule is the model's way to say no. The message tells it that a
-  model which is blocked, or needs something only the person can give,
-  should say so and stop without calling a tool, and that it will not be
-  sent back again; answering that way ends the prompt. Arguing with a stop
-  the model has reasons for would spend the allowance on nothing, and
-  `Lemieux.Extensions.Verify` stops after an answer without edits for the
-  same reason.
+  model the person asked to stop at this point, or one that is blocked or
+  needs something only the person can give, should say so and stop without
+  calling a tool, and that it will not be sent back again; answering that
+  way ends the prompt. Arguing with a stop the model has reasons for would
+  spend the allowance on nothing, and `Lemieux.Extensions.Verify` stops
+  after an answer without edits for the same reason.
+
+  The person's own "stop here" is named first, as its own sentence, because
+  the hook cannot see it: the rules read the plan, not the prompt. Without
+  it, live runs on `openai:gpt-5-mini` and `zai_coding_plan:glm-5.3`
+  (2026-10-07) told "do only the first task, then stop" did the first task,
+  stopped as asked, and were carried through the rest of the plan by a
+  message that said only to go on.
 
   Completion is read from the plan, never from prose. A sentence like "all
   done" proves nothing and "next I'll…" is the very failure this exists for;
@@ -262,11 +269,13 @@ defmodule Lemieux.Extensions.Continuation do
     """
     #{@marker} You ended your turn, but your plan still has open tasks:
     #{Enum.join(lines, "\n")}
-    Ending your turn hands control back to the person, so go on with the next task now and \
-    keep the plan current as you work: mark a task completed when it is done, and take off \
-    the plan anything no longer needed. If you are blocked, or need something only the person \
-    can give, say so in a sentence or two and end your turn without calling a tool; you will \
-    not be sent back again. (Continuation #{attempt} of #{allowance}.)\
+    If the person asked you to stop at this point, say so in a sentence and end your turn \
+    without calling a tool. Otherwise ending your turn hands control back to the person, so go \
+    on with the next task now and keep the plan current as you work: mark a task completed when \
+    it is done, and take off the plan anything no longer needed. If you are blocked, or need \
+    something only the person can give, say so in a sentence or two and end your turn without \
+    calling a tool. Either way you will not be sent back again. \
+    (Continuation #{attempt} of #{allowance}.)\
     """
   end
 

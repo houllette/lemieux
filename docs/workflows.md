@@ -74,8 +74,10 @@ At an ordinary stop it sends the model back, with a message starting
 `pending` or `in_progress` **and** the model wrote that plan during this
 prompt (a plan left from an earlier task is not what a later question is
 about). The model can decline: an answer that calls no tool is taken as its
-decision — blocked, or needing something only the person can give — and ends
-the prompt. Per prompt it sends the model back at most `:max_continuations`
+decision — the person asked it to stop there, or it is blocked or needs
+something only the person can give — and ends the prompt. The message names
+the person's own "stop here" first, since the hook reads the plan and cannot
+see the prompt. Per prompt it sends the model back at most `:max_continuations`
 times (default 5).
 
 A response cut off at the output-token limit (`:length`) with no tool call is

@@ -117,6 +117,12 @@ defmodule Lemieux.Extensions.ContinuationTest do
       assert message =~ "t3 [pending] step 3"
       refute message =~ "step 1"
       assert message =~ "(Continuation 1 of 5.)"
+
+      # Named first, because live models told "do only the first task, then
+      # stop" were carried past it by a message that did not name the case.
+      assert message =~
+               "If the person asked you to stop at this point, say so in a sentence and " <>
+                 "end your turn without calling a tool."
     end
 
     test "a model that answers without working is believed, and not sent back again", ctx do
