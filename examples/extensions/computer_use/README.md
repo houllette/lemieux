@@ -175,9 +175,9 @@ The SDK's current Pristine/Sinter dependency constraints require `jsv 0.21.2`
 and `texture 1.2.1` in this extension's isolated lockfile. The Lemieux root
 lockfile remains independent.
 
-### Jev compaction
+### System One compaction
 
-[Jev compaction](../../../dist/lmx/extensions/jev_compaction/README.md), which
+[System One compaction](../../../dist/lmx/extensions/systemone_compaction/README.md), which
 ships inside the `lmx` release, can shorten old read results before native
 compaction. It does not require the browser extension.
 

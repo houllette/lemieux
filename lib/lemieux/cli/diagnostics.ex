@@ -2,10 +2,10 @@ defmodule Lemieux.CLI.Diagnostics do
   @moduledoc false
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.Extensions
-  alias Lemieux.CLI.JevCompaction
   alias Lemieux.CLI.Logs
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.ProviderMux
+  alias Lemieux.CLI.SystemOneCompaction
   alias Lemieux.Extensions.Permissions
   alias Lemieux.Extensions.Workspace.Discovery
   alias Lemieux.ModelSpec
@@ -19,7 +19,7 @@ defmodule Lemieux.CLI.Diagnostics do
       "model_source" => Atom.to_string(options.host.model_source),
       "route" => route(options, prepared),
       "credentials" => credentials(options, prepared),
-      "jev_compaction" => jev_compaction(options),
+      "systemone_compaction" => systemone_compaction(options),
       "configuration" => configuration(options),
       "tui_module_available" => Code.ensure_loaded?(ExRatatui),
       "mcp" => mcp(options, prepared),
@@ -122,16 +122,16 @@ defmodule Lemieux.CLI.Diagnostics do
   # described options, which the explanation deliberately does not copy
   # (`Lemieux.Harness.Explanation`). In `auto` mode a `nil` provider is the
   # step staying off.
-  defp jev_compaction(options) do
-    disabled? = "jev_compaction" in Config.get(options.config, "disabled_extensions", [])
-    settings = Config.get(options.config, "jev_compaction", %{})
+  defp systemone_compaction(options) do
+    disabled? = "systemone_compaction" in Config.get(options.config, "disabled_extensions", [])
+    settings = Config.get(options.config, "systemone_compaction", %{})
     mode = if disabled?, do: "off", else: Map.get(settings, "mode", "auto")
 
     %{"mode" => mode, "provider" => if(mode != "off", do: selected_provider(options))}
   end
 
   defp selected_provider(options) do
-    case JevCompaction.provider(options.config, options.ixway) do
+    case SystemOneCompaction.provider(options.config, options.ixway) do
       {:ok, %{name: name}} -> name
       {:unavailable, _reason} -> nil
     end

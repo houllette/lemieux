@@ -613,8 +613,8 @@ required at all: update the ruleset in the same change.
 - From `ci.yml`: `Lint & test`, `Elixir floor (1.19 / OTP 28)`, `Dialyzer`,
   `Hex package (pinned)`, `Hex package (floor Elixir 1.19.0 / OTP 27.0)`,
   `Example builder`, `Example capture`, `Example computer_use`,
-  `Example jev_compaction`, `Example research`, `Example review`,
-  `Example security`, `Example verifier`, `Standalone release host`,
+  `Example research`, `Example review`, `Example security`,
+  `Example systemone_compaction`, `Example verifier`, `Standalone release host`,
   `Docs links`, `Public wording` and `Lint workflows`.
 - From `public-readiness.yml`: `Tutorial and release helpers`,
   `Commit identities` and `Secret scan (full history)`.

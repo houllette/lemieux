@@ -117,7 +117,7 @@ defmodule Lemieux.TUI.ViewTest do
     assert report =~ "Compacted · summarised the earlier conversation (14 entries)"
     assert report =~ "last request 13.0k tok"
     refute report =~ "next request"
-    refute report =~ "Jev"
+    refute report =~ "System One"
     assert status_row(compacted) =~ "context ?"
 
     assert {:noreply, settled} =
@@ -129,11 +129,11 @@ defmodule Lemieux.TUI.ViewTest do
     assert [{:you, "hey"}, {:compact_space, ^tick}, {:compact_result, _} | _] = next.lines
   end
 
-  test "the compact result names actual Jev projection evidence when enabled" do
+  test "the compact result names actual System One projection evidence when enabled" do
     harness = %Lemieux.Harness{
       applied: [
         %{
-          "module" => "LemieuxJevCompaction",
+          "module" => "LemieuxSystemOneCompaction",
           "options" => %{"enabled" => true, "mode" => "apply"}
         }
       ]
@@ -144,7 +144,9 @@ defmodule Lemieux.TUI.ViewTest do
     started = command(state, "/compact")
 
     pending = info(started, {:compacted, %{entries: Enum.to_list(1..14)}})
-    assert Enum.at(pending.lines, 1) |> elem(1) =~ "Jev active, no projection recorded yet"
+
+    assert Enum.at(pending.lines, 1) |> elem(1) =~
+             "System One compaction active, no projection recorded yet"
 
     state = command(state, "/compact")
 
@@ -155,7 +157,7 @@ defmodule Lemieux.TUI.ViewTest do
          %{
            type: :extension_state,
            payload: %{
-             "namespace" => "jev_compaction",
+             "namespace" => "systemone_compaction",
              "value" => %{"last_outcome" => "applied", "last_saved_tokens_estimate" => 1_250}
            }
          }}
@@ -164,7 +166,7 @@ defmodule Lemieux.TUI.ViewTest do
     compacted = info(state, {:compacted, %{entries: Enum.to_list(1..14)}})
 
     assert Enum.at(compacted.lines, 1) |> elem(1) =~
-             "last Jev projection kept ≈1.3k tok out of context"
+             "last System One projection kept ≈1.3k tok out of context"
   end
 
   describe "keys a host rebinds" do

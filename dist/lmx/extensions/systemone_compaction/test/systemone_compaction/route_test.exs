@@ -1,9 +1,9 @@
-defmodule LemieuxJevCompaction.RouteTest do
+defmodule LemieuxSystemOneCompaction.RouteTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.{Entry, Request, Session}
   alias Lemieux.Store.JSONL
-  alias LemieuxJevCompaction, as: JevCompaction
+  alias LemieuxSystemOneCompaction, as: SystemOneCompaction
 
   @moduletag :tmp_dir
 
@@ -22,16 +22,13 @@ defmodule LemieuxJevCompaction.RouteTest do
     {request, original} = request()
 
     opts = [
-      route: :ixway,
-      ixway_endpoint: endpoint,
-      ixway_api_key: "private-gateway-test-key",
-      model: "jev-local-1",
+      provider: ixway(endpoint),
       preserve_recent_entries: 0,
       input_per_million: 0.04,
       output_per_million: 0.0
     ]
 
-    assert {:ok, projected} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert {:ok, projected} = SystemOneCompaction.prepare(request, %{session: session}, opts)
     assert List.last(projected.entries).payload["output"] != original
     assert List.last(projected.entries).payload["output"] =~ "rerun the tool"
     assert_receive {:system_one_wire, wire}, 2_000
@@ -41,7 +38,7 @@ defmodule LemieuxJevCompaction.RouteTest do
     refute wire =~ original
 
     assert {:ok, %{value: %{"last_outcome" => "applied"}}} =
-             Session.document(session, "jev_compaction")
+             Session.document(session, "systemone_compaction")
 
     assert_in_delta Session.budget(session).spent_usd, 30 * 0.04 / 1_000_000, 1.0e-12
     Task.await(server)
@@ -77,7 +74,7 @@ defmodule LemieuxJevCompaction.RouteTest do
       output_per_million: 0.0
     ]
 
-    assert {:ok, projected} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert {:ok, projected} = SystemOneCompaction.prepare(request, %{session: session}, opts)
     assert List.last(projected.entries).payload["output"] =~ "rerun the tool"
     assert_receive {:system_one_wire, wire}, 2_000
     assert wire =~ "POST /decisions/v1/systemone HTTP/1.1"
@@ -88,7 +85,7 @@ defmodule LemieuxJevCompaction.RouteTest do
     refute wire =~ original
 
     assert {:ok, %{value: %{"last_outcome" => "applied", "last_usage" => usage}}} =
-             Session.document(session, "jev_compaction")
+             Session.document(session, "systemone_compaction")
 
     assert usage["model"] == "decision-1"
     assert_in_delta Session.budget(session).spent_usd, 30 * 0.05 / 1_000_000, 1.0e-12
@@ -112,15 +109,15 @@ defmodule LemieuxJevCompaction.RouteTest do
       preserve_recent_entries: 0
     ]
 
-    assert {:ok, ^request} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert {:ok, ^request} = SystemOneCompaction.prepare(request, %{session: session}, opts)
     assert_receive {:system_one_wire, wire}, 2_000
     assert String.downcase(wire) =~ "authorization: bearer private-vendor-test-key"
 
     assert {:ok,
             %{value: %{"last_outcome" => "failed", "last_usage" => %{"model" => "decision-1"}}}} =
-             Session.document(session, "jev_compaction")
+             Session.document(session, "systemone_compaction")
 
-    refute inspect(Session.document(session, "jev_compaction")) =~ "private-vendor-test-key"
+    refute inspect(Session.document(session, "systemone_compaction")) =~ "private-vendor-test-key"
     Task.await(server)
   end
 
@@ -144,7 +141,7 @@ defmodule LemieuxJevCompaction.RouteTest do
       preserve_recent_entries: 0
     ]
 
-    assert {:ok, ^request} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert {:ok, ^request} = SystemOneCompaction.prepare(request, %{session: session}, opts)
     assert_receive {:system_one_wire, wire}, 2_000
     assert String.downcase(wire) =~ "x-api-key: private-vendor-test-key"
     assert String.downcase(wire) =~ "x-account: acct-1"
@@ -152,26 +149,24 @@ defmodule LemieuxJevCompaction.RouteTest do
     Task.await(server)
   end
 
-  test "an Ixway rejection leaves the request intact and does not try hosted Jev", %{tmp_dir: dir} do
+  test "an Ixway rejection leaves the request intact and does not try another provider", %{
+    tmp_dir: dir
+  } do
     {endpoint, server} = endpoint(401, ~s({"error":"unauthorized"}))
     session = session(dir)
     {request, _original} = request()
 
     opts = [
-      route: :ixway,
-      ixway_endpoint: endpoint,
-      ixway_api_key: "private-gateway-test-key",
-      api_key: "hosted-key-that-must-not-be-used",
-      model: "jev-local-1",
+      provider: ixway(endpoint),
       preserve_recent_entries: 0
     ]
 
-    assert {:ok, ^request} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert {:ok, ^request} = SystemOneCompaction.prepare(request, %{session: session}, opts)
     assert_receive {:system_one_wire, wire}, 2_000
     assert wire =~ "POST /v1/systemone HTTP/1.1"
 
     assert {:ok, %{value: %{"last_outcome" => "failed", "attempts" => 1}}} =
-             Session.document(session, "jev_compaction")
+             Session.document(session, "systemone_compaction")
 
     assert Session.budget(session).spent_usd == nil
     Task.await(server)
@@ -190,18 +185,15 @@ defmodule LemieuxJevCompaction.RouteTest do
     {request, _original} = request()
 
     assert {:ok, ^request} =
-             JevCompaction.prepare(request, %{session: session},
-               route: :ixway,
-               ixway_endpoint: endpoint,
-               ixway_api_key: "private-gateway-test-key",
-               model: "jev-local-1",
+             SystemOneCompaction.prepare(request, %{session: session},
+               provider: ixway(endpoint),
                preserve_recent_entries: 0
              )
 
     assert_receive {:system_one_wire, _wire}, 2_000
 
     assert {:ok, %{value: %{"last_outcome" => "failed"}}} =
-             Session.document(session, "jev_compaction")
+             Session.document(session, "systemone_compaction")
 
     Task.await(server)
   end
@@ -213,11 +205,8 @@ defmodule LemieuxJevCompaction.RouteTest do
 
     task =
       Task.async(fn ->
-        JevCompaction.prepare(request, %{session: session},
-          route: :ixway,
-          ixway_endpoint: endpoint,
-          ixway_api_key: "private-gateway-test-key",
-          model: "jev-local-1",
+        SystemOneCompaction.prepare(request, %{session: session},
+          provider: ixway(endpoint),
           preserve_recent_entries: 0,
           timeout_ms: 50
         )
@@ -229,11 +218,22 @@ defmodule LemieuxJevCompaction.RouteTest do
     Task.await(server)
 
     assert {:ok, %{value: %{"last_outcome" => "failed", "attempts" => 1}}} =
-             Session.document(session, "jev_compaction")
+             Session.document(session, "systemone_compaction")
   end
 
+  defp ixway(endpoint),
+    do: %{
+      name: "ixway",
+      type: :endpoint,
+      base_url: endpoint,
+      api_key: "private-gateway-test-key",
+      api_key_header: nil,
+      headers: %{},
+      model: "jev-local-1"
+    }
+
   defp session(dir) do
-    runtime = :"jev_route_#{System.unique_integer([:positive])}"
+    runtime = :"systemone_route_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
 
     {:ok, session} =

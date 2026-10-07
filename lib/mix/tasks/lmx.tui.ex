@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Lmx.Tui do
 
   This is a development convenience for exercising current source without
   first assembling an OTP release. Run it from `dist/lmx` to include the bundled
-  Jev compaction extension. In that host it still uses the repository root as
+  System One compaction extension. In that host it still uses the repository root as
   the workspace. Installed releases open the same TUI with bare `lmx`.
 
   Arguments are the terminal UI's own:

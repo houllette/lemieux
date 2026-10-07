@@ -1,4 +1,4 @@
-defmodule LemieuxJevCompaction.LocalServerTest do
+defmodule LemieuxSystemOneCompaction.LocalServerTest do
   # Scores a read through a System One server you started yourself, over the
   # real wire: the check that a scorer on your own machine is a provider like
   # any other. It runs only when `LOCAL_SYSTEM_ONE_URL` names the server
@@ -9,11 +9,11 @@ defmodule LemieuxJevCompaction.LocalServerTest do
   #
   #     ollama pull nimble            # Ollama 0.35+ serves /v1/systemone
   #     LOCAL_SYSTEM_ONE_URL=http://127.0.0.1:11434 LOCAL_SYSTEM_ONE_MODEL=nimble \
-  #       mix test test/jev_compaction/local_server_test.exs
+  #       mix test test/systemone_compaction/local_server_test.exs
   #
   #     npx laya-system-one --host 127.0.0.1 --port 8080
   #     LOCAL_SYSTEM_ONE_URL=http://127.0.0.1:8080 LOCAL_SYSTEM_ONE_MODEL=laya-multilingual \
-  #       mix test test/jev_compaction/local_server_test.exs
+  #       mix test test/systemone_compaction/local_server_test.exs
   #
   # A model's verdict on the fixture is its own, so the test asserts the
   # shape of the evaluation — one attempt, a probability in [0, 1], the usage
@@ -23,7 +23,7 @@ defmodule LemieuxJevCompaction.LocalServerTest do
 
   alias Lemieux.{Entry, Request, Session}
   alias Lemieux.Store.JSONL
-  alias LemieuxJevCompaction, as: JevCompaction
+  alias LemieuxSystemOneCompaction, as: SystemOneCompaction
 
   @moduletag :local_system_one
   @moduletag :tmp_dir
@@ -32,7 +32,7 @@ defmodule LemieuxJevCompaction.LocalServerTest do
     url = System.fetch_env!("LOCAL_SYSTEM_ONE_URL")
     model = System.fetch_env!("LOCAL_SYSTEM_ONE_MODEL")
 
-    runtime = :"jev_local_#{System.unique_integer([:positive])}"
+    runtime = :"systemone_local_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
 
     {:ok, session} =
@@ -72,8 +72,8 @@ defmodule LemieuxJevCompaction.LocalServerTest do
       timeout_ms: 120_000
     ]
 
-    assert {:ok, projected} = JevCompaction.prepare(request, %{session: session}, opts)
-    assert {:ok, %{value: document}} = Session.document(session, "jev_compaction")
+    assert {:ok, projected} = SystemOneCompaction.prepare(request, %{session: session}, opts)
+    assert {:ok, %{value: document}} = Session.document(session, "systemone_compaction")
 
     assert document["attempts"] == 1
     assert document["last_outcome"] in ["applied", "insufficient"], inspect(document)

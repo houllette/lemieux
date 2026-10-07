@@ -61,8 +61,9 @@ One thing to know about that switch:
 | --- | --- | --- | --- |
 | [`extensions/computer_use`](extensions/computer_use/README.md) | Experimental headless **browser** use (not desktop control) | `mix check` | Chrome and ChromeDriver, `JEV_API_KEY` (TypeSafe, billed), and a text model key |
 
-Jev compaction, which used to live here, is part of the `lmx` release:
-[`dist/lmx/extensions/jev_compaction`](../dist/lmx/extensions/jev_compaction/README.md).
+System One compaction (formerly Jev compaction), which used to live here, is
+part of the `lmx` release:
+[`dist/lmx/extensions/systemone_compaction`](../dist/lmx/extensions/systemone_compaction/README.md).
 
 ## Research drivers (maintainers)
 

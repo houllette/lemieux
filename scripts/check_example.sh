@@ -4,7 +4,7 @@
 #     scripts/check_example.sh NAME...        (e.g. verifier review security)
 #
 # NAME is a project under examples/extensions/, or under dist/lmx/extensions/
-# for an extension the lmx binary bundles (jev_compaction); examples/ is
+# for an extension the lmx binary bundles (systemone_compaction); examples/ is
 # searched first. Each is its own Mix project, and by default several resolve
 # Lemieux from a pinned Git revision, so they are pointed at this checkout
 # instead. Without that, an example could keep passing against an old
@@ -69,7 +69,7 @@ for name in "$@"; do
 
     case $name in
       # These two define their own `check` alias, which is the contract.
-      computer_use | jev_compaction)
+      computer_use | systemone_compaction)
         mix check
         ;;
       # The tutorial also proves the documented bundle build still works,

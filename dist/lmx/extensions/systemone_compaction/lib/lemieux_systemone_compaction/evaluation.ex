@@ -1,8 +1,8 @@
-defmodule LemieuxJevCompaction.Evaluation do
+defmodule LemieuxSystemOneCompaction.Evaluation do
   @moduledoc """
-  Offline threshold sweeps and explicit route-cost arithmetic for Jev trials.
+  Offline threshold sweeps and explicit route-cost arithmetic for scorer trials.
 
-  A sweep reuses bounded score observations; it never asks Jev again. A
+  A sweep reuses bounded score observations; it never asks the scorer again. A
   `must_keep` label is an evaluator's proxy for risky elision, not a substitute
   for a paired model continuation and mechanical task grader. Price comparisons
   account for cache reads, cache writes, SDK calls and every supplied future
@@ -63,7 +63,7 @@ defmodule LemieuxJevCompaction.Evaluation do
 
   def price(_usage, _tiers), do: {:error, :invalid_price_input}
 
-  @doc "Compares provider requests and all Jev calls over paired trial horizons."
+  @doc "Compares provider requests and all scorer calls over paired trial horizons."
   @spec compare(
           baseline :: [data()],
           projected :: [data()],

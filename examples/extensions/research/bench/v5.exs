@@ -12,7 +12,10 @@ alias ResearchBench.LiveSetup
 
 config = LiveSetup.config()
 brave_key = System.get_env("BRAVE_SEARCH_API_KEY") || Config.web_search_api_key(config, "brave")
-jev_key = System.get_env("JEV_API_KEY") || Config.get(config, "jev_compaction", %{})["api_key"]
+
+jev_key =
+  System.get_env("JEV_API_KEY") ||
+    get_in(Config.get(config, "systemone_compaction_providers", %{}), ["typesafe", "api_key"])
 
 for {name, value} <- [{"Brave", brave_key}, {"Jev", jev_key}] do
   unless is_binary(value) and value != "", do: raise("v5 benchmark needs a #{name} key")

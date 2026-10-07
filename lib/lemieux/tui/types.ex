@@ -304,7 +304,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             mcp_flow: map() | nil,
             deferred_steer: {:pending | :sent | :not_sent, String.t()} | nil,
             sent_steers: [{shown :: String.t(), sent :: String.t()}],
-            jev:
+            systemone:
               %{mode: String.t(), saved: non_neg_integer() | nil, outcome: String.t() | nil} | nil
           }
   end

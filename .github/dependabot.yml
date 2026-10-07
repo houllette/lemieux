@@ -21,7 +21,7 @@ updates:
   # The installed `lmx` binary (`dist/lmx`) is a separate Mix project with its
   # own lock, but it gets no entry here. Dependabot evaluates a directory's
   # mix.exs in an isolated copy, and dist/lmx reads the repository's VERSION
-  # and depends on the library and the bundled Jev extension by path, none of
+  # and depends on the library and the bundled compaction extension by path, none of
   # which that copy has, so every update job fails. It is kept current
   # another way: CI audits its lock, and `mix deps.drift` fails when a root
   # bump is not carried over.

@@ -544,12 +544,12 @@ defmodule Lemieux.MixProject do
         # `precommit` has already run `test`.
         "cmd mix test.distributed",
         "cmd scripts/check_package.sh",
-        "cmd scripts/check_example.sh builder capture computer_use hello jev_compaction research review security verifier",
+        "cmd scripts/check_example.sh builder capture computer_use hello research review security systemone_compaction verifier",
         "cmd python3 -m unittest discover -s test -p 'test_*.py'"
       ],
       # The release host is a separate Mix project with its own lock, so a
       # bump here never reaches the binary on its own. Drift is refused unless
-      # reviewed: the bundled Jev compaction extension's System One SDK pulls
+      # reviewed: the bundled System One compaction extension's SDK pulls
       # in sinter 0.3.2, which pins jsv ~> 0.21.2 (and with it texture 1.x),
       # and pristine 0.4.0, which pins finch ~> 0.23.0. The library resolves
       # jsv 0.25.0 and finch 0.24.0. Drop each exception when its upstream

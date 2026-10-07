@@ -92,7 +92,7 @@ observation carries the plain answer plus `"citations"`, `"fetched"` and
 
 In `research_mode: :simple`, `Pipeline.run/2` and the agent automatically enable Jev-guided discovery when
 `JEV_API_KEY` is nonempty or a key is saved in the personal config's
-`jev_compaction.api_key`. Environment credentials take precedence over saved
+`systemone_compaction_providers.typesafe.api_key`. Environment credentials take precedence over saved
 credentials. `LMX_CONFIG=none` disables personal lookup; another value selects
 that config path. Config files are validated, never created or modified here.
 Without a key, the pipeline opens the deterministic search shortlist.
@@ -153,7 +153,7 @@ LMX_CONFIG=none MIX_ENV=test mise exec -- mix run bench/guided_research.exs \
 This spends one Brave call, at most three Jev calls, three guarded HTTP fetches
 and one synthesis request. It creates a temporary workspace and session store;
 it does not alter personal settings. The source host omits the unrelated
-optional Jev compaction setting supplied by `dist/lmx`.
+optional System One compaction setting supplied by `dist/lmx`.
 
 ## Offline tests and bench
 

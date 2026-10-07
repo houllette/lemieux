@@ -93,7 +93,7 @@ defmodule Lmx.Notices do
   # Licenses whose text names no particular copyright holder: a package that
   # ships no license file is covered by the one canonical text below.
   @holderless ["Apache-2.0"]
-  @first_party [:lmx, :lemieux, :lemieux_jev_compaction]
+  @first_party [:lmx, :lemieux, :lemieux_systemone_compaction]
   @elixir_apps [:eex, :elixir, :ex_unit, :iex, :logger, :mix]
   @license_file ~r/^(licen[cs]e|notice|copying|copyright)/i
 

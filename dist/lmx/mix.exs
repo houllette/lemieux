@@ -32,8 +32,8 @@ defmodule Lmx.MixProject do
     [
       {:lemieux, path: "../.."},
       # Bundled with lmx and disclosed in its README: it sends conversation
-      # excerpts to TypeSafe only when a Jev key is configured.
-      {:lemieux_jev_compaction, path: "extensions/jev_compaction"},
+      # excerpts to a System One provider only once one is configured.
+      {:lemieux_systemone_compaction, path: "extensions/systemone_compaction"},
       {:ex_ratatui, "~> 0.16"},
       {:castle, "~> 1.0"}
     ]

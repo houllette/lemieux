@@ -45,8 +45,8 @@ Every key `~/.lmx/config.json` accepts, and what applies when it is absent.
 | `keep_recent_tokens` | none | About how many tokens of recent conversation a compaction keeps ([Choosing a cut](compaction.md#choosing-a-cut)) |
 | `summary_model` | the session's model | A different model for compaction summaries |
 | `compaction_price_tiers` | none | Price bands per model, so compaction happens before a price cliff ([A price cliff](compaction.md#a-price-cliff)) |
-| `jev_compaction` | `{"mode": "auto"}` | A System One scorer — TypeSafe's Jev model unless `provider` selects another — shortens old file reads; on only when the selected provider is complete ([Jev compaction](#jev-compaction)) |
-| `jev_compaction_providers` | none | System One providers besides TypeSafe and Ixway, by name: `{"local": {"base_url": "http://127.0.0.1:8080", "model": "…"}}` ([Jev compaction](#jev-compaction)) |
+| `systemone_compaction` | `{"mode": "auto"}` | A System One model shortens old file reads before a request; `provider` chooses which, and it is on only when that provider is complete ([System One compaction](#system-one-compaction)) |
+| `systemone_compaction_providers` | none | What each System One provider needs, by name: `{"local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash"}}`, or `typesafe` and `ixway` settings ([System One compaction](#system-one-compaction)) |
 
 Embedding hosts can configure preflight, price-aware and advisory compaction
 through the session API. See [Compaction and price-aware
@@ -150,11 +150,12 @@ variable set to an empty value switches the saved key off. An `LMX_*`
 variable that is empty or blank is different: it counts as unset, so the
 file's value applies, except that the switches `LMX_WEB_FETCH`,
 `LMX_PROJECT_MCP` and `LMX_DELEGATE` read an empty value as off. `IXWAY_API_KEY`
-overrides `ixway.api_key`, `JEV_API_KEY` overrides `jev_compaction.api_key`,
+overrides `ixway.api_key`, `JEV_API_KEY` overrides
+`systemone_compaction_providers.typesafe.api_key`,
 the variable a System One provider's `api_key_env` names overrides that
 provider's `api_key`, and `BRAVE_SEARCH_API_KEY` overrides
-`web_search_providers.brave.api_key`. Which System One provider Jev
-compaction uses is chosen in the file alone (`jev_compaction.provider`);
+`web_search_providers.brave.api_key`. Which System One provider compaction
+uses is chosen in the file alone (`systemone_compaction.provider`);
 there is no flag or variable for it.
 Keys stay in host state: they are never written to transcripts or request
 snapshots.
@@ -166,8 +167,10 @@ checkout's own `.env` ([Environment variables](cli.md#environment-variables)).
 **Mistakes.** Malformed JSON, a missing file you named, or unsafe permissions
 stop startup. An unknown key is named at startup, with a suggestion, and
 ignored, except a likely misspelling of a routing or credential field
-(`model`, `providers`, `base_url`, `ixway`) and the retired `api_keys` and
-`preferred_models` maps, which stop startup. Inside a section such as
+(`model`, `providers`, `base_url`, `ixway`, `systemone_compaction`,
+`systemone_compaction_providers`) and the retired `api_keys`,
+`preferred_models`, `jev_compaction` and `jev_compaction_providers`, which
+stop startup with a sentence saying where their contents moved. Inside a section such as
 `providers`, `ixway` or `permissions`, any unknown key stops startup. So does
 a value a field cannot take, and the message names the field down to its key
 and what it takes: `Invalid lmx config field: ixway.enabled. It must be true
@@ -245,7 +248,7 @@ library's four tools (`read`, `write`, `edit`, `bash`):
   repository configures (a hook, a filter, `core.fsmonitor`) runs.
   [Taking changes back](everyday.md#taking-changes-back) says what `/undo`
   can and cannot put back.
-- [Jev compaction](#jev-compaction), when its provider is set up.
+- [System One compaction](#system-one-compaction), when its provider is set up.
 
 Off by default: [permissions](#permissions) (every tool call runs without
 asking, which the startup banner calls "full auto"), [the
@@ -254,7 +257,7 @@ sandbox](#the-sandbox), and hooks.
 `"disabled_extensions"` leaves shipped extensions out by name: `planning`,
 `verify`, `search`, `apply_patch`, `checkpoints`, `environment_context`,
 `mcp_discovery`, `mcp`, `interactive`, `web`, `elixir`, `workspace`,
-`delegation`, `a2a` and `jev_compaction`. Your own extensions and an
+`delegation`, `a2a` and `systemone_compaction`. Your own extensions and an
 embedding host's policy are not affected.
 
 ### Running with no configuration
@@ -278,48 +281,52 @@ has a state directory again, and with it the remembered model and the
 choice of a model from your keys or a local Ollama; only the config file is
 left unread.
 
-### Jev compaction
+### System One compaction
 
-`lmx` bundles an extension that asks a System One scorer — TypeSafe's Jev
-model, unless you select another provider — whether old, long file reads in
-the conversation are still needed, and shortens the ones it marks as not
-needed in the next request to the model. It sends nothing until the selected
-provider is complete. `jev_compaction.provider` selects one, the way
-`"web_search"` selects a search backend; two are built in:
+`lmx` bundles an extension that asks a System One model whether old, long
+file reads in the conversation are still needed, and shortens the ones it
+marks as not needed in the next request to the model. It sends nothing until
+the selected provider is complete.
 
-- **TypeSafe** (`"provider": "typesafe"`), the usual one: `JEV_API_KEY` in
-  the environment `lmx` runs in, or `jev_compaction.api_key` in
+`"systemone_compaction"` holds the choice and the budget (`mode`, `provider`,
+`max_evaluations`, `max_cost_usd`, `reservation_per_call_usd`), and
+`"systemone_compaction_providers"` holds what each provider needs, the way
+`"web_search"` and `"web_search_providers"` divide search. Two providers are
+built in:
+
+- **`typesafe`**, TypeSafe's hosted Jev: `JEV_API_KEY` in the environment
+  `lmx` runs in, or `systemone_compaction_providers.typesafe.api_key` in
   `~/.lmx/config.json`.
-- **Ixway** (`"provider": "ixway"`): an Ixway endpoint
-  (`jev_compaction.endpoint`, or the one `lmx` is routed through), a pinned
-  `jev_compaction.model` and an Ixway key (`IXWAY_API_KEY` or
-  `ixway.api_key`). The same request then goes to that endpoint, never to
-  TypeSafe.
+- **`ixway`**, an Ixway gateway: an endpoint (the entry's `base_url`, or the
+  Ixway route `lmx` uses), the entry's `model` and the Ixway key
+  (`IXWAY_API_KEY` or `ixway.api_key`). The same request then goes to that
+  endpoint, never to TypeSafe.
 
-Any other name is a provider you declare in `jev_compaction_providers`: a
-service that implements `POST /v1/systemone`, with a `base_url`, a `model`,
-and if it wants one a key (`api_key`, or `api_key_env` naming a variable in
-your shell, with `api_key_header` when the service wants it in a header
-rather than as a bearer token), plus `headers` and a tariff. A scorer on your
-own machine needs only that:
+Any other name is a provider you declare: a service that implements
+`POST /v1/systemone`, with a `base_url`, a `model`, and if it wants one a key
+(`api_key`, or `api_key_env` naming a variable in your shell, with
+`api_key_header` when the service wants it in a header rather than as a
+bearer token), plus `headers` and a tariff. An open model served by Ollama on
+your own machine needs only that:
 
 ```json
 {
-  "jev_compaction": {"provider": "local"},
-  "jev_compaction_providers": {
-    "local": {"base_url": "http://127.0.0.1:8080", "model": "jev-local-1"}
+  "systemone_compaction": {"provider": "local"},
+  "systemone_compaction_providers": {
+    "local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash",
+              "input_per_million": 0.0, "output_per_million": 0.0}
   }
 }
 ```
 
 With the selected provider complete, the default `"mode": "auto"` switches
 the step on with no other setting. With no `provider`, `lmx` chooses between
-TypeSafe and Ixway as it always has: Ixway when its endpoint and a pinned
-model are set, TypeSafe otherwise; a declared provider is never chosen that
-way, and its entry sends nothing until `provider` names it. There is no
-fallback from one provider to another, and a provider without a declared
-tariff makes no evaluation under a dollar cap. [Declaring a
-provider](compaction.md#declaring-a-provider) lists an entry's keys. The
+the built-in two: Ixway when its endpoint and a model are set, TypeSafe when
+its key is; a declared provider is never chosen that way, and its entry
+sends nothing until `provider` names it. There is no fallback from one
+provider to another, and a provider without a declared tariff makes no
+evaluation under a dollar cap. [Declaring a
+provider](compaction.md#declaring-a-provider) lists each entry's keys. The
 installed `lmx` never reads a working directory's `.env`, so a repository
 you open cannot supply a key or an endpoint.
 
@@ -327,16 +334,15 @@ you open cannot supply a key or an endpoint.
 this holds: the request contains successful `read` results of at least 1,000
 characters that are older than its six most recent entries (and are not
 `AGENTS.md` or `SKILL.md`); there are at most 20 of them; the session has made
-fewer than three Jev evaluations; and the request is not a retry and has not
+fewer than three evaluations; and the request is not a retry and has not
 been evaluated before. Each evaluation is one HTTP request,
-`POST /v1/systemone` under the selected provider's URL
-(`https://api.typesafe.ai` for TypeSafe), with the provider's key as a
-bearer token if it has one, no retries, no redirects and a 15-second
-timeout.
+`POST /v1/systemone` under the selected provider's URL, with the provider's
+key as a bearer token (or in its `api_key_header`) if it has one, no
+retries, no redirects and a 15-second timeout.
 
 **What it sends**, in a body of at most 60 KB (a larger one is not sent):
 
-- the model name (`jev-1.13.0` unless configured) and a fixed instruction;
+- the model name and a fixed instruction;
 - the text of every user and assistant message in the request, each longer
   than 500 bytes cut to its first and last 250 characters, with the last
   three user messages repeated as the goal;
@@ -349,27 +355,35 @@ It does not send tool results, nothing else from the system prompt, and no
 credential other than its own key. The abridged messages and summary can
 still quote files or code that were pasted into the conversation.
 
-**What it changes.** A result Jev scores below 0.1 is cut, in the outgoing
-request only, to its first 160 characters and a note telling the model to run
-the tool again if it needs the contents. The transcript keeps the full output
-and records each evaluation (entry ids, digests, scores, estimated savings,
-usage and latency), never tool output or credentials. The provider bills
-each evaluation, and the known cost counts toward `--max-cost-usd`; a
-provider with no declared tariff makes no evaluation under a cap.
+**What it changes.** A result the scorer scores below 0.1 is cut, in the
+outgoing request only, to its first 160 characters and a note telling the
+model to run the tool again if it needs the contents. The transcript keeps
+the full output and records each evaluation (entry ids, digests, scores,
+estimated savings, usage and latency), never tool output or credentials. The
+provider bills each evaluation, and the known cost counts toward
+`--max-cost-usd`; a provider with no declared tariff makes no evaluation
+under a cap.
 
-**Turning it off.** `"jev_compaction": {"mode": "off"}`, or
-`"disabled_extensions": ["jev_compaction"]`, or no complete provider.
-`"mode": "shadow"`
-still sends the same data but never shortens anything. From a source
-checkout it is included only when you run from `dist/lmx`, a Mix project with
-its own dependencies:
+**Turning it off.** `"systemone_compaction": {"mode": "off"}`, or
+`"disabled_extensions": ["systemone_compaction"]`, or no complete provider.
+`"mode": "shadow"` still sends the same data but never shortens anything.
+From a source checkout it is included only when you run from `dist/lmx`, a
+Mix project with its own dependencies:
 `cd dist/lmx && mise exec -- mix deps.get && mise exec -- mix lmx`
 ([From a source checkout](cli.md#from-a-source-checkout)). That run reads no
-`.env`, so keep the key in your shell or in `~/.lmx/config.json`. At the
-repository root, a `jev_compaction` setting other than `"mode": "off"` stops
-the start with a message saying so. The
-[extension's README](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
-and [Compaction](compaction.md#optional-jev-projection-before-compaction)
+`.env`, so keep keys in your shell or in `~/.lmx/config.json`. At the
+repository root, a `systemone_compaction` setting other than `"mode": "off"`
+stops the start with a message saying so.
+
+**Moving from Jev compaction.** The step was called Jev compaction, under
+`"jev_compaction"`; that key now stops the start with a sentence naming the
+new ones. The TypeSafe key moves to
+`systemone_compaction_providers.typesafe.api_key`, the Ixway endpoint to
+`systemone_compaction_providers.ixway.base_url`, and a model or tariff to the
+selected provider's entry; [Compaction](compaction.md#moving-from-jev-compaction)
+has the whole table. The
+[extension's README](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
+and [Compaction](compaction.md#optional-system-one-projection-before-compaction)
 cover its remaining settings.
 
 ### Checks after edits

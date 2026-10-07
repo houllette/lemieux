@@ -1,12 +1,14 @@
-defmodule LemieuxJevCompaction.Trial do
+defmodule LemieuxSystemOneCompaction.Trial do
   @moduledoc """
   Runs paired, mechanically graded continuations from the same seeded reads.
 
   Each arm gets a fresh work directory and an independently replayed seed
   transcript. The seed uses Lemieux's real `read` tool but a scripted provider;
-  only follow-up turns use the supplied provider. Jev arms assemble this
-  extension through the normal harness. The report contains case IDs,
-  exact-answer verdicts, bounded Jev observations, provider usage, and whether
+  only follow-up turns use the supplied provider. The scoring arms (`shadow`
+  and `projection`) assemble this extension through the normal harness, with
+  TypeSafe's hosted provider unless the caller supplies an SDK client. The
+  report contains case IDs, exact-answer verdicts, bounded scorer
+  observations, provider usage, and whether
   the original read outputs remain intact in the transcript. It never serializes
   prompts, file contents, responses, clients or credentials.
 
@@ -22,10 +24,10 @@ defmodule LemieuxJevCompaction.Trial do
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store.JSONL
-  alias LemieuxJevCompaction, as: JevCompaction
-  alias LemieuxJevCompaction.Evaluation
+  alias LemieuxSystemOneCompaction, as: SystemOneCompaction
+  alias LemieuxSystemOneCompaction.Evaluation
 
-  @arms [:baseline, :shadow, :jev, :summary]
+  @arms [:baseline, :shadow, :projection, :summary]
   @max_runs 200
   @usage_keys ~w(input_tokens output_tokens cache_read_tokens cache_write_tokens input_includes_cached cost_usd)
 
@@ -93,7 +95,7 @@ defmodule LemieuxJevCompaction.Trial do
       not is_binary(opts[:model]) or not is_function(opts[:provider_factory], 3) ->
         {:error, :provider_required}
 
-      Enum.any?(arms, &(&1 in [:shadow, :jev])) and not sdk_available?(opts) ->
+      Enum.any?(arms, &(&1 in [:shadow, :projection])) and not sdk_available?(opts) ->
         {:error, :sdk_required}
 
       not valid_sdk_rates?(opts[:sdk_rates]) ->
@@ -105,7 +107,7 @@ defmodule LemieuxJevCompaction.Trial do
   end
 
   defp sdk_available?(opts),
-    do: match?(%SystemOneSDK.Client{}, opts[:sdk_client]) or is_binary(opts[:jev_api_key])
+    do: match?(%SystemOneSDK.Client{}, opts[:sdk_client]) or is_binary(opts[:typesafe_api_key])
 
   defp valid_limit?(value, ceiling), do: is_integer(value) and value > 0 and value <= ceiling
 
@@ -221,8 +223,8 @@ defmodule LemieuxJevCompaction.Trial do
 
   defp run_one(case_data, arm, repetition, opts) do
     unique = System.unique_integer([:positive])
-    directory = Path.join(System.tmp_dir!(), "lemieux_jev_trial_#{unique}")
-    runtime_name = :"jev_trial_#{unique}"
+    directory = Path.join(System.tmp_dir!(), "lemieux_systemone_trial_#{unique}")
+    runtime_name = :"systemone_trial_#{unique}"
     File.mkdir_p!(directory)
 
     try do
@@ -394,11 +396,24 @@ defmodule LemieuxJevCompaction.Trial do
     options =
       case opts[:sdk_client] do
         %SystemOneSDK.Client{} = client -> Keyword.put(options, :client, client)
-        _no_client -> Keyword.put(options, :api_key, opts[:jev_api_key])
+        _no_client -> Keyword.put(options, :provider, typesafe(opts[:typesafe_api_key]))
       end
 
-    Harness.assemble(Harness.new(), [{JevCompaction, options}])
+    Harness.assemble(Harness.new(), [{SystemOneCompaction, options}])
   end
+
+  # The hosted scorer, as `Lemieux.CLI.SystemOneCompaction` describes it: the
+  # trial measures TypeSafe's service unless the caller hands it a client.
+  defp typesafe(key),
+    do: %{
+      name: "typesafe",
+      type: :typesafe,
+      base_url: "https://api.typesafe.ai",
+      api_key: key,
+      api_key_header: nil,
+      headers: %{},
+      model: nil
+    }
 
   defp followups(session, case_data, arm, repetition, opts, seed) do
     id = Session.id(session)
@@ -440,7 +455,7 @@ defmodule LemieuxJevCompaction.Trial do
             "repetition" => repetition,
             "followups" => rows,
             "evaluations" => evaluations,
-            "jev_extension_attached" => extension_attached?(session),
+            "extension_attached" => extension_attached?(session),
             "transcript_preserved" => transcript_preserved?(session, seed.output_hashes),
             "provider_cost_usd" => provider_cost,
             "provider_reported_cost_usd" => reported_provider_cost(usages),
@@ -465,7 +480,7 @@ defmodule LemieuxJevCompaction.Trial do
     |> Map.fetch!(:harness_context)
     |> get_in(["extensions", "applied"])
     |> List.wrap()
-    |> Enum.any?(&(&1["module"] == "LemieuxJevCompaction"))
+    |> Enum.any?(&(&1["module"] == "LemieuxSystemOneCompaction"))
   end
 
   defp transcript_preserved?(session, original_hashes) do
@@ -512,7 +527,7 @@ defmodule LemieuxJevCompaction.Trial do
   defp observations(session, case_data, path_by_entry) do
     labels = Map.get(case_data, "must_keep_by_path", %{})
 
-    case Session.document(session, "jev_compaction") do
+    case Session.document(session, "systemone_compaction") do
       {:ok, %{value: %{"evaluations" => evaluations, "attempts" => attempts}}} ->
         rows =
           Enum.map(evaluations, fn evaluation ->

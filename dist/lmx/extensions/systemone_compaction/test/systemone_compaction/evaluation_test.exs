@@ -1,7 +1,7 @@
-defmodule LemieuxJevCompaction.EvaluationTest do
+defmodule LemieuxSystemOneCompaction.EvaluationTest do
   use ExUnit.Case, async: true
 
-  alias LemieuxJevCompaction.Evaluation
+  alias LemieuxSystemOneCompaction.Evaluation
 
   test "a threshold sweep reuses scores and counts risky elisions" do
     evaluations = [

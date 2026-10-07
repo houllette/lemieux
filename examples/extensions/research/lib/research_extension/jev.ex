@@ -10,7 +10,8 @@ defmodule ResearchExtension.Jev do
   disabled so one choice cannot forward a credential or spend multiple requests.
 
   An explicit `:api_key` wins, then nonempty `JEV_API_KEY`, then the validated
-  personal configuration's `jev_compaction.api_key`. `LMX_CONFIG=none` disables
+  personal configuration's `systemone_compaction_providers.typesafe.api_key`,
+  the TypeSafe key `lmx` itself uses. `LMX_CONFIG=none` disables
   personal lookup; other values select that config path. No file is created or
   modified. Callers can bypass this host default with their own classifier.
   Credentials live only in the returned function's private runtime state.
@@ -55,7 +56,8 @@ defmodule ResearchExtension.Jev do
 
   defp saved_key(path, options) do
     with {:ok, config} <- Config.load(path, options) do
-      {:ok, Config.get(config, "jev_compaction", %{})["api_key"]}
+      {:ok,
+       get_in(Config.get(config, "systemone_compaction_providers", %{}), ["typesafe", "api_key"])}
     end
   end
 

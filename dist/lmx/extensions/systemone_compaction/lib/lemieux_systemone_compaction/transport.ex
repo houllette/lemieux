@@ -1,4 +1,4 @@
-defmodule LemieuxJevCompaction.Transport do
+defmodule LemieuxSystemOneCompaction.Transport do
   @moduledoc """
   Unary HTTP transport for SystemOneSDK with redirects and retries disabled.
 

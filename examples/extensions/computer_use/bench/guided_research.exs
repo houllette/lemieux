@@ -27,7 +27,7 @@ host_options = %{
   host_options
   | config: %{
       host_options.config
-      | settings: Map.delete(host_options.config.settings, "jev_compaction")
+      | settings: Map.delete(host_options.config.settings, "systemone_compaction")
     }
 }
 

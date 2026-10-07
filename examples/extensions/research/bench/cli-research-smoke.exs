@@ -26,7 +26,10 @@ true = options.web_search == "brave" and options.web_fetch
 # package supplied by dist/lmx. Keep this smoke focused on web research.
 options = %{
   options
-  | config: %{options.config | settings: Map.delete(options.config.settings, "jev_compaction")}
+  | config: %{
+      options.config
+      | settings: Map.delete(options.config.settings, "systemone_compaction")
+    }
 }
 
 workspace = Path.expand("tmp/cli-smoke-workspace")

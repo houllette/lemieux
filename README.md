@@ -217,10 +217,10 @@ it also runs the check command the repository chose, unasked;
   connect; update checks, to GitHub; web searches and fetched pages once you
   set a Brave key; and whatever the agent's commands send, since without
   `--sandbox` they have your network access. The bundled
-  [Jev compaction](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
-  extension sends abridged conversation text only once you give it a
-  TypeSafe key (`JEV_API_KEY`), an Ixway route or another System One
-  provider in your config file, which can be a scorer on your own machine.
+  [System One compaction](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
+  extension sends abridged conversation text only once you configure a
+  provider: a TypeSafe key (`JEV_API_KEY`), an Ixway gateway, or another
+  System One service, which can be an open model on your own machine.
 
 The [trust model](SECURITY.md#what-lmx-trusts-by-default) lists exactly what is
 guarded and what is not.
@@ -361,7 +361,7 @@ Thanks also to [Alloy](https://github.com/alloy-ex/alloy),
 [ex_athena](https://github.com/udin-io/ex_athena), whose published designs
 informed Lemieux's tool, feedback, telemetry, evaluation and terminal
 boundaries; [Why Lemieux](docs/why-lemieux.md#what-came-from-other-harnesses)
-describes those influences. The bundled Jev compaction extension adapts the
+describes those influences. The bundled System One compaction extension adapts the
 selective idea in [fast-jev-compaction](https://github.com/tamaratran/fast-jev-compaction),
 and the experimental computer-use example adapts portions of
 [jev-ultrafast](https://github.com/browser-use/jev-ultrafast) (MIT).

@@ -1,8 +1,8 @@
-defmodule LemieuxJevCompaction.TrialTest do
+defmodule LemieuxSystemOneCompaction.TrialTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.Providers.Scripted
-  alias LemieuxJevCompaction.Trial
+  alias LemieuxSystemOneCompaction.Trial
   alias SystemOneSDK.Test
 
   test "paired trials grade answers and retain only bounded score and usage evidence" do
@@ -52,7 +52,7 @@ defmodule LemieuxJevCompaction.TrialTest do
     Test.close(client)
   end
 
-  test "Jev arm assembles the standalone extension before a resumed model turn" do
+  test "the projection arm assembles the standalone extension before a resumed model turn" do
     client = Test.client()
     Test.stub(client, %{"keep_1" => {:noul, 0.01}})
     parent = self()
@@ -72,7 +72,7 @@ defmodule LemieuxJevCompaction.TrialTest do
     assert {:ok, %{"runs" => [run]}} =
              Trial.run([sample_case()],
                model: "test:model",
-               arms: [:jev],
+               arms: [:projection],
                provider_factory: factory,
                sdk_client: client,
                sdk_rates: %{"input_per_million" => 0.042, "output_per_million" => 0.0},
@@ -80,7 +80,7 @@ defmodule LemieuxJevCompaction.TrialTest do
                reservation_per_run_usd: 0.02
              )
 
-    assert run["jev_extension_attached"] == true
+    assert run["extension_attached"] == true
     assert run["transcript_preserved"] == true
     assert [%{"applied" => true}] = run["evaluations"]
     assert [%{"correct" => true}] = run["followups"]
@@ -97,13 +97,13 @@ defmodule LemieuxJevCompaction.TrialTest do
     Test.close(client)
   end
 
-  test "production defaults leave a recent required read untouched without calling Jev" do
+  test "production defaults leave a recent required read untouched without calling the scorer" do
     client = Test.client()
 
     assert {:ok, %{"runs" => [run]}} =
              Trial.run([sample_case()],
                model: "test:model",
-               arms: [:jev],
+               arms: [:projection],
                production_defaults: true,
                provider_factory: fn _, _, _ ->
                  Scripted.new([
@@ -118,7 +118,7 @@ defmodule LemieuxJevCompaction.TrialTest do
                reservation_per_run_usd: 0.02
              )
 
-    assert run["jev_extension_attached"] == true
+    assert run["extension_attached"] == true
     assert run["transcript_preserved"] == true
     assert run["evaluations"] == []
     assert [%{"correct" => true}] = run["followups"]
@@ -150,14 +150,14 @@ defmodule LemieuxJevCompaction.TrialTest do
              )
   end
 
-  test "a failed Jev call leaves its spending unknown and stops the trial" do
+  test "a failed scorer call leaves its spending unknown and stops the trial" do
     client = Test.client()
     Test.stub_transport_error(client, :closed)
 
     assert {:error, :incomplete_paid_usage, %{"runs" => []}} =
              Trial.run([sample_case()],
                model: "test:model",
-               arms: [:jev],
+               arms: [:projection],
                provider_factory: fn _, _, _ ->
                  Scripted.new([
                    Scripted.complete("OK",

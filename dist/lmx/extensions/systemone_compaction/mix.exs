@@ -1,13 +1,13 @@
-defmodule LemieuxJevCompaction.MixProject do
+defmodule LemieuxSystemOneCompaction.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :lemieux_jev_compaction,
+      app: :lemieux_systemone_compaction,
       version: "0.1.0",
       elixir: "~> 1.19",
       deps: [
-        # The repository root, four levels up from dist/lmx/extensions/jev_compaction.
+        # The repository root, four levels up from dist/lmx/extensions/systemone_compaction.
         # `LEMIEUX_EXTENSION_BASE` points it at another checkout, as
         # scripts/check_example.sh does.
         {:lemieux, path: System.get_env("LEMIEUX_EXTENSION_BASE", "../../../..")},

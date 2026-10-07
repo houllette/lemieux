@@ -304,7 +304,8 @@ establishes semantic entailment or independent source quality.
 In the example's `research_mode: :simple`, source selection can be guided by
 TypeSafe's Jev model, a hosted classifier that TypeSafe bills per call. It is
 switched on when `JEV_API_KEY` is set or a key is saved as
-`jev_compaction.api_key` in `~/.lmx/config.json` (the environment wins);
+`systemone_compaction_providers.typesafe.api_key` in `~/.lmx/config.json`
+(the environment wins);
 `LMX_CONFIG=none` turns off that lookup, and `discovery: false` opts out even
 with a key. It sends the classifier the question, the candidate pages (URL,
 title and snippet) and the text of the pages already fetched (a page over

@@ -28,15 +28,17 @@ defmodule Lemieux.Session.ExtensionUsageTest do
     id = Session.id(session)
 
     usage = %{
-      "model" => "jev-local-1",
+      "model" => "local-scorer-1",
       "input_tokens" => 100,
       "output_tokens" => 2,
       "cost_usd" => 0.005,
-      "source" => "jev_compaction"
+      "source" => "systemone_compaction"
     }
 
     assert {:ok, %{revision: 1}} =
-             Session.put_document(session, "jev_compaction", 0, %{"attempts" => 1}, usage: usage)
+             Session.put_document(session, "systemone_compaction", 0, %{"attempts" => 1},
+               usage: usage
+             )
 
     assert_receive {:lemieux, ^id, {:usage, ^usage}}
     assert Session.budget(session) == %{spent_usd: 0.005, max_cost_usd: 0.01}
@@ -64,7 +66,7 @@ defmodule Lemieux.Session.ExtensionUsageTest do
     assert Session.budget(resumed) == %{spent_usd: 0.005, max_cost_usd: 0.01}
 
     assert {:ok, %{revision: 1, value: %{"attempts" => 1}}} =
-             Session.document(resumed, "jev_compaction")
+             Session.document(resumed, "systemone_compaction")
   end
 
   test "unknown external cost remains unknown, never zero", %{tmp_dir: dir} do
@@ -81,13 +83,13 @@ defmodule Lemieux.Session.ExtensionUsageTest do
       )
 
     usage = %{
-      "model" => "jev-local-1",
+      "model" => "local-scorer-1",
       "input_tokens" => 0,
       "output_tokens" => 0,
       "cost_usd" => nil
     }
 
-    assert {:ok, _} = Session.put_document(session, "jev_compaction", 0, %{}, usage: usage)
+    assert {:ok, _} = Session.put_document(session, "systemone_compaction", 0, %{}, usage: usage)
     assert Session.budget(session).spent_usd == nil
   end
 
@@ -106,7 +108,7 @@ defmodule Lemieux.Session.ExtensionUsageTest do
     assert {:ok, %{revision: 1}} = Session.put_document(session, "judge", 0, %{"winner" => true})
 
     usage = %{
-      "model" => "jev-local-1",
+      "model" => "local-scorer-1",
       "input_tokens" => 12,
       "output_tokens" => 1,
       "cost_usd" => 0.001

@@ -1,7 +1,7 @@
 # The release host's tests prepare real runtimes, so the same overrides that
 # the library's suite scrubs (test/test_helper.exs) must not reach them from a
 # contributor's shell: with `LMX_WEB_SEARCH=brave` exported,
-# jev_compaction_test.exs failed while CI, which has none, passed.
+# what is now systemone_compaction_test.exs failed while CI, which has none, passed.
 System.put_env("LMX_CONFIG", "none")
 System.put_env("LMX_PROJECT_MCP", "0")
 

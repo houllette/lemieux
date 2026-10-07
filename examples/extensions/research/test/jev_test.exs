@@ -32,7 +32,14 @@ defmodule ResearchExtension.JevTest do
     tmp_dir: directory
   } do
     path = Path.join(directory, "config.json")
-    File.write!(path, JSON.encode!(%{"jev_compaction" => %{"api_key" => "saved-secret"}}))
+
+    File.write!(
+      path,
+      JSON.encode!(%{
+        "systemone_compaction_providers" => %{"typesafe" => %{"api_key" => "saved-secret"}}
+      })
+    )
+
     File.chmod!(path, 0o600)
     System.put_env("LMX_CONFIG", path)
     owner = self()

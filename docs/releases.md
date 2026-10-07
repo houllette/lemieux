@@ -433,7 +433,7 @@ want it gone (`rm -rf ~/.lmx`), together with the plugin cache
 - `bin/lmx`, the launcher (on Windows: `bin\lmx.cmd`, the PowerShell script it
   runs, and `bin/lmx` for Git Bash);
 - the Erlang runtime, Elixir, Lemieux, the terminal UI's native library and
-  the bundled [Jev compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md);
+  the bundled [System One compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md);
 - `releases/VERSION/release.json`, the build identity the installer and the
   updater check;
 - `LICENSE`, `NOTICE` and `THIRD_PARTY_NOTICES` at its root.

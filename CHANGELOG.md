@@ -37,42 +37,57 @@ API.
   one-file route to an OpenAI-compatible server, and
   [Adding a model route](docs/extensions.md#adding-a-model-route) is the
   guide. (#14)
-- Jev compaction chooses its **System One provider from the config file**,
-  the way `"web_search"` chooses a search backend. `jev_compaction.provider`
-  selects `typesafe`, `ixway` or a name declared in the new
-  `jev_compaction_providers` section, whose entries take a `base_url` that
-  speaks `POST /v1/systemone`, an optional `api_key` or `api_key_env` (with
-  `api_key_header` for a service that wants the key in a header rather than
-  as a bearer token), extra `headers`, a default `model` and a tariff. A
-  scorer on a machine you
-  control, or a vendor's decision API, now needs only config: no
-  `JEV_API_KEY` or Ixway key, and nothing reaches TypeSafe or Ixway. A
-  declared provider that is not selected neither switches the step on nor
-  receives anything; there is no fallback from one provider to another; and
-  a provider without a declared tariff makes no evaluation under a dollar
-  cap. TypeSafe alone keeps its default model and published rates. Existing
-  files keep working: with no `provider`, the choice between TypeSafe and
-  Ixway is the one `lmx` always made, `route` is accepted as the older
-  spelling of `provider`, and the TypeSafe key and Ixway endpoint stay where
-  they were. In `apply` and `shadow` mode an incomplete provider now stops
-  the start naming the missing piece, where it used to say only "Jev access
-  is unavailable", and `lmx explain` shows the selected provider in the
-  extension's options. In the bundled extension, `provider:` is the new
-  option for hosts; `route:` and its companions still work, and Ixway's
-  client is now the SDK's generic endpoint provider rather than TypeSafe's,
-  so a request to a gateway carries the SDK's own user agent and no
-  `X-TypeSafe-*` headers. `lmx explain` reports the step's mode and the
-  selected provider's name under `diagnostics.jev_compaction`. Verified
-  end to end against two open decision models served by Ollama 0.35 on this
-  machine, Bespoke Labs' Nimble and Cloudflare's Clef-flash; the extension's
-  suite keeps that as a live test you run by naming the server.
-  Two choices differ from the issue's sketch, and
-  `Lemieux.CLI.JevCompaction` records why: `typesafe` and `ixway` cannot be
-  redeclared in the new section (their key and endpoint keep their one
-  place), the provider is chosen in the file alone with no flag or `LMX_`
-  variable, the step stays a bundled extension rather than a library
-  behaviour, and `jev_compaction` keeps its name.
-  ([Declaring a provider](docs/compaction.md#declaring-a-provider), #6)
+- **Jev compaction is now System One compaction**, and it reaches any
+  System One provider named in the config file, the way `"web_search"`
+  chooses a search backend. `"systemone_compaction"` holds the choice
+  (`provider`), the `mode` and the budget; `"systemone_compaction_providers"`
+  holds, under each provider's name, its `base_url` (any service that speaks
+  `POST /v1/systemone`), key (`api_key`, `api_key_env`, and `api_key_header`
+  for a service that wants it in a header rather than as a bearer token),
+  extra `headers`, `model` and tariff. The built-in `typesafe` and `ixway`
+  take an entry too, for TypeSafe's key and model or the Ixway gateway's
+  address and model. An open decision model on your own machine, or a
+  vendor's decision API, now needs only config: no TypeSafe or Ixway key,
+  and nothing reaches either. This was verified end to end against two open
+  models that Ollama 0.35 serves on `/v1/systemone`, Bespoke Labs' Nimble
+  and Cloudflare's Clef-flash, and the extension's suite keeps that as a
+  live test you run by naming the server. A provider entry that is not
+  selected neither switches the step on nor receives anything; there is no
+  fallback from one provider to another; a provider without a declared
+  tariff makes no evaluation under a dollar cap, and TypeSafe alone keeps
+  its default model and published rates. In `apply` and `shadow` mode an
+  incomplete provider stops the start naming the missing piece, and
+  `lmx explain` reports the mode and the provider's name under
+  `diagnostics.systemone_compaction`. Ixway now goes through the SDK's
+  generic endpoint client rather than TypeSafe's, so a request to a gateway
+  carries the SDK's own user agent and no `X-TypeSafe-*` headers.
+  ([System One projection](docs/compaction.md#optional-system-one-projection-before-compaction), #6)
+
+  **Breaking:** `"jev_compaction"` and `"jev_compaction_providers"` are
+  refused at startup with a sentence naming the new keys, and so is
+  `"disabled_extensions": ["jev_compaction"]`; nothing is read from the old
+  spelling, since ignoring it would quietly switch the step off.
+  `jev_compaction.api_key` moves to
+  `systemone_compaction_providers.typesafe.api_key`, `jev_compaction.endpoint`
+  to `systemone_compaction_providers.ixway.base_url`, and a model or tariff
+  to the selected provider's entry ([the whole
+  table](docs/compaction.md#moving-from-jev-compaction)). `JEV_API_KEY` is
+  unchanged. The bundled extension is now `LemieuxSystemOneCompaction`
+  (`:lemieux_systemone_compaction`, in
+  `dist/lmx/extensions/systemone_compaction`); a host passes it `provider:`
+  or `client:`. The older `route:`, `api_key:`, `ixway_endpoint:`,
+  `ixway_api_key:` and `model:` options are refused with a sentence saying
+  where each value now goes, rather than ignored, and the extension no
+  longer reads `JEV_API_KEY` itself. It records its decisions under the
+  `systemone_compaction` namespace, so a session recorded before the rename
+  is resumed without its earlier projections, which sends those reads in
+  full again, and with the step's own evaluation count and cap starting
+  over. The Ixway entry's `base_url` is an origin, as `ixway.endpoint` is.
+  In the paired trial, the projection arm is `projection` (was `jev`), its
+  option `typesafe_api_key` (was `jev_api_key`) and its report field
+  `extension_attached` (was `jev_extension_attached`); the dated reports in
+  `eval/v1/results` keep the old names. The research example and its
+  benches read the TypeSafe key from its new place.
 
 ### Installing and updating
 

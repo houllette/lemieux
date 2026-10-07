@@ -1,9 +1,9 @@
-defmodule JevCompactionEval do
+defmodule SystemOneCompactionEval do
   @moduledoc false
 
   alias Lemieux.Providers.ReqLLM
-  alias LemieuxJevCompaction.Evaluation
-  alias LemieuxJevCompaction.Trial
+  alias LemieuxSystemOneCompaction.Evaluation
+  alias LemieuxSystemOneCompaction.Trial
 
   @switches [
     model: :string,
@@ -23,10 +23,10 @@ defmodule JevCompactionEval do
          {:ok, settings} <- settings(options),
          {:ok, env} <- private_env(),
          {:ok, key} <- provider_key(env, settings.model),
-         {:ok, jev_key} <- jev_key(env, settings.arms),
+         {:ok, typesafe_key} <- typesafe_key(env, settings.arms),
          {:ok, cases} <- Trial.read_corpus(settings.corpus),
          {:ok, tiers} <- tariff(settings.tariff, settings.model),
-         {:ok, report} <- trial(cases, settings, key, jev_key, tiers),
+         {:ok, report} <- trial(cases, settings, key, typesafe_key, tiers),
          {:ok, analyzed} <- analyze(report, settings, tiers),
          :ok <- write_report(analyzed, settings.output) do
       IO.puts("Completed #{length(report["runs"])} runs; report: #{settings.output}")
@@ -45,7 +45,11 @@ defmodule JevCompactionEval do
         {:error, reason}
 
       _invalid ->
-        IO.puts(:stderr, "Invalid arguments; see dist/lmx/extensions/jev_compaction/README.md")
+        IO.puts(
+          :stderr,
+          "Invalid arguments; see dist/lmx/extensions/systemone_compaction/README.md"
+        )
+
         {:error, :invalid_arguments}
     end
   end
@@ -53,12 +57,12 @@ defmodule JevCompactionEval do
   defp settings(options) do
     arms =
       options
-      |> Keyword.get(:arms, "baseline,shadow,jev,summary")
+      |> Keyword.get(:arms, "baseline,shadow,projection,summary")
       |> String.split(",", trim: true)
       |> Enum.map(fn
         "baseline" -> :baseline
         "shadow" -> :shadow
-        "jev" -> :jev
+        "projection" -> :projection
         "summary" -> :summary
         _unknown -> :invalid
       end)
@@ -66,7 +70,7 @@ defmodule JevCompactionEval do
     settings = %{
       model: Keyword.get(options, :model, "openai:gpt-5-mini"),
       corpus: Keyword.get(options, :corpus, "eval/v1/cases.json"),
-      output: Keyword.get(options, :output, "tmp/jev_compaction_eval.json"),
+      output: Keyword.get(options, :output, "tmp/systemone_compaction_eval.json"),
       tariff: Keyword.get(options, :tariff),
       arms: arms,
       repetitions: Keyword.get(options, :repetitions, 1),
@@ -100,7 +104,7 @@ defmodule JevCompactionEval do
   end
 
   defp private_env do
-    # The checkout root, five levels up from dist/lmx/extensions/jev_compaction/scripts.
+    # The checkout root, five levels up from dist/lmx/extensions/systemone_compaction/scripts.
     root = Path.expand("../../../../../.env", __DIR__)
     Dotenvy.source([root, System.get_env()], side_effect: fn _ -> :ok end)
   end
@@ -121,11 +125,11 @@ defmodule JevCompactionEval do
       else: {:error, :provider_key_unavailable}
   end
 
-  defp jev_key(env, arms) do
-    if Enum.any?(arms, &(&1 in [:shadow, :jev])) do
+  defp typesafe_key(env, arms) do
+    if Enum.any?(arms, &(&1 in [:shadow, :projection])) do
       if is_binary(env["JEV_API_KEY"]) and env["JEV_API_KEY"] != "",
         do: {:ok, env["JEV_API_KEY"]},
-        else: {:error, :jev_key_unavailable}
+        else: {:error, :typesafe_key_unavailable}
     else
       {:ok, nil}
     end
@@ -145,7 +149,7 @@ defmodule JevCompactionEval do
     end
   end
 
-  defp trial(cases, settings, {provider, key}, jev_key, tiers) do
+  defp trial(cases, settings, {provider, key}, typesafe_key, tiers) do
     Trial.run(cases,
       model: settings.model,
       arms: settings.arms,
@@ -154,7 +158,7 @@ defmodule JevCompactionEval do
       reservation_per_run_usd: settings.reservation_per_run,
       provider_factory: fn _, _, _ -> ReqLLM.new(api_keys: %{provider => key}) end,
       provider_tiers: tiers,
-      jev_api_key: jev_key,
+      typesafe_api_key: typesafe_key,
       sdk_rates: %{"input_per_million" => 0.042, "output_per_million" => 0.0},
       keep_threshold: settings.threshold,
       hook_opts: [min_saved_tokens: 1],
@@ -195,7 +199,8 @@ defmodule JevCompactionEval do
 
       if baseline do
         result =
-          Enum.reduce_while(["shadow", "jev", "summary"], {:ok, pairs}, fn arm, {:ok, pairs} ->
+          Enum.reduce_while(["shadow", "projection", "summary"], {:ok, pairs}, fn arm,
+                                                                                  {:ok, pairs} ->
             case by_arm[arm] do
               nil ->
                 {:cont, {:ok, pairs}}
@@ -266,7 +271,7 @@ defmodule JevCompactionEval do
   end
 end
 
-case JevCompactionEval.run(System.argv()) do
+case SystemOneCompactionEval.run(System.argv()) do
   :ok -> :ok
-  {:error, reason} -> Mix.raise("Jev compaction evaluation failed: #{inspect(reason)}")
+  {:error, reason} -> Mix.raise("System One compaction evaluation failed: #{inspect(reason)}")
 end

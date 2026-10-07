@@ -3,7 +3,7 @@ name: Dependency graph
 # GitHub's dependency graph does not read mix.lock, so without this the
 # public graph lists only the pip, npm and Go manifests inside eval/corpus
 # fixtures, and Dependabot alerts never cover a Hex package. This submits the
-# library's and the release host's locks (and the bundled Jev extension's,
+# library's and the release host's locks (and the bundled compaction extension's,
 # under dist/lmx) after every push to main.
 on:
   push:

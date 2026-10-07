@@ -1,63 +1,68 @@
-defmodule LemieuxJevCompaction do
+defmodule LemieuxSystemOneCompaction do
   @moduledoc """
-  Optional Jev projection of old, reproducible tool results before dispatch.
+  Optional System One projection of old, reproducible tool results before
+  dispatch.
 
   Assemble this extension in a host with access to a System One scorer, or
   install `hook/1` directly as a `prepare_next_turn` hook. It runs outside the
   session process, before Lemieux checks its context window and price tiers.
-  It asks SystemOneSDK whether the full output of each eligible old read is
-  still needed, then replaces only selected outputs in the request sent to the
-  model. Calls, results, user text and assistant text remain in order. The
-  authoritative transcript is untouched.
+  It asks a System One model, through SystemOneSDK, whether the full output
+  of each eligible old read is still needed, then replaces only selected
+  outputs in the request sent to the model. Calls, results, user text and
+  assistant text remain in order. The authoritative transcript is untouched.
 
   ## Providers
 
-  The scorer is one System One provider, chosen before anything is sent:
+  The scorer is one System One provider, chosen before anything is sent, and
+  given in one of two forms:
 
   - `provider:` describes it: `%{name: "local", type: :endpoint, base_url:
-    "http://127.0.0.1:8080", api_key: nil, headers: %{}, model: "jev-local-1"}`,
-    with an optional `api_key_header:` naming the header the key travels in
-    when the service does not take a bearer token.
-    `type: :typesafe` is TypeSafe's hosted service, reached through
-    `SystemOneSDK.Providers.TypeSafe` with its published rates and `jev-1.13.0`
-    as the default model; `type: :endpoint` is any other `POST /v1/systemone`
-    service — an Ixway gateway, a vendor's decision API, a scorer on a machine
-    you control — reached through `SystemOneSDK.Providers.Endpoint`, with no
+    "http://127.0.0.1:11434", api_key: nil, api_key_header: nil, headers:
+    %{}, model: "clef-flash"}`. `type: :typesafe` is TypeSafe's hosted
+    service, reached through `SystemOneSDK.Providers.TypeSafe` with its
+    published rates and `jev-1.13.0`, TypeSafe's Jev model, as the default;
+    `type: :endpoint` is any other `POST /v1/systemone` service — an Ixway
+    gateway, a vendor's decision API, an open model served on the person's
+    own machine — reached through `SystemOneSDK.Providers.Endpoint`, with no
     key unless one is given and no price unless `:input_per_million` and
-    `:output_per_million` declare one, so a capped session fails closed rather
-    than guessing. `lmx` builds this map from `jev_compaction` and
-    `jev_compaction_providers` in its config file (`Lemieux.CLI.JevCompaction`).
+    `:output_per_million` declare one, so a capped session fails closed
+    rather than guessing. `api_key_header` names the header the key travels
+    in when the service does not take a bearer token. `lmx` builds this map
+    from `systemone_compaction` and `systemone_compaction_providers` in its
+    config file (`Lemieux.CLI.SystemOneCompaction`).
   - `client:` is a `%SystemOneSDK.Client{}` the host built itself.
-  - The older spelling still works: `route:` (`:auto`, `:typesafe` or
-    `:ixway`) with `api_key:`, `ixway_endpoint:`, `ixway_api_key:` and
-    `model:`, where `:auto` prefers a pinned Ixway route and otherwise takes
-    a hosted key.
 
-  Whichever form selects the provider, nothing is sent anywhere else: an
-  unavailable provider leaves the request as it was, and never falls back to
-  another. The vendor defaults live with `type: :typesafe` alone, so a
-  provider nobody priced is unpriced, not priced like TypeSafe.
+  Nothing is sent anywhere else: an unavailable provider leaves the request
+  as it was, and never falls back to another. The vendor defaults live with
+  `type: :typesafe` alone, so a provider nobody priced is unpriced, not
+  priced like TypeSafe. The extension reads no environment variable; where a
+  key comes from is the host's decision.
 
-  Decisions are committed through the session's revisioned extension document.
-  A later turn, resume or fork can replay the same projection when the host
-  installs this hook again. An absent key, SDK failure, malformed response,
-  insufficient reduction or document conflict leaves the ordinary request in
-  place, so Lemieux's summary compaction can still run.
+  Decisions are committed through the session's revisioned extension document,
+  under the `systemone_compaction` namespace. A later turn, resume or fork can
+  replay the same projection when the host installs this hook again. An
+  absent key, SDK failure, malformed response, insufficient reduction or
+  document conflict leaves the ordinary request in place, so Lemieux's summary
+  compaction can still run. A transcript written while the extension was
+  called `LemieuxJevCompaction` recorded its decisions under `jev_compaction`;
+  they are not replayed, so such a session's old reads go out in full again,
+  which is the safe direction.
 
   `mode: :shadow` scores without projecting. Its bounded document observations
   contain only entry IDs, output digests, probabilities, byte-based savings,
   SDK usage and latency. Hosts can sweep thresholds offline without sending
-  the conversation to Jev again. Shadow mode does not replay prior elisions.
+  the conversation to the scorer again. Shadow mode does not replay prior
+  elisions.
 
-  This is deliberately narrower than fast-jev-compaction: only currently
-  available read-only tools named in `:eligible_tools` may be elided, errors
-  and recent results stay verbatim, and no call/result pair is removed. Jev
-  never receives the full tool output; its score cannot prove that an output
-  is safe to forget. Installing this extension activates projection by default
-  when a Jev client or key is available. Hosts can disable it or raise
-  `:activation_tokens` for their route economics.
+  This is deliberately narrower than fast-jev-compaction, the work it adapts:
+  only currently available read-only tools named in `:eligible_tools` may be
+  elided, errors and recent results stay verbatim, and no call/result pair is
+  removed. The scorer never receives the full tool output; its score cannot
+  prove that an output is safe to forget. Installing this extension activates
+  projection by default when a provider or client is available. Hosts can
+  disable it or raise `:activation_tokens` for their route economics.
 
-  Jev's cost is the session's cost. Each evaluation's SDK usage goes to
+  The scorer's cost is the session's cost. Each evaluation's SDK usage goes to
   `Lemieux.Session.put_document/5` as `usage:`: the transcript records it, and
   its known cost counts toward the session's spend and dollar cap (the
   session's `:max_cost_usd`, `--max-cost-usd` in `lmx`), including after
@@ -66,7 +71,7 @@ defmodule LemieuxJevCompaction do
   not count toward the context window. When the session is capped or this
   extension's own `:max_cost_usd` option is set, an evaluation is attempted
   only with known rates (`:input_per_million` and `:output_per_million`, which
-  default to TypeSafe's published ones on the hosted route) and a
+  default to TypeSafe's published ones for `type: :typesafe`) and a
   `:reservation_per_call_usd` that still fits under each cap.
   """
 
@@ -74,12 +79,11 @@ defmodule LemieuxJevCompaction do
   import Kernel, except: [apply: 2]
 
   alias Lemieux.{Entry, Request, Session, Tool}
-  alias LemieuxJevCompaction.Transport
+  alias LemieuxSystemOneCompaction.Transport
   alias SystemOneSDK.{Client, NoulAnswer, SystemOneResponse}
   alias SystemOneSDK.Providers.{Endpoint, TypeSafe}
 
-  @namespace "jev_compaction"
-  @typesafe_base_url "https://api.typesafe.ai"
+  @namespace "systemone_compaction"
   @default_model "jev-1.13.0"
   @typesafe_input_per_million 0.042
   @provider_types [:typesafe, :endpoint]
@@ -95,10 +99,19 @@ defmodule LemieuxJevCompaction do
     hook(opts)
 
     case Keyword.get(opts, :enabled, :auto) do
-      false -> {:ok, Keyword.put(opts, :enabled, false)}
-      :auto -> {:ok, Keyword.put(opts, :enabled, available?(opts))}
-      true -> if available?(opts), do: {:ok, opts}, else: {:error, "Jev access is unavailable"}
-      _invalid -> {:error, ":enabled must be true, false or :auto"}
+      false ->
+        {:ok, Keyword.put(opts, :enabled, false)}
+
+      :auto ->
+        {:ok, Keyword.put(opts, :enabled, available?(opts))}
+
+      true ->
+        if available?(opts),
+          do: {:ok, opts},
+          else: {:error, "no System One provider is available"}
+
+      _invalid ->
+        {:error, ":enabled must be true, false or :auto"}
     end
   rescue
     error in ArgumentError -> {:error, Exception.message(error)}
@@ -141,7 +154,7 @@ defmodule LemieuxJevCompaction do
     fn request, context -> prepare(request, context, opts) end
   end
 
-  @doc "Applies stored decisions and, when due, asks Jev once for new ones."
+  @doc "Applies stored decisions and, when due, asks the scorer once for new ones."
   @spec prepare(request :: Request.t(), context :: map(), opts :: options()) ::
           {:ok, Request.t()}
   def prepare(%Request{} = request, %{session: session} = context, opts) when is_list(opts) do
@@ -222,7 +235,7 @@ defmodule LemieuxJevCompaction do
   defp ask(request, projected, candidates, client, opts, revision, document, digest) do
     state = state(request, candidates)
     questions = questions(candidates)
-    model = Keyword.get(opts, :model) || client.default_model
+    model = client.default_model
     limit = Keyword.get(opts, :max_request_bytes, 60_000)
     body = %{"model" => model, "state" => state, "questions" => questions}
 
@@ -402,8 +415,7 @@ defmodule LemieuxJevCompaction do
 
   defp external_usage(_result, opts),
     do: %{
-      "model" =>
-        Keyword.get(opts, :requested_model) || Keyword.get(opts, :model) || @default_model,
+      "model" => Keyword.get(opts, :requested_model) || @default_model,
       "input_tokens" => 0,
       "output_tokens" => 0,
       "cost_usd" => nil,
@@ -568,47 +580,17 @@ defmodule LemieuxJevCompaction do
     cond do
       match?(%Client{}, opts[:client]) -> {:ok, %{name: "custom", type: :client}}
       is_map(opts[:provider]) -> usable(opts[:provider])
-      true -> legacy_route(opts)
+      true -> :unavailable
     end
   end
-
-  defp legacy_route(opts) do
-    hosted_key = Keyword.get(opts, :api_key) || System.get_env("JEV_API_KEY")
-    ixway_key = Keyword.get(opts, :ixway_api_key) || System.get_env("IXWAY_API_KEY")
-    ixway_endpoint = Keyword.get(opts, :ixway_endpoint)
-    model = Keyword.get(opts, :model)
-
-    case Keyword.get(opts, :route, :auto) do
-      :ixway -> usable(ixway(ixway_endpoint, ixway_key, model))
-      :typesafe -> usable(typesafe(hosted_key, model))
-      :auto -> auto_route(ixway_endpoint, ixway_key, hosted_key, model)
-    end
-  end
-
-  defp auto_route(endpoint, key, _hosted_key, model)
-       when is_binary(endpoint) and is_binary(model),
-       do: usable(ixway(endpoint, key, model))
-
-  defp auto_route(_endpoint, _key, hosted_key, model), do: usable(typesafe(hosted_key, model))
-
-  defp typesafe(key, model),
-    do: %{
-      name: "typesafe",
-      type: :typesafe,
-      base_url: @typesafe_base_url,
-      api_key: key,
-      model: model
-    }
-
-  defp ixway(endpoint, key, model),
-    do: %{name: "ixway", type: :endpoint, base_url: endpoint, api_key: key, model: model}
 
   # A provider is usable when a request to it could be built: a valid base
   # URL, a model to name, and for TypeSafe a key. `type: :endpoint` may have
   # no key at all — a scorer on a machine the person controls often has none.
   defp usable(%{type: :typesafe, api_key: key} = provider) do
     if present?(key),
-      do: usable(%{provider | model: provider.model || @default_model}, :typesafe),
+      do:
+        usable(Map.put(provider, :model, Map.get(provider, :model) || @default_model), :typesafe),
       else: :unavailable
   end
 
@@ -620,10 +602,17 @@ defmodule LemieuxJevCompaction do
   defp usable(%{type: :endpoint} = provider), do: usable(provider, :endpoint)
   defp usable(_provider), do: :unavailable
 
-  defp usable(%{base_url: url, model: model} = provider, type) do
+  defp usable(%{base_url: url} = provider, type) do
+    model = Map.get(provider, :model)
+
     if present?(model) and valid_base_url?(url) and key_or_absent?(Map.get(provider, :api_key)),
       do:
-        {:ok, %{provider | type: type, model: String.trim(model), api_key: trimmed_key(provider)}},
+        {:ok,
+         Map.merge(provider, %{
+           type: type,
+           model: String.trim(model),
+           api_key: trimmed_key(provider)
+         })},
       else: :unavailable
   end
 
@@ -856,10 +845,8 @@ defmodule LemieuxJevCompaction do
     unless mode(opts) in [:apply, :shadow],
       do: raise(ArgumentError, ":mode must be :apply or :shadow")
 
-    unless Keyword.get(opts, :route, :auto) in [:auto, :typesafe, :ixway],
-      do: raise(ArgumentError, ":route must be :auto, :typesafe or :ixway")
-
     validate_provider!(Keyword.get(opts, :provider))
+    refuse_removed_options!(opts)
 
     Enum.each(
       [:max_cost_usd, :reservation_per_call_usd, :input_per_million, :output_per_million],
@@ -873,6 +860,30 @@ defmodule LemieuxJevCompaction do
 
     if Keyword.get(opts, :max_candidates, @max_candidates) > @max_candidates,
       do: raise(ArgumentError, ":max_candidates cannot exceed #{@max_candidates}")
+  end
+
+  # The options from before `provider:` existed. Ignoring them would leave a
+  # host that upgraded with `enabled: :auto` silently without the step — the
+  # failure `lmx` refuses its old config keys to prevent — so each is named,
+  # with where its value now goes.
+  @removed_options [
+    route: "choose the provider by passing it as provider:",
+    api_key: "the key is provider:'s api_key",
+    ixway_endpoint:
+      "an Ixway gateway is provider: %{name: \"ixway\", type: :endpoint, base_url: ...}",
+    ixway_api_key: "the gateway key is provider:'s api_key",
+    model: "the model is provider:'s model, or the client's default"
+  ]
+
+  defp refuse_removed_options!(opts) do
+    case Enum.find(@removed_options, fn {key, _where} -> Keyword.has_key?(opts, key) end) do
+      nil ->
+        :ok
+
+      {key, where} ->
+        raise ArgumentError,
+              ":#{key} was removed when the extension became LemieuxSystemOneCompaction; #{where}"
+    end
   end
 
   defp validate_provider!(nil), do: :ok

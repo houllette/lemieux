@@ -139,20 +139,25 @@ defmodule Lemieux.CLI.ExplainTest do
   end
 
   # Issue #6: the report says where the compaction scorer's requests would
-  # go, by provider name alone. The library suite has no Jev extension, so
+  # go, by provider name alone. The library suite has no such extension, so
   # the shapes it can run are the switched-off ones; the release host's
-  # suite covers a selected provider (dist/lmx/test/lmx/jev_compaction_test.exs).
+  # suite covers a selected provider (dist/lmx/test/lmx/systemone_compaction_test.exs).
   test "the report names the compaction scorer's provider, or that the step is off", %{
     tmp_dir: dir
   } do
     path = Path.join(dir, "config.json")
-    File.write!(path, JSON.encode!(%{"version" => 1, "jev_compaction" => %{"mode" => "off"}}))
+
+    File.write!(
+      path,
+      JSON.encode!(%{"version" => 1, "systemone_compaction" => %{"mode" => "off"}})
+    )
+
     File.chmod!(path, 0o600)
 
     result = explain(["explain", "--config", path, "--no-delegate"], cwd: dir)
     assert result.result == :ok
     diagnostics = JSON.decode!(result.stdout)["diagnostics"]
-    assert diagnostics["jev_compaction"] == %{"mode" => "off", "provider" => nil}
+    assert diagnostics["systemone_compaction"] == %{"mode" => "off", "provider" => nil}
 
     # A declared and selected provider is still off when the extension is
     # disabled, and the report says so rather than naming it.
@@ -160,10 +165,10 @@ defmodule Lemieux.CLI.ExplainTest do
       path,
       JSON.encode!(%{
         "version" => 1,
-        "disabled_extensions" => ["jev_compaction"],
-        "jev_compaction" => %{"mode" => "apply", "provider" => "local"},
-        "jev_compaction_providers" => %{
-          "local" => %{"base_url" => "http://127.0.0.1:8080", "model" => "jev-local-1"}
+        "disabled_extensions" => ["systemone_compaction"],
+        "systemone_compaction" => %{"mode" => "apply", "provider" => "local"},
+        "systemone_compaction_providers" => %{
+          "local" => %{"base_url" => "http://127.0.0.1:8080", "model" => "local-scorer-1"}
         }
       })
     )
@@ -171,7 +176,7 @@ defmodule Lemieux.CLI.ExplainTest do
     result = explain(["explain", "--config", path, "--no-delegate"], cwd: dir)
     assert result.result == :ok
     diagnostics = JSON.decode!(result.stdout)["diagnostics"]
-    assert diagnostics["jev_compaction"] == %{"mode" => "off", "provider" => nil}
+    assert diagnostics["systemone_compaction"] == %{"mode" => "off", "provider" => nil}
     refute result.stdout =~ "127.0.0.1:8080"
   end
 
@@ -197,7 +202,7 @@ defmodule Lemieux.CLI.ExplainTest do
           "model" => "ixway:gpt-6-luna",
           "effort" => "max"
         },
-        "jev_compaction" => %{"api_key" => ""},
+        "systemone_compaction_providers" => %{"typesafe" => %{"api_key" => ""}},
         "web_search" => "brave",
         "web_search_providers" => %{"brave" => %{"api_key" => ""}},
         "web_fetch" => true,
