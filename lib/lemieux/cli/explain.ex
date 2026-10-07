@@ -34,6 +34,7 @@ defmodule Lemieux.CLI.Explain do
   @spec run(argv :: [String.t()], opts :: keyword()) :: :ok | {:error, pos_integer()}
   def run(argv, opts) do
     with {:ok, options} <- Options.parse(argv, command: :explain),
+         {:ok, opts} <- Runtime.with_routes(options, opts),
          {:ok, options, opts} <- ExtensionExperience.prepare(options, opts),
          options = Runtime.project_mcp(options, opts),
          options = Run.resolve_model(options, opts),

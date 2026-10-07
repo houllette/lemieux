@@ -43,6 +43,23 @@ defmodule Lemieux.Provider.Route do
   `Lemieux.Provider.Error.message/1` renders exceptions and deliberately
   knows no gateway's vocabulary.
 
+  ## Preparation: discovery and the default model
+
+  Two optional callbacks are for the host that *starts* a session rather
+  than for the adapter that runs its requests. `c:ready/1` is where a route
+  fetches whatever it must know before it can answer — a catalogue, a
+  policy — and a route whose state is complete returns it unchanged;
+  `c:default_model/1` is the model the route advertises when a person named
+  none, as `ixway:@default` asks for. `prepare/2` is the one sequence every
+  host runs them in: ready the route, resolve `NAME:@default`
+  (`Lemieux.ModelSpec.default_selection?/1`) through the default, then
+  check the model with `c:validate_model/3`, so a session never records a
+  model its route does not list. `Lemieux.Ixway.prepare/2` used to be that
+  sequence spelt for one gateway, and the CLI called it by name; now the
+  CLI prepares any registered route the same way (`Lemieux.CLI.Routes`),
+  and an extension's route gets the TUI's prefetch, the startup resolution
+  and the resume checks without implementing any of them.
+
   ## The streaming hooks
 
   Three optional callbacks bracket one streamed response. `c:observe_stream/3`
@@ -61,6 +78,7 @@ defmodule Lemieux.Provider.Route do
   path reads the same as its routed one.
   """
 
+  alias Lemieux.ModelSpec
   alias Lemieux.Request
 
   @typedoc "An implementation module paired with its own state."
@@ -103,6 +121,28 @@ defmodule Lemieux.Provider.Route do
   @callback reasoning_efforts(state :: term(), model :: String.t()) :: [String.t()]
 
   @doc """
+  Readies the route to answer: discovery, a catalogue refresh, a policy read.
+
+  Optional. Called before a startup model is resolved and before an
+  interactive host offers the route's models, and possibly more than once,
+  so a route whose state already holds what it needs returns it unchanged
+  rather than asking again. A failure is the route's own typed reason and
+  stops the start. Absent, the state is ready as it is.
+  """
+  @callback ready(state :: term()) :: {:ok, state :: term()} | {:error, term()}
+
+  @doc """
+  The model specification this route advertises as its default, under the
+  route's own name.
+
+  Optional. What `NAME:@default` resolves to, before a session records its
+  model; a route with no advertised default answers `{:error, reason}` with
+  a reason that says to choose one. Absent, `NAME:@default` is refused with
+  `{:error, {:no_default_model, NAME}}`.
+  """
+  @callback default_model(state :: term()) :: {:ok, String.t()} | {:error, term()}
+
+  @doc """
   Resolves the wire target for one request.
 
   `options` are the adapter's provider options merged with the request's own
@@ -136,6 +176,8 @@ defmodule Lemieux.Provider.Route do
               map()
 
   @optional_callbacks model_metadata: 1,
+                      ready: 1,
+                      default_model: 1,
                       estimate_cost: 2,
                       observe_stream: 3,
                       finish_stream: 3,
@@ -175,6 +217,66 @@ defmodule Lemieux.Provider.Route do
   def target({module, state}, %Request{} = request, options)
       when is_atom(module) and is_list(options),
       do: module.target(state, request, options)
+
+  @doc "Readies `route`; identity for a route without the callback. See `c:ready/1`."
+  @spec ready(route :: t()) :: {:ok, t()} | {:error, term()}
+  def ready({module, state}) when is_atom(module) do
+    if implements?(module, :ready, 1) do
+      with {:ok, state} <- module.ready(state), do: {:ok, {module, state}}
+    else
+      {:ok, {module, state}}
+    end
+  end
+
+  @doc """
+  The model `route` advertises as its default; see `c:default_model/1`.
+
+  `name` is the route's registered name, for the refusal when the callback
+  is absent and for checking that the answer is one of the route's own
+  models: a default under another provider's name would be dispatched to
+  that provider, which is exactly the fallback a route exists to rule out.
+  """
+  @spec default_model(route :: t(), name :: String.t()) :: {:ok, String.t()} | {:error, term()}
+  def default_model({module, state}, name) when is_atom(module) and is_binary(name) do
+    with true <- implements?(module, :default_model, 1),
+         {:ok, model} when is_binary(model) <- module.default_model(state) do
+      if ModelSpec.provider(model) == name,
+        do: {:ok, model},
+        else: {:error, {:default_model_outside_route, name, model}}
+    else
+      false -> {:error, {:no_default_model, name}}
+      {:ok, other} -> {:error, {:default_model_outside_route, name, other}}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  @doc """
+  Readies `route` and resolves `model` for a session about to start.
+
+  `model` is a specification under the route's name: `NAME:@default` resolves
+  through `default_model/2`, anything else is checked with
+  `c:validate_model/3` and no tools, which is the "does this model exist
+  here" question. Returns the readied route and the model the session should
+  record. This is the preparation every host runs before a routed session
+  starts — `Lemieux.CLI.Runtime` for a new session and a resume, the
+  terminal UI for its prefetch — so a route implements the two callbacks
+  and gets all three.
+  """
+  @spec prepare(route :: t(), model :: String.t()) ::
+          {:ok, t(), String.t()} | {:error, term()}
+  def prepare({module, _state} = route, model) when is_atom(module) and is_binary(model) do
+    with {:ok, route} <- ready(route),
+         {:ok, model} <- selected(route, model),
+         :ok <- validate_model(route, model, []) do
+      {:ok, route, model}
+    end
+  end
+
+  defp selected(route, model) do
+    if ModelSpec.default_selection?(model),
+      do: default_model(route, ModelSpec.provider(model)),
+      else: {:ok, model}
+  end
 
   @doc "The route's cost estimate for `request`, or `nil` without a route or a callback."
   @spec estimate_cost(route :: t() | nil, request :: Request.t()) :: number() | nil

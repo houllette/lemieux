@@ -6,6 +6,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
   alias Lemieux.CLI.Extensions
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
+  alias Lemieux.Providers.ReqLLM, as: Adapter
   alias Lemieux.Providers.Scripted
   alias Lemieux.Store.JSONL
 
@@ -208,6 +209,167 @@ defmodule Lemieux.CLI.ExtensionsTest do
     end
   end
 
+  describe "an extension that offers model routes" do
+    alias Lemieux.CLI.ProviderMux
+    alias Lemieux.Provider
+    alias LemieuxTest.StaticRoute
+
+    # A route source and nothing else: no `apply/2`, so it shapes no harness.
+    defp route_source(module, opts) do
+      apply? = Keyword.get(opts, :apply?, false)
+
+      """
+      defmodule #{inspect(module)} do
+        @behaviour Lemieux.Extension.Routes
+        #{if apply?, do: "@behaviour Lemieux.Extension", else: ""}
+        import Kernel, except: [apply: 2]
+
+        @impl Lemieux.Extension.Routes
+        def routes(config: config) do
+          name = Map.fetch!(config, "name")
+
+          {:ok,
+           [
+             %{
+               name: name,
+               route:
+                 {LemieuxTest.StaticRoute,
+                  LemieuxTest.StaticRoute.new(name: name, models: ["a", "b"], default: name <> ":a")}
+             }
+           ]}
+        end
+
+        #{if apply?, do: "@impl Lemieux.Extension\n  def apply(harness, _config), do: %{harness | max_turns: 7}", else: ""}
+      end
+      """
+    end
+
+    defp route_extension(directory, module, manifest \\ %{}, opts \\ []) do
+      File.mkdir_p!(directory)
+      File.write!(Path.join(directory, "route.exs"), route_source(module, opts))
+
+      write_manifest(
+        directory,
+        Map.merge(
+          %{
+            "name" => "relay",
+            "module" => inspect(module),
+            "script" => "route.exs",
+            "options" => %{"name" => "relay"}
+          },
+          manifest
+        )
+      )
+    end
+
+    test "loads with routes and no spec, and is recorded as loaded but not applied", %{
+      tmp_dir: tmp_dir
+    } do
+      directory = Path.join(tmp_dir, "relay")
+      module = unique_module("RouteOnly")
+      route_extension(directory, module)
+
+      assert {:ok, loaded} = Extensions.load(directory)
+      assert loaded.spec == nil
+      assert loaded.routes == {module, [config: %{"name" => "relay"}]}
+      assert loaded.provenance["routes"] == true
+
+      # Without a host provider, lmx builds its own: the route beside the
+      # direct connection, the start model resolved on it.
+      assert {:ok, options} =
+               Options.parse(["--model", "relay:@default", "--extension-dir", directory])
+
+      assert {:ok, prepared} =
+               Runtime.prepare(options, store: JSONL.new(Path.join(tmp_dir, "sessions")))
+
+      assert prepared.model == "relay:a"
+      assert prepared.routes == ["relay"]
+      assert {ProviderMux, _} = provider = Keyword.fetch!(prepared.options, :provider)
+      assert Provider.available_models(provider, provider: "relay") == ["relay:a", "relay:b"]
+
+      assert {StaticRoute, %StaticRoute{readied: 1}} =
+               provider |> ProviderMux.child("relay:a") |> Adapter.route()
+
+      refute Enum.any?(prepared.harness.applied, &(&1["module"] == inspect(module)))
+
+      assert [%{"name" => "relay", "routes" => true}] =
+               prepared.harness.harness_context["extensions"]["loaded"]
+    end
+
+    test "one module may shape the harness and offer routes", %{tmp_dir: tmp_dir} do
+      directory = Path.join(tmp_dir, "both")
+      module = unique_module("Both")
+
+      route_extension(directory, module, %{"name" => "both", "options" => %{"name" => "both"}},
+        apply?: true
+      )
+
+      assert {:ok, loaded} = Extensions.load(directory)
+      assert loaded.spec == {module, [config: %{"name" => "both"}]}
+      assert loaded.routes == {module, [config: %{"name" => "both"}]}
+
+      assert {:ok, options} = Options.parse(["--extension-dir", directory])
+
+      assert {:ok, prepared} =
+               Runtime.prepare(options, store: JSONL.new(Path.join(tmp_dir, "sessions")))
+
+      assert prepared.harness.max_turns == 7
+      assert prepared.routes == ["both"]
+      assert Enum.any?(prepared.harness.applied, &(&1["module"] == inspect(module)))
+    end
+
+    test "the person's extension_options reach routes/1 over the manifest's", %{tmp_dir: tmp_dir} do
+      root = Path.join(tmp_dir, "extensions")
+      module = unique_module("Configured")
+      route_extension(Path.join(root, "relay"), module)
+
+      config = Path.join(tmp_dir, "config.json")
+
+      File.write!(
+        config,
+        ~s({"version":1,"extensions":["relay"],"extension_options":{"relay":{"name":"renamed"}}})
+      )
+
+      File.chmod!(config, 0o600)
+
+      assert {:ok, options} = Options.parse(["--config", config, "--router", "renamed"])
+      assert options.model == "renamed:@default"
+
+      assert {:ok, prepared} =
+               Runtime.prepare(options,
+                 store: JSONL.new(Path.join(tmp_dir, "sessions")),
+                 extensions_dir: root
+               )
+
+      assert prepared.model == "renamed:a"
+      assert prepared.routes == ["renamed"]
+      # `--router NAME` is the sole connection for lmx run, like `--ixway`.
+      assert {Adapter, _} = Keyword.fetch!(prepared.options, :provider)
+    end
+
+    test "a host that supplies its own provider has no route registered for it", %{
+      tmp_dir: tmp_dir
+    } do
+      directory = Path.join(tmp_dir, "relay")
+      route_extension(directory, unique_module("Unused"))
+
+      assert {:ok, prepared} = prepare(["--extension-dir", directory], tmp_dir)
+      assert prepared.routes == []
+      assert {Scripted, _} = Keyword.fetch!(prepared.options, :provider)
+    end
+
+    test "--router naming a route no loaded extension registers stops the start", %{
+      tmp_dir: tmp_dir
+    } do
+      assert {:ok, options} = Options.parse(["--router", "relay"])
+
+      assert {:error, message} =
+               Runtime.prepare(options, store: JSONL.new(Path.join(tmp_dir, "sessions")))
+
+      assert message =~ "no model route named relay is registered"
+    end
+  end
+
   describe "selection by name" do
     test "config's extensions selects by name under the personal root", %{tmp_dir: tmp_dir} do
       root = Path.join(tmp_dir, "extensions")
@@ -381,6 +543,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
       assert {:error, message} = Extensions.load(directory)
       assert message =~ inspect(module)
       assert message =~ "apply/2"
+      assert message =~ "routes/1"
     end
 
     test "a module the code it names does not define", %{tmp_dir: tmp_dir} do

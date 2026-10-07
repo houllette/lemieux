@@ -6,6 +6,7 @@ defmodule Lemieux.IxwayTest do
   alias Lemieux.CLI.Runtime
   alias Lemieux.Ixway
   alias Lemieux.Provider
+  alias Lemieux.Provider.Route
   alias Lemieux.Providers.ReqLLM, as: Adapter
   alias Lemieux.Request
   alias Lemieux.Store.JSONL
@@ -197,6 +198,27 @@ defmodule Lemieux.IxwayTest do
     assert authenticated["user-agent"] == "Lemieux-Ixway/1"
   end
 
+  test "Ixway is prepared through the generic route preparation" do
+    connection = connection()
+
+    assert {:ok, ^connection} = Ixway.ready(connection)
+    assert {:ok, "ixway:team/coding"} = Ixway.default_model(connection)
+
+    assert {:ok, {Ixway, ^connection}, "ixway:team/coding"} =
+             Route.prepare({Ixway, connection}, "ixway:@default")
+
+    assert {:error, %Ixway.Error{reason: :model_not_available}} =
+             Route.prepare({Ixway, connection}, "ixway:missing")
+
+    denied = %{connection | client_policy: %{"default_profile" => %{"status" => "unavailable"}}}
+
+    assert {:error, %Ixway.Error{reason: :model_choice_required}} =
+             Route.prepare({Ixway, denied}, "ixway:@default")
+
+    assert Ixway.prepare(Ixway.provider(connection), "ixway:@default") ==
+             Adapter.prepare(Ixway.provider(connection), "ixway:@default")
+  end
+
   test "TUI prefetch retains a catalogue for model selection without another request" do
     parent = self()
 
@@ -215,7 +237,7 @@ defmodule Lemieux.IxwayTest do
 
     provider =
       ProviderMux.new(
-        Ixway.provider(endpoint: endpoint, api_key: "private-key"),
+        [{"ixway", Ixway.provider(endpoint: endpoint, api_key: "private-key")}],
         Adapter.new(api_keys: %{"openai" => "direct-key"})
       )
 

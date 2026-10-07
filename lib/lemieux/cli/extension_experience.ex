@@ -18,6 +18,7 @@ defmodule Lemieux.CLI.ExtensionExperience do
   """
 
   alias Lemieux.CLI.Options
+  alias Lemieux.CLI.Routes
   alias Lemieux.CLI.Runtime
   alias Lemieux.Extension.Profile
   alias Lemieux.Extensions.Workspace.Discovery
@@ -40,7 +41,7 @@ defmodule Lemieux.CLI.ExtensionExperience do
   defp prepare_extension(options, opts) do
     with :ok <- profile_choice(options, opts),
          :ok <- compatible(options, opts),
-         provider = Keyword.get_lazy(opts, :provider, fn -> Runtime.provider(options) end),
+         provider = provider(options, opts),
          {:ok, profile} <- selected_profile(options, provider, opts),
          extension = extension(profile, provider, designation(options, opts), opts),
          # Validated now, so a profile that cannot open says so here rather
@@ -72,6 +73,18 @@ defmodule Lemieux.CLI.ExtensionExperience do
       {:error, reason} ->
         {:error, "Cannot open extension experience: #{inspect(reason)}"}
     end
+  end
+
+  # The host's connection, with the routes the host registered when it did
+  # so before coming here (`Lemieux.CLI.Runtime.with_routes/2`), else the
+  # shipped ones alone.
+  defp provider(options, opts) do
+    Keyword.get_lazy(opts, :provider, fn ->
+      Runtime.provider(
+        options,
+        Keyword.get_lazy(opts, :routes, fn -> Routes.builtin(options) end)
+      )
+    end)
   end
 
   defp extension(profile, provider, name, opts) do

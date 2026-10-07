@@ -124,7 +124,7 @@ defmodule Lemieux.CLI.Help do
           --max-turns N             Model turns per prompt (default 400)
           --output-format F         lmx run only: text | json | stream-json
           --config PATH|none        Settings file (default ~/.lmx/config.json)
-          --router MODE             Override routing: direct or ixway (LMX_ROUTER)
+          --router MODE             Routing: direct, ixway or a route (LMX_ROUTER)
           --ixway URL               Use Ixway as the sole inference pipeline
                                     (instance origin; LMX_IXWAY_URL and
                                     IXWAY_API_KEY). Models: ixway:ID
@@ -408,6 +408,11 @@ defmodule Lemieux.CLI.Help do
     "extension_options": {"NAME": {...}}, so rebuilding it keeps them. A Mix
     project built with mix lmx.extension.build is the larger form; MCP
     servers and command hooks need no Elixir at all.
+
+    An extension may also register a model route (routes/1, see
+    Lemieux.Extension.Routes): its models are NAME:ID beside the direct
+    providers', /provider NAME switches to it, and --router NAME starts on
+    its advertised default. A route never falls back to a direct key.
     """
   end
 
@@ -536,7 +541,8 @@ defmodule Lemieux.CLI.Help do
                            reach; see lmx help models)
           --config PATH    Personal JSON config (default ~/.lmx/config.json;
                            LMX_CONFIG or --config none to disable)
-          --router MODE    Override routing: direct or ixway (LMX_ROUTER)
+          --router MODE    Routing: direct, ixway or a registered route's name
+                           (LMX_ROUTER)
           --ixway URL      Use Ixway as the sole inference pipeline (instance origin;
                            LMX_IXWAY_URL and IXWAY_API_KEY). Models: ixway:ID
           --base-url URL   Route model API calls through this provider-compatible

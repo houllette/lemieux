@@ -8,7 +8,13 @@ defmodule Lemieux.CLI.Config do
   setting could send a request directly to a vendor.
 
   Routing precedence is an explicit flag choice, then environment, then the
-  file. `--router direct` disables a saved Ixway route without deleting it.
+  file. `--router direct` disables a saved Ixway route without deleting it;
+  `--router NAME` selects a model route an extension registers
+  (`Lemieux.CLI.Routes`), by the name its models carry, and starts on that
+  route's default unless a model is named. The file selects such a route
+  the way it selects any provider: `"model": "NAME:ID"`, or
+  `providers.NAME.model`. Whether the name is registered is the runtime's to
+  check, once the extensions are loaded; here it is only a well-formed name.
   The file's model and system prompt are defaults for new conversations;
   only actual flags enter `Options.given` and override a resumed transcript.
 
@@ -90,6 +96,7 @@ defmodule Lemieux.CLI.Config do
 
   alias Lemieux.CLI.Extensions
   alias Lemieux.CLI.Options
+  alias Lemieux.Extension.Routes
   alias Lemieux.Extensions.A2A, as: A2AExtension
   alias Lemieux.Ixway
   alias Lemieux.ModelSpec
@@ -546,28 +553,49 @@ defmodule Lemieux.CLI.Config do
     mode(options[:router], options[:ixway], options[:base_url])
   end
 
-  defp mode(router, _ixway, _base_url) when router not in [nil, "direct", "ixway"],
-    do: {:error, "--router/LMX_ROUTER must be direct or ixway."}
+  defp mode(router, ixway, base_url) when router in [nil, "direct", "ixway"],
+    do: standard_mode(router, ixway, base_url)
 
-  defp mode(_router, ixway, base_url) when not is_nil(ixway) and not is_nil(base_url),
+  # Any other router is the name of a model route an extension registers;
+  # whether one is registered under it is checked once the extensions are
+  # loaded (`Lemieux.CLI.Routes.selected/2`). Like Ixway, a route owns its
+  # destination, so a URL for another cannot sit in the same layer.
+  defp mode(router, ixway, base_url) do
+    cond do
+      not Routes.valid_name?(router) ->
+        {:error,
+         "--router/LMX_ROUTER must be direct, ixway or the name of a registered model route " <>
+           "(lowercase letters, digits and _)."}
+
+      not is_nil(ixway) or not is_nil(base_url) ->
+        {:error,
+         "A model route cannot be combined with an Ixway URL or a provider base URL in the " <>
+           "same configuration layer."}
+
+      true ->
+        {:ok, router}
+    end
+  end
+
+  defp standard_mode(_router, ixway, base_url) when not is_nil(ixway) and not is_nil(base_url),
     do:
       {:error,
        "Ixway cannot be combined with --base-url/LMX_BASE_URL in the same configuration layer."}
 
-  defp mode("direct", ixway, _base_url) when not is_nil(ixway),
+  defp standard_mode("direct", ixway, _base_url) when not is_nil(ixway),
     do:
       {:error,
        "Direct routing cannot be combined with an Ixway URL in the same configuration layer."}
 
-  defp mode("ixway", _ixway, base_url) when not is_nil(base_url),
+  defp standard_mode("ixway", _ixway, base_url) when not is_nil(base_url),
     do:
       {:error,
        "Ixway cannot be combined with a provider base URL in the same configuration layer."}
 
-  defp mode(router, _ixway, _base_url) when is_binary(router), do: {:ok, router}
-  defp mode(nil, ixway, _base_url) when is_binary(ixway), do: {:ok, "ixway"}
-  defp mode(nil, nil, base_url) when is_binary(base_url), do: {:ok, "direct"}
-  defp mode(nil, nil, nil), do: {:ok, nil}
+  defp standard_mode(router, _ixway, _base_url) when is_binary(router), do: {:ok, router}
+  defp standard_mode(nil, ixway, _base_url) when is_binary(ixway), do: {:ok, "ixway"}
+  defp standard_mode(nil, nil, base_url) when is_binary(base_url), do: {:ok, "direct"}
+  defp standard_mode(nil, nil, nil), do: {:ok, nil}
 
   defp selected_mode(nil, env, ixway) do
     with {:ok, env_mode} <- mode(env),
@@ -580,7 +608,7 @@ defmodule Lemieux.CLI.Config do
     endpoint = parsed[:ixway] || env[:ixway] || ixway["endpoint"]
 
     if Ixway.valid_endpoint?(endpoint),
-      do: {:ok, [ixway: endpoint, base_url: nil]},
+      do: {:ok, [ixway: endpoint, base_url: nil, route: nil]},
       else:
         {:error,
          "Ixway requires an http(s) instance origin without /v1, credentials, query or fragment."}
@@ -590,14 +618,30 @@ defmodule Lemieux.CLI.Config do
     url = parsed[:base_url] || env[:base_url] || get(config, "base_url")
 
     if is_nil(url) or valid_base_url?(url),
-      do: {:ok, [ixway: nil, base_url: url]},
+      do: {:ok, [ixway: nil, base_url: url, route: nil]},
       else: {:error, "--base-url wants an absolute http:// or https:// URL"}
   end
+
+  defp route(name, _parsed, _env, _config, _ixway),
+    do: {:ok, [ixway: nil, base_url: nil, route: name]}
 
   defp file_model("ixway", config, ixway, _default),
     do: ixway["model"] || ixway_file_model(get(config, "model"))
 
   defp file_model("direct", config, _ixway, default), do: direct_model(config) || default
+
+  # A selected route starts on the file's model when the file chose one of
+  # that route's, else on the route's advertised default — never on the
+  # file's direct model, which the route does not serve.
+  defp file_model(name, config, _ixway, _default) do
+    configured = get(config, "model")
+
+    cond do
+      is_binary(configured) and ModelSpec.provider(configured) == name -> configured
+      model = get_in(get(config, "providers", %{}), [name, "model"]) -> model
+      true -> ModelSpec.default_selection(name)
+    end
+  end
 
   # The starter's direct model must not prevent a later --ixway opt-in from
   # selecting the gateway's advertised default. Explicit flag/env models still

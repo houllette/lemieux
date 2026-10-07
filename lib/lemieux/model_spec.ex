@@ -53,4 +53,23 @@ defmodule Lemieux.ModelSpec do
       when is_binary(provider) and provider != "" and is_binary(model_id) and model_id != "" do
     provider <> ":" <> model_id
   end
+
+  # The one model id that is an instruction rather than a name: "whichever
+  # model this route advertises as its default". A `Lemieux.Provider.Route`
+  # resolves it before a session records its model, so a transcript never
+  # says `@default`; Ixway introduced the spelling and every route shares it.
+  @default_id "@default"
+
+  @doc """
+  The selection instruction for `provider`'s advertised default model:
+  `provider:@default`, which `Lemieux.Provider.Route.prepare/2` resolves.
+  """
+  @spec default_selection(provider :: provider()) :: String.t()
+  def default_selection(provider) when is_binary(provider) and provider != "",
+    do: join(provider, @default_id)
+
+  @doc "Whether `spec` asks for a route's advertised default rather than naming a model."
+  @spec default_selection?(spec :: String.t() | nil) :: boolean()
+  def default_selection?(spec) when is_binary(spec), do: model_id(spec) == @default_id
+  def default_selection?(nil), do: false
 end

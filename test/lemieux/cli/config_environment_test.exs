@@ -60,6 +60,21 @@ defmodule Lemieux.CLI.ConfigEnvironmentTest do
     assert {:ok, %{ixway: nil}} = Options.parse(["--base-url", "https://direct.example/v1"])
   end
 
+  test "LMX_ROUTER names a model route, and a flag overrides it" do
+    System.put_env("LMX_ROUTER", "relay")
+
+    assert {:ok, %{host: %{route: "relay"}, ixway: nil, model: "relay:@default"}} =
+             Options.parse([])
+
+    assert {:ok, %{host: %{route: nil}, model: model}} = Options.parse(["--router", "direct"])
+    assert model == Options.default_model()
+    assert Options.inference_default("fallback:model") == "relay:@default"
+
+    System.put_env("LMX_ROUTER", "not a name")
+    assert {:error, message} = Options.parse([])
+    assert message =~ "direct, ixway or the name of a registered model route"
+  end
+
   test "disabled Ixway is saved without becoming active and config none skips it", %{tmp_dir: dir} do
     path =
       config(dir, %{

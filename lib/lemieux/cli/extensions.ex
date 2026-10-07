@@ -37,6 +37,14 @@ defmodule Lemieux.CLI.Extensions do
   manifest from `lemieux-extension.json`, which the learning lane's export
   writes for a source tree and which never loads anything.
 
+  The module is a `Lemieux.Extension`, a `Lemieux.Extension.Routes`, or
+  both: one that exports `apply/2` shapes the harness, one that exports
+  `routes/1` offers model routes for `Lemieux.CLI.Routes` to register, and
+  `routes/1` receives the same `[config: map]`. A module exporting neither
+  is refused, since there is nothing to load it for. What is loaded says
+  which it was: `spec` is `nil` for a route-only module, `routes` is `nil`
+  for a harness-only one.
+
   Options may also come from the person's configuration: `load_all/2`'s
   `:options` maps an extension's manifest name to a JSON object merged over
   the manifest's own `options`. That is where a person keeps settings they
@@ -160,10 +168,16 @@ defmodule Lemieux.CLI.Extensions do
   @type selection :: {:name, String.t()} | {:dir, Path.t()}
 
   @typedoc """
-  A loaded extension: the spec `Lemieux.Harness.assemble/2` takes and the
-  JSON-shaped provenance the runtime records.
+  A loaded extension: the spec `Lemieux.Harness.assemble/2` takes (`nil` for
+  a module without `apply/2`), the module and options `Lemieux.CLI.Routes`
+  asks for routes (`nil` for one without `routes/1`), and the JSON-shaped
+  provenance the runtime records.
   """
-  @type loaded :: %{spec: {module(), [config: map()]}, provenance: map()}
+  @type loaded :: %{
+          spec: {module(), [config: map()]} | nil,
+          routes: {module(), [config: map()]} | nil,
+          provenance: map()
+        }
 
   @doc "The manifest's file name inside an extension directory."
   @spec manifest_file() :: String.t()
@@ -260,12 +274,24 @@ defmodule Lemieux.CLI.Extensions do
   defp configured_options(_options),
     do: {:error, "extension_options must map extension names to JSON objects of options"}
 
-  defp configure(%{spec: {module, [config: config]}, provenance: provenance} = loaded, configured) do
+  defp configure(%{provenance: provenance} = loaded, configured) do
     case Map.fetch(configured, provenance["name"]) do
-      {:ok, options} -> %{loaded | spec: {module, [config: Map.merge(config, options)]}}
-      :error -> loaded
+      {:ok, options} ->
+        %{
+          loaded
+          | spec: configured(loaded.spec, options),
+            routes: configured(loaded.routes, options)
+        }
+
+      :error ->
+        loaded
     end
   end
+
+  defp configured(nil, _options), do: nil
+
+  defp configured({module, [config: config]}, options),
+    do: {module, [config: Map.merge(config, options)]}
 
   defp load_once(directory, loaded) do
     if Enum.any?(loaded, &(&1.provenance["directory"] == directory)) do
@@ -396,8 +422,9 @@ defmodule Lemieux.CLI.Extensions do
          :ok <- validate(manifest, directory),
          :ok <- compatible(manifest, directory),
          {:ok, code} <- load_code(manifest, directory),
-         {:ok, module} <- extension_module(manifest, directory, code) do
+         {:ok, module, contracts} <- extension_module(manifest, directory, code) do
       options = Map.get(manifest, "options", %{})
+      spec = {module, [config: options]}
 
       provenance =
         Map.merge(
@@ -410,7 +437,14 @@ defmodule Lemieux.CLI.Extensions do
           code
         )
 
-      {:ok, %{spec: {module, [config: options]}, provenance: provenance}}
+      provenance = if contracts.routes?, do: Map.put(provenance, "routes", true), else: provenance
+
+      {:ok,
+       %{
+         spec: if(contracts.apply?, do: spec),
+         routes: if(contracts.routes?, do: spec),
+         provenance: provenance
+       }}
     end
   end
 
@@ -774,8 +808,8 @@ defmodule Lemieux.CLI.Extensions do
     module = module(manifest)
 
     with :ok <- defined(module, manifest, directory, code),
-         :ok <- exports_apply(module) do
-      {:ok, module}
+         {:ok, contracts} <- exports_contract(module) do
+      {:ok, module, contracts}
     end
   end
 
@@ -806,10 +840,18 @@ defmodule Lemieux.CLI.Extensions do
     end
   end
 
-  defp exports_apply(module) do
-    if function_exported?(module, :apply, 2),
-      do: :ok,
+  # Which of the two contracts the module speaks; neither is nothing to load.
+  defp exports_contract(module) do
+    contracts = %{
+      apply?: function_exported?(module, :apply, 2),
+      routes?: function_exported?(module, :routes, 1)
+    }
+
+    if contracts.apply? or contracts.routes?,
+      do: {:ok, contracts},
       else:
-        {:error, "#{inspect(module)} does not export apply/2, so it is not a Lemieux.Extension"}
+        {:error,
+         "#{inspect(module)} does not export apply/2 (a Lemieux.Extension) or routes/1 " <>
+           "(a Lemieux.Extension.Routes), so there is nothing to load it for"}
   end
 end
