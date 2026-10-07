@@ -3,7 +3,7 @@ defmodule Lemieux.MixProject do
 
   # Dependabot evaluates a temporary copy of mix.exs without copying VERSION.
   # Keep this literal in sync with VERSION; MixProjectTest enforces the pair.
-  @version "0.9.0"
+  @version "0.9.1"
   @source_url "https://github.com/houllette/lemieux"
   @description "The Elixir runtime behind the lmx coding agent: runs the model/tool loop " <>
                  "itself and records every session as an append-only transcript you can " <>

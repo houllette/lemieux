@@ -184,6 +184,12 @@ minimum macOS version belongs to each release: check it again every time
   ([Qualification](#qualification)).
 - Commit the reviewed upgrade decision, `dist/lmx/upgrades/X.Y.Z.exs`
   ([Upgrade decisions](#upgrade-decisions)).
+- Regenerate `test/fixtures/harness_learning/contracts.json`. Its harness
+  snapshot records the Lemieux version, so every bump moves the version and
+  three digests in it (the snapshot's manifest and semantic digests and the
+  run evidence digest), and the golden contracts test fails until they move:
+  `mix test test/lemieux/learning/golden_contracts_test.exs` shows the new
+  values. Change only those, so the file keeps its layout.
 - Run `mise exec -- mix precommit.full` (it needs network access and
   `python3`).
 - Check that no placeholder or private wording is left. The placeholder
@@ -312,10 +318,15 @@ which reads the latest GitHub release.
 ### 8. Publish the GitHub release
 
 Read the draft once more: the body is `.github/release-notes.md`, and the
-minimum macOS version in it must match what the macOS jobs recorded. Then
-publish it as the latest release, not as a pre-release:
+minimum macOS version in it must match what the macOS jobs recorded. Check
+that it carries both signatures, because publishing makes it immutable and an
+unsigned release cannot be fixed afterwards
+([Re-runs and mistakes](#re-runs-and-mistakes)). Then publish it as the
+latest release, not as a pre-release:
 
 ```sh
+gh release view vX.Y.Z --repo houllette/lemieux --json assets \
+  -q '[.assets[].name | select(. == "SHA256SUMS.sig" or . == "update.json.sig")] | length'    # must print 2
 gh release edit vX.Y.Z --repo houllette/lemieux --draft=false --prerelease=false --latest
 ```
 
@@ -348,6 +359,20 @@ within the hour.
   Check, sign and verify again, with the new run's id in step 4.
 - A published release is never rebuilt; the draft job refuses it. Fix a
   mistake with a new version.
+- A release published before it was signed can never be signed: immutable
+  releases refuse new assets and `sign_draft` refuses a published release,
+  while `install.sh` refuses it ("this release has no SHA256SUMS.sig") and
+  installed copies report it as not signed yet. Make the previous release
+  Latest again, which `install.sh`, the updater and release CI all read, and
+  mark the unsigned one a pre-release; then release the same code as the next
+  patch version, with its upgrade decision from the previous release:
+
+  ```sh
+  gh release edit vPREVIOUS --repo houllette/lemieux --latest
+  gh release edit vX.Y.Z --repo houllette/lemieux --prerelease
+  ```
+
+  0.9.0 went out this way, and 0.9.1 is the same code, signed.
 - Any change to the signed bytes after signing (a rebuild, a re-upload,
   operating-system code signing) means new `SHA256SUMS` and `update.json` and
   signing again.
