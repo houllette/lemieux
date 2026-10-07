@@ -9,6 +9,33 @@ API.
 
 ## Unreleased
 
+### lmx
+
+- An extension `lmx` loads can register a **model route**: a module that
+  exports `routes/1` (`Lemieux.Extension.Routes`) offers named
+  `Lemieux.Provider.Route`s, and `lmx` registers them beside Ixway
+  (`Lemieux.CLI.Routes`) and runs them through the same host code — the
+  prefetch before the terminal UI opens, `NAME:@default` resolving to the
+  route's advertised default, `/provider NAME` and `/model` listing its
+  models, the start model readied and checked on its route for a new
+  session and a resume, and a request under one name never reaching another
+  connection. Until now that code named `Lemieux.Ixway`, and a second route
+  meant another binary. `--router` and `LMX_ROUTER` take a registered
+  route's name beside `direct` and `ixway`: `lmx run` then sends through
+  that route alone, as `--ixway` always has, and the file's `"model"` or
+  `providers.NAME.model` chooses the start model when it names one of the
+  route's. A name nobody registered, a route that would shadow a `req_llm`
+  provider or another route, a malformed registration, and a `routes/1`
+  that cannot build its routes (a credential not set) each stop the start in
+  a sentence naming the extension. `lmx explain` reports the route under
+  `diagnostics.route` and a route's credential as `route_managed`. The
+  loader accepts a module exporting `apply/2`, `routes/1` or both, and
+  records `"routes": true` for one that offers routes.
+  [`examples/extensions/relay`](examples/extensions/relay/README.md) is a
+  one-file route to an OpenAI-compatible server, and
+  [Adding a model route](docs/extensions.md#adding-a-model-route) is the
+  guide. (#14)
+
 ### Installing and updating
 
 - Release builds pin Erlang/OTP 29.1.1 and Elixir 1.20.4; 0.8.1 was built on
@@ -20,6 +47,19 @@ API.
 
 ### Library
 
+- `Lemieux.Provider.Route` has two optional callbacks for the host that
+  starts a session, `ready/1` and `default_model/1`, and `prepare/2`, the
+  one sequence every host runs them in: ready the route, resolve
+  `NAME:@default` (`Lemieux.ModelSpec.default_selection?/1`) through the
+  default, check the model. `Lemieux.Providers.ReqLLM.prepare/2`,
+  `ready/1` and `route/1` do the same for a routed provider;
+  `Lemieux.Ixway.prepare/2` is now that sequence for the shipped route,
+  which implements both callbacks, and `Lemieux.Ixway.ready/1` is public.
+  `Lemieux.Extension.Routes` is the behaviour an extension implements to
+  offer routes to a host, with `validate/1` for what it returned.
+  `Lemieux.CLI.ProviderMux.new/3` takes a list of `{name, provider}` routes
+  in place of one Ixway provider; a host that built one passes
+  `[{"ixway", ixway}]`. (#14)
 - `Lemieux.Provider.Error.category/1` files an HTTP `408` under `:timeout`.
   `retryable?/1` and `transient?/2` already treated it as transient, but the
   category a host's retry policy sees was `:other`, so a CDN that answered

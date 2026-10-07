@@ -27,6 +27,7 @@ commands from this checkout.
 | [`first_session.exs`](first_session.exs) | A complete embedded session with a scripted model | `mix run examples/first_session.exs` | Nothing; see [First embedded agent](../docs/first-embedded-agent.md) for a real provider |
 | [`extensions/hello`](extensions/hello/README.md) | One deterministic tool packaged as an extension, built into a bundle `lmx` loads | `mix test`; `lmx explain --extension hello` | A provider key to chat with it |
 | [`extensions/planning`](extensions/planning/README.md) | The smallest **script** extension: one `.exs` and an `extension.json`, no Mix project, adding a deterministic `plan_order` tool | The root suite; `lmx explain --extension-dir examples/extensions/planning` | A provider key to chat with it |
+| [`extensions/relay`](extensions/relay/README.md) | A one-file **model route**: an OpenAI-compatible server you run, registered under the provider name `relay` so `--model relay:ID` and `--router relay` reach it and nothing else does | The root suite; `RELAY_API_KEY=none lmx explain --extension-dir examples/extensions/relay --model relay:@default` | A server speaking `/v1/chat/completions` and `RELAY_API_KEY` |
 
 ## Agents built on the library
 
@@ -86,8 +87,9 @@ The synthetic tasks these drivers and the evaluation gate run on are in
 Check an example's Mix project against this checkout the way CI does, from
 the repository root: `scripts/check_example.sh NAME`, for `hello`, `review`,
 `verifier`, `research`, `security`, `capture`, `builder` or `computer_use`.
-`extensions/planning` has no Mix project; the root suite checks it
-(`test/lemieux/planning_example_test.exs`).
+`extensions/planning` and `extensions/relay` have no Mix project; the root
+suite checks them (`test/lemieux/planning_example_test.exs`,
+`test/lemieux/relay_example_test.exs`).
 
 ## License
 

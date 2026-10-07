@@ -736,7 +736,7 @@ flags are in `lmx help mcp` and the builder flags in `lmx help learning`.
 | `--sandbox` | Run commands in macOS Seatbelt or Linux bubblewrap (`lmx help sandbox`) |
 | `--config PATH` | The personal JSON configuration; default `~/.lmx/config.json`. `none` reads no config file and, unless `LMX_HOME` is set, keeps no state (no history, checkpoints, log or remembered model); transcripts, MCP tokens and crash dumps still go under `~/.lmx` unless their own options move them ([Running with no configuration](configuration.md#running-with-no-configuration)) |
 | `--max-turns N`, `--max-requests N`, `--max-cost-usd N` | [Session limits](#session-limits) |
-| `--router direct\|ixway` | Override the primary inference route |
+| `--router direct\|ixway\|NAME` | Override the primary inference route: direct, Ixway, or a [model route an extension registers](extensions.md#adding-a-model-route) |
 | `--ixway URL` | Use the [Ixway inference pipeline](ixway.md) with an instance origin |
 | `--base-url URL` | Use a provider-compatible API gateway (not an HTTP proxy) |
 | `--system TEXT` | Replace the base system prompt; the terminal UI still adds its workspace layer, `lmx run` runs bare |
@@ -831,7 +831,7 @@ An embedding host sets its own limits through its session options.
 | `LMX_WEB_SEARCH` | `brave` selects web search; `none` turns it off |
 | `LMX_WEB_FETCH` | `1`, `true` or `yes` turns page reading on; `0`, `false`, `no` or empty turns it off |
 | `BRAVE_SEARCH_API_KEY` | Brave Search key; wins over a saved one, and an empty value ignores the saved one |
-| `LMX_ROUTER` | Primary inference route: `direct` or `ixway` |
+| `LMX_ROUTER` | Primary inference route: `direct`, `ixway` or a registered route's name |
 | `LMX_BASE_URL` | Provider-compatible API base URL |
 | `LMX_IXWAY_URL` | Ixway instance origin; needs a gateway key from the environment or the config |
 | `IXWAY_API_KEY` | Ixway gateway key, used only on Ixway routes |

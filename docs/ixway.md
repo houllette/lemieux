@@ -75,6 +75,15 @@ You can save this connection and optional model and effort defaults in
 [`~/.lmx/config.json`](configuration.md#personal-configuration). `--router direct`
 disables the saved route for one command; `--router ixway` activates it.
 
+`lmx` registers Ixway as the model route named `ixway` (`Lemieux.CLI.Routes`),
+through the same mechanism an extension uses to register a route of its own
+([Adding a model route](extensions.md#adding-a-model-route)). The prefetch
+before the screen opens, the resolution of `ixway:@default`, the `/provider`
+and `/model` listings and the rule that an `ixway:` request never reaches a
+direct provider are that mechanism's, not special cases for this gateway;
+`Lemieux.Ixway` supplies the gateway's discovery, catalogue, default and
+routing disclosure through `Lemieux.Provider.Route`'s callbacks.
+
 ## Embedded hosts
 
 No new dependency, supervisor child, database or endpoint is required.

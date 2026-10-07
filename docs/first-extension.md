@@ -141,7 +141,11 @@ deliberately: two tools with the same name stop a session before its first
 request.
 
 For a capability that already exists as a service, an MCP server needs no
-Elixir at all.
+Elixir at all. For somewhere new to send a session's requests — a gateway or
+a server of your own — a script can register a **model route** instead of
+shaping the harness; [Adding a model route](extensions.md#adding-a-model-route)
+and the [`relay` example](https://github.com/houllette/lemieux/blob/main/examples/extensions/relay/README.md)
+show that form.
 
 ## Resume, remove and upgrade
 
