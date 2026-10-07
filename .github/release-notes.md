@@ -1,4 +1,9 @@
-# Lemieux 0.9.0
+# Lemieux 0.9.1
+
+0.9.1 is 0.9.0, signed. 0.9.0 was published without the signatures that
+`install.sh` and every installed `lmx` check, so neither would install it;
+0.9.1 is the same code with them. Everything below is what changed since
+0.8.1.
 
 Long tasks keep going, extensions can bring their own model routes, and Jev
 compaction becomes System One compaction, which any System One provider in
@@ -8,11 +13,11 @@ read [Before you restart](#before-you-restart) first if your
 
 ## Before you restart
 
-0.9.0 refuses to start while `~/.lmx/config.json` has a `"jev_compaction"` or
+0.9.1 refuses to start while `~/.lmx/config.json` has a `"jev_compaction"` or
 `"jev_compaction_providers"` key, or `"disabled_extensions":
 ["jev_compaction"]`. It stops with a sentence naming the new keys rather than
 ignoring the old ones, since ignoring them would quietly switch compaction
-off. Move them before you restart into 0.9.0:
+off. Move them before you restart into 0.9.1:
 
 | Was | Now |
 | --- | --- |
@@ -25,13 +30,13 @@ off. Move them before you restart into 0.9.0:
 | `"disabled_extensions": ["jev_compaction"]` | `"disabled_extensions": ["systemone_compaction"]` |
 
 `JEV_API_KEY` is unchanged.
-[Moving from Jev compaction](https://github.com/houllette/lemieux/blob/v0.9.0/docs/compaction.md#moving-from-jev-compaction)
+[Moving from Jev compaction](https://github.com/houllette/lemieux/blob/v0.9.1/docs/compaction.md#moving-from-jev-compaction)
 has the whole table and what happens to a session recorded before the rename.
 A config without those keys needs no change.
 
 A script extension whose manifest names a bare version, such as
 `"versions": {"lemieux": "0.8.0"}`, was written for the 0.8 line and is not
-loaded by 0.9.0; update the script and give it `"~> 0.9"` or `"0.9.0"`.
+loaded by 0.9.1; update the script and give it `"~> 0.9"` or `"0.9.0"`.
 Extensions built with `mix lmx.extension.build` keep loading.
 
 ## What changed
@@ -45,12 +50,12 @@ Extensions built with `mix lmx.extension.build` keep loading.
   told to write the file in smaller parts. Messages `lmx` sends the model are
   drawn as `lmx` speaking (`↻`, or `✓` for the check after edits).
   `"continuation"` sets the allowances, and `"continuation": false` turns it
-  off ([Continuing unfinished work](https://github.com/houllette/lemieux/blob/v0.9.0/docs/configuration.md#continuing-unfinished-work)).
+  off ([Continuing unfinished work](https://github.com/houllette/lemieux/blob/v0.9.1/docs/configuration.md#continuing-unfinished-work)).
   (#21)
 - **Extensions can register model routes.** An extension `lmx` loads can
   offer named routes beside Ixway; `--router NAME` and `LMX_ROUTER` select
   one, `/provider` and `/model` list its models, and `lmx explain` reports it.
-  [Adding a model route](https://github.com/houllette/lemieux/blob/v0.9.0/docs/extensions.md#adding-a-model-route)
+  [Adding a model route](https://github.com/houllette/lemieux/blob/v0.9.1/docs/extensions.md#adding-a-model-route)
   is the guide, and `examples/extensions/relay` is a one-file route to an
   OpenAI-compatible server. (#14)
 - **System One compaction reaches any System One provider.**
@@ -70,7 +75,7 @@ Extensions built with `mix lmx.extension.build` keep loading.
   the session retries, instead of both being recorded as the model failing.
   `lmx run` exits 6 (provider) for the second. (#15, #16)
 
-The [changelog](https://github.com/houllette/lemieux/blob/v0.9.0/CHANGELOG.md)
+The [changelog](https://github.com/houllette/lemieux/blob/v0.9.1/CHANGELOG.md)
 has the details.
 
 ## Updating from 0.8.1
@@ -82,13 +87,16 @@ its own once its signed manifest is published, or now:
 lmx update
 ```
 
-This is a restart release on every platform: 0.9.0 runs a newer Erlang/OTP
+This is a restart release on every platform: 0.9.1 runs a newer Erlang/OTP
 (29.1.1) and Elixir (1.20.4), and adds and removes modules, so no running
 screen takes it live. Installed copies stage it and say to restart; move any
 `jev_compaction` settings first ([Before you restart](#before-you-restart)),
 save an unsent draft, quit, and start `lmx -c` to resume where you were.
 `LMX_AUTO_UPDATE=0` keeps the notices and installs only on `lmx update` or
 `/update`. The Windows build is updated by downloading the new archive.
+
+An `lmx` 0.8.1 that reported 0.9.0 as "not signed yet" takes 0.9.1 the same
+way, and so does a 0.9.0 installed by hand.
 
 ## Install lmx
 
@@ -115,7 +123,7 @@ runs nothing from the archive while it installs.
 Linux arm64 and musl distributions such as Alpine have no build yet; use the
 source checkout. To check this release yourself before you run anything,
 follow
-[Verify a download](https://github.com/houllette/lemieux/blob/v0.9.0/docs/releases.md#verify-a-download).
+[Verify a download](https://github.com/houllette/lemieux/blob/v0.9.1/docs/releases.md#verify-a-download).
 The release-signing public key is `X7aGNLOgOV+bz13CuG4x4AVnhKmsPIH8eYvBrajsiG8=`.
 
 **From source**, anywhere mise can install the pinned Erlang and Elixir:
@@ -144,7 +152,7 @@ host's attention:
 
 The bundled compaction extension is now `LemieuxSystemOneCompaction`; its old
 options are refused with a sentence saying where each value now goes. The
-[changelog](https://github.com/houllette/lemieux/blob/v0.9.0/CHANGELOG.md)
+[changelog](https://github.com/houllette/lemieux/blob/v0.9.1/CHANGELOG.md)
 lists every library change.
 
 ## Before your first session
@@ -153,7 +161,7 @@ lists every library change.
   user, not sandboxed; the startup notice says "full auto". Use
   `--permission-mode ask` to approve each action and `--sandbox` to confine
   commands.
-  [What lmx trusts by default](https://github.com/houllette/lemieux/blob/v0.9.0/SECURITY.md#what-lmx-trusts-by-default)
+  [What lmx trusts by default](https://github.com/houllette/lemieux/blob/v0.9.1/SECURITY.md#what-lmx-trusts-by-default)
   has the whole trust model.
 - Your provider bills the requests `lmx` makes; `--max-requests` and
   `--max-cost-usd` set limits. A task with open items in its plan sends the

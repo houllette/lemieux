@@ -7,6 +7,15 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## 0.9.1 — 2026-10-07
+
+0.9.0, signed. 0.9.0 was published without `SHA256SUMS.sig` and
+`update.json.sig`, so `install.sh` refused to install it and installed copies
+of `lmx` reported it as not signed yet; a published release is immutable, so
+the signatures could not be added to it afterwards. 0.9.1 changes nothing
+else: everything listed under 0.9.0 is in it, and an `lmx` 0.8.1 updates to
+it by restart.
+
 ## 0.9.0 — 2026-10-07
 
 ### lmx
