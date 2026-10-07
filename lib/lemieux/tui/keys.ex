@@ -66,11 +66,14 @@ defmodule Lemieux.TUI.Keys do
       or back on for the sitting. `alt-n`.
 
   `:forward` is not an action: it is the answer for every key the table does
-  not claim, and it hands the key to the input box untouched. The editing
-  vocabulary — cursor, word motion, kill and yank, selection with shift — is
-  whatever the underlying editor supports, and this table deliberately knows
-  nothing about it. A host that wants a key back for the editor binds it to
-  `forward`.
+  not claim, and it hands the key to the input box. The editing vocabulary —
+  cursor, word motion, kill and yank, selection with shift — is whatever the
+  underlying editor supports, and this table deliberately knows nothing
+  about it. A host that wants a key back for the editor binds it to
+  `forward`. On the way, `Lemieux.TUI.Composer` changes only what the editor
+  would get wrong: Ctrl-U deletes to the start of the line rather than
+  undoing, Ctrl-Z undoes, and a character arriving with Command, Hyper or
+  Meta held, or a control character, types nothing.
 
   ## The grammar
 

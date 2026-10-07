@@ -446,9 +446,57 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec edit(ExRatatui.Event.Key.t(), TUI.t()) :: {:noreply, TUI.t()}
     def edit(%ExRatatui.Event.Key{code: code, modifiers: modifiers}, state) do
-      :ok = ExRatatui.textarea_handle_key(state.input, code, modifiers)
-      {:noreply, edited(state)}
+      case editor_key(code, modifiers) do
+        {code, modifiers} ->
+          :ok = ExRatatui.textarea_handle_key(state.input, code, modifiers)
+          {:noreply, edited(state)}
+
+        :ignore ->
+          {:noreply, state}
+      end
     end
+
+    # The editor's own bindings were written for an application, and Ctrl-U
+    # is undo there. At a prompt it deletes back to the start of the line, and
+    # iTerm2, Ghostty, Alacritty and VS Code send it for Cmd-Backspace, so
+    # Cmd-Backspace undid instead (#23): each press took back one typed
+    # character, and held after deleting it brought the deleted text back.
+    # Ctrl-U now deletes to the line's start, as the editor's Ctrl-J does,
+    # and undo moves to Ctrl-Z, which a raw-mode terminal delivers as a key
+    # rather than a suspend. A Cmd-Backspace reported as itself, which only
+    # the kitty keyboard protocol does, gets the same treatment: the editor
+    # ignores the Command key and would delete one character.
+    defp editor_key("u", ["ctrl"]), do: {"j", ["ctrl"]}
+    defp editor_key("z", ["ctrl"]), do: {"u", ["ctrl"]}
+
+    defp editor_key("backspace", modifiers) do
+      if "super" in modifiers or "meta" in modifiers,
+        do: {"j", ["ctrl"]},
+        else: {"backspace", modifiers}
+    end
+
+    defp editor_key(code, modifiers) do
+      if stray_character?(code, modifiers), do: :ignore, else: {code, modifiers}
+    end
+
+    # The editor types any one character pressed with neither Ctrl nor Alt,
+    # whatever else is held and whatever the character is. So a Command,
+    # Hyper or Meta key the terminal reported — Cmd-K, Cmd-C — typed its
+    # letter, and a stray control character landed in the draft as an
+    # invisible byte. A character is typed only with nothing but Shift held,
+    # and only when it is not a control character; anything else the key map
+    # and the editor both pass over does nothing.
+    defp stray_character?(code, modifiers) do
+      String.length(code) == 1 and "ctrl" not in modifiers and "alt" not in modifiers and
+        (modifiers -- ["shift"] != [] or control_character?(code))
+    end
+
+    # Line feed, carriage return and tab are the control characters that are
+    # text: the editor breaks the line on the first two and keeps the third.
+    # `String.printable?/1` is not the test, because it counts ESC and BEL as
+    # printable.
+    defp control_character?(code) when code in ["\n", "\r", "\t"], do: false
+    defp control_character?(code), do: String.match?(code, ~r/\p{Cc}/u)
 
     # The input box changed: the menus reopen from the top, history browsing
     # ends, and the `@` picker catches up with the path being typed.
