@@ -19,7 +19,7 @@ defmodule Mix.Tasks.LmxTest do
   # Two expressions rather than `send(...) && :ok`: `send/2` returns its
   # message, so the `&&` was a constant conditional, and Elixir 1.20.4's type
   # checker says so — a warning `mix test --warnings-as-errors` turns into a
-  # failed suite on a machine newer than the pinned 1.20.2.
+  # failed suite.
   defp configured do
     fn ->
       send(self(), :configured)

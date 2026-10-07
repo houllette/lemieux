@@ -86,9 +86,9 @@ OPENSSL_VERSION=3.5.9
 # Elixir) and check that the download matches before adding it.
 pinned_sha256() {
   case $1 in
-    otp_src_29.0.2.tar.gz) echo b9a7714fdd282c4a7113651b1e2728a58799e60ffe20e545f5cc94c621527b15 ;;
+    otp_src_29.1.1.tar.gz) echo 054e0143e39c780e091107fc9b345792a9c1a55f6bac1eca1c1101510fc06bf6 ;;
     openssl-3.5.9.tar.gz) echo 603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a ;;
-    v1.20.2-otp-29.zip) echo a9e88cd41fbbba7da6f6dc237a49dd2ed4e70457121035cc7fc56ad05582f394 ;;
+    v1.20.4-otp-29.zip) echo 7863c546cda13fecc949e562e326042451dacf8fd8698a36783cb71eeb223b46 ;;
     *) return 1 ;;
   esac
 }

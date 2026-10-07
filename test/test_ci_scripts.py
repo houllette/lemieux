@@ -188,12 +188,12 @@ class StaticOtpPinsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_an_unpinned_otp_version_fails_before_release_time(self):
-        result = self.check_pins("erlang 29.0.99\nelixir 1.20.2-otp-29\n")
+        result = self.check_pins("erlang 29.0.99\nelixir 1.20.4-otp-29\n")
         self.assertEqual(result.returncode, 1)
         self.assertIn("no pinned SHA-256 for otp_src_29.0.99.tar.gz", result.stderr)
 
     def test_elixir_must_be_built_for_the_otp_major(self):
-        result = self.check_pins("erlang 29.0.2\nelixir 1.20.2-otp-28\n")
+        result = self.check_pins("erlang 29.1.1\nelixir 1.20.4-otp-28\n")
         self.assertEqual(result.returncode, 1)
         self.assertIn("not built for OTP 29", result.stderr)
 

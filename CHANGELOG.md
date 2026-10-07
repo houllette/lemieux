@@ -9,6 +9,15 @@ API.
 
 ## Unreleased
 
+### Installing and updating
+
+- Release builds pin Erlang/OTP 29.1.1 and Elixir 1.20.4; 0.8.1 was built on
+  29.0.2 and 1.20.2. The runtime components Erlang/OTP vendors (PCRE2, AsmJit,
+  zlib, Zstandard, Ryu, the Unicode Character Database) are the same versions
+  in both OTP releases, so `THIRD_PARTY_NOTICES` is reviewed for 29.1.1 with
+  the entries it had. A new ERTS means the next release updates 0.8.1 by
+  restart rather than a hot swap.
+
 ### Library
 
 - `Lemieux.Provider.Error.category/1` files an HTTP `408` under `:timeout`.
