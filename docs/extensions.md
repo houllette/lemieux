@@ -197,7 +197,7 @@ Applied by `lmx`, from a host that embeds the CLI:
 Lemieux.CLI.run(argv, extensions: [{MyApp.Audited, log: log}])
 ```
 
-`extensions:` is applied after everything `lmx` adds except Jev compaction,
+`extensions:` is applied after everything `lmx` adds except System One compaction,
 which is where a host can wrap what `lmx` did.
 
 ## What `lmx` ships, and which mode applies which
@@ -228,7 +228,7 @@ session would apply.
 | `Lemieux.Extensions.Delegation` | The repository scout behind `delegate`, and its budgets ([Delegation](subagents.md)) | `delegation` | default | default |
 | Yours, from `--extension`, `--extension-dir` or `"extensions"` | Whatever you built; see [Installing an extension into `lmx`](#installing-an-extension-into-lmx), and [Adding a model route](#adding-a-model-route) for one that offers a route rather than shaping the harness | | flag | flag |
 | `Lemieux.Extensions.Checkpoints` | Records what tools change, for `/undo`, `/rewind` and `/redo` ([Checkpoints](tool-contracts.md#checkpoints)) | `checkpoints` | default | default |
-| `LemieuxJevCompaction` | Jev compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-jev-projection-before-compaction)) | `jev_compaction` | when a route is set | when a route is set |
+| `LemieuxSystemOneCompaction` | System One compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-system-one-projection-before-compaction)) | `systemone_compaction` | when a provider is complete | when a provider is complete |
 
 "New sessions" means a session `lmx` is equipping a fresh catalog for: a
 resumed session keeps the catalog its transcript recorded. `environment_context`,
@@ -244,7 +244,7 @@ scout beside it, then what you loaded. A profile goes before the catalog
 extensions so `ask_user` and the scout join its tools rather than being
 replaced by them. Checkpoints come after your extensions, so the file tools
 they wrap are the final ones. An embedding host's own `extensions:` apply
-after all of these, and Jev compaction after everything else.
+after all of these, and System One compaction after everything else.
 
 A library host applies none of them by default. Its session is the base
 harness and whatever it assembles. `Lemieux.Extensions.coding/3` returns the
@@ -413,7 +413,7 @@ lmx --extension-dir ./tools/audit     # any directory, repeatable
 `--extension` — names only, never paths, never modules. The personal root is
 `~/.lmx/extensions`, or `$LMX_EXTENSIONS_DIR` (a blank value counts as
 unset). Loaded extensions apply after everything `lmx` ships except
-checkpoints and Jev compaction ([the table above](#what-lmx-ships-and-which-mode-applies-which)),
+checkpoints and System One compaction ([the table above](#what-lmx-ships-and-which-mode-applies-which)),
 and before an embedding host's `extensions:`, in the order given: the
 config's names first, then the flags as typed. Both hosts — `lmx run`
 and the TUI — load them, because both assemble through
@@ -641,21 +641,23 @@ show the shapes an extension takes:
   `lmx explain --extension-dir examples/extensions/planning`, which makes no
   model call. The root test suite checks it.
 - The [computer-use extension](https://github.com/houllette/lemieux/blob/main/examples/extensions/computer_use/README.md)
-  is experimental: a separate Mix host with bounded web discovery, Jev
-  classification (TypeSafe, billed) and headless browser actions through
-  Wallaby. It demonstrates a composed tool inheriting the current host's
-  policy for inner fetches and browser input. Its browser dependencies and
-  lifecycle remain outside the core application. Its page-observation design
-  and parts of its browser script are adapted from the MIT-licensed
-  jev-ultrafast project; its `NOTICE` file carries that license.
+  is experimental: a separate Mix host with bounded web discovery, System
+  One classification (any `systemone_providers` entry — a local model, or
+  TypeSafe and other hosted ones, which bill) and headless browser actions
+  through Wallaby. It demonstrates a composed tool inheriting the current
+  host's policy for inner fetches and browser input. Its browser
+  dependencies and lifecycle remain outside the core application. Its
+  page-observation design and parts of its browser script are adapted from
+  the MIT-licensed jev-ultrafast project; its `NOTICE` file carries that
+  license.
 
-The [Jev compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
-lives in `dist/lmx/extensions/jev_compaction` and ships inside the `lmx`
+The [System One compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
+lives in `dist/lmx/extensions/systemone_compaction` and ships inside the `lmx`
 release; it is part of `lmx`, not an example. It attaches at
-`prepare_next_turn` when a Jev route is configured and shortens selected old
+`prepare_next_turn` when a System One provider is configured and shortens selected old
 read results in the outgoing request before summary compaction checks the
 context window and price tier;
-[Compaction](compaction.md#optional-jev-projection-before-compaction) says
+[Compaction](compaction.md#optional-system-one-projection-before-compaction) says
 what it sends and how to turn it off.
 
 ## Composition, restoration and trusted code

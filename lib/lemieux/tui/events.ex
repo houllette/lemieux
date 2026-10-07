@@ -285,7 +285,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         state
         |> replace_compact_row(
           {:compact_result,
-           "Compacted " <> String.trim_leading(report) <> jev_report(state.tools.jev)}
+           "Compacted " <> String.trim_leading(report) <> systemone_report(state.tools.systemone)}
         )
         |> put_in([Access.key!(:turn), :compacting], nil)
 
@@ -293,22 +293,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp present_event(
-           %{tools: %{jev: %{} = jev}} = state,
+           %{tools: %{systemone: %{} = systemone}} = state,
            {:entry,
             %{
               type: :extension_state,
-              payload: %{"namespace" => "jev_compaction", "value" => value}
+              payload: %{"namespace" => "systemone_compaction", "value" => value}
             }},
            effects
          )
          when is_map(value) do
       updated = %{
-        jev
+        systemone
         | saved: Map.get(value, "last_saved_tokens_estimate"),
           outcome: Map.get(value, "last_outcome")
       }
 
-      {put_in(state.tools.jev, updated), effects}
+      {put_in(state.tools.systemone, updated), effects}
     end
 
     defp present_event(state, {:tool_call, call}, effects) do
@@ -713,14 +713,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
       %{state | lines: lines}
     end
 
-    defp jev_report(nil), do: ""
-    defp jev_report(%{mode: "shadow"}), do: " · Jev shadow, no context removed"
+    defp systemone_report(nil), do: ""
+    defp systemone_report(%{mode: "shadow"}), do: " · System One shadow, no context removed"
 
-    defp jev_report(%{saved: saved}) when is_integer(saved) and saved > 0,
-      do: " · last Jev projection kept ≈#{Turn.compact_number(saved)} tok out of context"
+    defp systemone_report(%{saved: saved}) when is_integer(saved) and saved > 0,
+      do: " · last System One projection kept ≈#{Turn.compact_number(saved)} tok out of context"
 
-    defp jev_report(%{outcome: nil}), do: " · Jev active, no projection recorded yet"
-    defp jev_report(_jev), do: " · Jev active, no context saved in the last projection"
+    defp systemone_report(%{outcome: nil}),
+      do: " · System One compaction active, no projection recorded yet"
+
+    defp systemone_report(_systemone),
+      do: " · System One compaction active, no context saved in the last projection"
 
     # An `ask_user` question takes the input box over; what was being typed is
     # kept in the flow and put back when the question is answered or dropped.

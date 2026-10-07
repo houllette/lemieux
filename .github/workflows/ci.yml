@@ -238,7 +238,7 @@ jobs:
         run: scripts/check_package.sh
 
   # Every example project (the hello tutorial runs in public-readiness.yml)
-  # and the Jev compaction extension the lmx binary bundles, checked by the
+  # and the System One compaction extension the lmx binary bundles, checked by the
   # script `mix precommit.full` runs, so CI and the local gate cannot drift
   # apart. Each resolves Lemieux from Hex by default; the script points it at
   # this checkout, because an example that only passed against the published
@@ -254,10 +254,10 @@ jobs:
           - {example: builder, path: examples/extensions/builder}
           - {example: capture, path: examples/extensions/capture}
           - {example: computer_use, path: examples/extensions/computer_use}
-          - {example: jev_compaction, path: dist/lmx/extensions/jev_compaction}
           - {example: research, path: examples/extensions/research}
           - {example: review, path: examples/extensions/review}
           - {example: security, path: examples/extensions/security}
+          - {example: systemone_compaction, path: dist/lmx/extensions/systemone_compaction}
           - {example: verifier, path: examples/extensions/verifier}
     steps:
       - uses: actions/checkout@v7

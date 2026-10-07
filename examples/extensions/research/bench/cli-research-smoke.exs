@@ -22,11 +22,14 @@ unless is_binary(brave_key) and brave_key != "", do: raise("missing Brave key")
 
 {:ok, options} = Options.parse(["--model", model])
 true = options.web_search == "brave" and options.web_fetch
-# The source checkout does not include the optional Jev-compaction release
-# package supplied by dist/lmx. Keep this smoke focused on web research.
+# The source checkout does not include the optional System One compaction
+# release package supplied by dist/lmx. Keep this smoke focused on web research.
 options = %{
   options
-  | config: %{options.config | settings: Map.delete(options.config.settings, "jev_compaction")}
+  | config: %{
+      options.config
+      | settings: Map.delete(options.config.settings, "systemone_compaction")
+    }
 }
 
 workspace = Path.expand("tmp/cli-smoke-workspace")

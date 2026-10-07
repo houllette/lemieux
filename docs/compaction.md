@@ -216,41 +216,90 @@ bands against the provider's published tariff when you set or update them,
 and reconcile modeled cost with the provider's usage reports and invoices; a
 discrepancy is not evidence of savings.
 
-## Optional Jev projection before compaction
+## Optional System One projection before compaction
 
 The installed `lmx` bundles one more step that runs before compaction: the
-[Jev compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
-(`LemieuxJevCompaction`). It asks TypeSafe's Jev model whether old, long
-`read` results are still needed, and shortens the ones it marks as not needed
-in the next request sent to the model. The transcript keeps the full output.
-It runs as a `prepare_next_turn` hook, before the window and price checks
-above, so a successful projection may avoid a summary on the pending request;
-if it saves too little or Jev is unavailable, the ordinary summary logic still
-applies.
+[System One compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
+(`LemieuxSystemOneCompaction`). It asks a System One model — TypeSafe's
+hosted Jev, an Ixway gateway, a vendor's decision API or an open model on
+your own machine — whether old, long `read` results are still needed, and
+shortens the ones it marks as not needed in the next request sent to the
+model. The transcript keeps the full output. It runs as a
+`prepare_next_turn` hook, before the window and price checks above, so a
+successful projection may avoid a summary on the pending request; if it
+saves too little or the scorer is unavailable, the ordinary summary logic
+still applies.
 
-The extension lives in `dist/lmx/extensions/jev_compaction` and is part of
-the `lmx` release, not of the library: the `lemieux` package does not depend
-on it, and an embedding host that wants it adds that directory as a path
-dependency and assembles `LemieuxJevCompaction` with its harness, or installs
-its `hook/1` directly.
+The extension lives in `dist/lmx/extensions/systemone_compaction` and is
+part of the `lmx` release, not of the library: the `lemieux` package does
+not depend on it, and an embedding host that wants it adds that directory as
+a path dependency and assembles `LemieuxSystemOneCompaction` with its
+harness, or installs its `hook/1` directly.
+
+Until this release the step was called Jev compaction, and its settings were
+`"jev_compaction"`. That key is now refused at startup with a sentence
+naming the new ones; see [Moving from Jev compaction](#moving-from-jev-compaction).
+
+### Choosing a provider
+
+Choosing a provider is separate from configuring one, the way `"web_search"`
+and `"web_search_providers"` divide search. `"systemone_providers"` declares
+each System One provider once, under a name of your choosing, with what it
+needs; the list is shared by every feature that asks such a model, and each
+feature picks its own from it. For this step, `"systemone_compaction"` holds
+the choice and the budget:
+
+```json
+{
+  "systemone_compaction": {"mode": "auto", "provider": "local"},
+  "systemone_providers": {
+    "local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash",
+              "input_per_million": 0.0, "output_per_million": 0.0},
+    "typesafe": {"api_key": "…"}
+  }
+}
+```
+
+`provider` names the one the evaluations go to. The computer-use and
+research examples select theirs from the same list
+([System One providers](configuration.md#system-one-providers)), so a small
+local model can serve compaction while a stronger one picks browser actions.
+Two are built in, and need an entry only to change what they default to:
+
+- **`typesafe`**, TypeSafe's hosted service at `https://api.typesafe.ai`. Its
+  key is `JEV_API_KEY` in the environment `lmx` runs in, or the entry's
+  `api_key`; the environment wins, and an empty `JEV_API_KEY` switches the
+  saved key off. It alone has a default model (`jev-1.13.0`, TypeSafe's Jev)
+  and published rates.
+- **`ixway`**, an Ixway gateway that implements `POST /v1/systemone`. Its
+  endpoint is the entry's `base_url`, or the Ixway route `lmx` uses
+  (`--ixway`, `LMX_IXWAY_URL` or `ixway.endpoint`); its model is the entry's
+  `model`; its key is the Ixway key (`IXWAY_API_KEY` or `ixway.api_key`),
+  which stays in the `ixway` section beside the gateway it opens.
+
+Any other name is a provider you declare ([Declaring a
+provider](#declaring-a-provider)): a service that implements
+`POST /v1/systemone`, which can be a model on your own machine, keeping the
+excerpts described below off anyone else's servers.
+
+With no `provider` (or `"provider": "auto"`), `lmx` chooses between the two
+built-in ones: Ixway when its endpoint and a model are both set, TypeSafe
+when its key is. A declared provider is never chosen that way: its entry
+switches nothing on and sends nothing until `provider` names it, so it can
+sit in the file before you want it. There is no fallback from one provider
+to another.
+
+`"mode"` defaults to `"auto"`, which switches the step on, with no other
+setting, as soon as the selected provider is complete, and leaves it off
+when it is not. `"apply"` and `"shadow"` require a complete provider: without
+one the session does not start, and the sentence names the missing piece.
+
+The provider is chosen in the file alone; there is no flag or `LMX_`
+variable for it, since where the excerpts go belongs beside the credentials
+it needs. The installed `lmx` never reads a working directory's `.env`, so a
+repository you open cannot supply a key or an endpoint.
 
 ### When it sends something
-
-Nothing is sent until a route is complete. `"jev_compaction"`'s `mode`
-defaults to `"auto"`, which switches the extension on, with no other setting,
-as soon as either route is complete:
-
-- **TypeSafe**, the usual one: a Jev key, from `JEV_API_KEY` in the
-  environment `lmx` runs in or `jev_compaction.api_key` in
-  `~/.lmx/config.json`. The environment value wins.
-- **Ixway**: an Ixway endpoint (`jev_compaction.endpoint`, or the one `lmx`
-  is routed through: `--ixway`, `LMX_IXWAY_URL` or `ixway.endpoint`), a pinned
-  `jev_compaction.model` and an Ixway key (`IXWAY_API_KEY` or
-  `ixway.api_key`). The request then goes to that endpoint, never to
-  TypeSafe.
-
-The installed `lmx` never reads a working directory's `.env`, so a repository
-you open cannot supply a key or an endpoint.
 
 Once on, the extension makes an evaluation before a model request only when
 all of these hold:
@@ -262,12 +311,12 @@ all of these hold:
 - the session has made fewer than three evaluations;
 - the request is not a retry, and has not been evaluated before.
 
-Each evaluation is one HTTPS request: on the TypeSafe route,
-`POST https://api.typesafe.ai/v1/systemone`, with the key as a bearer token,
-no retries, no redirects and a 15-second timeout. Its body, capped at 60 KB
-(a larger one is not sent), holds:
+Each evaluation is one HTTP request, `POST /v1/systemone` under the selected
+provider's URL, with the provider's key as a bearer token (or in its
+`api_key_header`) if it has one, no retries, no redirects and a 15-second
+timeout. Its body, capped at 60 KB (a larger one is not sent), holds:
 
-- the model name (`jev-1.13.0` unless configured) and a fixed instruction;
+- the model name and a fixed instruction;
 - the text of every user and assistant message in the request, each one over
   500 bytes cut to its first and last 250 characters, with the last three
   user messages repeated as the goal;
@@ -282,102 +331,209 @@ quote files, code or anything pasted into the conversation. Nothing else from
 the system prompt is sent, and no credential other than the key that
 authenticates the request.
 
-A result Jev scores below `keep_threshold` (0.1) is replaced, in the outgoing
-request only, by its first 160 characters and a note telling the model to
-run the tool again if it needs the exact contents. Calls and results stay
-paired; writes, errors and recent results are never shortened. The
-transcript records each evaluation in the extension's own entry: the entry
-IDs, output digests, scores, estimated savings, token usage and latency, but
-no tool output or credential.
+A result the scorer scores below `keep_threshold` (0.1) is replaced, in the
+outgoing request only, by its first 160 characters and a note telling the
+model to run the tool again if it needs the exact contents. Calls and
+results stay paired; writes, errors and recent results are never shortened.
+The transcript records each evaluation in the extension's own entry (the
+`systemone_compaction` namespace): the entry IDs, output digests, scores,
+estimated savings, token usage and latency, but no tool output or
+credential.
 
-TypeSafe bills each evaluation, and the known cost counts toward the
-session's dollar budget (`--max-cost-usd`) across resume and fork.
+The provider bills each evaluation at its tariff, and the known cost counts
+toward the session's dollar budget (`--max-cost-usd`) across resume and fork.
 
 ### Turning it off
 
 Any of these keeps it from sending anything:
 
-- `"jev_compaction": {"mode": "off"}` in `~/.lmx/config.json`;
-- `"disabled_extensions": ["jev_compaction"]`;
-- leaving both routes incomplete: no `JEV_API_KEY` or
-  `jev_compaction.api_key`, and no pinned model for an Ixway endpoint.
+- `"systemone_compaction": {"mode": "off"}` in `~/.lmx/config.json`;
+- `"disabled_extensions": ["systemone_compaction"]`;
+- leaving the selected provider incomplete: no TypeSafe key, no model for
+  an Ixway endpoint, and no `provider` naming a declared one.
 
 `"shadow"` mode still sends the same data, to score results, but never
-shortens anything. `"apply"` and `"shadow"` require a usable route: without
-one, the session does not start.
+shortens anything.
 
-### Settings
+### Declaring a provider
 
-`"jev_compaction"` takes `mode` (`auto`, `apply`, `shadow` or `off`),
-`route` (`auto`, `typesafe` or `ixway`), `model`, `endpoint`, `api_key`,
-`max_evaluations`, `max_cost_usd`, `reservation_per_call_usd`,
-`input_per_million` and `output_per_million`.
-
-To send the requests to an Ixway endpoint that implements
-`POST /v1/systemone`, pin the model and give the endpoint and an Ixway key
-(`IXWAY_API_KEY`, or `ixway.api_key` in your config file):
+An entry under any name other than `typesafe` and `ixway` declares a
+provider, and the name selects it:
 
 ```json
 {
-  "ixway": {"enabled": false, "endpoint": "https://ixway.example"},
-  "jev_compaction": {
-    "mode": "apply",
-    "route": "ixway",
-    "model": "jev-local-1",
-    "input_per_million": 0.04,
-    "output_per_million": 0.0,
-    "max_cost_usd": 0.05,
-    "reservation_per_call_usd": 0.01
+  "systemone_compaction": {"provider": "local"},
+  "systemone_providers": {
+    "local": {"base_url": "http://127.0.0.1:8080", "model": "local-scorer-1"}
   }
 }
 ```
 
-The Jev route is independent of the ordinary inference route, so this
-example keeps chat inference direct. `route: "auto"` chooses Ixway only when
-an endpoint and a pinned Jev model are both configured, and TypeSafe
-otherwise. The Ixway route uses the Ixway key, not the Jev key, and
-`route: "ixway"` never falls back to TypeSafe after a failed or unavailable
-Ixway route. An endpoint counts as configured before any network call; a
-later HTTP failure leaves the outgoing model request unprojected. Ixway's
-chat-completions endpoint is a different protocol and cannot stand in for
-`POST /v1/systemone`.
+With this, the evaluations go to `POST http://127.0.0.1:8080/v1/systemone`
+and nowhere else: no TypeSafe or Ixway key is needed, and nothing reaches
+TypeSafe or Ixway. Each kind of entry takes:
+
+| Key | Declared provider | `typesafe` | `ixway` |
+| --- | --- | --- | --- |
+| `base_url` | Required. The root before `/v1/systemone`: an `http(s)` URL, a path prefix allowed, with no credentials, query or fragment | fixed | the gateway's origin (no path, as `ixway.endpoint`), if not the Ixway route `lmx` uses |
+| `model` | Required. The model to ask | default `jev-1.13.0` | required |
+| `api_key` | A key, if the service wants one; the file must then be readable only by you | the TypeSafe key; `JEV_API_KEY` wins | refused: the key is `IXWAY_API_KEY` or `ixway.api_key` |
+| `api_key_env` | The name of an environment variable holding the key instead. When the variable is set it wins over `api_key`, and an empty value switches the saved key off; when it is unset and there is no `api_key`, the provider is incomplete rather than unauthenticated | — | — |
+| `api_key_header` | The header the key travels in, for a service that does not take a bearer token (`X-API-Key`, say); without it the key is sent as `Authorization: Bearer` | — | — |
+| `headers` | Extra request headers, as an object of names to one-line values. `Authorization` is refused, and a key does not belong here: `api_key` and `api_key_env` are the fields `lmx` keeps private (the file must be yours alone, and an empty value is a named placeholder), and `api_key_header` puts the key in whatever header the service wants | — | — |
+| `input_per_million`, `output_per_million` | The tariff in USD per million tokens, both or neither | overrides the published rates | the gateway's tariff |
+| `type` | `endpoint`, the only kind so far | — | — |
+
+An open decision model served on your own machine is the shortest entry of
+all. Ollama 0.35 and later serves System One models on the same
+`POST /v1/systemone` path as its chat models, so with Bespoke Labs' Nimble
+or Cloudflare's Clef pulled (`ollama pull nimble`, `ollama pull clef-flash`;
+both Apache-2.0), this is the whole configuration:
+
+```json
+{
+  "systemone_compaction": {"provider": "ollama", "reservation_per_call_usd": 0.001},
+  "systemone_providers": {
+    "ollama": {
+      "base_url": "http://127.0.0.1:11434",
+      "model": "clef-flash",
+      "input_per_million": 0.0,
+      "output_per_million": 0.0
+    }
+  }
+}
+```
+
+The zero tariff says what a local model costs, so a session with a dollar
+cap still runs the step; the reservation is what a capped session asks for
+before any call, and a local one is held to the same rule. Any other server
+that implements the protocol — Laya ships one — takes the same entry with
+its URL and model name. The extension's suite has a live check for exactly
+this ([Checking it](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md#checking-it)).
+
+A vendor's hosted decision API fits the same entry, with the key kept in
+your shell:
+
+```json
+{
+  "systemone_compaction": {"provider": "vendor"},
+  "systemone_providers": {
+    "vendor": {
+      "base_url": "https://decisions.vendor.example/accounts/ACCOUNT_ID",
+      "api_key_env": "VENDOR_API_KEY",
+      "model": "decision-1",
+      "input_per_million": 0.05,
+      "output_per_million": 0.0
+    }
+  }
+}
+```
+
+To score through an Ixway gateway instead, give its entry a model (and a
+`base_url` unless `lmx` already routes through that gateway), with the Ixway
+key in the `ixway` section or `IXWAY_API_KEY`:
+
+```json
+{
+  "ixway": {"enabled": false, "endpoint": "https://ixway.example"},
+  "systemone_compaction": {
+    "mode": "apply",
+    "provider": "ixway",
+    "max_cost_usd": 0.05,
+    "reservation_per_call_usd": 0.01
+  },
+  "systemone_providers": {
+    "ixway": {"model": "gateway-scorer-1", "input_per_million": 0.04, "output_per_million": 0.0}
+  }
+}
+```
+
+The scorer's provider is independent of the ordinary inference route, so
+this example keeps chat inference direct. An endpoint counts as configured
+before any network call; a later HTTP failure leaves the outgoing model
+request unprojected. Ixway's chat-completions endpoint is a different
+protocol and cannot stand in for `POST /v1/systemone`.
+
+### Settings and cost
+
+`"systemone_compaction"` takes `mode` (`auto`, `apply`, `shadow` or `off`),
+`provider` (`auto`, `typesafe`, `ixway` or a declared name),
+`max_evaluations`, `max_cost_usd` and `reservation_per_call_usd`. Everything
+about a provider — its address, key, model and tariff — is in its entry.
+
+Only TypeSafe has a default model and published rates. Every other provider
+is unpriced until its entry declares both rates, so a session with a dollar
+cap (`--max-cost-usd`, or `systemone_compaction.max_cost_usd`) makes no
+evaluation through it: the step fails closed rather than paying an unknown
+price. `lmx explain` reports the mode and the selected provider's name under
+`diagnostics.systemone_compaction`, and nothing else about it.
 
 Each call records its usage, its known USD cost (or `null` when the cost is
-unknown) and its route in the session, so `Session.snapshot/1` includes the
-spend and `max_cost_usd` accounts for it across resume and fork. A session
-with a dollar cap needs `reservation_per_call_usd` before Jev will call the
-endpoint; `jev_compaction.max_cost_usd` caps Jev's calls separately. Both
+unknown) and its provider (under the record's `route` key) in the session,
+so `Session.snapshot/1` includes the spend and `max_cost_usd` accounts for
+it across resume and fork. A session with a dollar cap needs
+`reservation_per_call_usd` before the scorer is called;
+`systemone_compaction.max_cost_usd` caps the scorer's calls separately. Both
 caps check the reservation before a call, and the reported token usage sets
 the charge afterwards. An unpriced or failed attempt has unknown cost, not
-zero. For an Ixway route, declare both rates from its tariff; the TypeSafe
-route uses the extension's dated published rate unless you override it. The
-byte-based trigger and reduction remain estimates, so measure task quality
-and net cost on your own work before counting on savings.
+zero. TypeSafe uses the extension's dated published rate unless its entry
+overrides it. The byte-based trigger and reduction remain estimates, so
+measure task quality and net cost on your own work before counting on
+savings.
 
 In the terminal UI, `/compact` adds the last projection's **estimated**
-tokens kept out of a model request when Jev is active, or says no projection
-has been recorded. That is evidence about the request sent, separate from the
-summary's token count and from billed savings.
+tokens kept out of a model request when the step is active, or says no
+projection has been recorded. That is evidence about the request sent,
+separate from the summary's token count and from billed savings.
 
 `mode: "shadow"` records bounded keep scores and candidate savings without
 changing the request, for measuring what the extension would have done. The
 default keep threshold of 0.1 is deliberately conservative. The extension
 also ships a
-[paired evaluation command](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md#paired-jev-evaluation)
-that compares unchanged history, shadow scores, Jev projection and ordinary
-summarization on the same seeded reads. It makes paid model and Jev calls.
+[paired evaluation command](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md#paired-evaluation)
+that compares unchanged history, shadow scores, projection and ordinary
+summarization on the same seeded reads. It makes paid model and TypeSafe
+calls.
+
+### Moving from Jev compaction
+
+The old settings map onto the new ones like this:
+
+| Was | Now |
+| --- | --- |
+| `jev_compaction.mode`, `.max_evaluations`, `.max_cost_usd`, `.reservation_per_call_usd` | the same fields under `systemone_compaction` |
+| `jev_compaction.route` or `.provider` | `systemone_compaction.provider` |
+| `jev_compaction.api_key` | `systemone_providers.typesafe.api_key` |
+| `jev_compaction.endpoint` | `systemone_providers.ixway.base_url` |
+| `jev_compaction.model` | `model` in the selected provider's entry |
+| `jev_compaction.input_per_million`, `.output_per_million` | the same fields in the selected provider's entry |
+| `jev_compaction_providers.NAME` | `systemone_providers.NAME` |
+| `"disabled_extensions": ["jev_compaction"]` | `"disabled_extensions": ["systemone_compaction"]` |
+
+Under the old automatic choice, a `jev_compaction.model` beside an Ixway
+endpoint selected Ixway. To keep that choice, put the model in the `ixway`
+entry (or set `"provider": "ixway"`); a model put in the `typesafe` entry
+instead would send the excerpts to TypeSafe.
+
+`JEV_API_KEY` is unchanged: it is TypeSafe's name for its key. A session
+recorded before the rename kept its decisions under the `jev_compaction`
+namespace, which the renamed extension does not replay: resuming one sends
+its old reads in full again until a new evaluation shortens them, and the
+step's own count of evaluations and its `max_cost_usd` start again for that
+session. The session's dollar cap is unaffected, since it counts every
+recorded charge.
 
 ### From a source checkout
 
 The repository root is the library project, which does not include the
-extension. There, with no `jev_compaction` settings nothing happens, even
-with `JEV_API_KEY` set; with any setting other than `"mode": "off"`, `lmx`
-stops before the session starts and says where the extension lives. The
-release host's project in `dist/lmx` includes it. Fetch its dependencies
+extension. There, with no `systemone_compaction` settings nothing happens,
+even with `JEV_API_KEY` set; with any setting other than `"mode": "off"`,
+`lmx` stops before the session starts and says where the extension lives.
+The release host's project in `dist/lmx` includes it. Fetch its dependencies
 once, then run `lmx` from there. The session works in the repository root,
 not in `dist/lmx`; `-C ../..` says so explicitly, and `-C DIR` names any
-other directory. That run reads no `.env`, so keep `JEV_API_KEY` in your
-shell or in `~/.lmx/config.json`:
+other directory. That run reads no `.env`, so keep keys in your shell or in
+`~/.lmx/config.json`:
 
 ```sh
 cd dist/lmx

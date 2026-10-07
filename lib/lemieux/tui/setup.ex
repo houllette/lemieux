@@ -63,7 +63,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           no_color: no_color(opts)
         },
         input: ExRatatui.textarea_new(),
-        tools: no_tools(jev_setup(Keyword.get(opts, :harness))),
+        tools: no_tools(systemone_setup(Keyword.get(opts, :harness))),
         terminal: %{
           width: 80,
           height: 20,
@@ -271,11 +271,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    # The empty in-flight tool state, keeping `jev` — the one part a session
+    # The empty in-flight tool state, keeping `systemone` — the one part a session
     # sets once, which a clear or a switch resets rather than drops.
     @doc false
-    @spec no_tools(jev :: map() | nil) :: TUI.in_flight()
-    def no_tools(jev),
+    @spec no_tools(systemone :: map() | nil) :: TUI.in_flight()
+    def no_tools(systemone),
       do: %{
         calls: %{},
         outputs: %{},
@@ -285,16 +285,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
         mcp_flow: nil,
         deferred_steer: nil,
         sent_steers: [],
-        jev: jev
+        systemone: systemone
       }
 
     @doc false
-    @spec jev_reset(jev :: map() | nil) :: map() | nil
-    def jev_reset(nil), do: nil
-    def jev_reset(jev), do: %{jev | saved: nil, outcome: nil}
+    @spec systemone_reset(systemone :: map() | nil) :: map() | nil
+    def systemone_reset(nil), do: nil
+    def systemone_reset(systemone), do: %{systemone | saved: nil, outcome: nil}
 
-    defp jev_setup(%Lemieux.Harness{applied: applied}) do
-      case Enum.find(applied, &(&1["module"] == "LemieuxJevCompaction")) do
+    defp systemone_setup(%Lemieux.Harness{applied: applied}) do
+      case Enum.find(applied, &(&1["module"] == "LemieuxSystemOneCompaction")) do
         %{"options" => %{"enabled" => true, "mode" => mode}} ->
           %{mode: mode, saved: nil, outcome: nil}
 
@@ -303,7 +303,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    defp jev_setup(_harness), do: nil
+    defp systemone_setup(_harness), do: nil
 
     defp compact_at_option(opts) do
       if Keyword.get(opts, :auto_compaction, true) == false do

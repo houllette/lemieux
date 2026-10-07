@@ -28,6 +28,18 @@ defmodule Lemieux.CLI.Config do
   research tools by default; `"web_search": "none"` disables that route without
   deleting the key. No request is sent until the agent calls a web tool.
 
+  System One models follow the same shape. `"systemone_providers"` declares
+  each provider once — the built-in `typesafe` and `ixway`, each limited to
+  what it can use (TypeSafe's address is fixed, Ixway's key stays in the
+  `ixway` section beside the gateway it opens), and any other name as a
+  `base_url` that speaks `POST /v1/systemone` with an optional key, header
+  set, model and tariff. Each feature that asks such a model selects one by
+  name, compaction with `systemone_compaction.provider`; an entry nobody
+  selects receives nothing. `Lemieux.CLI.SystemOne` resolves the choice. The
+  compaction step was called Jev compaction until it could reach any
+  provider; `"jev_compaction"` is now refused with a sentence naming the new
+  keys, since ignoring it would quietly switch the step off.
+
   Three keys are data that stand in for code, and are held to that line.
   `"extensions"` is a list of names, each a directory under the personal
   extensions root that `Lemieux.CLI.Extensions` loads; a path or a module
@@ -50,8 +62,10 @@ defmodule Lemieux.CLI.Config do
   reason `lmx log` should refuse to run. Two kinds still fail, because
   ignoring them could change where requests go or what credentials a request
   carries: a field whose closest match is a routing or credential field
-  (`"modle"`, `"ixwya"`, `"provider"`), and the retired `"api_keys"` and
-  `"preferred_models"` maps, whose contents moved into `"providers"`. Inside
+  (`"modle"`, `"ixwya"`, `"provider"`, `"system_one_compaction"`), and the
+  retired `"api_keys"` and `"preferred_models"` maps, whose contents moved
+  into `"providers"`, and `"jev_compaction"`, which became
+  `"systemone_compaction"`. Inside
   a structured section (`"providers"`, `"ixway"`, `"permissions"`…) every
   unknown key fails, naming the section and the key, since those sections
   are small and a misspelt key there silently disables what it configured.
@@ -69,7 +83,7 @@ defmodule Lemieux.CLI.Config do
   while setting things up — is read as no key at all: named at startup like
   an unknown field, and dropped, so every later check sees the file without
   it. The runtime already treats an empty key as absent wherever it looks for
-  one (`Lemieux.CLI.Models`, `Lemieux.CLI.Runtime`, the Jev route), so
+  one (`Lemieux.CLI.Models`, `Lemieux.CLI.Runtime`, System One compaction), so
   refusing the file for it protected nothing; it only kept the screen that
   saves a real key from opening. A key that spans lines, or is not text, is
   still an error, since that is never a placeholder. `put_provider_key/3`
@@ -117,17 +131,23 @@ defmodule Lemieux.CLI.Config do
 
   @fields ~w(version model providers base_url ixway system sessions_dir context_window web_search
              web_search_providers web_fetch mouse project_mcp delegate a2a_peers theme themes keys processing extensions disabled_extensions
-             auto_compaction compaction_price_tiers keep_recent_tokens summary_model jev_compaction
-             max_turns max_requests max_cost_usd scrub_credentials credential_allowlist hooks
+             auto_compaction compaction_price_tiers keep_recent_tokens summary_model systemone_compaction
+             systemone_providers max_turns max_requests max_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
              extension_options scout_model verify input_modalities notifications skills)
   # A misspelling of one of these is refused rather than ignored: ignoring it
   # could send a request somewhere other than where the file meant, or
   # without the credential it meant to supply.
-  @routing_fields ~w(model providers base_url ixway)
+  @routing_fields ~w(model providers base_url ixway systemone_compaction
+                     systemone_providers)
   @retired_fields %{
     "api_keys" => "keys now live in providers.NAME.api_key",
-    "preferred_models" => "per-provider models now live in providers.NAME.model"
+    "preferred_models" => "per-provider models now live in providers.NAME.model",
+    "jev_compaction" =>
+      "the step is now systemone_compaction (mode, provider and its budget), and each " <>
+        "provider's key, address, model and tariff live in systemone_providers.NAME; " <>
+        "the TypeSafe key is systemone_providers.typesafe.api_key",
+    "jev_compaction_providers" => "providers now live in systemone_providers"
   }
   @permission_fields ~w(mode allow deny ask non_interactive)
   @permission_modes ~w(off ask default accept_edits acceptEdits auto full_auto bypassPermissions
@@ -141,9 +161,13 @@ defmodule Lemieux.CLI.Config do
   @price_fields ~w(up_to input_per_million output_per_million cached_input_per_million)
   @ixway_fields ~w(enabled endpoint api_key model effort headers)
   @provider_fields ~w(api_key model effort)
-  @jev_fields ~w(mode route model endpoint api_key max_evaluations max_cost_usd
-                 reservation_per_call_usd input_per_million output_per_million)
-  @shipped_extensions ~w(mcp interactive web elixir workspace delegation a2a jev_compaction
+  @systemone_fields ~w(mode provider max_evaluations max_cost_usd reservation_per_call_usd)
+  @systemone_builtin ~w(typesafe ixway)
+  @systemone_provider_fields ~w(type base_url api_key api_key_env api_key_header headers model
+                                input_per_million output_per_million)
+  @systemone_typesafe_fields ~w(api_key model input_per_million output_per_million)
+  @systemone_ixway_fields ~w(base_url model input_per_million output_per_million)
+  @shipped_extensions ~w(mcp interactive web elixir workspace delegation a2a systemone_compaction
                          environment_context planning verify search apply_patch checkpoints
                          mcp_discovery)
 
@@ -678,7 +702,7 @@ defmodule Lemieux.CLI.Config do
 
   # The module documentation's "An empty key is a placeholder": every
   # `api_key` that is an empty or blank string, wherever the file keeps one,
-  # becomes a warning naming its path and leaves the settings. Only the four
+  # becomes a warning naming its path and leaves the settings. Only the
   # places the runtime reads a key from are looked at, and only when the
   # section around it is the object it should be; a section that is not is
   # left for `validate/1` to name.
@@ -695,12 +719,18 @@ defmodule Lemieux.CLI.Config do
   defp empty_key_paths(settings) do
     settings
     |> Enum.flat_map(fn
-      {section, %{"api_key" => key}} when section in ~w(ixway jev_compaction) ->
+      {"ixway" = section, %{"api_key" => key}} ->
         [{[section, "api_key"], key}]
 
+      # The Ixway entry has no key of its own, so an empty one there is not a
+      # placeholder to warn about: it is refused with a pointer to where the
+      # gateway key lives (`systemone_entry_fields/3`).
       {section, providers}
-      when section in ~w(providers web_search_providers) and is_map(providers) ->
-        for {name, %{"api_key" => key}} <- providers, do: {[section, name, "api_key"], key}
+      when section in ~w(providers web_search_providers systemone_providers) and
+             is_map(providers) ->
+        for {name, %{"api_key" => key}} <- providers,
+            not (section == "systemone_providers" and name == "ixway"),
+            do: {[section, name, "api_key"], key}
 
       _other ->
         []
@@ -769,8 +799,10 @@ defmodule Lemieux.CLI.Config do
          :ok <- validate_mcp_servers(Map.get(settings, "mcp_servers", %{})),
          :ok <- validate_extension_options(Map.get(settings, "extension_options", %{})),
          :ok <- validate_web_search_providers(Map.get(settings, "web_search_providers", %{})),
-         :ok <- validate_ixway(Map.get(settings, "ixway", %{})) do
-      validate_jev(Map.get(settings, "jev_compaction", %{}))
+         :ok <- validate_ixway(Map.get(settings, "ixway", %{})),
+         :ok <-
+           validate_systemone_providers(Map.get(settings, "systemone_providers", %{})) do
+      validate_systemone(settings)
     end
   end
 
@@ -878,13 +910,24 @@ defmodule Lemieux.CLI.Config do
            "#{Extensions.default_root()} (letters, digits, - and _), never a path or a module."}
   end
 
+  # The one renamed shipped extension gets its new name in the refusal, so the
+  # person is not left to find it in a list of fifteen.
   defp validate_disabled_extensions(names) do
-    if Enum.all?(names, &(&1 in @shipped_extensions)) and
-         length(Enum.uniq(names)) == length(names),
-       do: :ok,
-       else:
-         {:error,
-          "Invalid lmx config field: disabled_extensions. Use unique shipped names: #{Enum.join(@shipped_extensions, ", ")}."}
+    cond do
+      "jev_compaction" in names ->
+        invalid(
+          "disabled_extensions",
+          "jev_compaction is now systemone_compaction; use that name to leave it out."
+        )
+
+      Enum.all?(names, &(&1 in @shipped_extensions)) and
+          length(Enum.uniq(names)) == length(names) ->
+        :ok
+
+      true ->
+        {:error,
+         "Invalid lmx config field: disabled_extensions. Use unique shipped names: #{Enum.join(@shipped_extensions, ", ")}."}
+    end
   end
 
   # The registry is built here, once, for the cross-field check: a `"theme"`
@@ -965,7 +1008,8 @@ defmodule Lemieux.CLI.Config do
   defp valid_field?("keep_recent_tokens", value), do: is_integer(value) and value > 0
   defp valid_field?("summary_model", value), do: valid_model?(value)
   defp valid_field?("compaction_price_tiers", value), do: valid_price_tiers?(value)
-  defp valid_field?("jev_compaction", value), do: is_map(value)
+  defp valid_field?("systemone_compaction", value), do: is_map(value)
+  defp valid_field?("systemone_providers", value), do: is_map(value)
   defp valid_field?("base_url", value), do: valid_base_url?(value)
   defp valid_field?("web_search", value), do: value in ["brave", "none"]
   # What each section holds is checked after the field pass, naming the
@@ -1077,7 +1121,7 @@ defmodule Lemieux.CLI.Config do
   defp validate_web_search_provider(name, settings) do
     with :ok <-
            expect(
-             is_binary(name) and Regex.match?(~r/^[a-z][a-z0-9_]*$/, name),
+             valid_backend_name?(name),
              "web_search_providers",
              "A search provider's name is lowercase letters, digits and underscores."
            ),
@@ -1164,45 +1208,238 @@ defmodule Lemieux.CLI.Config do
 
   defp valid_headers?(_value), do: false
 
-  defp validate_jev(jev) do
-    with :ok <- known_fields(jev, @jev_fields, "jev_compaction section"),
-         :ok <- each_field(jev, "jev_compaction", &jev_field/2) do
-      jev_budget(jev)
+  defp validate_systemone(settings) do
+    section = Map.get(settings, "systemone_compaction", %{})
+
+    with :ok <- moved_systemone_field(section),
+         :ok <- known_fields(section, @systemone_fields, "systemone_compaction section"),
+         :ok <- each_field(section, "systemone_compaction", &systemone_field/2),
+         :ok <- systemone_budget(section) do
+      systemone_selection(section, Map.get(settings, "systemone_providers", %{}))
     end
   end
 
-  defp jev_field("mode", value),
+  # Fields `"jev_compaction"` held that moved out of the section when it was
+  # renamed: a file whose section key was renamed by hand is told where each
+  # one went, instead of "unknown field" or a guess at `mode` for `model`.
+  @moved_systemone_fields [
+    {"route", "it is systemone_compaction.provider"},
+    {"api_key", "the TypeSafe key is systemone_providers.typesafe.api_key"},
+    {"endpoint", "the Ixway endpoint is systemone_providers.ixway.base_url"},
+    {"model", "a model is model in the selected provider's systemone_providers entry"},
+    {"input_per_million", "a tariff lives in the selected provider's systemone_providers entry"},
+    {"output_per_million", "a tariff lives in the selected provider's systemone_providers entry"}
+  ]
+
+  defp moved_systemone_field(section) do
+    case Enum.find(@moved_systemone_fields, fn {key, _where} -> Map.has_key?(section, key) end) do
+      nil -> :ok
+      {key, where} -> invalid("systemone_compaction.#{key}", "It moved: #{where}.")
+    end
+  end
+
+  defp systemone_field("mode", value),
     do: expect(value in ~w(auto apply shadow off), "It must be auto, apply, shadow or off.")
 
-  defp jev_field("route", value),
-    do: expect(value in ~w(auto ixway typesafe), "It must be auto, ixway or typesafe.")
+  defp systemone_field("provider", value),
+    do:
+      expect(
+        value == "auto" or valid_backend_name?(value),
+        "It must be auto, typesafe, ixway or the name of a provider in systemone_providers."
+      )
 
-  defp jev_field("model", value),
-    do: expect(is_binary(value) and value != "", "It must name a model.")
-
-  defp jev_field("endpoint", value),
-    do: expect(Ixway.valid_endpoint?(value), @endpoint_expectation)
-
-  defp jev_field("api_key", value), do: expect(key_text?(value), @key_expectation)
-
-  defp jev_field("max_evaluations", value),
+  defp systemone_field("max_evaluations", value),
     do: expect(is_integer(value) and value > 0, "It must be a whole number above zero.")
 
-  defp jev_field(key, value)
-       when key in ~w(max_cost_usd reservation_per_call_usd input_per_million output_per_million),
-       do: expect(is_number(value) and value >= 0, "It must be a number, zero or more.")
+  defp systemone_field(key, value) when key in ~w(max_cost_usd reservation_per_call_usd),
+    do: expect(is_number(value) and value >= 0, "It must be a number, zero or more.")
 
-  defp jev_budget(%{"max_cost_usd" => cap} = jev) do
-    reservation = jev["reservation_per_call_usd"]
+  defp systemone_budget(%{"max_cost_usd" => cap} = section) do
+    reservation = section["reservation_per_call_usd"]
 
     expect(
       is_number(reservation) and reservation > 0 and reservation <= cap,
-      "jev_compaction.reservation_per_call_usd",
+      "systemone_compaction.reservation_per_call_usd",
       "With max_cost_usd set, it must be a number above zero and no more than max_cost_usd."
     )
   end
 
-  defp jev_budget(_jev), do: :ok
+  defp systemone_budget(_section), do: :ok
+
+  # Checked here, once both sections are known to be well formed. The name is
+  # not echoed: it passed the name check, but so might a pasted key. The two
+  # built-in providers need no entry; any other name does.
+  defp systemone_selection(%{"provider" => name}, entries)
+       when name not in ["auto" | @systemone_builtin] do
+    expect(
+      Map.has_key?(entries, name),
+      "systemone_compaction.provider",
+      "It names a provider systemone_providers does not declare."
+    )
+  end
+
+  defp systemone_selection(_section, _entries), do: :ok
+
+  defp validate_systemone_providers(providers) do
+    Enum.reduce_while(providers, :ok, fn {name, settings}, :ok ->
+      case validate_systemone_provider(name, settings) do
+        :ok -> {:cont, :ok}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
+  end
+
+  # As for search providers, the name is not echoed before it has passed the
+  # name check: what sits in a key's place in a mistyped file may be the key.
+  defp validate_systemone_provider(name, settings) do
+    path = "systemone_providers.#{name}"
+
+    with :ok <-
+           expect(
+             valid_backend_name?(name),
+             "systemone_providers",
+             "A provider's name is lowercase letters, digits and underscores."
+           ),
+         :ok <-
+           expect(
+             name != "auto",
+             path,
+             "auto is the default choice between typesafe and ixway, not a provider's name."
+           ),
+         :ok <- object(settings, path),
+         :ok <- systemone_entry_fields(name, settings, path),
+         :ok <- each_field(settings, path, &systemone_provider_field/2) do
+      paired_rates(settings, path)
+    end
+  end
+
+  # What each kind of entry may hold. TypeSafe's address is fixed, so its
+  # entry is a key, a model and a tariff. A gateway key lives in the `ixway`
+  # section, beside the gateway it opens, so the Ixway entry has no key of
+  # its own: `api_key` there is named and sent to where the key belongs.
+  defp systemone_entry_fields("typesafe", settings, path),
+    do: known_fields(settings, @systemone_typesafe_fields, "#{path} section")
+
+  defp systemone_entry_fields("ixway", %{"api_key" => _key}, path),
+    do:
+      invalid(
+        "#{path}.api_key",
+        "The Ixway key is IXWAY_API_KEY, or ixway.api_key in the config file."
+      )
+
+  defp systemone_entry_fields("ixway", settings, path) do
+    with :ok <- known_fields(settings, @systemone_ixway_fields, "#{path} section") do
+      expect(
+        not Map.has_key?(settings, "base_url") or Ixway.valid_endpoint?(settings["base_url"]),
+        "#{path}.base_url",
+        @endpoint_expectation
+      )
+    end
+  end
+
+  defp systemone_entry_fields(_name, settings, path) do
+    with :ok <- known_fields(settings, @systemone_provider_fields, "#{path} section") do
+      expect(
+        Map.has_key?(settings, "base_url"),
+        path,
+        "It must include base_url, the root before /v1/systemone."
+      )
+    end
+  end
+
+  # One rate alone prices nothing: the extension treats a half-declared
+  # tariff as unknown, which under a dollar cap skips every evaluation
+  # without a word. TypeSafe's published output rate is zero, so "set the
+  # input rate" is the likely habit; here it is named instead.
+  defp paired_rates(settings, path) do
+    if Map.has_key?(settings, "input_per_million") == Map.has_key?(settings, "output_per_million"),
+      do: :ok,
+      else:
+        invalid(
+          path,
+          "input_per_million and output_per_million go together: a tariff with one side " <>
+            "cannot price an evaluation, so declare both or neither."
+        )
+  end
+
+  defp systemone_provider_field("type", value),
+    do: expect(value == "endpoint", "It must be endpoint: a POST /v1/systemone service.")
+
+  # A path prefix is allowed, unlike an Ixway endpoint: a vendor's decision
+  # API often lives under an account path, and the SDK keeps the prefix.
+  defp systemone_provider_field("base_url", value),
+    do:
+      expect(
+        valid_system_one_url?(value),
+        "It must be an http(s) URL without credentials, query or fragment: the root before /v1/systemone."
+      )
+
+  defp systemone_provider_field("api_key", value), do: expect(key_text?(value), @key_expectation)
+
+  defp systemone_provider_field("api_key_env", value),
+    do: expect(valid_env_name?(value), "It must name an environment variable.")
+
+  defp systemone_provider_field("api_key_header", value),
+    do:
+      expect(
+        valid_header_name?(value) and String.downcase(value) != "authorization",
+        "It must name a header other than Authorization; without it the key travels as a bearer token."
+      )
+
+  defp systemone_provider_field("headers", value),
+    do:
+      expect(
+        valid_system_one_headers?(value),
+        "It must be an object of header names to one-line values, without Authorization " <>
+          "(the key belongs in api_key or api_key_env)."
+      )
+
+  defp systemone_provider_field("model", value),
+    do: expect(is_binary(value) and String.trim(value) != "", "It must name a model.")
+
+  defp systemone_provider_field(key, value) when key in ~w(input_per_million output_per_million),
+    do: expect(is_number(value) and value >= 0, "It must be a number, zero or more.")
+
+  # A backend's name in a credentials section: search and System One
+  # providers share the rule, which is stricter than a model provider's
+  # (`valid_provider_name?/1` allows a hyphen, as req_llm's ids do).
+  defp valid_backend_name?(name),
+    do: is_binary(name) and Regex.match?(~r/^[a-z][a-z0-9_]*$/, name)
+
+  defp valid_env_name?(value),
+    do: is_binary(value) and Regex.match?(~r/^[A-Za-z_][A-Za-z0-9_]*$/, value)
+
+  # Any header a vendor's API wants, except the one that carries the key:
+  # `api_key` and `api_key_env` are what the file-permission check and the
+  # inspect protocol keep private, and a header value is neither.
+  defp valid_system_one_headers?(headers) when is_map(headers) do
+    Enum.all?(headers, fn
+      {name, value} when is_binary(value) ->
+        valid_header_name?(name) and String.downcase(name) != "authorization" and
+          not String.contains?(value, ["\r", "\n"])
+
+      _header ->
+        false
+    end)
+  end
+
+  defp valid_system_one_headers?(_headers), do: false
+
+  defp valid_header_name?(name),
+    do: is_binary(name) and Regex.match?(~r/^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/, name)
+
+  defp valid_system_one_url?(url) when is_binary(url) do
+    case URI.new(String.trim(url)) do
+      {:ok, %URI{scheme: scheme, host: host, userinfo: nil, query: nil, fragment: nil}}
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+        true
+
+      _ ->
+        false
+    end
+  end
+
+  defp valid_system_one_url?(_url), do: false
 
   defp each_field(settings, path, check) do
     Enum.reduce_while(settings, :ok, fn {key, value}, :ok ->
@@ -1256,8 +1493,8 @@ defmodule Lemieux.CLI.Config do
     secrets? =
       section_has_keys?(settings, "providers") or
         section_has_keys?(settings, "web_search_providers") or
-        get_in(settings, ["ixway", "api_key"]) != nil or
-        get_in(settings, ["jev_compaction", "api_key"]) != nil
+        section_has_keys?(settings, "systemone_providers") or
+        get_in(settings, ["ixway", "api_key"]) != nil
 
     check_mode(:os.type(), stat.mode, secrets?)
   end

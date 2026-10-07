@@ -246,7 +246,7 @@ git push --force-with-lease
 | Security | `mix hex.audit` and `mix deps.audit` for the library and for `dist/lmx`, and lockfile drift between the two |
 | Dialyzer | `mix dialyzer` |
 | Hex package (pinned) and Hex package (floor Elixir 1.19.0 / OTP 27.0) | builds the package and compiles it as a dependency (`scripts/check_package.sh`) |
-| Example NAME | each example project, and the bundled Jev compaction extension, against this checkout (`scripts/check_example.sh NAME`) |
+| Example NAME | each example project, and the bundled System One compaction extension, against this checkout (`scripts/check_example.sh NAME`) |
 | Standalone release host | compilation, the format check and the tests of `dist/lmx` |
 | Docs links | `python3 scripts/check_links.py` |
 | Public wording | `scripts/check_public_text.sh` |
@@ -304,7 +304,7 @@ New to the vocabulary (host, session, harness, extension, transcript)? The
 | MCP | `lib/lemieux/mcp.ex`, `lib/lemieux/mcp/` |
 | Provider protocols | Upstream in [ReqLLM](https://github.com/agentjido/req_llm). Lemieux owns only the session/provider integration (`lib/lemieux/providers/`); read `deps/req_llm/usage-rules.md` first. |
 | The installed binary: release, launcher, updates, notices | `dist/lmx/`, `scripts/install.sh`, `scripts/install.py` |
-| The bundled Jev compaction extension | `dist/lmx/extensions/jev_compaction/` |
+| The bundled System One compaction extension | `dist/lmx/extensions/systemone_compaction/` |
 | Optional learning and evaluation | `lib/lemieux/learning/`, `eval/`, `examples/` |
 | CI and release automation | `.github/workflows/`, `scripts/` |
 

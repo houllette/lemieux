@@ -12,11 +12,10 @@ alias ResearchBench.LiveSetup
 
 config = LiveSetup.config()
 brave_key = System.get_env("BRAVE_SEARCH_API_KEY") || Config.web_search_api_key(config, "brave")
-jev_key = System.get_env("JEV_API_KEY") || Config.get(config, "jev_compaction", %{})["api_key"]
+unless is_binary(brave_key) and brave_key != "", do: raise("v5 benchmark needs a Brave key")
 
-for {name, value} <- [{"Brave", brave_key}, {"Jev", jev_key}] do
-  unless is_binary(value) and value != "", do: raise("v5 benchmark needs a #{name} key")
-end
+# RESEARCH_SYSTEMONE_PROVIDER; see live_setup.exs.
+system_one = LiveSetup.system_one(config)
 
 # RESEARCH_MODEL and RESEARCH_EFFORT; see live_setup.exs.
 %{model: model, effort: effort, provider: provider} =
@@ -94,8 +93,10 @@ end
   agents: [
     {"model-alone", ResearchExtension.Baseline, base},
     {"one-search-fetch", ResearchExtension, fn -> pipeline.(false) end},
-    {"jev-guided", ResearchExtension,
-     fn -> pipeline.(api_key: jev_key, candidate_limit: 10, max_depth: 1, timeout_ms: 30_000) end},
+    {"systemone-guided", ResearchExtension,
+     fn ->
+       pipeline.(provider: system_one, candidate_limit: 10, max_depth: 1, timeout_ms: 30_000)
+     end},
     {"iterative-web", Lemieux.Agent.Session, iterative}
   ],
   benchmark_options: [repetitions: 1, max_concurrency: 1, output: "tmp/research-v5-report.json"]

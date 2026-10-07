@@ -199,6 +199,79 @@ defmodule LemieuxComputerUse.RunnerTest do
     assert_receive :closed
   end
 
+  test "with no classifier the run stops before discovery or the browser, without falling back" do
+    options = Keyword.delete(opts(), :classify)
+
+    assert {:error, %{"reason" => "no System One provider is configured"}} =
+             Runner.run(input(), options)
+
+    unusable = %{
+      name: "local",
+      type: :endpoint,
+      base_url: "http://127.0.0.1:11434",
+      api_key: nil,
+      api_key_header: nil,
+      headers: %{},
+      model: nil
+    }
+
+    assert {:error, %{"reason" => "System One provider is unusable"}} =
+             Runner.run(input(), Keyword.put(options, :systemone, provider: unusable))
+
+    assert {:error, %{"reason" => ":jev was renamed :systemone" <> _}} =
+             Runner.run(input(), Keyword.put(options, :jev, api_key: "test-secret"))
+
+    assert {:error, %{"reason" => reason}} =
+             Runner.run(input(), Keyword.put(options, :systemone, api_key: "test-secret"))
+
+    assert reason =~ "provider:"
+    refute reason =~ "test-secret"
+    refute_receive :closed
+  end
+
+  test "a classifier's fixed diagnostic is kept and any other error text is not" do
+    for {error, kept} <- [
+          {"System One returned HTTP 503", "System One returned HTTP 503"},
+          {"System One transport failed", "System One transport failed"},
+          {"System One returned HTTP 503: secret body", nil},
+          {"provider said test-secret", nil}
+        ] do
+      options = Keyword.put(opts(), :classify, fn _ -> {:error, error} end)
+
+      assert {:error, %{"status" => "classifier_failed", "reason" => ^kept}} =
+               Runner.run(input(), options)
+
+      assert_receive :closed
+    end
+  end
+
+  test "describe names the classifier and its provider, never its key or address" do
+    provider = %{
+      name: "local",
+      type: :endpoint,
+      base_url: "http://127.0.0.1:11434",
+      api_key: "test-secret",
+      api_key_header: nil,
+      headers: %{},
+      model: "clef-flash"
+    }
+
+    assert {:ok, opts} =
+             LemieuxComputerUse.init(
+               allowed_hosts: ["example.com"],
+               systemone: [provider: provider]
+             )
+
+    description = LemieuxComputerUse.describe(opts)
+    assert description["classifier"] == "systemone"
+    assert description["systemone_provider"] == "local"
+    refute inspect(description) =~ "test-secret"
+    refute inspect(description) =~ "11434"
+
+    assert {:ok, opts} = LemieuxComputerUse.init(allowed_hosts: ["example.com"])
+    refute Map.has_key?(LemieuxComputerUse.describe(opts), "systemone_provider")
+  end
+
   test "harness assembly adds the ordinary tool and final host policy governs its nested actions" do
     assert {:ok, harness} =
              Lemieux.Harness.assemble(Lemieux.Harness.new(), [{LemieuxComputerUse, opts()}])

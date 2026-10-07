@@ -678,7 +678,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             theme: Screen.theme(state),
             renderers: Screen.renderers(state)
           },
-          empty_tools: Setup.no_tools(Setup.jev_reset(state.tools.jev)),
+          empty_tools: Setup.no_tools(Setup.systemone_reset(state.tools.systemone)),
           idle_turn: Turn.idle_turn(),
           history_limit: History.limit()
         })
@@ -770,7 +770,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       %{
         state
         | lines: [],
-          tools: Setup.no_tools(state.tools.jev),
+          tools: Setup.no_tools(state.tools.systemone),
           history: History.browsing(state.history, nil),
           selection: nil,
           turn: Turn.idle_turn(),

@@ -138,7 +138,6 @@ defmodule Lemieux.CLI.Runtime do
 
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.Extensions, as: LoadedExtensions
-  alias Lemieux.CLI.JevCompaction
   alias Lemieux.CLI.Limits
   alias Lemieux.CLI.OAuth
   alias Lemieux.CLI.Options
@@ -147,6 +146,7 @@ defmodule Lemieux.CLI.Runtime do
   alias Lemieux.CLI.Runtime.Assembly
   alias Lemieux.CLI.Runtime.SecretPaths
   alias Lemieux.CLI.Skills
+  alias Lemieux.CLI.SystemOneCompaction
   alias Lemieux.Conversation.Command.Builtin
   alias Lemieux.Environment.Local
   alias Lemieux.Environment.Sandbox
@@ -912,7 +912,7 @@ defmodule Lemieux.CLI.Runtime do
       Keyword.has_key?(opts, :profile) or options.extension_profile != nil or options.build_ext
 
     with {:ok, web} <- web_spec(options, context, disabled, profile?),
-         {:ok, jev} <- jev_spec(options, disabled) do
+         {:ok, systemone} <- systemone_spec(options, disabled) do
       elixir = elixir(options, context)
       recipe = recipe(options, opts, context, web, elixir, profile?)
 
@@ -925,7 +925,9 @@ defmodule Lemieux.CLI.Runtime do
          is_nil(spec) or MapSet.member?(disabled, Atom.to_string(name))
        end)
        |> Enum.concat(Enum.map(Keyword.get(opts, :extensions, []), &{:host, &1}))
-       |> then(fn extensions -> if jev, do: extensions ++ [{:jev, jev}], else: extensions end)}
+       |> then(fn extensions ->
+         if systemone, do: extensions ++ [{:systemone, systemone}], else: extensions
+       end)}
     end
   end
 
@@ -935,10 +937,10 @@ defmodule Lemieux.CLI.Runtime do
       else: web(options, context)
   end
 
-  defp jev_spec(options, disabled) do
-    if MapSet.member?(disabled, "jev_compaction"),
+  defp systemone_spec(options, disabled) do
+    if MapSet.member?(disabled, "systemone_compaction"),
       do: {:ok, nil},
-      else: JevCompaction.spec(options.config, options.ixway)
+      else: SystemOneCompaction.spec(options.config, options.ixway)
   end
 
   # What lmx adds to the defaults is for sessions lmx is equipping: not over

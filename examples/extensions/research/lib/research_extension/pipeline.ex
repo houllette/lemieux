@@ -1,7 +1,7 @@
 defmodule ResearchExtension.Pipeline do
   @moduledoc """
   Claim-led research by default, with the previous single-search path retained
-  as `research_mode: :simple` for comparison and Jev-guided discovery.
+  as `research_mode: :simple` for comparison and System One–guided discovery.
 
   The default `ResearchExtension.Deep` path plans up to six facts, searches
   with the question's version and date qualifiers, checks each answer against
@@ -11,11 +11,12 @@ defmodule ResearchExtension.Pipeline do
   remains available to synthesis; shortening it dropped a required fact in
   the live passage experiment.
 
-  In `:simple` mode, a configured Jev key enables source selection and bounded link discovery
-  before synthesis. Without a key, search/fetch stays deterministic. An explicit
-  `discovery: false` disables the classifier, and a `:classify` callback replaces
-  the default host adapter. The
-  synthesis is one
+  In `:simple` mode, a configured System One provider enables source selection
+  and bounded link discovery before synthesis (`ResearchExtension.SystemOne`);
+  `discovery: [provider: name]` selects one from the lmx config file. Without
+  one, search/fetch stays deterministic. An explicit `discovery: false`
+  disables the classifier, and a `:classify` callback replaces the default
+  host adapter. The synthesis is one
   `max_turns: 1` session with no tools: the model is handed the fetched text
   and asked for JSON with an answer and the source URLs it relied on. The
   pipeline then checks the citations against the pages it fetched. An answer
@@ -115,16 +116,16 @@ defmodule ResearchExtension.Pipeline do
   Options: `:search` (a `{module, state}` `Lemieux.WebSearch.Backend`,
   required), `:fetch` (a `Lemieux.Tools.WebFetch` struct, required),
   `:top_k`, `:max_total_bytes`, `:hooks` (a `Lemieux.Hooks` list applied to
-  the search and fetch calls), `:discovery` (automatic with a Jev key, false to
-  disable, or keyword options; an explicit `:classify` callback wins; see
-  `ResearchExtension.Discovery`), `:cwd`,
-  `:timeout_ms`, `:research_mode` (`:deep` by default, or `:simple` for the
-  historical one-search/Jev path), `:query_strategy` for `:simple` (`:leading`
-  by default or experimental `:balanced`), `:plan` and `:compose` callback
-  seams for deterministic deep-path tests, and
-  `:session` — the
-  keyword passed to `Lemieux.Agent.Session.run/2` (`:provider`, `:model`,
-  `:supervisor`, `:sessions_dir`, `:session_options`).
+  the search and fetch calls), `:discovery` (automatic with a configured
+  System One provider, false to disable, or keyword options such as
+  `provider:`; an explicit `:classify` callback wins; see
+  `ResearchExtension.Discovery`), `:cwd`, `:timeout_ms`, `:research_mode`
+  (`:deep` by default, or `:simple` for the historical one-search/System One
+  path), `:query_strategy` for `:simple` (`:leading` by default or
+  experimental `:balanced`), `:plan` and `:compose` callback seams for
+  deterministic deep-path tests, and `:session` — the keyword passed to
+  `Lemieux.Agent.Session.run/2` (`:provider`, `:model`, `:supervisor`,
+  `:sessions_dir`, `:session_options`).
   """
   @spec run(question :: String.t(), opts :: keyword()) ::
           {:ok, result()} | {:error, error()} | {:error, error(), partial()}

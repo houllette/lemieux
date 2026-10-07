@@ -12,8 +12,9 @@ defmodule ResearchExtension do
   the provider and the model.
 
   The previous one-search path remains available as `research_mode: :simple`.
-  In that mode a configured Jev key enables source selection and bounded
-  documentation-link discovery; `discovery: false` disables it.
+  In that mode a configured System One provider (`ResearchExtension.SystemOne`)
+  enables source selection and bounded documentation-link discovery;
+  `discovery: false` disables it.
 
   A completed observation carries the plain answer, the cited URLs, what was
   fetched (with byte counts and truncation flags) and what was skipped. A

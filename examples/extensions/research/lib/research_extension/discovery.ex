@@ -31,10 +31,20 @@ defmodule ResearchExtension.Discovery do
   @moduledoc """
   Bounded source discovery over search metadata and fetched links.
 
-  A configured Jev key enables the default classifier; a host can supply its
-  own callback or disable discovery. Choices name offered IDs, never
-  invented URLs. Links stay on the fetched page's host; all requests and choices
-  cross the host's current hooks. The page limit counts failed fetches too.
+  A configured System One provider enables the default classifier
+  (`ResearchExtension.SystemOne`); a host can select one with `provider:`,
+  supply its own `classify:` callback or disable discovery. Choices name
+  offered IDs, never invented URLs. Links stay on the fetched page's host; all
+  requests and choices cross the host's current hooks. The page limit counts
+  failed fetches too.
+
+  The question is portable: any System One server can answer it, not only
+  TypeSafe's. Each option's description is a string, and a lone option is
+  taken without asking (the reasons are beside the code that builds the
+  question). A decision taken that way is recorded with `"confidence"`,
+  `"model"` and `"usage"` null — a classifier's answer always has a numeric
+  confidence — and is not counted in `classifier_attempts`, which counts
+  requests.
 
   STOP is a model judgement, recorded as such, not proof of complete research.
   Synthesis and fetched-URL citation validation remain separate. Failed requests
@@ -43,9 +53,13 @@ defmodule ResearchExtension.Discovery do
   """
   alias Lemieux.Tools
   alias ResearchExtension.Discovery.Choice
-  alias ResearchExtension.Jev
+  alias ResearchExtension.SystemOne
 
-  @doc "Resolves automatic Jev discovery, an explicit callback, or a false opt-out."
+  @doc """
+  Resolves automatic System One discovery, a selected provider
+  (`provider:`, see `ResearchExtension.SystemOne`), an explicit `classify:`
+  callback, or a false opt-out.
+  """
   @spec resolve(value :: keyword() | nil | false) :: keyword() | nil
   def resolve(false), do: nil
   def resolve(nil), do: resolve([])
@@ -57,10 +71,11 @@ defmodule ResearchExtension.Discovery do
     if Keyword.has_key?(opts, :classify) do
       options(opts)
     else
-      case Jev.classifier(opts) do
+      case SystemOne.classifier(opts) do
         {:ok, classify} ->
+          # The provider may carry a key; it lives on only in the closure.
           opts
-          |> Keyword.drop([:api_key, :request])
+          |> Keyword.drop([:provider, :request])
           |> Keyword.put(:classify, classify)
           |> options()
 
@@ -153,24 +168,50 @@ defmodule ResearchExtension.Discovery do
   end
 
   defp choose(question, state, opts, config) do
-    state = %{state | classifier_attempts: state.classifier_attempts + 1}
-
     candidates =
       state.frontier |> Enum.with_index(1) |> Map.new(fn {row, id} -> {to_string(id), row} end)
 
-    criteria =
-      Map.new(candidates, fn {id, row} -> {id, Map.take(row, ~w(url title snippet depth via))} end)
+    criteria = criteria(candidates, state.pages)
 
-    criteria =
-      if state.pages == [],
-        do: criteria,
-        else:
-          Map.put(
-            criteria,
-            "STOP",
-            "Sources directly cover every requested fact; more pages would be redundant"
-          )
+    # One option is nothing to choose, and System One servers other than
+    # TypeSafe's refuse a choice with fewer than two candidates (Ollama
+    # answers "criteria must contain 2–26 candidates"). Asking would fail the
+    # run on those servers and spend a request on TypeSafe's for a foregone
+    # answer, so the lone candidate is taken and the decision says no model
+    # made it. Only a choice before any page was fetched can get here: from
+    # then on STOP is always an option.
+    case Map.keys(criteria) do
+      [only] ->
+        decided(question, state, candidates, only, forced(), opts, config)
 
+      _several ->
+        state = %{state | classifier_attempts: state.classifier_attempts + 1}
+        classify(question, state, candidates, criteria, opts, config)
+    end
+  end
+
+  # Descriptions are strings: the candidate's metadata as JSON. Some System
+  # One servers accept only a string (or null) per option — Ollama's
+  # `nimble` refuses object descriptions — and every server accepts a
+  # string. The frontier holds at most 20 candidates, so with STOP the
+  # choice stays inside the 26 options those servers allow.
+  defp criteria(candidates, pages) do
+    criteria =
+      Map.new(candidates, fn {id, row} ->
+        {id, JSON.encode!(Map.take(row, ~w(url title snippet depth via)))}
+      end)
+
+    if pages == [],
+      do: criteria,
+      else:
+        Map.put(
+          criteria,
+          "STOP",
+          "Sources directly cover every requested fact; more pages would be redundant"
+        )
+  end
+
+  defp classify(question, state, candidates, criteria, opts, config) do
     request = %{
       "state" => %{
         "question" => question,
@@ -203,26 +244,38 @@ defmodule ResearchExtension.Discovery do
     response = Map.get(receipt, :structured_content) || %{}
 
     with false <- receipt.error?, {:ok, selected, confidence} <- decode(response, criteria) do
-      evidence = %{
-        "choice" => selected,
+      judgement = %{
         "confidence" => confidence,
         "model" => response["model"],
         "usage" => usage(response["usage"]),
-        "latency_ms" => div(micros, 1000),
-        "url" => if(selected == "STOP", do: nil, else: candidates[selected]["url"]),
-        "depth" => if(selected == "STOP", do: nil, else: candidates[selected]["depth"]),
-        "via" => if(selected == "STOP", do: nil, else: candidates[selected]["via"])
+        "latency_ms" => div(micros, 1000)
       }
 
-      state = %{state | decisions: state.decisions ++ [evidence]}
-
-      if selected == "STOP",
-        do: finish(state, "model_stop"),
-        else: fetch_one(question, state, candidates[selected], opts, config)
+      decided(question, state, candidates, selected, judgement, opts, config)
     else
       true -> {:error, "classifier_failed", state}
       {:error, _} -> {:error, "invalid_choice", state}
     end
+  end
+
+  defp forced, do: %{"confidence" => nil, "model" => nil, "usage" => nil, "latency_ms" => 0}
+
+  defp decided(question, state, candidates, selected, judgement, opts, config) do
+    candidate = Map.get(candidates, selected, %{})
+
+    evidence =
+      Map.merge(judgement, %{
+        "choice" => selected,
+        "url" => candidate["url"],
+        "depth" => candidate["depth"],
+        "via" => candidate["via"]
+      })
+
+    state = %{state | decisions: state.decisions ++ [evidence]}
+
+    if selected == "STOP",
+      do: finish(state, "model_stop"),
+      else: fetch_one(question, state, candidate, opts, config)
   end
 
   defp fetch_one(question, state, selected, opts, config) do

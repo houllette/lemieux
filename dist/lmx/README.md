@@ -2,7 +2,7 @@
 
 This Mix project builds the native `lmx` binary: an OTP release that bundles
 the Erlang runtime, Elixir, the Lemieux library (`../..`), the terminal UI's
-native library and the [Jev compaction extension](extensions/jev_compaction/README.md).
+native library and the [System One compaction extension](extensions/systemone_compaction/README.md).
 It is the only place that starts anything: it owns the application callback
 (`Lmx.Application`), the launcher and self-updates, so the `:lemieux` library
 can keep starting nothing when a host embeds it.
@@ -10,7 +10,7 @@ can keep starting nothing when a host embeds it.
 You need this directory to build, test or change the binary. To run `lmx`
 from source, use the repository root: `mise exec -- mix lmx ARGS` runs any
 command, and bare `mise exec -- mix lmx` opens the terminal UI. A source run
-from here also has the bundled Jev extension. This project has its own
+from here also has the bundled compaction extension. This project has its own
 dependencies, so fetch them first:
 
 ```sh
@@ -21,7 +21,7 @@ mise exec -- mix lmx -C ../..    # the terminal UI, working on the checkout
 
 Unlike a run from the repository root, this one reads no `.env`
 (`config/config.exs` turns that off, as in the binary): put your provider's
-key, and `JEV_API_KEY` for Jev, in your environment or in
+key, and `JEV_API_KEY` for TypeSafe, in your environment or in
 `~/.lmx/config.json`.
 
 ## Layout
@@ -35,7 +35,7 @@ key, and `JEV_API_KEY` for Jev, in your environment or in
 | `priv/launcher.sh`, `priv/launcher.ps1` | `bin/lmx` on Unix; `bin/lmx.ps1` (run by `bin/lmx.cmd`) on Windows. |
 | `rel/vm.args.eex` | VM flags: UTF-8 file names, no BREAK menu, a bounded shutdown. |
 | `config/config.exs` | Release configuration: the binary never reads a working directory's `.env`. |
-| `extensions/jev_compaction` | The bundled Jev extension, its own Mix project. |
+| `extensions/systemone_compaction` | The bundled System One compaction extension, its own Mix project. |
 | `notices/` | Reviewed inputs for `THIRD_PARTY_NOTICES` (see below). |
 | `upgrades/` | One reviewed upgrade decision per version; see [upgrades/README.md](upgrades/README.md). |
 

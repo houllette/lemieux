@@ -37,6 +37,72 @@ API.
   one-file route to an OpenAI-compatible server, and
   [Adding a model route](docs/extensions.md#adding-a-model-route) is the
   guide. (#14)
+- **Jev compaction is now System One compaction**, and it reaches any
+  System One provider named in the config file, the way `"web_search"`
+  chooses a search backend. `"systemone_providers"` declares each System
+  One provider once, shared by every feature that asks such a model, and
+  `"systemone_compaction"` holds this step's choice (`provider`), its `mode`
+  and its budget. An entry holds, under the provider's name, its `base_url` (any service that speaks
+  `POST /v1/systemone`), key (`api_key`, `api_key_env`, and `api_key_header`
+  for a service that wants it in a header rather than as a bearer token),
+  extra `headers`, `model` and tariff. The built-in `typesafe` and `ixway`
+  take an entry too, for TypeSafe's key and model or the Ixway gateway's
+  address and model. An open decision model on your own machine, or a
+  vendor's decision API, now needs only config: no TypeSafe or Ixway key,
+  and nothing reaches either. This was verified end to end against two open
+  models that Ollama 0.35 serves on `/v1/systemone`, Bespoke Labs' Nimble
+  and Cloudflare's Clef-flash, and the extension's suite keeps that as a
+  live test you run by naming the server. A provider entry that is not
+  selected neither switches the step on nor receives anything; there is no
+  fallback from one provider to another; a provider without a declared
+  tariff makes no evaluation under a dollar cap, and TypeSafe alone keeps
+  its default model and published rates. In `apply` and `shadow` mode an
+  incomplete provider stops the start naming the missing piece, and
+  `lmx explain` reports the mode and the provider's name under
+  `diagnostics.systemone_compaction`. Ixway now goes through the SDK's
+  generic endpoint client rather than TypeSafe's, so a request to a gateway
+  carries the SDK's own user agent and no `X-TypeSafe-*` headers.
+  ([System One projection](docs/compaction.md#optional-system-one-projection-before-compaction), #6)
+
+  **Breaking:** `"jev_compaction"` and `"jev_compaction_providers"` are
+  refused at startup with a sentence naming the new keys, and so is
+  `"disabled_extensions": ["jev_compaction"]`; nothing is read from the old
+  spelling, since ignoring it would quietly switch the step off.
+  `jev_compaction.api_key` moves to
+  `systemone_providers.typesafe.api_key`, `jev_compaction.endpoint`
+  to `systemone_providers.ixway.base_url`, and a model or tariff
+  to the selected provider's entry ([the whole
+  table](docs/compaction.md#moving-from-jev-compaction)). `JEV_API_KEY` is
+  unchanged. The bundled extension is now `LemieuxSystemOneCompaction`
+  (`:lemieux_systemone_compaction`, in
+  `dist/lmx/extensions/systemone_compaction`); a host passes it `provider:`
+  or `client:`. The older `route:`, `api_key:`, `ixway_endpoint:`,
+  `ixway_api_key:` and `model:` options are refused with a sentence saying
+  where each value now goes, rather than ignored, and the extension no
+  longer reads `JEV_API_KEY` itself. It records its decisions under the
+  `systemone_compaction` namespace, so a session recorded before the rename
+  is resumed without its earlier projections, which sends those reads in
+  full again, and with the step's own evaluation count and cap starting
+  over. The Ixway entry's `base_url` is an origin, as `ixway.endpoint` is.
+  In the paired trial, the projection arm is `projection` (was `jev`), its
+  option `typesafe_api_key` (was `jev_api_key`) and its report field
+  `extension_attached` (was `jev_extension_attached`); the dated reports in
+  `eval/v1/results` keep the old names.
+- **The computer-use and research examples ask any System One provider**,
+  chosen from the same `"systemone_providers"` list: `mix lmx.browser
+  --systemone-provider NAME` for browser actions, `discovery: [provider:
+  NAME]` for research's source selection, and the automatic choice
+  (TypeSafe when `JEV_API_KEY` is set) when neither names one. Their
+  classifiers are now `LemieuxComputerUse.SystemOne` and
+  `ResearchExtension.SystemOne`, take a provider rather than a TypeSafe key,
+  and refuse their old `jev:` and `api_key:` options. Their questions are
+  portable: every `choice` has string descriptions and 2 to 26 options,
+  which System One servers other than TypeSafe's require. A single target
+  or source is taken without asking, and a browser operation with more than
+  26 targets is asked as a choice of group and then a choice within it,
+  for TypeSafe too. Both examples' live tests pass against Clef-flash and
+  Nimble served by Ollama, for `choice` questions over real page and source
+  fixtures. The research example now needs this checkout or Lemieux 0.9.
 
 ### Installing and updating
 
@@ -49,6 +115,12 @@ API.
 
 ### Library
 
+- `Lemieux.CLI.SystemOne.provider/3` resolves a System One provider from
+  `"systemone_providers"` for any feature that asks one: a selection by
+  name (or the automatic choice between TypeSafe and Ixway), the field or
+  flag that made it for refusals, and a provider description out — never a
+  client, since the library has no System One SDK dependency.
+  `Lemieux.CLI.SystemOne.rates/2` reads a provider's declared tariff. (#6)
 - `Lemieux.Provider.Route` has two optional callbacks for the host that
   starts a session, `ready/1` and `default_model/1`, and `prepare/2`, the
   one sequence every host runs them in: ready the route, resolve

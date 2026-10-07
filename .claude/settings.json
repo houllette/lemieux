@@ -37,7 +37,7 @@
       "Bash(*--allow-live*)",
       "Bash(*mix*lemieux.extension.eval*examples/experiments/*)",
       "Bash(*mix*run*examples/experiments/soak.exs*)",
-      "Bash(*mix*run*jev_compaction_eval.exs*)",
+      "Bash(*mix*run*systemone_compaction_eval.exs*)",
       "Bash(*run-live*)"
     ]
   }

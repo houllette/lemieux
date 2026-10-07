@@ -9,14 +9,17 @@
 - **Needs:** for live use, a model with its provider's key and
   `BRAVE_SEARCH_API_KEY`. The live benches default to an Ixway route
   (`ixway:gpt-6-luna`); set `RESEARCH_MODEL` to run them on another provider.
+  Guided discovery needs a System One provider. The example builds against
+  this checkout or Lemieux 0.9 and later: it uses `Lemieux.CLI.SystemOne`,
+  which 0.8 does not have.
 
 This is a native **extension**: an ordinary Mix library that starts nothing on
 its own. Its default path plans the question's facts, searches and fetches
 bounded public pages, then requires a matching passage in a fetched page for
 each answer claim. It makes focused follow-up searches when evidence is
 missing. The stages are plain functions (`ResearchExtension.Pipeline` and
-`ResearchExtension.Deep`). The one-search or Jev-guided path remains
-available with `research_mode: :simple` for comparisons.
+`ResearchExtension.Deep`). The one-search or System One–guided path
+remains available with `research_mode: :simple` for comparisons.
 
 From this directory, with an absolute path to your Lemieux checkout:
 
@@ -69,8 +72,8 @@ bounded request counts.
 
 ## One-search path
 
-Pass `research_mode: :simple` to use the previous one-search synthesis or Jev
-source selector. `top_k` bounds the results opened and `max_total_bytes`
+Pass `research_mode: :simple` to use the previous one-search synthesis or the
+System One source selector. `top_k` bounds the results opened and `max_total_bytes`
 bounds the streaming fetch budget. A page the fetch tool refuses is skipped;
 fetching nothing is fatal.
 
@@ -88,32 +91,98 @@ grounding is a check here, not a label. Search and fetch calls go through
 observation carries the plain answer plus `"citations"`, `"fetched"` and
 `"skipped"`; a failed one keeps the same evidence and the raw model reply.
 
-## Guided source discovery
+## System One–guided discovery
 
-In `research_mode: :simple`, `Pipeline.run/2` and the agent automatically enable Jev-guided discovery when
-`JEV_API_KEY` is nonempty or a key is saved in the personal config's
-`jev_compaction.api_key`. Environment credentials take precedence over saved
-credentials. `LMX_CONFIG=none` disables personal lookup; another value selects
-that config path. Config files are validated, never created or modified here.
-Without a key, the pipeline opens the deterministic search shortlist.
-Pass `discovery: false` to opt out even with a key. An explicit
-`discovery: [api_key: key]` overrides credential lookup.
+In `research_mode: :simple`, `Pipeline.run/2` and the agent can let a System
+One model choose which source to open next. A System One provider is any
+service that answers `POST /v1/systemone`: TypeSafe's hosted Jev model, an
+Ixway gateway, or an open model on your own machine. Providers are declared
+once, under `"systemone_providers"` in the lmx config file
+([configuration guide](../../../docs/configuration.md)), and resolved by
+`Lemieux.CLI.SystemOne`; this example only builds the request
+(`ResearchExtension.SystemOne`).
+
+- With no `provider:`, discovery switches itself on with the automatic
+  choice: TypeSafe when `JEV_API_KEY` is nonempty or a key is saved as
+  `systemone_providers.typesafe.api_key` (the environment wins), or Ixway
+  when `systemone_providers.ixway` names a model and the gateway is
+  configured. With neither, the pipeline opens the deterministic search
+  shortlist.
+- `discovery: [provider: "NAME"]` selects any entry of `systemone_providers`.
+  A named provider that cannot be used (undeclared, or missing its key or
+  model) stops the run before search with the reason. It never falls back to
+  another provider or quietly runs without discovery.
+- `discovery: [provider: provider]` takes a provider map as
+  `Lemieux.CLI.SystemOne.provider/3` returns it, for a host that resolves
+  providers itself.
+- `discovery: false` opts out even with a provider configured.
+
+`LMX_CONFIG=none` disables the config-file lookup (the automatic choice still
+sees `JEV_API_KEY`); another value selects that config path. Config files are
+validated, never created or modified here. The old `discovery: [api_key: key]`
+is refused with a message naming `provider:`.
+
+An open model served by Ollama 0.35 or later is a provider like any other.
+After `ollama pull clef-flash`, declare it in `~/.lmx/config.json`:
+
+```json
+{
+  "systemone_providers": {
+    "local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash"}
+  }
+}
+```
+
+and pass `discovery: [provider: "local"]`. A provider declared without a key
+is sent none; one with a key gets it as a bearer token, or in the header its
+`api_key_header` names.
 
 The default uses the existing Req dependency with the native
-[TypeSafe classification contract](https://docs.typesafe.ai/api), pinned to
-`jev-1.13.0`. It requires no browser or SDK installation. One classification
-request has a 15-second receive timeout and a 5-second connect timeout, with
-redirects and retries disabled. Source-choice errors fail the research run with
-partial evidence rather than silently claiming that guided discovery succeeded.
+[System One wire contract](https://docs.typesafe.ai/api) and requires no
+browser or SDK installation. TypeSafe is asked for `jev-1.13.0`, any other
+provider for its declared model, and an answer naming a different model is
+refused. One classification request has a 15-second receive timeout and a
+5-second connect timeout, with redirects and retries disabled. Source-choice
+errors fail the research run with partial evidence rather than silently
+claiming that guided discovery succeeded.
 
-An explicit `discovery: [classify: classifier]` replaces that default.
+The question is written so any System One server can answer it, not only
+TypeSafe's:
+
+- Each option's description is a string: the candidate's URL, title,
+  snippet, depth and origin as JSON. Some servers accept nothing else
+  (Ollama's `nimble` refuses object descriptions).
+- A choice always has at least two options, because servers other than
+  TypeSafe's refuse fewer. When one source is on offer and nothing has been
+  fetched yet, so STOP is not an option either, that source is opened
+  without asking. The decision is recorded with `confidence`, `model` and
+  `usage` null and is not counted in `classifier_attempts`.
+- The frontier's 20 candidates plus STOP stay inside the 26 options those
+  servers accept.
+
+A live check runs discovery over the fixture pages with the real classifier
+against a server on your own machine, and asserts that every answer is a
+valid choice among the offered keys with a distribution over them. It runs
+only when a server is named (`LOCAL_SYSTEM_ONE_KEY` supplies a bearer token
+if the server wants one); it has passed with `clef-flash` and `nimble` on
+Ollama 0.35:
+
+```sh
+LOCAL_SYSTEM_ONE_URL=http://127.0.0.1:11434 LOCAL_SYSTEM_ONE_MODEL=clef-flash \
+  LEMIEUX_EXTENSION_BASE=/absolute/path/to/lemieux MIX_ENV=test \
+  mise exec -- mix test test/system_one/local_server_test.exs
+```
+
+An explicit `discovery: [classify: classifier]` replaces the default.
 The callback accepts a native typed-question request and returns
 `{:ok, %{"answers" => ..., "model" => ..., "usage" => ...}}`. A host that
 already loads the optional computer-use extension can use
-`&LemieuxComputerUse.Jev.evaluate/1`. The research example adds no SDK dependency.
+`&LemieuxComputerUse.SystemOne.evaluate/1`. The research example adds no SDK
+dependency.
 
 ```elixir
 discovery: [
+  provider: "local",
   candidate_limit: 5,
   max_depth: 1,
   timeout_ms: 30_000
@@ -136,24 +205,26 @@ requests cross `web_fetch`. Rewritten classification inputs are refused.
 The discovery deadline cancels the worker, with incomplete evidence marked
 explicitly and unknown counters reported as null. Returned `discovery`
 evidence contains source provenance, choices, usage, attempts and stop reason;
-Jev billed cost remains unknown. `model_stop` is a model judgement about the
-supplied excerpts, not an independently verified completeness claim. The
-synthesis receives the full retained page text, and citation checks still run.
+the provider's billed cost remains unknown. `model_stop` is a model judgement
+about the supplied excerpts, not an independently verified completeness
+claim. The synthesis receives the full retained page text, and citation
+checks still run.
 
 [Research extension](../../../docs/web-tools.md#research-extension) in the
-web tools guide summarizes the same bounds. To try Jev activation with the
-computer-use example's env-file loader and your personal model configuration,
-run from that directory:
+web tools guide summarizes the same bounds. To try guided discovery with the
+computer-use example's env-file loader and your personal model configuration
+(the automatic choice, or `--systemone-provider NAME`), run from that
+directory:
 
 ```sh
 LMX_CONFIG=none MIX_ENV=test mise exec -- mix run bench/guided_research.exs \
   --execute --env-file ../../../.env
 ```
 
-This spends one Brave call, at most three Jev calls, three guarded HTTP fetches
-and one synthesis request. It creates a temporary workspace and session store;
-it does not alter personal settings. The source host omits the unrelated
-optional Jev compaction setting supplied by `dist/lmx`.
+This spends one Brave call, at most three System One calls, three guarded
+HTTP fetches and one synthesis request. It creates a temporary workspace and
+session store; it does not alter personal settings. The source host omits the
+unrelated optional System One compaction setting supplied by `dist/lmx`.
 
 ## Offline tests and bench
 
@@ -166,7 +237,7 @@ is named to keep it out of hosts, and it admits loopback only. The tests cover
 the happy path, an unfetched citation, an uncited answer, malformed and fenced
 replies, a page over the per-page cap and the total budget, a search backend
 error, a refused private page, hooks, and the agent entry point. Offline tests
-and the deterministic bench explicitly disable automatic Jev discovery.
+and the deterministic bench explicitly disable automatic System One discovery.
 
 `bench/compare.exs` starts the fixture server itself and pairs two agents on
 five fixture questions whose answers live in the pages:
@@ -202,17 +273,21 @@ model goes straight to its provider through ReqLLM, with that provider's key
 in the environment, for example `RESEARCH_MODEL=openai:gpt-5-mini` with
 `OPENAI_API_KEY`. `RESEARCH_EFFORT` sets the reasoning effort (`max` on
 Ixway, the provider's default otherwise). The Brave key comes from
-`BRAVE_SEARCH_API_KEY` and the Jev key from `JEV_API_KEY`, or from
-`~/.lmx/config.json` when the variable is unset. Keys in the environment are
-enough: the scripts read that file only if it exists. They read it whatever
-`LMX_CONFIG` says, because the v5 command below sets `LMX_CONFIG=none`, which
-turns off the pipeline's own lookup of a saved Jev key, and still takes its
-keys from the file.
+`BRAVE_SEARCH_API_KEY`, or from `~/.lmx/config.json` when the variable is
+unset. A guided arm's System One provider is the `systemone_providers` entry
+`RESEARCH_SYSTEMONE_PROVIDER` names, or, with the variable unset, the
+automatic choice (TypeSafe with `JEV_API_KEY` or a saved key, as the recorded
+campaigns ran). The bench hands the resolved provider to the pipeline as
+`discovery: [provider: provider]`. Keys in the environment are enough: the
+scripts read that file only if it exists. They read it whatever `LMX_CONFIG`
+says, because the v5 command below sets `LMX_CONFIG=none`, which turns off
+the pipeline's own provider lookup, and still takes its keys and provider
+from the file.
 
 `bench/live.exs` and `bench/live-manifest.json` pair the bare model against
 Brave search and production-policy page fetch. Both arms use the same model
-and effort, and optional Jev discovery is disabled to isolate search and
-fetch. From this directory, with an absolute path to Lemieux:
+and effort, and optional System One discovery is disabled to isolate search
+and fetch. From this directory, with an absolute path to Lemieux:
 
 ```sh
 LEMIEUX_EXTENSION_BASE=/absolute/path/to/lemieux mise exec -- mix lemieux.extension.eval bench/live.exs --allow-live
@@ -240,10 +315,11 @@ LEMIEUX_EXTENSION_BASE=/absolute/path/to/lemieux mise exec -- mix lemieux.extens
 
 `bench/v5.exs` is the larger follow-up. Its [12-task corpus](bench/v5-corpus.json)
 freezes 46 atomic claims across version conflicts and false premises. It
-compares model alone, one search with six page attempts, Jev-guided discovery
-and iterative web on the `RESEARCH_MODEL` model (by default `ixway:gpt-6-luna`
-at `max` effort). The run is serial with one repetition and also needs a
-`JEV_API_KEY`. The script passes the frozen key path to the grader. From this
+compares model alone, one search with six page attempts, System One–guided
+discovery and iterative web on the `RESEARCH_MODEL` model (by default
+`ixway:gpt-6-luna` at `max` effort). The run is serial with one repetition
+and also needs a System One provider: `JEV_API_KEY` for TypeSafe, as
+recorded, or `RESEARCH_SYSTEMONE_PROVIDER=NAME` for another. The script passes the frozen key path to the grader. From this
 directory, with credentials in the environment or the personal config:
 
 ```sh
@@ -277,7 +353,8 @@ Lemieux.Agent.run(ResearchExtension,
 ```
 
 The host owns credentials, the search backend, the fetch limits and the model.
-Outside this checkout the example depends on `lemieux` from Hex. For
+Outside this checkout the example depends on `lemieux` from Hex (0.9 or
+later). For
 development against this checkout, set `LEMIEUX_EXTENSION_BASE` to its
 absolute path; unset it to use the Hex release. Export preserves `mix.exs` and
 does not publish to Hex or install the extension into `lmx`.

@@ -78,8 +78,8 @@ and `python3` for the suite.
 
 CI runs more than that: the multi-node suite, the suite on the oldest
 supported Elixir minor, the Hex package compiled as a dependency (also on the
-oldest supported toolchain), every example project and the bundled Jev
-extension, the Python release-helper tests, and the link, wording, workflow,
+oldest supported toolchain), every example project and the bundled System
+One compaction extension, the Python release-helper tests, and the link, wording, workflow,
 commit-identity and secret-scan checks. **Run `mix precommit.full` before a
 release or when a change reaches the examples, the package boundary or the
 release scripts.** It adds the multi-node suite, the package check, every
@@ -99,7 +99,7 @@ language server, Docker, another build), pass `--max-cases 4`.
 | Everything CI runs, including examples and package checks | `mix precommit.full` |
 | The precommit gate without rewriting files | `mix ci` |
 | Run any `lmx` command from this checkout (bare, it opens the terminal UI) | `mix lmx ARGS` |
-| Check one example project, or the bundled Jev extension | `scripts/check_example.sh NAME` |
+| Check one example project, or the bundled compaction extension | `scripts/check_example.sh NAME` |
 | Check the release host's lock matches the library's | `mix deps.drift` |
 | Install deps | `mix deps.get` |
 | Compile (warnings are errors in CI) | `mix compile --warnings-as-errors` |
@@ -139,8 +139,8 @@ command in the guides runs from a source checkout, and its hints say
 `mix lmx`; `mix lmx.tui` still opens the terminal UI. Run from the repository
 root, it reads the checkout's `.env`. Run from `dist/lmx` (after a
 `mix deps.get` there, since it is a project of its own), `mix lmx` keeps the
-repository root as its workspace, includes the bundled Jev compaction
-extension (which acts only when a Jev key or route is configured) and, like
+repository root as its workspace, includes the bundled System One compaction
+extension (which acts only when a System One provider is configured) and, like
 the binary, reads no `.env`. Mix prints compile progress on standard output,
 so run `mix compile` once before redirecting `mix lmx run …`.
 

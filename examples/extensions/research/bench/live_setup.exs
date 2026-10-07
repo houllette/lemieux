@@ -1,9 +1,10 @@
 defmodule ResearchBench.LiveSetup do
   @moduledoc """
   What every live research bench runs on: the personal settings its keys may
-  come from, and one model, effort and provider for all of its arms, chosen
-  here so that a comparison changes model in one place and its arms always
-  match. A bench loads it with `Code.require_file("live_setup.exs", __DIR__)`.
+  come from, one model, effort and provider for all of its arms, and the
+  System One provider of a guided-discovery arm, chosen here so that a
+  comparison changes model in one place and its arms always match. A bench
+  loads it with `Code.require_file("live_setup.exs", __DIR__)`.
 
     * `RESEARCH_MODEL` — `provider:model`; default `ixway:gpt-6-luna`, the
       model the recorded campaigns used. An `ixway:` model goes through Ixway,
@@ -15,12 +16,17 @@ defmodule ResearchBench.LiveSetup do
     * `RESEARCH_EFFORT` — the reasoning effort for every arm; default `max`
       on Ixway, otherwise `default` (the provider's own). Anything else must
       be an effort the model offers.
+    * `RESEARCH_SYSTEMONE_PROVIDER` — the System One provider a guided arm
+      asks which source to open: a name from `"systemone_providers"` in
+      `~/.lmx/config.json`, or unset for the automatic choice (TypeSafe with
+      `JEV_API_KEY` or a saved key, which the recorded campaigns used).
 
   The benches bound their spend in requests, not dollars: an Ixway route
   cannot price a request before it is routed.
   """
 
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.SystemOne
   alias Lemieux.Ixway
 
   @default_model "ixway:gpt-6-luna"
@@ -33,9 +39,9 @@ defmodule ResearchBench.LiveSetup do
 
   `LMX_CONFIG` does not change which file this reads. The documented v5
   command sets `LMX_CONFIG=none`, which turns off the pipeline's own lookup
-  of a saved Jev key (`ResearchExtension.Jev`), and still expects the
-  bench's keys to come from this file; honouring `LMX_CONFIG=none` here
-  would leave that run without them.
+  of a System One provider (`ResearchExtension.SystemOne`), and still
+  expects the bench's keys and provider to come from this file; honouring
+  `LMX_CONFIG=none` here would leave that run without them.
   """
   @spec config(path :: Path.t()) :: Config.t()
   def config(path \\ Config.default_path()) do
@@ -58,6 +64,27 @@ defmodule ResearchBench.LiveSetup do
     case System.get_env("RESEARCH_MODEL", @default_model) do
       "ixway:" <> _ = model -> ixway(model, config, provider_options)
       model -> direct(model, provider_options)
+    end
+  end
+
+  @doc """
+  The System One provider `RESEARCH_SYSTEMONE_PROVIDER` selects from
+  `config` (`Lemieux.CLI.SystemOne.provider/3`), for a bench to pass as
+  `discovery: [provider: provider]`. Handing the pipeline the resolved
+  provider keeps its own lookup, which `LMX_CONFIG=none` switches off, out of
+  the run. A provider that cannot be used stops the bench with the reason
+  rather than running the arm without guidance.
+  """
+  @spec system_one(config :: Config.t() | nil) :: SystemOne.provider()
+  def system_one(config) do
+    selection = System.get_env("RESEARCH_SYSTEMONE_PROVIDER")
+
+    case SystemOne.provider(config, selection,
+           selected_by: "RESEARCH_SYSTEMONE_PROVIDER",
+           ixway_endpoint: System.get_env("LMX_IXWAY_URL")
+         ) do
+      {:ok, provider} -> provider
+      {:unavailable, reason} -> raise "the guided arm needs a System One provider, but #{reason}"
     end
   end
 

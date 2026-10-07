@@ -302,16 +302,29 @@ already recorded, and makes no hidden model or web calls. Neither check
 establishes semantic entailment or independent source quality.
 
 In the example's `research_mode: :simple`, source selection can be guided by
-TypeSafe's Jev model, a hosted classifier that TypeSafe bills per call. It is
-switched on when `JEV_API_KEY` is set or a key is saved as
-`jev_compaction.api_key` in `~/.lmx/config.json` (the environment wins);
-`LMX_CONFIG=none` turns off that lookup, and `discovery: false` opts out even
-with a key. It sends the classifier the question, the candidate pages (URL,
-title and snippet) and the text of the pages already fetched (a page over
-6,000 bytes as an excerpt), and asks which to open next. Without a key, the
-pipeline opens the deterministic search shortlist. An explicit classifier
-callback replaces the default transport; no browser or SDK dependency is
-required.
+a System One model, from any provider declared under `"systemone_providers"`
+in `~/.lmx/config.json` ([System One providers](configuration.md#system-one-providers)). With no
+selection it is switched on by the automatic choice, as before: TypeSafe's
+hosted Jev model, which TypeSafe bills per call, when `JEV_API_KEY` is set or
+a key is saved as `systemone_providers.typesafe.api_key` (the environment
+wins), or an Ixway gateway with a model set. `discovery: [provider: "NAME"]`
+selects any declared provider instead, such as an open model Ollama serves
+on your own machine (`base_url` `http://127.0.0.1:11434`, `model`
+`clef-flash`); a named provider that cannot be used stops the run rather
+than falling back. `LMX_CONFIG=none` turns off the file lookup, and
+`discovery: false` opts out even with a provider. It sends the classifier the
+question, the candidate pages (URL, title and snippet) and the text of the
+pages already fetched (a page over 6,000 bytes as an excerpt), and asks which
+to open next. Without a provider, the pipeline opens the deterministic search
+shortlist. An explicit classifier callback replaces the default transport; no
+browser or SDK dependency is required.
+
+The question is portable across System One servers: each candidate's
+description is a string (its metadata as JSON), since some servers refuse
+object descriptions, and a lone candidate with nothing yet fetched is opened
+without asking, since servers other than TypeSafe's refuse a choice with
+fewer than two options. That decision is recorded with no model, confidence
+or usage. The example's README has a live check against a local server.
 
 The source frontier deduplicates fragment and final URLs and bounds
 candidates, link depth, classifier time, fetch attempts and received bytes.
@@ -320,16 +333,19 @@ fetches go through the current host's hooks. A classifier's `STOP` or
 confidence is a model judgement, not proof that the question has been
 answered.
 
-The example's live benches make paid model, search and (for some) Jev
-requests. Each takes its model from `RESEARCH_MODEL` as `provider:model`.
+The example's live benches make paid model, search and (for some) System
+One requests. Each takes its model from `RESEARCH_MODEL` as `provider:model`.
 The default, `ixway:gpt-6-luna`, goes through Ixway, configured by the
 `ixway` object in `~/.lmx/config.json` or by `IXWAY_API_KEY` and
 `LMX_IXWAY_URL`; any other model goes straight to its provider with that
 provider's key, for example `RESEARCH_MODEL=openai:gpt-5-mini` with
 `OPENAI_API_KEY`. `RESEARCH_EFFORT` sets the reasoning effort (`max` on
-Ixway, the provider's default otherwise). The Brave and Jev keys come from
-`BRAVE_SEARCH_API_KEY` and `JEV_API_KEY`, or from `~/.lmx/config.json` when
-the variables are unset. The example's README has the options and commands.
+Ixway, the provider's default otherwise). The Brave key comes from
+`BRAVE_SEARCH_API_KEY`, or from `~/.lmx/config.json` when the variable is
+unset. A guided arm asks the System One provider `RESEARCH_SYSTEMONE_PROVIDER`
+names in that file's `systemone_providers`, or, unset, the automatic choice
+(TypeSafe with `JEV_API_KEY` or a saved key). The example's README has the
+options and commands.
 
 ## Configured page fetch
 

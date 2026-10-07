@@ -88,7 +88,7 @@ mise exec -- mix lmx help models
 prints say `mix lmx` instead of `lmx`. `mix lmx.tui` still works and is the
 same as `mix lmx tui`.
 
-The bundled [Jev compaction](configuration.md#jev-compaction) extension is
+The bundled [System One compaction](configuration.md#system-one-compaction) extension is
 part of the release host in `dist/lmx`, a Mix project with its own
 dependencies. To include it, fetch them once and run from there; the agent
 still works in the repository root, not in `dist/lmx`:
@@ -836,7 +836,7 @@ An embedding host sets its own limits through its session options.
 | `LMX_IXWAY_URL` | Ixway instance origin; needs a gateway key from the environment or the config |
 | `IXWAY_API_KEY` | Ixway gateway key, used only on Ixway routes |
 | `OLLAMA_API_KEY` | Ollama Cloud key; also turns on the terminal UI's Cloud catalog |
-| `JEV_API_KEY` | TypeSafe Jev key; switches on [Jev compaction](configuration.md#jev-compaction) where it is bundled: the installed `lmx`, or a source run from `dist/lmx` |
+| `JEV_API_KEY` | TypeSafe's Jev key; switches on [System One compaction](configuration.md#system-one-compaction) through the `typesafe` provider where it is bundled: the installed `lmx`, or a source run from `dist/lmx` |
 | `LMX_CREDENTIALS` | MCP OAuth token file; default `~/.lmx/mcp-credentials.json` |
 | `LMX_OAUTH_CALLBACK_PORT` | MCP OAuth callback port; default 8642 |
 | `LMX_CHECK_UPDATES` | `0` turns the installed `lmx`'s automatic update checks off (at start, after `/new` and `/resume`, and hourly); `/update` still checks |

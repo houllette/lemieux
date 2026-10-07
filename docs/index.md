@@ -60,7 +60,7 @@ are runnable agents and extensions, each with a check that runs offline.
 | **Receipt** | In the terminal UI, the line a tool call is drawn as (`Ran mix test`, `Edited lib/x.ex (+3 -1)`). In the library, the record a tool makes once a remote side has acknowledged its effect, so a lost result is reported as unknown rather than failed. |
 | **Scout** | The read-only helper session `lmx` can hand a question to through its `delegate` tool. It reads with `read`, `grep` and `glob` under its own budget, and `--no-delegate` turns it off. |
 | **Overlay** | A learned harness overlay: a JSON file, made by the experimental harness-learning tools, that adds system-prompt text. Only your own `~/.lmx/harness.json` may also re-describe tools, and `lmx` names a repository's `.lmx/harness.json` every time it applies one. |
-| **Jev** | TypeSafe's model for judging which old file reads a conversation still needs. `lmx` bundles an extension that uses it to shorten requests; it sends nothing until you give it a key or an Ixway route. See [what it sends](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md). |
+| **System One** | A kind of model that answers typed questions about a state with calibrated probabilities instead of generating text, over `POST /v1/systemone`. TypeSafe's Jev is one; open ones (Cloudflare's Clef, Bespoke Labs' Nimble, Laya) run on your own machine. `lmx` bundles an extension that asks one which old file reads a conversation still needs, to shorten requests; it sends nothing until you configure a provider. See [what it sends](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md). |
 
 ## Using lmx
 

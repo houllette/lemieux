@@ -17,7 +17,7 @@ erl_crash.dump
 /dist/lmx/deps/
 /dist/lmx/tmp/
 /dist/lmx/erl_crash.dump
-# Extensions bundled with the lmx release (Jev compaction) are Mix projects of
+# Extensions bundled with the lmx release (System One compaction) are Mix projects of
 # their own, built and fetched in place like the examples below.
 /dist/lmx/extensions/*/_build/
 /dist/lmx/extensions/*/deps/

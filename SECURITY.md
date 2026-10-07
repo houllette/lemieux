@@ -167,25 +167,33 @@ and `--config none` without `LMX_HOME` does not run it.
   repository's files and yours out of that run; `"disabled_extensions":
   ["workspace"]` does so for every session; `--config none`, with `LMX_HOME`
   unset, reads none of your personal files.
-- **TypeSafe** receives abridged conversation excerpts when Jev compaction is
-  on. `lmx` bundles this extension.
-  - *When:* it turns itself on when `JEV_API_KEY` is set or
-    `jev_compaction.api_key` is saved in your config. It then sends one HTTPS
-    request to `api.typesafe.ai` before a model request that carries long,
-    older `read` results, and at most three such requests a session by
-    default.
-  - *What:* the Jev model name, a fixed instruction, the text of every user
-    and assistant message (each longer than 500 bytes cut to its first and
-    last 250 characters), the earlier summary cut the same way, and for each
-    old result the tool name, its arguments (at most 500 characters, usually
-    a path) and its length. It sends no tool output, but the abridged
+- **The System One provider you configure** — TypeSafe, an Ixway gateway,
+  a vendor's decision API or a model on your own machine — receives
+  abridged conversation excerpts when System One compaction is on. `lmx`
+  bundles this extension.
+  - *When:* it turns itself on when the selected provider is complete. With
+    `systemone_compaction.provider` set, that is the named provider. Without
+    it, the choice is automatic: an Ixway gateway when the `ixway` entry has
+    a model and `lmx` has the gateway's address and key, otherwise TypeSafe
+    when `JEV_API_KEY` is set or a key is saved in
+    `systemone_providers.typesafe.api_key`. It then sends one HTTP
+    request to that provider's address, and never to another, before a
+    model request that carries long, older `read` results, and at most three
+    such requests a session by default.
+  - *What:* the model name, a fixed instruction, the text of every user and
+    assistant message (each longer than 500 bytes cut to its first and last
+    250 characters), the earlier summary cut the same way, and for each old
+    result the tool name, its arguments (at most 500 characters, usually a
+    path) and its length. It sends no tool output, but the abridged
     messages can quote files.
-  - *Cost:* TypeSafe bills each request, and the cost counts against
-    `--max-cost-usd`.
-  - *Off:* `"jev_compaction": {"mode": "off"}` or `"disabled_extensions":
-    ["jev_compaction"]`. An Ixway endpoint with a pinned Jev model takes
-    TypeSafe's place. The
-    [Jev compaction README](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
+  - *Cost:* the provider bills each request, and the known cost counts
+    against `--max-cost-usd`; a provider with no declared tariff makes no
+    request under a cap.
+  - *Off:* `"systemone_compaction": {"mode": "off"}` or
+    `"disabled_extensions": ["systemone_compaction"]`. A provider entry in
+    `systemone_providers` that is not selected receives nothing.
+    The
+    [extension's README](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
     has the details.
 - **Brave Search** receives the agent's search queries when a Brave key is set
   (`BRAVE_SEARCH_API_KEY`). Page fetch then reaches the pages the model asks

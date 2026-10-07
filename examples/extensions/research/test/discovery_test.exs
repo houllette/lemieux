@@ -90,18 +90,12 @@ defmodule ResearchExtension.DiscoveryTest do
     assert result.discovery.stop_reason == "model_stop"
     assert length(result.discovery.decisions) == 3
     assert_receive {:choice, first}
-
-    assert Enum.any?(
-             Map.values(first["questions"]["next"]["criteria"]),
-             &(&1["url"] == base <> "/junk.html")
-           )
+    assert Enum.any?(Map.values(candidates(first)), &(&1["url"] == base <> "/junk.html"))
 
     assert_receive {:choice, second}
-
-    links =
-      Map.values(second["questions"]["next"]["criteria"])
-      |> Enum.filter(&is_map/1)
-      |> Enum.map(& &1["url"])
+    assert Enum.all?(Map.values(second["questions"]["next"]["criteria"]), &is_binary/1)
+    assert Map.has_key?(second["questions"]["next"]["criteria"], "STOP")
+    links = candidates(second) |> Map.values() |> Enum.map(& &1["url"])
 
     assert Enum.count(links, &(&1 == base <> "/guide.html")) == 1
     refute "http://10.0.0.1/secret" in links
@@ -158,7 +152,7 @@ defmodule ResearchExtension.DiscoveryTest do
     agent_opts =
       Keyword.delete(opts, :session) ++
         session ++
-        [discovery: [api_key: "test-key", request: request]]
+        [discovery: [provider: typesafe("test-key"), request: request]]
 
     input = %{prompt: "Tidepool retention and drain", cwd: opts[:cwd], timeout_ms: 10_000}
     assert {:ok, observation} = Lemieux.Agent.run(ResearchExtension, input, agent_opts)
@@ -236,10 +230,42 @@ defmodule ResearchExtension.DiscoveryTest do
     assert_receive {:request, _}
     assert_receive {:request, request}
 
-    refute Enum.any?(
-             Map.values(request["questions"]["next"]["criteria"]),
-             &(is_map(&1) and &1["url"] == base <> "/guide.html")
-           )
+    refute Enum.any?(Map.values(candidates(request)), &(&1["url"] == base <> "/guide.html"))
+  end
+
+  test "a lone candidate is opened without asking the classifier", %{base: base, opts: opts} do
+    owner = self()
+    index = base <> "/index.html"
+
+    search =
+      Static.new([%{keywords: ~w(tidepool), url: index, title: "index", snippet: "Tidepool"}])
+
+    classify = fn request ->
+      send(owner, {:classified, request})
+      choice(request, index)
+    end
+
+    assert {:error, {:unfetched_citation, _}, partial} =
+             Pipeline.run(
+               "Tidepool",
+               Keyword.put(opts, :search, {Static, search}) ++
+                 [discovery: [classify: classify, max_depth: 0]]
+             )
+
+    refute_received {:classified, _}
+    assert Enum.map(partial.fetched, & &1.url) == [index]
+    assert partial.discovery.classifier_attempts == 0
+    assert partial.discovery.stop_reason == "frontier_exhausted"
+
+    assert [
+             %{
+               "choice" => "1",
+               "url" => ^index,
+               "confidence" => nil,
+               "model" => nil,
+               "usage" => nil
+             }
+           ] = partial.discovery.decisions
   end
 
   test "the discovery deadline stops a stalled classifier before synthesis", %{opts: opts} do
@@ -274,6 +300,15 @@ defmodule ResearchExtension.DiscoveryTest do
     assert Scripted.requests(opts[:session][:provider]) == []
   end
 
+  # The offered sources: every description but STOP's is a candidate's
+  # metadata as a JSON string.
+  defp candidates(request) do
+    for {id, description} <- request["questions"]["next"]["criteria"],
+        id != "STOP",
+        into: %{},
+        do: {id, JSON.decode!(description)}
+  end
+
   defp choice(request, url) do
     criteria = request["questions"]["next"]["criteria"]
 
@@ -281,15 +316,14 @@ defmodule ResearchExtension.DiscoveryTest do
       if url == "STOP",
         do: "STOP",
         else:
-          Enum.find_value(criteria, fn {id, row} ->
-            if is_map(row) and row["url"] == url, do: id
-          end)
+          Enum.find_value(candidates(request), fn {id, row} -> if row["url"] == url, do: id end)
 
     assert selected
 
     {:ok,
      %{
-       "model" => "scripted-discovery",
+       # The native adapter's request names a model, which the answer echoes.
+       "model" => request["model"] || "scripted-discovery",
        "answers" => %{
          "next" => %{
            "choice" => selected,
@@ -301,4 +335,15 @@ defmodule ResearchExtension.DiscoveryTest do
        "usage" => %{"input_tokens" => 1}
      }}
   end
+
+  defp typesafe(key),
+    do: %{
+      name: "typesafe",
+      type: :typesafe,
+      base_url: "https://api.typesafe.ai",
+      api_key: key,
+      api_key_header: nil,
+      headers: %{},
+      model: nil
+    }
 end

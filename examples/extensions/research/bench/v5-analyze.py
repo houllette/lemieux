@@ -62,8 +62,8 @@ def counts(result):
         fetched_bytes = sum((call.get("structured_content") or {}).get("bytes") or 0 for call in calls if call.get("name") == "web_fetch")
     else:
         searches = 1
-        fetches = discovery.get("attempts") if arm == "jev-guided" else len(fetched) + sum("budget" not in row.get("reason", "") for row in skipped)
-        classifiers = discovery.get("classifier_attempts") if arm == "jev-guided" else 0
+        fetches = discovery.get("attempts") if arm == "systemone-guided" else len(fetched) + sum("budget" not in row.get("reason", "") for row in skipped)
+        classifiers = discovery.get("classifier_attempts") if arm == "systemone-guided" else 0
         denied = 0
         fetched_bytes = sum(page.get("bytes") or 0 for page in fetched)
     return {"model_requests": resources.get("requests"), "classifier_requests": classifiers,
@@ -106,7 +106,7 @@ for index, record in enumerate(records, 1):
 (ROOT / "tmp/research-v5-blind-key.json").write_text(json.dumps(key, indent=2) + "\n")
 (ROOT / "tmp/research-v5-ledger.json").write_text(json.dumps(records, indent=2) + "\n")
 print("attempts", len(records), "claims", sum(len(row["claims"]) for row in records))
-for arm in ("model-alone", "one-search-fetch", "jev-guided", "iterative-web"):
+for arm in ("model-alone", "one-search-fetch", "systemone-guided", "iterative-web"):
     group = [row for row in records if row["arm"] == arm]
     print(arm, "pass", sum(row["frozen_proxy_passed"] for row in group),
           "claim matches", sum(c["answer_pattern_match"] for row in group for c in row["claims"]),

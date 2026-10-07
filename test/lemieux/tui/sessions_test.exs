@@ -1418,7 +1418,7 @@ defmodule Lemieux.TUI.SessionsTest do
                mcp_flow: nil,
                deferred_steer: nil,
                sent_steers: [],
-               jev: nil
+               systemone: nil
              }
 
       # Announced and headed by the name, not the id — the whole reason a

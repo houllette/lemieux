@@ -519,7 +519,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 mcp_flow: nil,
                 deferred_steer: nil,
                 sent_steers: [],
-                jev: nil
+                systemone: nil
               },
               # The `@` picker's state in one field, because its parts are read
               # and written together. `cwd` comes from the session's own

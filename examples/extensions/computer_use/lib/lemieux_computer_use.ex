@@ -1,8 +1,10 @@
 defmodule LemieuxComputerUse do
   @moduledoc """
-  Experimental browser-use extension: bounded discovery, Jev choices, Wallaby
-  input, and explicit outcome evidence. Hosts start the browser runtime and
-  supply allowed hosts. No browser or model call runs during harness assembly.
+  Experimental browser-use extension: bounded discovery, System One choices,
+  Wallaby input, and explicit outcome evidence. Hosts start the browser
+  runtime, supply allowed hosts and choose the System One provider
+  (`systemone: [provider: provider]`, see `LemieuxComputerUse.SystemOne`).
+  No browser or model call runs during harness assembly.
   """
   @behaviour Lemieux.Extension
   import Kernel, except: [apply: 2]
@@ -33,9 +35,27 @@ defmodule LemieuxComputerUse do
     validate(opts)
   end
 
-  @doc "Validates host-supplied execution limits."
+  @doc """
+  Validates host-supplied execution limits and the System One options.
+
+  `:jev` is refused rather than ignored: it configured the TypeSafe-only
+  classifier, and a host still passing it would otherwise run with no
+  classifier, or one it did not choose, without being told.
+  """
   @spec validate(opts :: keyword()) :: {:ok, keyword()} | {:error, String.t()}
   def validate(opts) do
+    if Keyword.has_key?(opts, :jev) do
+      {:error,
+       ":jev was renamed :systemone, which takes provider: (a System One provider map) " <>
+         "or client: instead of a key"}
+    else
+      with :ok <-
+             LemieuxComputerUse.SystemOne.validate_options(Keyword.get(opts, :systemone, [])),
+           do: validate_limits(opts)
+    end
+  end
+
+  defp validate_limits(opts) do
     hosts = Keyword.get(opts, :allowed_hosts, [])
 
     valid =
@@ -99,13 +119,23 @@ defmodule LemieuxComputerUse do
 
   @impl true
   @spec describe(opts :: keyword()) :: map()
-  def describe(opts),
-    do: %{
+  def describe(opts) do
+    description = %{
       "experimental" => true,
       "driver" => "wallaby",
-      "classifier" => "jev",
+      "classifier" => "systemone",
       "allowed_hosts" => Keyword.fetch!(opts, :allowed_hosts)
     }
+
+    put_provider(
+      description,
+      LemieuxComputerUse.SystemOne.provider_name(Keyword.get(opts, :systemone, []))
+    )
+  end
+
+  # The provider's name only: its key and address are not a description.
+  defp put_provider(description, nil), do: description
+  defp put_provider(description, name), do: Map.put(description, "systemone_provider", name)
 
   defp bounded?(opts, key, default, range), do: Keyword.get(opts, key, default) in range
 end

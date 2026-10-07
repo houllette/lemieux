@@ -73,19 +73,26 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
           # Call IDs belong to the session being left. A colliding ID in the
           # next session must never patch an old row.
           tools:
-            Map.put(opts.empty_tools, :jev, restore_jev(snapshot.entries, opts.empty_tools.jev)),
+            Map.put(
+              opts.empty_tools,
+              :systemone,
+              restore_systemone(snapshot.entries, opts.empty_tools.systemone)
+            ),
           turn: opts.idle_turn
       }
     end
 
-    defp restore_jev(_entries, nil), do: nil
+    defp restore_systemone(_entries, nil), do: nil
 
-    defp restore_jev(entries, jev) do
+    defp restore_systemone(entries, systemone) do
       latest =
         entries
         |> Enum.reverse()
         |> Enum.find_value(fn
-          %{type: :extension_state, payload: %{"namespace" => "jev_compaction", "value" => value}}
+          %{
+            type: :extension_state,
+            payload: %{"namespace" => "systemone_compaction", "value" => value}
+          }
           when is_map(value) ->
             value
 
@@ -95,10 +102,14 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
       case latest do
         nil ->
-          jev
+          systemone
 
         value ->
-          %{jev | saved: value["last_saved_tokens_estimate"], outcome: value["last_outcome"]}
+          %{
+            systemone
+            | saved: value["last_saved_tokens_estimate"],
+              outcome: value["last_outcome"]
+          }
       end
     end
 
