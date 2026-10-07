@@ -320,7 +320,7 @@ reasoning; this is the shape.
   "name": "audit",
   "module": "MyApp.Audit",
   "ebin": ["lib/my_app/ebin", "lib/jason/ebin"],
-  "versions": {"lemieux": "0.8.0", "elixir": "1.20.2", "otp": "29"},
+  "versions": {"lemieux": "0.9.0", "elixir": "1.20.4", "otp": "29"},
   "extension_api": 1,
   "options": {"log": "/var/log/agents.log"}
 }
@@ -340,7 +340,7 @@ reasoning; this is the shape.
   sides. A bundle without `extension_api` predates it and must match
   Lemieux, Elixir and OTP exactly.
   A script's `versions` names only Lemieux, as a version (its release line) or
-  a requirement such as `"~> 0.8"`, since the script is compiled by the
+  a requirement such as `"~> 0.9"`, since the script is compiled by the
   running binary.
 - `options`, if present, is a JSON object passed to the module's `init/1` as
   `[config: map]`, string keys and all. Personal config's

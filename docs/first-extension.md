@@ -48,7 +48,7 @@ No provider key is needed. The tests drive a real Lemieux session with
 scripted model responses and check that the tool's result reaches the
 transcript. `LEMIEUX_EXTENSION_BASE` points the example at your checkout. For
 a project of your own, copy the directory and replace the `lemieux()`
-dependency in its `mix.exs` with `{:lemieux, "~> 0.8"}` from Hex.
+dependency in its `mix.exs` with `{:lemieux, "~> 0.9"}` from Hex.
 
 Read the complete [implementation](https://github.com/houllette/lemieux/blob/main/examples/extensions/hello/lib/hello_extension.ex):
 
@@ -124,11 +124,11 @@ An extension small enough for one file needs no Mix project and no rebuild
 after an upgrade. `lmx extension new NAME` writes a directory with an
 `extension.json` and one `.exs` file, which the running `lmx` compiles when it
 loads it. Its manifest names only the Lemieux it was written for, as a version
-(`"0.8.0"`, meaning that release line) or a requirement:
+(`"0.9.0"`, meaning that release line) or a requirement:
 
 ```json
 {"schema_version": 1, "name": "planning", "module": "LemieuxPlanningExample",
- "script": "planning.exs", "versions": {"lemieux": "~> 0.8"}}
+ "script": "planning.exs", "versions": {"lemieux": "~> 0.9"}}
 ```
 
 [`examples/extensions/planning`](https://github.com/houllette/lemieux/blob/main/examples/extensions/planning/README.md)

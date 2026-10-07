@@ -7,7 +7,7 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 0.9.0 — 2026-10-07
 
 ### lmx
 

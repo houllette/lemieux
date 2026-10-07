@@ -15,7 +15,7 @@ module, the script, the Lemieux it was written for and the route's options:
 
 ```json
 {"schema_version": 1, "name": "relay", "module": "LemieuxRelayExample",
- "script": "relay.exs", "versions": {"lemieux": "~> 0.8"},
+ "script": "relay.exs", "versions": {"lemieux": "~> 0.9"},
  "options": {"endpoint": "http://localhost:8000", "models": ["qwen3-32b"],
              "default": "qwen3-32b", "context_window": 32768}}
 ```

@@ -1,1 +1,1 @@
-{"schema_version":1,"name":"planning","module":"LemieuxPlanningExample","script":"planning.exs","versions":{"lemieux":"~> 0.8"}}
+{"schema_version":1,"name":"planning","module":"LemieuxPlanningExample","script":"planning.exs","versions":{"lemieux":"~> 0.9"}}
