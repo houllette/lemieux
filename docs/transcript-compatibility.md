@@ -107,7 +107,10 @@ stream failed — kept for a reader, never sent again, whether the request was
 retried or the turn ended. A `run_evidence` entry with `"degraded" => true`
 stands in for a manifest that could not be built, with the run id and the
 reason. An `error` entry recording a failed summary carries
-`"retrying" => true` when the summary was tried again. Requests may also carry
+`"retrying" => true` when the summary was tried again. A `user` entry with
+`"stop_hook" => true` is part of the conversation — the model is sent it — but
+was written by a `stop` hook rather than typed by the person; earlier builds
+wrote the same feedback without the mark. Requests may also carry
 short synthetic user messages the session composes — leading a tail that
 begins mid-turn, or closing a summary request. They are never entries: their
 ids name the entry they were built beside (`…-continued`, `…-summarise`), they

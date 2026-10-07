@@ -7,9 +7,14 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     alias Lemieux.Extensions.Verify
     alias Lemieux.ID.Shorthand
+    alias Lemieux.Transcript
     alias Lemieux.TUI.Activity
     alias Lemieux.TUI.Blocks
     alias Lemieux.TUI.ToolText
+
+    # The tag a shipped stop hook puts first so the model can tell which rule
+    # spoke; the row's glyph already says the harness did.
+    @hook_tag ~r/\A\[lmx [^\]\n]*\]\s*/
 
     @doc "Summarizes a finished delegation group."
     @spec group_summary(map()) :: String.t()
@@ -192,10 +197,13 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp turn_boundary?({:you, _text}, [row | _rest]), do: Blocks.model_row?(row)
     defp turn_boundary?(_line, _acc), do: false
 
-    # A message the verify extension sent the model is the harness talking,
-    # not the person; `verify_lines/1` says it in that voice.
-    defp entry_lines(%{type: :user, payload: %{"text" => text}}) do
-      if verify?(text), do: verify_lines(text), else: split_lines(:you, text)
+    # A message a stop hook sent the model is the harness talking, not the
+    # person; `harness_lines/1` says it in that voice.
+    defp entry_lines(%{type: :user, payload: %{"text" => text}} = entry) do
+      case harness_lines(entry) do
+        [] -> split_lines(:you, text)
+        lines -> lines
+      end
     end
 
     defp entry_lines(%{type: :error, payload: payload}),
@@ -242,5 +250,25 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       |> String.trim_leading()
       |> then(&split_lines(:verify, &1))
     end
+
+    @doc """
+    The rows for a user entry the harness wrote, or `[]` for one the person
+    did.
+
+    A stop hook's message (`Lemieux.Transcript.stop_hook?/1`) is drawn as
+    `:hook` rows without its `[lmx …]` tag, and verify's as `:verify` rows
+    with its check mark — including verify messages from before the session
+    marked stop hooks' words, which only the tag identifies.
+    """
+    @spec harness_lines(entry :: Lemieux.Entry.t()) :: [{:hook | :verify, String.t()}]
+    def harness_lines(%{type: :user, payload: %{"text" => text}} = entry) when is_binary(text) do
+      cond do
+        verify?(text) -> verify_lines(text)
+        Transcript.stop_hook?(entry) -> split_lines(:hook, String.replace(text, @hook_tag, ""))
+        true -> []
+      end
+    end
+
+    def harness_lines(_entry), do: []
   end
 end

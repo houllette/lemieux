@@ -188,13 +188,23 @@ defmodule Lemieux.CLITest do
       assert Scripted.requests(provider) == []
     end
 
-    test "truncated model output is retained but exits with failure", context do
-      result =
-        lmx(["run", "work"], context, [Scripted.complete("partial", finish_reason: :length)])
+    test "truncated model output is picked up once, then retained, and exits with failure",
+         context do
+      provider =
+        Scripted.new([
+          Scripted.complete("partial", finish_reason: :length),
+          Scripted.complete("still partial", finish_reason: :length)
+        ])
 
+      result = lmx(["run", "work"], context, [], provider: provider)
+
+      # The first cut-off is sent back (`Lemieux.Extensions.Continuation`);
+      # the second, with nothing done in between, ends the run as it is.
+      assert length(Scripted.requests(provider)) == 2
       assert result.status == {:error, 1}
-      assert result.stdout == "partial\n"
+      assert result.stdout == "still partial\n"
       assert result.stderr =~ "did not complete"
+      assert result.stderr =~ "cut off at the model's output limit"
     end
 
     test "joins a multi-word prompt rather than dropping the tail", context do

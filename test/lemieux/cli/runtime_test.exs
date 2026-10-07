@@ -111,9 +111,60 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Search",
              "Lemieux.Extensions.ApplyPatch",
              "Lemieux.Extensions.Planning",
+             "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Delegation",
              "Lemieux.CLI.RuntimeTest.Audit"
            ]
+  end
+
+  describe "continuation" do
+    defp applied(tmp_dir, settings, argv \\ []) do
+      path = Path.join(tmp_dir, "config.json")
+      File.write!(path, JSON.encode!(Map.put(settings, "version", 1)))
+      assert {:ok, options} = Options.parse(["--config", path] ++ argv)
+
+      assert {:ok, prepared} =
+               Runtime.prepare(options, provider: Scripted.new([]), store: JSONL.new(tmp_dir))
+
+      prepared.harness.applied
+    end
+
+    defp modules(applied), do: Enum.map(applied, & &1["module"])
+
+    test "lmx sends the model back to unfinished work by default, ahead of verify", %{
+      tmp_dir: tmp_dir
+    } do
+      modules = tmp_dir |> applied(%{}) |> modules()
+      continuation = Enum.find_index(modules, &(&1 == "Lemieux.Extensions.Continuation"))
+      verify = Enum.find_index(modules, &(&1 == "Lemieux.Extensions.Verify"))
+
+      assert is_integer(continuation) and is_integer(verify)
+      assert continuation < verify
+    end
+
+    test "the config's allowances reach the extension", %{tmp_dir: tmp_dir} do
+      applied =
+        applied(tmp_dir, %{
+          "continuation" => %{"max_continuations" => 8, "max_output_continuations" => 1}
+        })
+
+      assert %{"options" => options} =
+               Enum.find(applied, &(&1["module"] == "Lemieux.Extensions.Continuation"))
+
+      assert options["max_continuations"] == 8
+      assert options["max_output_continuations"] == 1
+    end
+
+    test "\"continuation\": false and disabled_extensions both leave it out", %{tmp_dir: tmp_dir} do
+      for settings <- [
+            %{"continuation" => false},
+            %{"continuation" => %{"enabled" => false}},
+            %{"disabled_extensions" => ["continuation"]}
+          ] do
+        refute "Lemieux.Extensions.Continuation" in modules(applied(tmp_dir, settings)),
+               inspect(settings)
+      end
+    end
   end
 
   test "config can withhold individual shipped extensions while leaving others enabled", %{
@@ -342,6 +393,7 @@ defmodule Lemieux.CLI.RuntimeTest do
     assert Enum.map(snapshot["extensions"]["applied"], & &1["module"]) == [
              "Lemieux.Extensions.Interactive",
              "Lemieux.Extensions.Elixir",
+             "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Delegation"
            ]
 

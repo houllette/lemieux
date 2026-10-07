@@ -42,6 +42,12 @@ defmodule Lemieux.Prompt do
       their tools allow it, but only if the model sends them together.
     * **Say what was checked.** The last paragraph was already there; it now
       asks for the check, not only for honesty about its absence.
+    * **Finish before stopping.** A response that calls no tool ends the
+      prompt, and nothing told the model so. A long task was reported
+      (2026-10-07) to stop partway until somebody prompted it to go on.
+      Codex's prompt carries the same instruction. It is not measured here,
+      and it does not carry the fix alone — `Lemieux.Extensions.Continuation`
+      is the part that does not depend on the model reading it.
   """
 
   @default """
@@ -63,6 +69,10 @@ defmodule Lemieux.Prompt do
     a different answer.
   - Leave version control to the person. Do not commit, push, reset, rebase,
     force-push or discard changes unless they ask you to.
+  - Keep working until the task is done. Ending your turn hands control back
+    to the person, so do not stop to report progress or to ask whether to go
+    on; stop when the work is finished, or when you need something only the
+    person can give, and say which.
 
   About the tools:
 

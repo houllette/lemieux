@@ -29,7 +29,8 @@ defmodule Lemieux.CLI.Runtime do
       with `Lemieux.Extensions.MCPDiscovery` in `:auto` mode beside them,
       `Lemieux.Extensions.Web` for configured Brave research or explicit web
       flags, `Lemieux.Extensions.Elixir` for `--elixir`, the coding recipe's
-      `environment_context`, `planning` (the `todo` tool) and `verify`,
+      `environment_context`, `planning` (the `todo` tool), `continuation`
+      (unfinished plans and cut-off answers are sent back) and `verify`,
       `Lemieux.Extensions.Delegation` unless `--no-delegate`, then
       `Lemieux.Extensions.Search` (`grep`, `glob`),
       `Lemieux.Extensions.ApplyPatch` (for GPT-5-family models) and, last
@@ -960,6 +961,9 @@ defmodule Lemieux.CLI.Runtime do
       elixir: elixir,
       workspace: workspace(opts),
       environment_context: personal?,
+      # Reads nothing from the machine, so unlike verify it does not need a
+      # state directory: `--config none` runs keep it too.
+      continuation: if(not profile?, do: continuation(options)),
       verify: if(personal?, do: verify(options, checkpoints_dir(options, disabled(options)))),
       a2a: a2a(options),
       delegate: delegate?(options, context),
@@ -1031,6 +1035,28 @@ defmodule Lemieux.CLI.Runtime do
       timeout_ms: Map.get(settings, "timeout_ms")
     ]
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+  end
+
+  # The same shape as verify's: `"continuation": false` and
+  # `{"enabled": false}` leave it out, an object sets its allowances.
+  defp continuation(options) do
+    case Config.get(options.config, "continuation", true) do
+      false ->
+        nil
+
+      %{"enabled" => false} ->
+        nil
+
+      %{} = settings ->
+        [
+          max_continuations: Map.get(settings, "max_continuations"),
+          max_output_continuations: Map.get(settings, "max_output_continuations")
+        ]
+        |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+
+      _true ->
+        true
+    end
   end
 
   defp a2a(options) do

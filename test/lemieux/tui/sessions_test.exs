@@ -19,6 +19,7 @@ defmodule Lemieux.TUI.SessionsTest do
   alias Lemieux.TUI
   alias Lemieux.TUI.Notices
   alias Lemieux.TUI.Screen
+  alias Lemieux.TUI.Theme
   alias Lemieux.TUI.TranscriptPresentation
   alias Lemieux.TUI.Updates
   alias Lemieux.TUITest.ApprovalCard
@@ -109,6 +110,21 @@ defmodule Lemieux.TUI.SessionsTest do
 
         assert screen(state) =~ ~s(• Ran mix test --only "a  b")
       end
+    end
+
+    test "a resumed stop hook's message is the harness speaking, not a line the person typed" do
+      view = %{theme: Theme.default(), renderers: %{}, width: 80}
+
+      hook =
+        Entry.new(:user, %{
+          "text" => "[lmx output limit] Your last response was cut off.",
+          "stop_hook" => true
+        })
+
+      typed = Entry.new(:user, %{"text" => "keep going"})
+
+      assert [{:you, "keep going"}, {:hook, "Your last response was cut off."}] =
+               TranscriptPresentation.lines([typed, hook], view)
     end
 
     test "a completed read stays compact because the model already received its contents" do

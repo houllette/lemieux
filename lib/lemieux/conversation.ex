@@ -1234,6 +1234,8 @@ defmodule Lemieux.Conversation do
   # 16,384-token cap a direct Ollama request now carries, just ended, and
   # looked finished. The cap is the model's or the provider's, which nothing
   # typed here raises; what a person can do is ask for the rest.
+  # `Lemieux.Extensions.Continuation` asks for it on its own; this is what is
+  # left when the answer was cut off again with nothing done in between.
   defp cut_off(:length),
     do: [
       {:say,

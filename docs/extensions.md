@@ -223,6 +223,7 @@ session would apply.
 | `Lemieux.Extensions.Planning` | The `todo` plan ([Plans](workflows.md#session-plans)) | `planning` | new sessions | new sessions |
 | `Lemieux.Extensions.Workspace` | Persona, instructions, memory, skills, plugins, the learned overlay | `workspace` | unless bare | yes |
 | `Lemieux.Extensions.EnvironmentContext` | The date, platform, shell, directory and git state at the end of the prompt | `environment_context` | default | default |
+| `Lemieux.Extensions.Continuation` | Sends the model back to its unfinished plan, or past an answer cut off at the output limit ([Continue](workflows.md#continue-unfinished-work)) | `continuation` | default | default |
 | `Lemieux.Extensions.Verify` | The project's check after a turn that edited files ([Verify](workflows.md#verify-after-changes)) | `verify` | default | default |
 | `Lemieux.Extensions.A2A` | The peers in `"a2a_peers"` ([A2A](a2a.md)) | `a2a` | when configured | when configured |
 | `Lemieux.Extensions.Delegation` | The repository scout behind `delegate`, and its budgets ([Delegation](subagents.md)) | `delegation` | default | default |
@@ -234,7 +235,8 @@ session would apply.
 resumed session keeps the catalog its transcript recorded. `environment_context`,
 `verify` and `checkpoints` need a personal state directory, so `--config none`
 without `LMX_HOME` leaves them out, and an `--extension-profile` run gets
-neither `environment_context` nor `verify`.
+none of `environment_context`, `continuation` and `verify`. `continuation`
+reads nothing from the machine, so `--config none` keeps it.
 
 The order in the table is the order they apply: hooks and the policy that
 reads what they decided, then servers, the interactive tool, the network

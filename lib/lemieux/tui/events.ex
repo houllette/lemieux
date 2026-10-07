@@ -457,12 +457,15 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp present_event(state, {:entry, %{type: :extension_state} = entry}, effects),
       do: {PlanPanel.observe(state, entry), effects}
 
-    # The verify extension's report to the model arrives as a user message the
-    # person did not type, so nothing else draws it.
-    defp present_event(state, {:entry, %{type: :user, payload: %{"text" => text}}}, effects) do
-      if TranscriptPresentation.verify?(text),
-        do: {Transcript.append_rows(state, TranscriptPresentation.verify_lines(text)), effects},
-        else: {state, effects}
+    # A stop hook's message to the model — verify's report, continuation's
+    # nudge, a command hook's feedback — arrives as a user message the person
+    # did not type, so nothing else draws it. What the person typed was drawn
+    # when it was submitted.
+    defp present_event(state, {:entry, %{type: :user} = entry}, effects) do
+      case TranscriptPresentation.harness_lines(entry) do
+        [] -> {state, effects}
+        rows -> {Transcript.append_rows(state, rows), effects}
+      end
     end
 
     # An attempt the stream broke off in the middle of: kept on the record,

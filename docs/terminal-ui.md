@@ -694,7 +694,11 @@ The model's plan (the `todo` tool's `lemieux.plan` entries) is drawn by
 `Lemieux.TUI.PlanPanel` above the input while a task is open, centred on the
 step in progress, live and when a session is loaded. Messages from the check
 after edits (`[lmx verify]`, from `Lemieux.Extensions.Verify`) are drawn as
-their own row type rather than as something the person typed.
+their own row type, marked `✓`, rather than as something the person typed.
+Every other stop hook's message (`Lemieux.Extensions.Continuation` sending the
+model back to its plan or past a cut-off answer, or a command hook's feedback)
+is drawn marked `↻`, without its `[lmx …]` tag. A prompt that still ends at the
+output-token limit says so when it ends, as one that hit the turn budget does.
 
 One invariant is enforced rather than trusted: every row a renderer returns
 must be one of `ToolText`'s row shapes, and every row must carry the call's
