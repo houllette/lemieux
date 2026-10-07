@@ -600,7 +600,11 @@ usage — and ends `:incomplete` is the same cut one step earlier, before the
 first token. The adapter reports it as `{:unanswered, model, :incomplete}`
 rather than a finished turn (a session would otherwise answer with a blank
 line and go idle), and `Lemieux.Provider.Error` classifies it `:server`, so
-the session's bounded retry asks again. OpenAI refuses a request on an
+the session's bounded retry asks again — unless the session is under
+`:max_cost_usd` and the failed attempt left spend unknown, which a stream
+that reported no usage does: the dollar gate refuses to retry on unknown
+spend, and a host's category-based retry is what applies there. OpenAI
+refuses a request on an
 account with no credit in exactly this shape; that refusal repeats, and
 after the retries the failure's sentence still says to check credit, quota
 and request validity. An empty stream that ends `:length` or
@@ -694,15 +698,33 @@ would cost about a dollar a request on a Sonnet-class model, which would stop
 a `$5` session after two or three turns. Unknown pricing answers `nil`, and
 the gate refuses rather than treating it as free.
 
-When ReqLLM cannot resolve the model's catalog tariff for the request — a
-tariff with service-tier modifiers (flex, priority, data residency) that no
-pricing context answers, as `openai:gpt-6-luna`'s is — the estimate falls
-back to the model's flat list rates (`cost` in the catalog: what the standard
-tier charges, and what the first tier of a long-context tariff charges), and
-the usage a direct request reports is priced the same way, with
-`pricing.status` set to `"list_rates"` so a host can tell it from ReqLLM's own
-`"priced"`. The assumption is the standard tier: a request on a batch or
-priority tier, or past a long-context threshold, is estimated at list price
-rather than refused. A model with no rates at all still answers `nil`, and
-the budget stop names it (`no price is known for ollama:some-model`). Routed
+When ReqLLM cannot resolve the model's catalog tariff for the request, the
+estimate falls back to the model's flat list rates (`cost` in the catalog:
+what the standard tier charges, and what the first tier of a long-context
+tariff charges), and the usage a direct request reports is priced the same
+way, with `pricing.status` set to `"list_rates"` so a host can tell it from
+ReqLLM's own `"priced"`. This is not a corner case. A tariff with a
+data-residency, flex or priority modifier that no pricing context answers is
+one ReqLLM 1.26 refuses to price at all, and under Lemieux's default context
+that is 34 of the catalog's priced models: the current Anthropic frontier
+(`claude-fable-5-1`, `claude-opus-5`, `claude-opus-5-5`, `claude-sonnet-5`),
+OpenAI's gpt-5.6 and gpt-6 families, `google:gemini-3.1-pro-preview`, xAI's
+grok-4.3 and later, DeepSeek v4, MiniMax M3 and Alibaba's qwen3.6/3.7 among
+them. The assumption is the standard tier: a request on a batch or priority
+tier, past a long-context threshold, or writing a one-hour cache (twice the
+five-minute rate the catalog's `cache_write` holds) is estimated at list
+price rather than refused. Reasoning tokens are priced as ReqLLM prices them:
+at the model's reasoning rate when it publishes one, at the output rate when
+the provider bills them beside output (Gemini), and not again when they are
+already inside `output_tokens` (OpenAI).
+
+What is not a price is not a fallback. A model with no list rates, negative
+ones (OpenRouter's routers carry a sentinel of -1,000,000) or rates not in
+USD (Z.AI's coding plan is priced in credits) still answers `nil`, and the
+budget stop names it (`no price is known for openrouter:openrouter/auto`).
+Usage that is not whole — a count the provider did not report, or cache
+counts that do not add up, which ReqLLM records as `usage_reported` and
+`billing_usage_complete` — is left unpriced, so unknown spend stays unknown
+and a capped session stops rather than spending against a wrong total
+(`Lemieux.Providers.ReqLLM.price_at_list_rates/2` is the rule). Routed
 requests are left as the route priced them.
