@@ -55,7 +55,7 @@ from:
   becomes an error the model can read, not a dead session. An installed
   `lmx` is an OTP release, so a compatible, signed update can load into the
   terminal UI while it runs.
-- **The same loop runs in your application.** Add `{:lemieux, "~> 0.8"}`,
+- **The same loop runs in your application.** Add `{:lemieux, "~> 0.9"}`,
   mount `Lemieux.Supervisor`, and supply your own tools, store, approval
   policy and interface through the API `lmx` uses; `lmx` has no private path
   into the library. [First embedded agent](docs/first-embedded-agent.md) runs
@@ -143,7 +143,7 @@ shows how to make `lmx` work from any directory.
 
 ```elixir
 def deps do
-  [{:lemieux, "~> 0.8"}]
+  [{:lemieux, "~> 0.9"}]
 end
 ```
 
@@ -301,10 +301,10 @@ guides and the API reference are on [HexDocs](https://hexdocs.pm/lemieux).
 
 ## Project status
 
-Lemieux 0.8 is the first public release, with one maintainer. The contracts that
-[Support and compatibility](docs/support.md) lists as supported (sessions,
-tools, transcripts, resume and fork, extensions) have offline tests, and
-`lmx` is the supported first-party host. APIs may still change before 1.0,
+Lemieux is at 0.9, with one maintainer; 0.8 was its first public release.
+The contracts that [Support and compatibility](docs/support.md) lists as
+supported (sessions, tools, transcripts, resume and fork, extensions) have
+offline tests, and `lmx` is the supported first-party host. APIs may still change before 1.0,
 with migration notes in the [changelog](CHANGELOG.md).
 
 Experimental, and free to change in any 0.x release: the harness-learning,

@@ -32,7 +32,7 @@ commands from this checkout.
 ## Agents built on the library
 
 Each is an ordinary Mix project with its own `mix.exs`. Outside this checkout
-it depends on `lemieux` from Hex (`~> 0.8`). Inside the checkout, point it at
+it depends on `lemieux` from Hex (`~> 0.9`). Inside the checkout, point it at
 your working copy first: `export LEMIEUX_EXTENSION_BASE="$PWD"` from the
 repository root. Where an example's own scripts call a model, you name it as
 `provider:model` in `LMX_MODEL` (`RESEARCH_MODEL` for the research benches).

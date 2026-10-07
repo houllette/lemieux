@@ -15,7 +15,7 @@ defmodule LemieuxBuilderExtension.MixProject do
   defp lemieux do
     case System.get_env("LEMIEUX_EXTENSION_BASE") do
       nil ->
-        {:lemieux, "~> 0.8"}
+        {:lemieux, "~> 0.9"}
 
       path ->
         {:lemieux, path: path}

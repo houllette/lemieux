@@ -1,6 +1,6 @@
 # Roadmap
 
-Lemieux is at 0.8. This page lists the work that is still open, so that a
+Lemieux is at 0.9. This page lists the work that is still open, so that a
 contributor can see where help is useful and what "done" means for each item.
 It is not a promise of dates. Before you begin a large change, start a
 conversation in

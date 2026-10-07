@@ -91,7 +91,7 @@ numbers in it were measured, and each says where.
 
 ```elixir
 # mix.exs
-{:lemieux, "~> 0.8"}
+{:lemieux, "~> 0.9"}
 ```
 
 Lemieux needs Elixir 1.19 or later and recent releases of its provider stack:
@@ -153,7 +153,7 @@ control should never load it; the installed `lmx` turns it off for that
 reason. In Livebook or a script, pass the same setting to `Mix.install/2`:
 
 ```elixir
-Mix.install([{:lemieux, "~> 0.8"}], config: [req_llm: [load_dotenv: false]])
+Mix.install([{:lemieux, "~> 0.9"}], config: [req_llm: [load_dotenv: false]])
 ```
 
 With the default subagent admission, a runtime can run 8 delegated children

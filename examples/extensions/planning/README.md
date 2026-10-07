@@ -12,7 +12,7 @@ module, the script and the Lemieux it was written for:
 
 ```json
 {"schema_version": 1, "name": "planning", "module": "LemieuxPlanningExample",
- "script": "planning.exs", "versions": {"lemieux": "~> 0.8"}}
+ "script": "planning.exs", "versions": {"lemieux": "~> 0.9"}}
 ```
 
 `lmx` compiles the script when it loads the directory, so there is no Mix

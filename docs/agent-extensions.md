@@ -84,7 +84,7 @@ an explicit compiled registry. For example, `fetch` is not a built-in tool: impl
 and register it before offering it as an available choice. `scaffold` requires
 `directory`, `name` and `profile_json`, and reports the specific failed validation.
 A generated project depends on the Lemieux release that generated it, from Hex
-(for example `{:lemieux, "~> 0.8.0"}`), and needs Elixir 1.19 or later.
+(for example `{:lemieux, "~> 0.9.0"}`), and needs Elixir 1.19 or later.
 `LEMIEUX_EXTENSION_BASE`, set to the absolute path of a checkout, replaces that
 with a path dependency for local development.
 
@@ -394,8 +394,8 @@ and writes an integrity receipt. `Extension.verify/1` checks the exact file set;
 symlinks, traversal and unsupported roots are rejected. Export neither publishes
 nor installs dependencies. Authors own licenses and the contents of selected files.
 
-The scaffold depends on the Hex release that generated it (`~> 0.8.0` admits
-0.8.x and refuses 0.9.0), with `LEMIEUX_EXTENSION_BASE` as an optional local
+The scaffold depends on the Hex release that generated it (`~> 0.9.0` admits
+0.9.x and refuses 0.10.0), with `LEMIEUX_EXTENSION_BASE` as an optional local
 override. When you upgrade Lemieux, raise that requirement deliberately and
 rerun the extension tests before distributing a new bundle. A local consumer
 can use `{:my_extension, path: "../exported-extension"}` and call its Agent
