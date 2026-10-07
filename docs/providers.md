@@ -311,6 +311,28 @@ person will read should describe itself — an exception whose `message/1` is
 the sentence, as `Lemieux.Ixway.Error` is — because `Lemieux.Provider.Error`
 renders exceptions and knows no gateway's vocabulary.
 
+Two optional callbacks are for the host that starts a session rather than
+for the adapter: `ready/1` readies the route (discovery, a catalogue read)
+and `default_model/1` names the model it advertises when nobody chose one.
+`Lemieux.Provider.Route.prepare/2` runs them in the one order every host
+uses — ready, resolve `NAME:@default`, check the model — and
+`Lemieux.Providers.ReqLLM.prepare/2` does the same for a routed provider.
+`Lemieux.Ixway.prepare/2` is that sequence for the shipped route.
+
+In `lmx`, a route is **registered under a name** and the name is the
+provider prefix of its models (`Lemieux.CLI.Routes`). Ixway is registered as
+`ixway` when it is configured, and an extension `lmx` loads can register
+routes of its own by exporting `routes/1` (`Lemieux.Extension.Routes`), with
+no second binary: [Adding a model route](extensions.md#adding-a-model-route)
+is the example. Both kinds then go through the same host code: the
+terminal UI readies the start model's route before the screen opens,
+`--model NAME:@default` resolves to the route's default, `--router NAME`
+makes the route `lmx run`'s sole connection, `/provider NAME` and `/model`
+list its models, and a request under one name never falls back to another
+connection (`Lemieux.CLI.ProviderMux`). A route's credentials stay in its
+own state; the transcript records which extension was loaded and nothing of
+that state.
+
 Lemieux does preflight deterministic provider rejection rules before handing
 a request to `req_llm`. Anthropic custom-tool input schemas cannot use
 top-level `oneOf`, `allOf` or `anyOf`, so an incompatible host or MCP tool is

@@ -68,7 +68,8 @@ defmodule Lemieux.CLI.Options do
   given and stop asking for a key of the built-in default's provider.
 
   `model_source` records what chose `model` — `:flag`, `:env`, `:config`,
-  `:ixway`, or `:fallback` when nothing did — which is what lets
+  `:ixway`, `:route` (a `--router NAME` route's default), or `:fallback`
+  when nothing did — which is what lets
   `Lemieux.CLI.Models` replace only a model nobody asked for. `local_model`
   is what discovery read about the local Ollama model a start checked with
   the daemon — one `Lemieux.CLI.Models` picked, or a remembered one it found
@@ -124,15 +125,26 @@ defmodule Lemieux.CLI.Options do
   @typedoc """
   What only `lmx` the host decides, kept together because each is about this
   invocation rather than the session: where personal state lives, what chose
-  the model, `--continue`, whether the repository's MCP servers were trusted
-  for this run, the permission mode and sandbox asked for, and mouse capture.
-  One field rather than seven for the reason `t:fork_point/0` is one: the
-  struct is at the size where the BEAM stops representing a map compactly.
+  the model, the model route `--router NAME` selected (`route`; `nil` for
+  direct and Ixway, which have fields of their own), `--continue`, whether
+  the repository's MCP servers were trusted for this run, the permission
+  mode and sandbox asked for, and mouse capture. One field rather than eight
+  for the reason `t:fork_point/0` is one: the struct is at the size where
+  the BEAM stops representing a map compactly.
   """
   @type host :: %{
           state_dir: Path.t() | nil,
+          route: String.t() | nil,
           model_source:
-            :flag | :env | :config | :ixway | :fallback | :last_used | :credential | :ollama,
+            :flag
+            | :env
+            | :config
+            | :ixway
+            | :route
+            | :fallback
+            | :last_used
+            | :credential
+            | :ollama,
           local_model: map() | nil,
           continue: boolean(),
           project_mcp_trusted: boolean(),
@@ -206,6 +218,7 @@ defmodule Lemieux.CLI.Options do
     extensions: [],
     host: %{
       state_dir: nil,
+      route: nil,
       model_source: :fallback,
       local_model: nil,
       continue: false,
@@ -411,6 +424,7 @@ defmodule Lemieux.CLI.Options do
   defp host(parsed, inference, config) do
     %{
       state_dir: state_dir(config),
+      route: inference[:route],
       model_source: model_source(parsed, inference, config),
       local_model: nil,
       continue: Keyword.get(parsed, :continue, false),
@@ -426,6 +440,7 @@ defmodule Lemieux.CLI.Options do
       parsed[:model] -> :flag
       env("LMX_MODEL") -> :env
       inference[:ixway] -> :ixway
+      inference[:route] -> :route
       Config.direct_model(config) -> :config
       true -> :fallback
     end
@@ -702,9 +717,10 @@ defmodule Lemieux.CLI.Options do
   def inference_default(fallback) do
     case parse([]) do
       {:ok, options} ->
-        if options.ixway || env("LMX_MODEL") || Config.direct_model(options.config),
-          do: options.model,
-          else: fallback
+        if options.ixway || options.host.route || env("LMX_MODEL") ||
+             Config.direct_model(options.config),
+           do: options.model,
+           else: fallback
 
       {:error, reason} ->
         raise ArgumentError, reason

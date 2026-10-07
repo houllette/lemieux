@@ -49,6 +49,7 @@ defmodule Lemieux.CLI.TUI do
          :ok <- no_stray_words(options.argv, argv, opts),
          :ok <- prompt(options),
          :ok <- one_of_continue_or_resume(options),
+         {:ok, opts} <- Runtime.with_routes(options, opts),
          {:ok, options, opts} <- ExtensionExperience.prepare(options, opts),
          :ok <- model_spec(options, opts),
          :ok <- available(),
@@ -66,11 +67,12 @@ defmodule Lemieux.CLI.TUI do
   # answered "gpt-4o is not a model specification … /retry", advice that
   # could not help. The same sentence and status as `lmx run` instead. Not
   # for a host route, whose model names are its own, nor for `ixway:`
-  # names, which are the gateway's, nor where a transcript decides the
+  # names, which are the gateway's, nor for a registered route's names
+  # (`Lemieux.CLI.Runtime.route?/2`), nor where a transcript decides the
   # model (`--resume`, `--continue`).
   defp model_spec(options, opts) do
     if host_route?(options, opts) or options.resume != nil or options.host.continue or
-         ModelSpec.provider(options.model) == "ixway" do
+         ModelSpec.provider(options.model) == "ixway" or Runtime.route?(opts, options.model) do
       :ok
     else
       case ReqLLM.model(options.model) do
@@ -523,15 +525,19 @@ defmodule Lemieux.CLI.TUI do
     # preparation instead of making "Starting session..." wait for both in
     # sequence. The result is still checked before the session becomes ready.
     history = Task.Supervisor.async_nolink(tasks, list_sessions)
-    # The configured Ixway route checks its instance and model catalogue over
+    # A route the start model is on — Ixway checking its instance and
+    # catalogue, an extension's route doing its own discovery — asks over
     # HTTP. Start those requests before local workspace assembly so their
     # latency overlaps the work needed for every session.
     provider_task =
       Task.Supervisor.async_nolink(tasks, fn ->
-        provider = Keyword.get_lazy(opts, :provider, fn -> Runtime.tui_provider(options) end)
+        provider =
+          Keyword.get_lazy(opts, :provider, fn ->
+            Runtime.tui_provider(options, Keyword.get(opts, :routes, []))
+          end)
 
-        if String.starts_with?(options.model, "ixway:") do
-          Runtime.discover_tui_provider(provider)
+        if String.starts_with?(options.model, "ixway:") or Runtime.route?(opts, options.model) do
+          Runtime.discover_tui_provider(provider, options.model)
         else
           {:ok, provider}
         end
@@ -639,8 +645,10 @@ defmodule Lemieux.CLI.TUI do
     if host_route?(options, opts), do: nil, else: Models.first_run(options, opts)
   end
 
-  defp host_route?(options, opts),
-    do: Keyword.has_key?(opts, :provider) or options.ixway != nil or options.base_url != nil
+  defp host_route?(options, opts) do
+    Keyword.has_key?(opts, :provider) or options.ixway != nil or options.host.route != nil or
+      options.base_url != nil
+  end
 
   defp request_cap(options), do: options |> Options.limits() |> Keyword.get(:max_requests)
 
@@ -714,7 +722,7 @@ defmodule Lemieux.CLI.TUI do
   end
 
   defp provider_options(options, provider, opts) do
-    case {provider_model(options, provider), provider} do
+    case {provider_model(options, provider, opts), provider} do
       {nil, "ollama"} -> local_options(options, opts)
       {model, _provider} -> {:ok, chosen(options, model)}
     end
@@ -747,9 +755,20 @@ defmodule Lemieux.CLI.TUI do
     put_in(options.host.model_source, :flag)
   end
 
-  defp provider_model(options, provider) do
+  # The configured model for the provider, the table's, or — for a registered
+  # route, which the table does not know — the route's advertised default,
+  # which the restart resolves (`Lemieux.CLI.Runtime.prepare/2`). Without the
+  # last, `/provider relay` after a failed start restarted on the same
+  # failing model and said nothing.
+  defp provider_model(options, provider, opts) do
     Config.preferred_models(options.config)[provider] ||
-      Enum.find_value(Models.recommended(), &(&1.provider == provider && &1.model))
+      Enum.find_value(Models.recommended(), &(&1.provider == provider && &1.model)) ||
+      route_default(opts, provider)
+  end
+
+  defp route_default(opts, provider) do
+    default = ModelSpec.default_selection(provider)
+    if Runtime.route?(opts, default), do: default
   end
 
   @doc """

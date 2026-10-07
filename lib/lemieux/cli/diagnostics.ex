@@ -4,9 +4,11 @@ defmodule Lemieux.CLI.Diagnostics do
   alias Lemieux.CLI.Extensions
   alias Lemieux.CLI.Logs
   alias Lemieux.CLI.Options
+  alias Lemieux.CLI.ProviderMux
   alias Lemieux.Extensions.Permissions
   alias Lemieux.Extensions.Workspace.Discovery
   alias Lemieux.ModelSpec
+  alias Lemieux.Providers.ReqLLM, as: ReqLLMProvider
 
   @spec report(options :: Lemieux.CLI.Options.t(), prepared :: map()) :: map()
   def report(options, prepared) do
@@ -14,7 +16,7 @@ defmodule Lemieux.CLI.Diagnostics do
       "versions" => Extensions.versions(),
       "model" => prepared.model,
       "model_source" => Atom.to_string(options.host.model_source),
-      "route" => route(options),
+      "route" => route(options, prepared),
       "credentials" => credentials(options, prepared),
       "configuration" => configuration(options),
       "tui_module_available" => Code.ensure_loaded?(ExRatatui),
@@ -85,9 +87,21 @@ defmodule Lemieux.CLI.Diagnostics do
   end
 
   defp servers(harness), do: Enum.map(harness.mcp_servers || [], & &1["name"])
-  defp route(%{ixway: endpoint}) when is_binary(endpoint), do: "ixway"
-  defp route(%{base_url: url}) when is_binary(url), do: "provider_compatible_gateway"
-  defp route(_options), do: "direct"
+  # The route the start model is on: Ixway, a `--router NAME` route, or one
+  # the model's own name selects among the registered ones; else the gateway
+  # a base URL points at, else direct.
+  defp route(%{ixway: endpoint}, _prepared) when is_binary(endpoint), do: "ixway"
+  defp route(%{host: %{route: name}}, _prepared) when is_binary(name), do: name
+
+  defp route(%{base_url: url}, %{model: model} = prepared) do
+    name = ModelSpec.provider(model)
+
+    cond do
+      name in Map.get(prepared, :routes, []) -> name
+      is_binary(url) -> "provider_compatible_gateway"
+      true -> "direct"
+    end
+  end
 
   # Only names and presence are returned. URLs, configuration values, headers
   # and key lookup errors may contain secrets and do not belong in diagnostics.
@@ -114,15 +128,30 @@ defmodule Lemieux.CLI.Diagnostics do
     %{"status" => presence(key), "environment_variable" => "IXWAY_API_KEY"}
   end
 
+  # The connection the model's requests go to: a registered route keeps its
+  # own credential (`Lemieux.Provider.Route`), and only names are reported.
   defp credentials(options, %{options: runtime, model: model}) do
-    case Keyword.fetch!(runtime, :provider) do
-      {Lemieux.Providers.ReqLLM, _state} ->
-        provider_credentials(options, ModelSpec.provider(model))
+    case runtime |> Keyword.fetch!(:provider) |> connection(model) do
+      {Lemieux.Providers.ReqLLM, _state} = provider ->
+        case ReqLLMProvider.route(provider) do
+          nil ->
+            provider_credentials(options, ModelSpec.provider(model))
+
+          {module, _state} ->
+            %{
+              "status" => "route_managed",
+              "route" => ModelSpec.provider(model),
+              "module" => inspect(module)
+            }
+        end
 
       _host_provider ->
         %{"status" => "host_managed"}
     end
   end
+
+  defp connection({ProviderMux, _state} = provider, model), do: ProviderMux.child(provider, model)
+  defp connection(provider, _model), do: provider
 
   defp provider_credentials(options, name) do
     # Transport aliases use the same credential identity as the provider path.

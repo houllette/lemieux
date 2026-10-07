@@ -104,6 +104,24 @@ defmodule Lemieux.CLI.Runtime do
   them — and `prepare/2` resolves them once so `start/2` has nothing left to
   decide.
 
+  ## Model routes
+
+  The provider `lmx` builds is the direct `req_llm` connection, with every
+  registered model route beside it (`Lemieux.CLI.Routes`): Ixway when it is
+  configured, and the routes the loaded extensions offer
+  (`Lemieux.Extension.Routes`). A model's name chooses among them —
+  `ixway:team/coding`, `relay:qwen3-32b`, `anthropic:claude-sonnet-5` — and a
+  request never crosses from one to another (`Lemieux.CLI.ProviderMux`).
+  `--router ixway` and `--router NAME` make that route the sole connection
+  for `lmx run`, as `--ixway` always has; the terminal UI keeps the direct
+  providers beside it to switch to. The hosts register the routes before
+  their own checks (`with_routes/2`), so a model on a route is never refused
+  as a provider `req_llm` does not know, and `prepare/2` readies the start
+  model's route and resolves `NAME:@default` on it
+  (`Lemieux.Providers.ReqLLM.prepare/2`) for a new session and for a resume
+  alike. A host that passes `:provider` has decided where requests go, and
+  no route is registered for it.
+
   Explicit host session constraints (including hooks, environment, tool
   profile and budgets) are reapplied after assembly. Prompts, catalogs, host
   tools, MCP servers and harness context are composition inputs instead.
@@ -125,6 +143,7 @@ defmodule Lemieux.CLI.Runtime do
   alias Lemieux.CLI.OAuth
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.ProviderMux
+  alias Lemieux.CLI.Routes
   alias Lemieux.CLI.Runtime.Assembly
   alias Lemieux.CLI.Runtime.SecretPaths
   alias Lemieux.CLI.Skills
@@ -149,7 +168,9 @@ defmodule Lemieux.CLI.Runtime do
   alias Lemieux.MCP.Config, as: MCPConfig
   alias Lemieux.MCP.Trust
   alias Lemieux.ModelCatalog
+  alias Lemieux.ModelSpec
   alias Lemieux.Prompt
+  alias Lemieux.Provider
   alias Lemieux.Providers.ReqLLM, as: ReqLLMProvider
   alias Lemieux.Store.JSONL
   alias Lemieux.Tools
@@ -210,6 +231,7 @@ defmodule Lemieux.CLI.Runtime do
           options: keyword(),
           resume: String.t() | nil,
           model: String.t(),
+          routes: [String.t()],
           permissions: Permissions.Handle.t() | nil,
           sandbox: map() | nil,
           checkpoints: Path.t() | nil,
@@ -326,6 +348,9 @@ defmodule Lemieux.CLI.Runtime do
       root of their own;
     * `:extensions` — the host's own, applied after `lmx`'s and after
       anything the person loaded;
+    * `:routes` — the model routes `with_routes/2` registered, so they are
+      not registered a second time here; without it, and without
+      `:provider`, they are registered now;
     * `:subagent_options` — overrides for the scout's `Lemieux.Subagent.Delegate`;
     * `:permissions` — a `Lemieux.Extensions.Permissions` handle the host
       created with `permissions/2`, so a screen that switches mode switches
@@ -355,7 +380,10 @@ defmodule Lemieux.CLI.Runtime do
          # Current host ceilings override history; omitted ceilings retain it.
          # Reapplying these after extensions prevents a profile relaxing a CLI cap.
          opts = Keyword.merge(Limits.restore(Options.limits(options), recorded), opts),
-         provider = Keyword.get_lazy(opts, :provider, fn -> provider(options) end),
+         {:ok, loaded} <- loaded(options, opts),
+         {:ok, routes} <- routes(options, opts, loaded),
+         provider = Keyword.get_lazy(opts, :provider, fn -> provider(options, routes) end),
+         :ok <- reachable(opts, provider, requested_model(options, recorded)),
          {:ok, provider, model} <-
            prepare_provider(provider, requested_model(options, recorded)),
          opts = configured_effort(opts, options.config, model, resume),
@@ -369,7 +397,6 @@ defmodule Lemieux.CLI.Runtime do
            permissions: permissions,
            credentials: credential_policy(options, opts)
          },
-         {:ok, loaded} <- loaded(options, opts),
          {:ok, extensions} <- extensions(options, opts, context, loaded),
          {:ok, tools} <- assembly_tools(opts, recorded, resume, Keyword.values(extensions)),
          {equipment, composition} <-
@@ -395,6 +422,7 @@ defmodule Lemieux.CLI.Runtime do
          harness: harness,
          model: model,
          resume: resume,
+         routes: Routes.names(routes),
          permissions: permissions,
          sandbox: Sandbox.describe(harness.environment),
          checkpoints: checkpoints_dir(options, disabled(options)),
@@ -605,11 +633,49 @@ defmodule Lemieux.CLI.Runtime do
     end
   end
 
+  # A model whose provider is neither one req_llm knows nor a registered
+  # route cannot be served by the connection lmx built. A new session is
+  # told so before this, by the hosts' own model check; a resumed transcript
+  # whose route's extension is no longer selected is told here, before a
+  # session exists and with what brings the route back — it used to start,
+  # append the prompt and fail the first request as a provider unknown.
+  # Only the direct connection is asked, and only its own "unknown provider"
+  # is refused: a route's model goes to the route's preparation next, a
+  # missing key and a blocked provider keep the path they had, and a host's
+  # own provider serves whatever names it serves.
+  defp reachable(opts, provider, model) do
+    connection = connection(provider, model)
+
+    if Keyword.has_key?(opts, :provider) or ReqLLMProvider.route(connection) != nil do
+      :ok
+    else
+      case Provider.validate_model(connection, model, []) do
+        {:error, {:unknown_model, _spec, :unknown_provider}} -> {:error, unreachable(model)}
+        _served_or_refused_on_its_own_path -> :ok
+      end
+    end
+  end
+
+  defp connection({ProviderMux, _state} = provider, model), do: ProviderMux.child(provider, model)
+  defp connection(provider, _model), do: provider
+
+  defp unreachable(model) do
+    provider = ModelSpec.provider(model)
+
+    "#{model} names #{provider}, which is not a provider lmx knows and not a model route a " <>
+      "loaded extension registers: if an extension registers #{provider}, select it " <>
+      "(--extension NAME, --extension-dir PATH or the config file's \"extensions\"); " <>
+      "otherwise choose another model with --model"
+  end
+
+  # The start model's route is readied and the model resolved on it, for a
+  # mux and for a sole routed connection alike; a direct connection and a
+  # host's own provider pass through with the model unchanged.
   defp prepare_provider({ProviderMux, _state} = provider, model),
     do: provider |> ProviderMux.prepare(model) |> named_key()
 
   defp prepare_provider(provider, model),
-    do: provider |> Lemieux.Ixway.prepare(model) |> named_key()
+    do: provider |> ReqLLMProvider.prepare(model) |> named_key()
 
   # The library names the variable it reads the gateway key from. This host
   # also reads it from its config file, and the person most likely to meet
@@ -621,7 +687,67 @@ defmodule Lemieux.CLI.Runtime do
   defp named_key({:error, %Lemieux.Ixway.Error{reason: :api_key_required}}),
     do: {:error, @ixway_key_needed}
 
+  # `Lemieux.Provider.Route.default_model/2`'s refusals, as sentences: the
+  # route is the person's choice, so the way forward is one of its models.
+  defp named_key({:error, {:no_default_model, name}}),
+    do:
+      {:error,
+       "#{name}:@default asks for the #{name} route's default model, and it advertises " <>
+         "none: choose one of its models with --model #{name}:ID"}
+
+  defp named_key({:error, {:default_model_outside_route, name, model}}),
+    do:
+      {:error,
+       "the #{name} route advertised #{model} as its default, which is not one of its own " <>
+         "models; a route's default must be #{name}:ID"}
+
   defp named_key(result), do: result
+
+  @doc """
+  `opts` with the model routes this invocation registers, under `:routes`,
+  the way the hosts call it before their own checks.
+
+  Loads the selected extensions and registers the routes they offer beside
+  the shipped ones (`Lemieux.CLI.Routes.register/2`), and checks that a
+  `--router NAME` names one of them. `opts` that already carry `:routes`, or
+  a host's own `:provider`, are returned as they are: the host has decided
+  where requests go. A refusal is a sentence about the command as given.
+  """
+  @spec with_routes(options :: Options.t(), opts :: keyword()) ::
+          {:ok, keyword()} | {:error, String.t()}
+  def with_routes(%Options{} = options, opts) when is_list(opts) do
+    if Keyword.has_key?(opts, :provider) or Keyword.has_key?(opts, :routes) do
+      {:ok, opts}
+    else
+      with {:ok, loaded} <- loaded(options, opts),
+           {:ok, routes} <- routes(options, opts, loaded) do
+        {:ok, Keyword.put(opts, :routes, routes)}
+      end
+    end
+  end
+
+  @doc "Whether `model` names a route registered in `opts` by `with_routes/2`."
+  @spec route?(opts :: keyword(), model :: String.t() | nil) :: boolean()
+  def route?(opts, model) when is_list(opts),
+    do: Routes.registered?(Keyword.get(opts, :routes, []), ModelSpec.provider(model))
+
+  # The registry `with_routes/2` built, else built here. A host that supplies
+  # `:provider` decides where requests go, so no route is registered for it:
+  # a route's missing credential must not stop a host that never sends to it.
+  defp routes(options, opts, loaded) do
+    cond do
+      Keyword.has_key?(opts, :routes) ->
+        {:ok, Keyword.fetch!(opts, :routes)}
+
+      Keyword.has_key?(opts, :provider) ->
+        {:ok, []}
+
+      true ->
+        with {:ok, routes} <- Routes.register(options, loaded),
+             :ok <- Routes.selected(options, routes),
+             do: {:ok, routes}
+    end
+  end
 
   defp interactive?(opts), do: Keyword.get(opts, :interactive?, false)
 
@@ -1522,46 +1648,89 @@ defmodule Lemieux.CLI.Runtime do
     end
   end
 
-  @doc "Builds the CLI connection with its runtime route and credential policy."
+  @doc """
+  Builds the CLI connection with its runtime route and credential policy:
+  `provider/2` over the routes the options register — the shipped Ixway
+  route when it is configured, and the routes of the extensions the options
+  select, loaded from the personal root. A route that cannot be registered,
+  or a `--router NAME` nobody registers, raises with the sentence a host
+  would print, as `provider/0` raises for options that do not parse: the
+  callers of this arity are tooling with no sentence of their own.
+  """
   @spec provider(options :: Options.t()) :: Lemieux.Provider.t()
-  def provider(%Options{ixway: endpoint} = options) when is_binary(endpoint) do
-    {:ok, _started} = Application.ensure_all_started(:req_llm)
-
-    Lemieux.Ixway.provider(
-      [
-        endpoint: endpoint,
-        api_key:
-          System.get_env("IXWAY_API_KEY") || Config.get(options.config, "ixway", %{})["api_key"],
-        headers:
-          options.config |> Config.get("ixway", %{}) |> Map.get("headers", %{}) |> Map.to_list()
-      ],
-      receive_timeout: :infinity,
-      stream_idle_timeout: :timer.minutes(5)
-    )
-  end
-
-  def provider(%Options{} = options), do: direct_provider(options)
-
-  @doc "Builds the TUI connection, including direct keys beside a configured Ixway route."
-  @spec tui_provider(options :: Options.t()) :: Lemieux.Provider.t()
-  def tui_provider(%Options{ixway: endpoint} = options) when is_binary(endpoint) do
-    direct = direct_provider(options)
-
-    ProviderMux.new(provider(options), direct,
-      blocked_providers: shadowed_providers(options.config)
-    )
-  end
-
-  def tui_provider(%Options{} = options) do
-    direct = direct_provider(options)
-
-    case shadowed_providers(options.config) do
-      [] -> direct
-      blocked -> ProviderMux.new(nil, direct, blocked_providers: blocked)
+  def provider(%Options{} = options) do
+    with {:ok, loaded} <- loaded(options, []),
+         {:ok, routes} <- routes(options, [], loaded) do
+      provider(options, routes)
+    else
+      {:error, reason} -> raise ArgumentError, reason
     end
   end
 
-  @doc "Prefetches TUI route discovery before selecting the session's model."
+  @doc """
+  Builds the connection `lmx run` sends through, given the registered routes.
+
+  `--ixway` and `--router NAME` select one route as the sole connection:
+  its models alone, no direct credential to fall back on. Otherwise the
+  direct connection carries every registered route beside it
+  (`Lemieux.CLI.ProviderMux`), each answering for the models under its own
+  name, and none when no route is registered.
+  """
+  @spec provider(options :: Options.t(), routes :: Routes.t()) :: Lemieux.Provider.t()
+  def provider(%Options{} = options, routes) when is_list(routes) do
+    cond do
+      is_binary(options.ixway) -> sole(routes, "ixway", options)
+      is_binary(options.host.route) -> sole(routes, options.host.route, options)
+      routes == [] -> direct_provider(options)
+      true -> ProviderMux.new(routes, direct_provider(options))
+    end
+  end
+
+  # `Routes.selected/2` has already refused a `--router NAME` nobody
+  # registered where a host prepares; Ixway is built on the spot for a
+  # caller that passed a list without it.
+  defp sole(routes, name, options) do
+    case Routes.fetch(routes, name) do
+      {:ok, provider} -> provider
+      :error when name == "ixway" -> Routes.ixway(options)
+      :error -> raise ArgumentError, Routes.unregistered(name, routes)
+    end
+  end
+
+  @doc "Builds the TUI connection with the shipped routes alone: `tui_provider/2` over `Lemieux.CLI.Routes.builtin/1`."
+  @spec tui_provider(options :: Options.t()) :: Lemieux.Provider.t()
+  def tui_provider(%Options{} = options), do: tui_provider(options, Routes.builtin(options))
+
+  @doc """
+  Builds the TUI connection: the direct providers with configured
+  credentials beside every registered route, so a person can switch between
+  them with `/provider`, and a shared key blocked from advertising a second
+  provider.
+  """
+  @spec tui_provider(options :: Options.t(), routes :: Routes.t()) :: Lemieux.Provider.t()
+  def tui_provider(%Options{} = options, routes) when is_list(routes) do
+    direct = direct_provider(options)
+
+    case {routes, shadowed_providers(options.config)} do
+      {[], []} -> direct
+      {routes, blocked} -> ProviderMux.new(routes, direct, blocked_providers: blocked)
+    end
+  end
+
+  @doc """
+  Readies the route the TUI's start model names before the session's model
+  is selected, so the route's discovery overlaps the screen's own work; a
+  model on no route leaves the provider as it is.
+  """
+  @spec discover_tui_provider(provider :: Lemieux.Provider.t(), model :: String.t()) ::
+          {:ok, Lemieux.Provider.t()} | {:error, term()}
+  def discover_tui_provider({ProviderMux, _state} = provider, model) when is_binary(model),
+    do: provider |> ProviderMux.ready(ModelSpec.provider(model)) |> named_key()
+
+  def discover_tui_provider(provider, model) when is_binary(model),
+    do: provider |> ReqLLMProvider.ready() |> named_key()
+
+  @doc "Readies every registered route of a TUI connection before a model is selected."
   @spec discover_tui_provider(provider :: Lemieux.Provider.t()) ::
           {:ok, Lemieux.Provider.t()} | {:error, term()}
   def discover_tui_provider({ProviderMux, _state} = provider),

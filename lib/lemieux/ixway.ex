@@ -20,6 +20,15 @@ defmodule Lemieux.Ixway do
   before a CLI session persists its configuration. Defaults come from the
   authenticated policy, never from array order or a guessed profile name.
 
+  The host-facing half of that — readying the catalogue before a model is
+  chosen, resolving the default — is `c:Lemieux.Provider.Route.ready/1` and
+  `c:Lemieux.Provider.Route.default_model/1`, implemented here, so that
+  `Lemieux.Provider.Route.prepare/2` prepares this route exactly as it
+  prepares one an extension registered (`Lemieux.Extension.Routes`). `lmx`
+  registers this gateway under the name `ixway` through `Lemieux.CLI.Routes`
+  like any other route; `prepare/2` and `discover_provider/1` remain as the
+  shorthand an embedding host already calls.
+
   This module does not implement an inference protocol. ReqLLM's OpenAI chat
   transport owns encoding, tools, structured output, streaming and errors.
   An inline model pins that grammar even for IDs such as `gpt-5`, which would
@@ -37,6 +46,7 @@ defmodule Lemieux.Ixway do
   alias Lemieux.Ixway.LogFilter
   alias Lemieux.Ixway.Receipt
   alias Lemieux.ModelSpec
+  alias Lemieux.Provider.Route
   alias Lemieux.Providers.ReqLLM, as: Adapter
   alias Lemieux.Request
   alias ReqLLM.StreamResponse.MetadataHandle
@@ -174,7 +184,11 @@ defmodule Lemieux.Ixway do
     end
   end
 
-  @doc false
+  @doc """
+  Discovers the catalogue when the connection has none, and returns a
+  connection that has one unchanged: `c:Lemieux.Provider.Route.ready/1`.
+  """
+  @impl Lemieux.Provider.Route
   @spec ready(connection :: t()) :: {:ok, t()} | {:error, term()}
   def ready(%__MODULE__{models: nil} = connection), do: discover(connection)
   def ready(%__MODULE__{} = connection), do: {:ok, connection}
@@ -235,6 +249,24 @@ defmodule Lemieux.Ixway do
   @spec select_model(connection :: t(), spec :: String.t()) ::
           {:ok, String.t()} | {:error, term()}
   def select_model(connection, "ixway:@default") do
+    with {:ok, connection} <- ready(connection), do: default_model(connection)
+  end
+
+  def select_model(connection, spec) do
+    with {:ok, _entry} <- entry(connection, spec), do: {:ok, spec}
+  end
+
+  @doc """
+  The gateway's advertised default, `ixway:ID`:
+  `c:Lemieux.Provider.Route.default_model/1`.
+
+  From the authenticated key policy, else the one catalogue entry marked as
+  the default for OpenAI chat; an unavailable configured default or an
+  ambiguous recommendation is `:model_choice_required`, never a guess.
+  """
+  @impl Lemieux.Provider.Route
+  @spec default_model(connection :: t()) :: {:ok, String.t()} | {:error, term()}
+  def default_model(connection) do
     with {:ok, connection} <- ready(connection),
          id when is_binary(id) <- default_id(connection),
          {:ok, _entry} <- entry(connection, ModelSpec.join("ixway", id)) do
@@ -243,10 +275,6 @@ defmodule Lemieux.Ixway do
       {:error, _} = error -> error
       _ -> error(:model_choice_required)
     end
-  end
-
-  def select_model(connection, spec) do
-    with {:ok, _entry} <- entry(connection, spec), do: {:ok, spec}
   end
 
   @doc false
@@ -356,13 +384,17 @@ defmodule Lemieux.Ixway do
     end
   end
 
-  @doc "Discovers a provider connection and resolves a startup selection without inference."
+  @doc """
+  Discovers a provider connection and resolves a startup selection without
+  inference: `Lemieux.Provider.Route.prepare/2` over this route, kept as the
+  shorthand a host that holds an Ixway provider calls. Any other provider is
+  returned as it is.
+  """
   @spec prepare(provider :: Lemieux.Provider.t(), model :: String.t()) ::
           {:ok, Lemieux.Provider.t(), String.t()} | {:error, term()}
   def prepare({module, %{route: {__MODULE__, connection}} = state}, model) do
-    with {:ok, connection} <- ready(connection),
-         {:ok, model} <- select_model(connection, model) do
-      {:ok, {module, %{state | route: {__MODULE__, connection}}}, model}
+    with {:ok, route, model} <- Route.prepare({__MODULE__, connection}, model) do
+      {:ok, {module, %{state | route: route}}, model}
     end
   end
 

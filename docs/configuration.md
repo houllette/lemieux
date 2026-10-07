@@ -174,7 +174,13 @@ that saves a real key can open. Supply the key, or remove the placeholder.
 **Routing** is chosen at the highest layer that makes a choice: `--router`,
 `--ixway` or `--base-url`; then `LMX_ROUTER`, `LMX_IXWAY_URL` or
 `LMX_BASE_URL`; then the file. Conflicting choices in one layer are an error.
-For example, `--router direct` turns a saved Ixway route off for one command:
+`--router` takes `direct`, `ixway`, or the name of a model route an
+extension registers ([Adding a model route](extensions.md#adding-a-model-route)):
+`--router relay` sends `lmx run` through that route alone and starts on its
+advertised default, or on `"model"`/`providers.relay.model` when the file
+names one of its models; a name no loaded extension registers stops the
+start with a sentence. For example, `--router direct` turns a saved Ixway
+route off for one command:
 
 ```sh
 lmx --router direct --model anthropic:claude-sonnet-5
@@ -1395,6 +1401,13 @@ load first, then the flags in the order typed; each directory loads once. A
 name with no directory, a manifest that does not validate, or a build that
 does not fit this runtime stops startup with a sentence, rather than starting
 a session without what you asked for.
+
+An extension may offer **model routes** instead of, or beside, shaping the
+harness: a module exporting `routes/1` has them registered under the names
+its models carry, selected with `--model NAME:ID`, `--router NAME` or
+`/provider NAME`, and `providers.NAME.model` and `providers.NAME.effort`
+apply to them as to any provider. [Adding a model route](extensions.md#adding-a-model-route)
+has the contract and the rules.
 
 A script extension only has to satisfy its declared `lemieux` requirement,
 because it compiles in the running VM. A compiled bundle from a current

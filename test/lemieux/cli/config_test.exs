@@ -687,6 +687,67 @@ defmodule Lemieux.CLI.ConfigTest do
              Options.parse(["--config", path, "--model", "ixway:another"])
   end
 
+  test "--router names a model route an extension registers", %{tmp_dir: dir} do
+    assert {:ok, options} = Options.parse(["--config", "none", "--router", "relay"])
+    assert options.host.route == "relay"
+    assert options.ixway == nil
+    assert options.base_url == nil
+    assert options.model == "relay:@default"
+    assert options.host.model_source == :route
+
+    assert {:ok, %{model: "relay:fast", host: %{route: "relay", model_source: :flag}}} =
+             Options.parse(["--config", "none", "--router", "relay", "--model", "relay:fast"])
+
+    assert {:error, message} = Options.parse(["--config", "none", "--router", "Relay"])
+    assert message =~ "direct, ixway or the name of a registered model route"
+
+    assert {:error, message} =
+             Options.parse([
+               "--config",
+               "none",
+               "--router",
+               "relay",
+               "--ixway",
+               "https://gw.example"
+             ])
+
+    assert message =~ "cannot be combined"
+
+    assert {:error, _} =
+             Options.parse([
+               "--config",
+               "none",
+               "--router",
+               "relay",
+               "--base-url",
+               "https://d.example/v1"
+             ])
+
+    # The file's model on that route wins over its default; a direct model
+    # the file names is not the route's to serve.
+    path =
+      write_config(dir, %{
+        "model" => "openai:gpt-5",
+        "providers" => %{"relay" => %{"model" => "relay:fast", "effort" => "high"}}
+      })
+
+    assert {:ok, %{model: "relay:fast", host: %{route: "relay"}}} =
+             Options.parse(["--config", path, "--router", "relay"])
+
+    assert {:ok, %{model: "openai:gpt-5", host: %{route: nil}}} =
+             Options.parse(["--config", path])
+
+    assert {:ok, config} = Config.load(path)
+    assert Config.effort(config, "relay:fast") == "high"
+
+    path = write_config(dir, %{"model" => "relay:slow"})
+
+    assert {:ok, %{model: "relay:slow", host: %{route: "relay"}}} =
+             Options.parse(["--config", path, "--router", "relay"])
+
+    assert {:ok, %{model: "relay:slow", host: %{route: nil}}} = Options.parse(["--config", path])
+  end
+
   test "invalid JSON, typos and insecure secret files fail without echoing contents", %{
     tmp_dir: dir
   } do

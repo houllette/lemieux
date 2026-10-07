@@ -121,4 +121,58 @@ defmodule Lemieux.Provider.RouteTest do
     refute Lemieux.Ixway in called
     assert Route in called
   end
+
+  describe "prepare/2" do
+    alias Lemieux.ModelSpec
+    alias LemieuxTest.StaticRoute
+
+    defp static(attrs),
+      do:
+        {StaticRoute,
+         StaticRoute.new([name: "relay", models: ["a", "b"], owner: self()] ++ attrs)}
+
+    test "readies the route, resolves NAME:@default and checks the model" do
+      route = static(default: "relay:b")
+
+      assert {:ok, {StaticRoute, readied}, "relay:b"} = Route.prepare(route, "relay:@default")
+      assert readied.readied == 1
+      assert_received {:route_ready, "relay"}
+
+      assert {:ok, _route, "relay:a"} = Route.prepare(route, "relay:a")
+
+      assert {:error, {:unknown_model, "relay:c"}} = Route.prepare(route, "relay:c")
+    end
+
+    test "a route without the callbacks is ready as it is and advertises no default" do
+      assert Route.ready(gateway()) == {:ok, gateway()}
+      assert Route.default_model(gateway(), "gw") == {:error, {:no_default_model, "gw"}}
+      assert Route.prepare(gateway(), "gw:a") == {:ok, gateway(), "gw:a"}
+      assert Route.prepare(gateway(), "gw:@default") == {:error, {:no_default_model, "gw"}}
+      assert Route.prepare(gateway(), "gw:b") == {:error, {:gateway, :unknown, "gw:b"}}
+    end
+
+    # A default under another provider's name would be dispatched to that
+    # provider: the fallback a route exists to rule out.
+    test "a default outside the route's own name is refused" do
+      assert Route.prepare(static(default: "openai:gpt-5"), "relay:@default") ==
+               {:error, {:default_model_outside_route, "relay", "openai:gpt-5"}}
+
+      assert {:error, {:no_default, "relay"}} = Route.prepare(static([]), "relay:@default")
+    end
+
+    test "a ready failure stops preparation with the route's reason" do
+      route = static(ready: {:error, :catalogue_unreachable})
+      assert Route.prepare(route, "relay:a") == {:error, :catalogue_unreachable}
+      assert Route.ready(route) == {:error, :catalogue_unreachable}
+    end
+
+    test "the selection instruction is one spelling for every route" do
+      assert ModelSpec.default_selection("relay") == "relay:@default"
+      assert ModelSpec.default_selection?("relay:@default")
+      assert ModelSpec.default_selection?("ixway:@default")
+      refute ModelSpec.default_selection?("relay:@defaults")
+      refute ModelSpec.default_selection?("relay:a")
+      refute ModelSpec.default_selection?(nil)
+    end
+  end
 end

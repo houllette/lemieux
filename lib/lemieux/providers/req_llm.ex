@@ -289,6 +289,46 @@ defmodule Lemieux.Providers.ReqLLM do
   @spec new(opts :: keyword()) :: Lemieux.Provider.t()
   def new(opts \\ []) when is_list(opts), do: {__MODULE__, build_state(opts)}
 
+  @doc "The route `provider` sends every request through, or `nil` for a direct connection."
+  @spec route(provider :: Lemieux.Provider.t()) :: Route.t() | nil
+  def route({__MODULE__, %State{route: route}}), do: route
+  def route(_provider), do: nil
+
+  @doc """
+  Readies a routed provider's route without choosing a model
+  (`Lemieux.Provider.Route.ready/1`), for a host that wants the route's
+  discovery under way before it knows which model the session starts on.
+
+  A direct connection, and any other provider, is ready as it is.
+  """
+  @spec ready(provider :: Lemieux.Provider.t()) ::
+          {:ok, Lemieux.Provider.t()} | {:error, term()}
+  def ready({__MODULE__, %State{route: route} = state}) when not is_nil(route) do
+    with {:ok, route} <- Route.ready(route), do: {:ok, {__MODULE__, %{state | route: route}}}
+  end
+
+  def ready(provider), do: {:ok, provider}
+
+  @doc """
+  Prepares a provider for a session starting on `model`: a routed one has
+  its route readied and the model resolved and checked by
+  `Lemieux.Provider.Route.prepare/2`; a direct connection, and any other
+  provider, is returned as it is with the model unchanged.
+
+  Returns the provider to start the session with — the route's state may
+  now hold what it discovered — and the model the session should record,
+  which is where `NAME:@default` becomes a model name.
+  """
+  @spec prepare(provider :: Lemieux.Provider.t(), model :: String.t()) ::
+          {:ok, Lemieux.Provider.t(), String.t()} | {:error, term()}
+  def prepare({__MODULE__, %State{route: route} = state}, model)
+      when not is_nil(route) and is_binary(model) do
+    with {:ok, route, model} <- Route.prepare(route, model),
+         do: {:ok, {__MODULE__, %{state | route: route}}, model}
+  end
+
+  def prepare(provider, model) when is_binary(model), do: {:ok, provider, model}
+
   @impl Lemieux.Provider
   def available_models(%State{route: route}, opts) when not is_nil(route),
     do: Route.available_models(route, opts)

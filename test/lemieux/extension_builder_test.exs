@@ -232,7 +232,7 @@ defmodule Lemieux.ExtensionBuilderTest do
                Keyword.put(context.runtime, :provider, provider)
              )
 
-    assert message =~ "Ixway"
+    assert message =~ "ixway:gpt-6-luna cannot be priced before routing"
     assert message =~ "/create-extension"
     assert message =~ "--quota"
     assert Scripted.requests(provider) == []

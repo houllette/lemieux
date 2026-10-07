@@ -226,7 +226,7 @@ session would apply.
 | `Lemieux.Extensions.Verify` | The project's check after a turn that edited files ([Verify](workflows.md#verify-after-changes)) | `verify` | default | default |
 | `Lemieux.Extensions.A2A` | The peers in `"a2a_peers"` ([A2A](a2a.md)) | `a2a` | when configured | when configured |
 | `Lemieux.Extensions.Delegation` | The repository scout behind `delegate`, and its budgets ([Delegation](subagents.md)) | `delegation` | default | default |
-| Yours, from `--extension`, `--extension-dir` or `"extensions"` | Whatever you built; see [Installing an extension into `lmx`](#installing-an-extension-into-lmx) | | flag | flag |
+| Yours, from `--extension`, `--extension-dir` or `"extensions"` | Whatever you built; see [Installing an extension into `lmx`](#installing-an-extension-into-lmx), and [Adding a model route](#adding-a-model-route) for one that offers a route rather than shaping the harness | | flag | flag |
 | `Lemieux.Extensions.Checkpoints` | Records what tools change, for `/undo`, `/rewind` and `/redo` ([Checkpoints](tool-contracts.md#checkpoints)) | `checkpoints` | default | default |
 | `LemieuxJevCompaction` | Jev compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-jev-projection-before-compaction)) | `jev_compaction` | when a route is set | when a route is set |
 
@@ -424,9 +424,104 @@ typed ones for a run.
 looks for `.lmx/extensions/` in a checkout: opening an unfamiliar repository
 must not execute its setup, and the flag is where you say you have read it.
 
+## Adding a model route
+
+An extension can also give `lmx` somewhere new to send requests: a **model
+route**, a `Lemieux.Provider.Route` that owns a catalogue and a destination
+— a gateway, a proxy, a server you run. The harness deliberately holds no
+provider, so a route does not go through `apply/2`. The module exports
+`routes/1` instead (`Lemieux.Extension.Routes`), and `lmx` registers what it
+returns beside the shipped Ixway route (`Lemieux.CLI.Routes`):
+
+```elixir
+defmodule MyApp.Relay do
+  @behaviour Lemieux.Extension.Routes
+
+  @impl true
+  def routes(config: config) do
+    case {config["endpoint"], System.get_env("RELAY_API_KEY")} do
+      {nil, _key} -> {:error, "relay needs an \"endpoint\" option"}
+      {_endpoint, nil} -> {:error, "RELAY_API_KEY is not set"}
+      {endpoint, key} -> {:ok, [%{name: "relay", route: {MyApp.Relay.Route, MyApp.Relay.Route.new(endpoint, key)}}]}
+    end
+  end
+end
+```
+
+`routes/1` receives the same `[config: map]` as `init/1` — the manifest's
+`options` with your `"extension_options"` merged over them — and builds
+state without I/O; a refusal is an `{:error, reason}` it returns, which
+`lmx` prints as it is. Discovery belongs in the route's optional `ready/1`,
+which `lmx` runs for the route the start model is on, before the terminal
+UI opens and before a session starts. It is not run for every route: one
+the person switches to with `/provider` is asked about its models
+unreadied, so a route lists and checks its models from a catalogue it holds
+or by discovering then, as Ixway does. Its optional `default_model/1` is
+what `relay:@default` resolves to. A module may export `apply/2` as well
+and do both; one that exports neither is refused. The loaded form is the
+same as for any extension: a script or a compiled bundle, selected with
+`--extension`, `--extension-dir` or the config file's `"extensions"`.
+
+The **name** is the provider prefix of the route's models, lowercase
+letters, digits and `_`. `lmx` refuses one that is a `req_llm` provider's,
+the shipped gateway's (`ixway`), or already registered, in a sentence naming
+the extension; a `routes/1` that returns an error — the key is not set —
+stops the start the same way rather than starting a session that cannot
+reach its model.
+
+Once registered, a route is selected like any provider and kept apart from
+every other:
+
+- `--model relay:ID` names one of its models; `--model relay:@default`
+  starts on the one it advertises.
+- `--router relay` (or `LMX_ROUTER=relay`) makes it the route for the
+  command: `lmx run` sends through it alone, with no direct credential to
+  fall back on, the way `--ixway` always has; the terminal UI keeps the
+  direct providers beside it to switch to. Without a model it starts on
+  `relay:@default`, or on the file's `"model"` or `providers.relay.model`
+  when that names one of its models; `providers.relay.effort` applies too.
+- In the terminal UI, `/provider relay` and `/model` list its models beside
+  the direct providers' and Ixway's, and a resumed session whose transcript
+  recorded a `relay:` model readies the route again before it starts.
+- A request to `relay:ID` goes to the relay and nowhere else, and a request
+  to any other provider never goes to the relay; a route lists models under
+  its own name only. Compaction's summary request and a delegated
+  investigator on a `relay:` model follow the same rule, because they go
+  through the same provider; under `--router relay`, a `summary_model` or
+  `scout_model` naming a direct model is refused by the route rather than
+  sent to the direct provider.
+- The route cannot price its requests unless it implements
+  `estimate_cost/2`, so a session under `max_cost_usd` refuses them rather
+  than counting them as free; bound such a session with `max_requests` or
+  `max_turns`.
+
+Credentials never reach a transcript: read them from the environment or
+the options in `routes/1` and never return them from `describe/1`. The
+adapter `lmx` wraps a route in shows nothing of the route's state when
+inspected. A compiled bundle should derive a quiet `Inspect` for its own
+state too; a script compiled by the running `lmx` cannot (the protocols are
+consolidated by then), so a script keeps a credential out of its state and
+reads it when a request is sent, as the example does. The transcript
+records the extension as loaded, with `"routes": true`, and records it
+under `"applied"` only if it also shaped the harness; `lmx explain` reports
+the route under `diagnostics.route` and its credential as `route_managed`.
+To stop using a route, stop selecting its extension: a transcript that
+recorded one of its models then refuses to resume, before a session starts,
+with a sentence naming the extension flags that bring the route back.
+Upgrading is the same as for any extension —
+a script needs only its declared Lemieux requirement, a bundle a compatible
+build — and `Lemieux.Extension.api_version/0` moves if this contract does.
+
+[`examples/extensions/relay`](https://github.com/houllette/lemieux/blob/main/examples/extensions/relay/README.md)
+is a complete one-file route: an OpenAI-compatible server under the name
+`relay`, with the models you list. From the repository root,
+`RELAY_API_KEY=none lmx explain --extension-dir examples/extensions/relay --model relay:@default`
+reports the session it would start, with no model call.
+
 ## Provenance
 
-A loaded extension is recorded twice. `harness_context["extensions"]["loaded"]`
+A loaded extension is recorded twice — once, as loaded, when it only
+offers a model route and so shapes no harness. `harness_context["extensions"]["loaded"]`
 says what was loaded, from where, and which build: the name, the directory,
 the manifest's SHA-256, and for the `ebin` form three facts about the beams
 it carries — `module_digest`, the md5 of the extension module's own beam;
@@ -529,6 +624,11 @@ show the shapes an extension takes:
 - [`hello`](https://github.com/houllette/lemieux/blob/main/examples/extensions/hello/README.md)
   is one deterministic tool in a Mix project, built into a bundle `lmx`
   loads. [Your first extension](first-extension.md) walks through it.
+- [`relay`](https://github.com/houllette/lemieux/blob/main/examples/extensions/relay/README.md)
+  is a one-file **model route**: an OpenAI-compatible server you run,
+  registered under the provider name `relay` with the models you list, so
+  `--model relay:ID`, `--router relay` and `/provider relay` reach it and
+  nothing else does. See [Adding a model route](#adding-a-model-route).
 - [`planning`](https://github.com/houllette/lemieux/blob/main/examples/extensions/planning/README.md)
   is the smallest kind: one `.exs` script and an `extension.json`, no Mix
   project. It adds one pure tool, `plan_order`, which puts steps with

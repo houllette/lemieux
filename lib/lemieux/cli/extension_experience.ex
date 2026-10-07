@@ -18,8 +18,10 @@ defmodule Lemieux.CLI.ExtensionExperience do
   """
 
   alias Lemieux.CLI.Options
+  alias Lemieux.CLI.Routes
   alias Lemieux.CLI.Runtime
   alias Lemieux.Extension.Profile
+  alias Lemieux.Extensions.Delegation
   alias Lemieux.Extensions.Workspace.Discovery
   alias Lemieux.Learning.Builder
   alias Lemieux.ModelSpec
@@ -40,7 +42,7 @@ defmodule Lemieux.CLI.ExtensionExperience do
   defp prepare_extension(options, opts) do
     with :ok <- profile_choice(options, opts),
          :ok <- compatible(options, opts),
-         provider = Keyword.get_lazy(opts, :provider, fn -> Runtime.provider(options) end),
+         provider = provider(options, opts),
          {:ok, profile} <- selected_profile(options, provider, opts),
          extension = extension(profile, provider, designation(options, opts), opts),
          # Validated now, so a profile that cannot open says so here rather
@@ -64,14 +66,27 @@ defmodule Lemieux.CLI.ExtensionExperience do
 
       {:ok, %{options | model: Profile.model(profile)}, opts}
     else
-      {:error, :unpriced_ixway_builder} ->
+      {:error, {:unpriced_builder_model, model}} ->
         {:error,
-         "Ixway cannot estimate the builder's $5 cap before routing. Use the normal TUI's " <>
-           "/create-extension skill, or use --build-ext --quota for authorized quota traffic."}
+         "#{model} cannot be priced before routing, and the builder's $5 cap needs a priced " <>
+           "estimate. Use the normal TUI's /create-extension skill, or use --build-ext --quota " <>
+           "for authorized quota traffic."}
 
       {:error, reason} ->
         {:error, "Cannot open extension experience: #{inspect(reason)}"}
     end
+  end
+
+  # The host's connection, with the routes the host registered when it did
+  # so before coming here (`Lemieux.CLI.Runtime.with_routes/2`), else the
+  # shipped ones alone.
+  defp provider(options, opts) do
+    Keyword.get_lazy(opts, :provider, fn ->
+      Runtime.provider(
+        options,
+        Keyword.get_lazy(opts, :routes, fn -> Routes.builtin(options) end)
+      )
+    end)
   end
 
   defp extension(profile, provider, name, opts) do
@@ -110,11 +125,20 @@ defmodule Lemieux.CLI.ExtensionExperience do
             &(ModelSpec.provider(&1) == ModelSpec.provider(options.model))
           )
 
-    builder_profile(model, options.quota)
+    builder_profile(model, options.quota, provider)
   end
 
-  defp builder_profile("ixway:" <> _model, false), do: {:error, :unpriced_ixway_builder}
-  defp builder_profile(model, quota?), do: {:ok, Builder.profile(model, quota: quota?)}
+  # A metered builder session needs a priced estimate for its $5 cap, and a
+  # route that cannot price its requests — Ixway, a relay to a server of
+  # one's own — would have every request refused. Asked of the provider, not
+  # guessed from the name, as the scout does (`Lemieux.Extensions.Delegation`).
+  defp builder_profile(model, true, _provider), do: {:ok, Builder.profile(model, quota: true)}
+
+  defp builder_profile(model, false, provider) do
+    if Delegation.priced?(provider, model),
+      do: {:ok, Builder.profile(model, quota: false)},
+      else: {:error, {:unpriced_builder_model, model}}
+  end
 
   defp limit(%{"options" => %{"usage_mode" => "quota", "max_requests" => maximum}}),
     do:

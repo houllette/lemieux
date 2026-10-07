@@ -133,7 +133,8 @@ defmodule Lemieux.CLI.Run do
   end
 
   defp checked(options, out, opts) do
-    with {:ok, options, opts} <- usage(ExtensionExperience.prepare(options, opts)),
+    with {:ok, opts} <- usage(Runtime.with_routes(options, opts)),
+         {:ok, options, opts} <- usage(ExtensionExperience.prepare(options, opts)),
          :ok <- usage(one_of_continue_or_resume(options)),
          {:ok, prompt} <- usage(prompt(options.argv, opts)) do
       opts = Keyword.drop(opts, [:stdin, :stdin_terminal?])
@@ -303,8 +304,10 @@ defmodule Lemieux.CLI.Run do
       else: options |> Models.resolve(opts) |> Models.local(opts)
   end
 
-  defp host_route?(options, opts),
-    do: Keyword.has_key?(opts, :provider) or options.ixway != nil or options.base_url != nil
+  defp host_route?(options, opts) do
+    Keyword.has_key?(opts, :provider) or options.ixway != nil or options.host.route != nil or
+      options.base_url != nil
+  end
 
   # A model specification that `req_llm` cannot resolve — `gpt-4o` with no
   # provider, a provider it has never heard of — used to start a session,
@@ -313,10 +316,11 @@ defmodule Lemieux.CLI.Run do
   # costs a catalog lookup and no request, and says how to write one. Only
   # where lmx resolves the provider itself and the session is new: a host
   # route serves its own model names, a resumed session runs on the model
-  # its transcript recorded, and `ixway:` names are the gateway's.
+  # its transcript recorded, `ixway:` names are the gateway's, and a
+  # registered route's names are its own (`Lemieux.CLI.Runtime.route?/2`).
   defp model_spec(options, opts) do
     if host_route?(options, opts) or options.resume != nil or
-         ModelSpec.provider(options.model) == "ixway" do
+         ModelSpec.provider(options.model) == "ixway" or Runtime.route?(opts, options.model) do
       :ok
     else
       case ReqLLM.model(options.model) do
