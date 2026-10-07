@@ -150,6 +150,7 @@ defmodule Lemieux.Providers.ReqLLM do
   alias Lemieux.Providers.ReqLLM.ResponseMetadata
   alias Lemieux.Request
   alias Lemieux.Tool
+  alias Lemieux.Usage
   alias ReqLLM.Context
   alias ReqLLM.Message
   alias ReqLLM.Message.ContentPart
@@ -445,24 +446,207 @@ defmodule Lemieux.Providers.ReqLLM do
     options = state |> normalize_state() |> Map.fetch!(:options) |> Keyword.merge(request.params)
 
     with {:ok, model} <- model(request.model),
-         output when is_integer(output) and output >= 0 <- output_reservation(request, model),
-         {input, cached} = input_estimate(request),
-         {:ok, %{total: total}} <-
-           ReqLLM.Billing.calculate(
-             %{
-               input_tokens: input,
-               output_tokens: output,
-               cached_tokens: cached,
-               cache_creation_tokens: 0,
-               input_includes_cached: true
-             },
-             model,
-             pricing_context(options)
-           ) do
-      total
+         output when is_integer(output) and output >= 0 <- output_reservation(request, model) do
+      {input, cached} = input_estimate(request)
+
+      usage = %{
+        input_tokens: input,
+        output_tokens: output,
+        cached_tokens: cached,
+        cache_creation_tokens: 0,
+        input_includes_cached: true
+      }
+
+      case ReqLLM.Billing.calculate(usage, model, pricing_context(options)) do
+        {:ok, %{total: total}} ->
+          total
+
+        {:ok, nil} ->
+          list_rate_estimate(model, input, cached, output)
+      end
     else
       _unknown -> nil
     end
+  end
+
+  # The estimate's shape of a usage: the cached share of the input read at the
+  # cache-read rate, no writes, nothing reasoned yet.
+  defp list_rate_estimate(model, input, cached, output) do
+    case list_rates(model) do
+      nil ->
+        nil
+
+      rates ->
+        list_rate_cost(rates, %{
+          input: input - cached,
+          cached: cached,
+          written: 0,
+          output: output,
+          reasoning: 0,
+          reasoning_billed?: false
+        })
+    end
+  end
+
+  # A model's catalog tariff is a list of conditional components — tiers by
+  # input size, a batch or flex or priority rate, a data-residency surcharge —
+  # and `ReqLLM.Billing` prices a request only when it can resolve every
+  # component that could apply. Under Lemieux's default pricing context it
+  # cannot for 34 of the catalog's 8,300 priced models (ReqLLM 1.26, llm_db
+  # 2026.9.8): the current Anthropic frontier (`claude-fable-5-1`,
+  # `claude-opus-5`, `claude-opus-5-5`, `claude-sonnet-5`), OpenAI's gpt-5.6
+  # and gpt-6 families, `google:gemini-3.1-pro-preview`, xAI's grok-4.3 and
+  # later, DeepSeek v4, MiniMax M3 and Alibaba's qwen3.6/3.7, because each
+  # carries a data-residency, flex or priority modifier no context resolves.
+  # So a session under `:max_cost_usd` stopped before its first request —
+  # every metered attempt in a twelve-task benchmark — against models the
+  # catalog does price.
+  #
+  # The model's flat `cost` rates are its list price: what the standard tier
+  # charges, and what the first tier of a long-context tariff charges. When
+  # the full tariff cannot be resolved, a request is priced at list rates
+  # instead, for the estimate and for the usage a direct request reports
+  # (which says so: `pricing.status` is `"list_rates"`), so the gate can run
+  # and the measured cost column stays filled. The assumption is the standard
+  # tier: a request on a tier priced differently (batch at half, priority at
+  # twice), past a long-context threshold, or writing a one-hour cache (twice
+  # the five-minute rate `cost.cache_write` holds) is estimated at list price
+  # rather than refused.
+  #
+  # Rates that cannot be list prices answer `nil`, and the gate refuses as it
+  # always did: none; negative (OpenRouter's routers carry -1,000,000 as a
+  # "priced by whatever answers" sentinel, which would make a cap impossible
+  # to reach); or not in USD (Z.AI's coding plan is priced in credits, and its
+  # zero rates would read as free). Reasoning is priced as `ReqLLM.Billing`
+  # would: at `cost.reasoning` when the model has one, else at the output rate
+  # when the usage says reasoning is billed beside output (Gemini), else not
+  # at all (OpenAI counts it inside `output_tokens`).
+  defp list_rates(%{cost: %{input: input, output: output} = cost, pricing: pricing})
+       when is_number(input) and input >= 0 and is_number(output) and output >= 0 do
+    rates = %{
+      input: input,
+      output: output,
+      cache_read: rate_or(Map.get(cost, :cache_read), input),
+      cache_write: rate_or(Map.get(cost, :cache_write), input),
+      reasoning: Map.get(cost, :reasoning)
+    }
+
+    usd? = Map.get(pricing || %{}, :currency) in [nil, "USD"]
+
+    if usd? and Enum.all?(Map.values(rates), &(is_nil(&1) or (is_number(&1) and &1 >= 0))),
+      do: rates
+  end
+
+  defp list_rates(_model), do: nil
+
+  defp rate_or(rate, _fallback) when is_number(rate), do: rate
+  defp rate_or(_rate, fallback), do: fallback
+
+  defp list_rate_cost(rates, tokens) do
+    reasoning =
+      cond do
+        is_number(rates.reasoning) -> tokens.reasoning * rates.reasoning
+        tokens.reasoning_billed? -> tokens.reasoning * rates.output
+        true -> 0
+      end
+
+    cost =
+      max(tokens.input, 0) * rates.input + tokens.cached * rates.cache_read +
+        tokens.written * rates.cache_write + tokens.output * rates.output + reasoning
+
+    Float.round(cost / 1_000_000, 6)
+  end
+
+  # `req_llm` prices the usage it reports from the same tariff and leaves the
+  # cost out (`pricing.status` `"unknown"`) when it cannot resolve it. A direct
+  # request's usage goes through `price_at_list_rates/2` on its way out, for
+  # the reason the estimate does: a session that cannot price what it just
+  # spent has unknown spend, and the gate stops it before the next request.
+  # Every routed request is left exactly as reported; a gateway owns its own
+  # tariff.
+  defp price_usage(emit, request, nil) do
+    fn
+      {:usage, usage} -> emit.({:usage, price_at_list_rates(usage, request.model)})
+      event -> emit.(event)
+    end
+  end
+
+  defp price_usage(emit, _request, _route), do: emit
+
+  @doc """
+  Prices reported usage at the model's list rates when `req_llm` left it
+  unpriced, and says so.
+
+  The usage comes back with `"cost_usd"` set and `"pricing"` reading
+  `%{"status" => "list_rates", "currency" => "USD", "total" => cost}`, so a
+  host can tell the number from one `req_llm` priced (`"priced"`). Why list
+  rates stand in, and what they assume, is explained beside the rates
+  themselves above.
+
+  Left exactly as reported when `req_llm` did price it; when the model has
+  no usable list rates (none, negative, or not in USD); or when the usage is
+  not whole — an input or output count the provider did not report, or cache
+  counts that do not add up, which `req_llm` records as `usage_reported` and
+  `billing_usage_complete`. An unknown cost stays unknown rather than
+  becoming a number: under a cap, a session whose spend is unknown stops,
+  which is the safe direction.
+
+  Public because it is a rule rather than plumbing, worth testing without a
+  network.
+  """
+  @spec price_at_list_rates(usage :: map(), model :: String.t()) :: map()
+  def price_at_list_rates(usage, model) when is_map(usage) and is_binary(model) do
+    usage = json(usage)
+
+    with false <- is_number(Usage.cost_usd(usage)),
+         true <- whole_usage?(usage),
+         {:ok, catalog} <- ReqLLM.model(model),
+         rates when is_map(rates) <- list_rates(catalog) do
+      cost = list_rate_cost(rates, measured_tokens(usage))
+
+      usage
+      |> Map.put("cost_usd", cost)
+      |> Map.put("pricing", %{"status" => "list_rates", "currency" => "USD", "total" => cost})
+    else
+      _unpriced -> usage
+    end
+  end
+
+  defp whole_usage?(usage) do
+    reported = Map.get(usage, "usage_reported") || %{}
+
+    Map.get(reported, "input") != false and Map.get(reported, "output") != false and
+      Map.get(usage, "billing_usage_complete") != false
+  end
+
+  # The counts as `json/1` left them: string keys, in the names `req_llm` and
+  # the providers use. OpenAI counts cached and written tokens inside
+  # `input_tokens` and says so with `input_includes_cached`; Anthropic reports
+  # them beside it.
+  defp measured_tokens(usage) do
+    input = usage_count(usage, ["input_tokens"])
+    cached = usage_count(usage, ["cache_read_tokens", "cached_tokens", "cache_read_input_tokens"])
+
+    written =
+      usage_count(usage, [
+        "cache_write_tokens",
+        "cache_creation_tokens",
+        "cache_creation_input_tokens"
+      ])
+
+    uncached =
+      if Map.get(usage, "input_includes_cached") in [true, "true"],
+        do: max(input - cached - written, 0),
+        else: input
+
+    %{
+      input: uncached,
+      cached: cached,
+      written: written,
+      output: usage_count(usage, ["output_tokens"]),
+      reasoning: usage_count(usage, ["reasoning_tokens"]),
+      reasoning_billed?: Map.get(usage, "add_reasoning_to_cost") in [true, "true"]
+    }
   end
 
   @doc """
@@ -1577,6 +1761,7 @@ defmodule Lemieux.Providers.ReqLLM do
   # `served`, also direct-only, asks what window the answer was served with.
   defp stream_at(request, target, options, emit, route, metadata_options, served \\ nil) do
     options = with_prompt_cache(options, target, route)
+    emit = price_usage(emit, request, route)
     # Private to this request: a route's own stream bookkeeping uses another
     # reference, and must never receive these messages as its own.
     facts = make_ref()
@@ -1761,7 +1946,9 @@ defmodule Lemieux.Providers.ReqLLM do
 
   # ReqLLM calls a stream that ended without its terminal event `:incomplete`.
   # For Claude that is the dropped error event; elsewhere it is left to
-  # `check_answered/2`, which knows an empty `:incomplete` as a refusal.
+  # `check_answered/2`, which turns an empty `:incomplete` into an
+  # `{:unanswered, model, finish}` failure that `Lemieux.Provider.Error`
+  # files, like this one, under `:server`.
   defp interruption(%{finish_reason: finish}, %{terminal?: false}, target)
        when finish in [nil, :unknown, :incomplete] do
     if claude_wire?(target),
@@ -1849,6 +2036,18 @@ defmodule Lemieux.Providers.ReqLLM do
 
   Deliberately narrow. A model that stops with `:stop` and says nothing is odd
   but not broken; a truncated answer has content, and keeps it.
+
+  The failure is `{:unanswered, model, finish_reason}`, which
+  `Lemieux.Provider.Error.category/1` files under `:server` when the finish is
+  `:incomplete` or `:unknown`, so the session's bounded retry asks again. It
+  was `:other` — the OpenAI case above is a refusal, and a refusal is not
+  retried — until a gateway behind a CDN closed a `200` stream with nothing
+  in it, once in an 89-task benchmark, and the attempt was recorded as the
+  model failing. The response does not say which of the two happened. A
+  refusal that repeats fails every retry with the same sentence, which still
+  names credit, quota and request validity; a cut stream is answered on the
+  next try. `:length` and `:content_filter` with nothing in them stay
+  `:other`: the provider finished on purpose and said so.
   """
   @spec check_answered(result :: map(), model :: String.t()) ::
           :ok | {:error, {:unanswered, String.t(), term()}}

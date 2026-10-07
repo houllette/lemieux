@@ -7,6 +7,62 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Installing and updating
+
+- Release builds pin Erlang/OTP 29.1.1 and Elixir 1.20.4; 0.8.1 was built on
+  29.0.2 and 1.20.2. The runtime components Erlang/OTP vendors (PCRE2, AsmJit,
+  zlib, Zstandard, Ryu, the Unicode Character Database) are the same versions
+  in both OTP releases, so `THIRD_PARTY_NOTICES` is reviewed for 29.1.1 with
+  the entries it had. A new ERTS means the next release updates 0.8.1 by
+  restart rather than a hot swap.
+
+### Library
+
+- `Lemieux.Provider.Error.category/1` files an HTTP `408` under `:timeout`.
+  `retryable?/1` and `transient?/2` already treated it as transient, but the
+  category a host's retry policy sees was `:other`, so a CDN that answered
+  seven streaming requests in one benchmark run with a bare `408` had each
+  one recorded as the model failing. The `:error` transcript entry carries
+  the failure's `http_status` beside `category` and `reason` when there was
+  one, and the `provider_error` of a benchmark observation always has the
+  key (`null` when there was none), so a `retry: [when: ...]` predicate can
+  decide on the status itself. (#15)
+- A `200` stream that carried nothing at all and ended `:incomplete` — the
+  adapter's `{:unanswered, model, :incomplete}` failure — is classified
+  `:server`, so `transient?/2` is true and the session's bounded retry asks
+  again, the same as for a stream cut mid-answer. It was `:other`, because
+  OpenAI refuses a request on an account with no credit in the same shape;
+  nothing in the response tells the two apart, and that refusal still fails
+  every retry with the sentence naming credit, quota and request validity,
+  while a gateway that dropped the stream before the first token is answered
+  on the next try instead of being recorded as the model failing. Under a
+  dollar cap the session's own retry still refuses when the failed attempt
+  left spend unknown, as a stream that reported no usage does; there a
+  host's category-based retry is what fires. `lmx run` exits 6 (provider)
+  rather than 1 for this failure, and `lmx log` labels it `error (server)`.
+  (#16)
+- A session under `max_cost_usd` runs against a model whose catalog tariff
+  ReqLLM cannot resolve. Under the default pricing context that is 34 of the
+  catalog's priced models — the current Anthropic frontier
+  (`claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5`), OpenAI's
+  gpt-5.6 and gpt-6 families, `google:gemini-3.1-pro-preview`, xAI's grok-4.3
+  and later, DeepSeek v4, MiniMax M3, Alibaba's qwen3.6/3.7 — because each
+  carries a data-residency, flex or priority modifier that resolves under no
+  context, and ReqLLM's billing calculator then answers no price. On 0.8.1
+  every metered session on one of them stopped before its first request with
+  `its cost cannot be estimated`, and dropping the cap lost the measured cost
+  column too. The estimate, and the cost of the usage a direct request
+  reports, now fall back to the model's flat list rates, and the usage says
+  so (`pricing.status` is `"list_rates"`); a pricing context the tariff
+  cannot be resolved for (`pricing_context: %{}`) is priced the same way,
+  where it used to answer `nil`. [Cost estimates](docs/providers.md#cost-estimates)
+  says what list rates assume. A model with no usable list rates — none,
+  negative, or not in USD — still stops, and the message names it (`no price
+  is known for openrouter:openrouter/auto`); usage that is not whole stays
+  unpriced. The `{:budget, payload}` finish carries `model`. (#17)
+
 ## 0.8.1 — 2026-10-06
 
 The first update to the public release: four fixes from the first week of

@@ -597,10 +597,15 @@ provider request, including a compaction request, Lemieux adds measured spend
 to a pessimistic, cache-aware estimate that prices the current input as
 uncached plus the request's maximum output. When the total would exceed the
 cap, no request is started and the ending is
-`{:finished, {:budget, %{spent: spent, estimate: estimate, cap: cap}}}`. Unknown
-pricing also stops: an unpriced request is not silently treated as free. Set a
-realistic `:max_tokens` in `:params` when the model's catalog maximum is much
-larger than the output this session needs.
+`{:finished, {:budget, %{spent: spent, estimate: estimate, cap: cap, model: model}}}`,
+`model` being the one the stopped request was for. Unknown pricing also stops:
+an unpriced request is not silently treated as free, and the `:error` entry
+names the model no price is known for. When ReqLLM cannot resolve a model's
+catalog tariff but the model has list rates, the estimate and the measured
+usage use those rates and the usage's `pricing.status` says `"list_rates"`
+([Cost estimates](providers.md#cost-estimates)). Set a realistic
+`:max_tokens` in `:params` when the model's catalog maximum is much larger
+than the output this session needs.
 
 ### Delegating bounded investigations
 

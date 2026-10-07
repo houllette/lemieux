@@ -152,6 +152,32 @@ defmodule Lemieux.AgentTest do
     assert observation["usage"]["cost_usd"] == 0.2
   end
 
+  # A CDN answered streaming requests with a bare 408. The category says
+  # "timeout"; the status is the fact a host's retry predicate can decide on
+  # when the category alone is not enough (an empty-body 414, say).
+  test "a provider failure's category and HTTP status reach the observation", context do
+    supervisor = :"agent_session_status_#{System.unique_integer([:positive])}"
+    provider = Scripted.new([Scripted.http_error(408, reason: "HTTP 408")])
+
+    assert {:error, :agent_failed, observation} =
+             CustomAgent.run(
+               AgentSession,
+               %{prompt: "work", cwd: context.tmp_dir, timeout_ms: 60_000},
+               provider: provider,
+               model: "test:model",
+               supervisor: supervisor,
+               sessions_dir: Path.join(context.tmp_dir, "sessions")
+             )
+
+    assert observation["status"] == "failed"
+
+    assert observation["provider_error"] == %{
+             "category" => "timeout",
+             "reason" => "HTTP 408",
+             "http_status" => 408
+           }
+  end
+
   test "the reusable session deadline is measured on the clock it is given", context do
     clock = Manual.new()
     supervisor = :"agent_session_clock_#{System.unique_integer([:positive])}"

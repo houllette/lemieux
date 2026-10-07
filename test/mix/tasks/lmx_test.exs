@@ -16,7 +16,16 @@ defmodule Mix.Tasks.LmxTest do
     end
   end
 
-  defp configured, do: fn -> send(self(), :configured) && :ok end
+  # Two expressions rather than `send(...) && :ok`: `send/2` returns its
+  # message, so the `&&` was a constant conditional, and Elixir 1.20.4's type
+  # checker says so — a warning `mix test --warnings-as-errors` turns into a
+  # failed suite.
+  defp configured do
+    fn ->
+      send(self(), :configured)
+      :ok
+    end
+  end
 
   describe "mix lmx" do
     test "passes the arguments through untouched, the way the binary takes them" do

@@ -805,9 +805,12 @@ value applies.
   one number must bound every request.
 - `max_cost_usd` stops before a request whose estimated cost could pass the
   ceiling. Missing pricing, an unknown estimate or unknown earlier spend also
-  stops it, rather than counting as zero. This is an estimate the runtime
-  enforces, not a limit the provider enforces on your bill; use a request
-  limit when a route cannot price requests.
+  stops it, rather than counting as zero, and the stop names the model whose
+  price is missing. A model whose catalog tariff cannot be resolved for the
+  request is estimated, and its usage priced, at the model's list rates; the
+  usage says so (`pricing.status` is `list_rates`). This is an estimate the
+  runtime enforces, not a limit the provider enforces on your bill; use a
+  request limit when a route cannot price requests.
 
 On resume, the limits you give now replace the recorded ones, limits you omit
 keep their recorded values, and requests and spend already made still count.

@@ -51,15 +51,112 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
                       1.0e-10
     end
 
-    test "a stream preserves explicitly incomplete pricing context" do
+    test "a stream preserves explicitly incomplete pricing context, and is priced at list rates" do
+      # The context reaches ReqLLM untouched — it cannot price the request
+      # with it — and the adapter prices the usage at the model's list rates,
+      # saying so, rather than leaving the session's spend unknown.
       owner = self()
       provider = anthropic(owner, 200, sse(complete_answer("Unpriced.")))
       request = claude_request(params: [pricing_context: %{}])
 
       assert :ok = Provider.run(provider, request, &send(owner, &1))
       assert_receive {:usage, usage}
-      assert usage["pricing"]["status"] == "unknown"
+      assert usage["pricing"]["status"] == "list_rates"
       assert usage["total_cost"] == nil
+
+      assert_in_delta usage["cost_usd"],
+                      (usage["input_tokens"] + usage["output_tokens"] * 5) / 1_000_000,
+                      1.0e-10
+
+      assert Lemieux.Usage.cost_usd(usage) == usage["cost_usd"]
+    end
+
+    test "a direct stream to a model whose tariff ReqLLM cannot resolve is priced at list rates" do
+      # gpt-6-luna's tariff has service-tier modifiers no context resolves, so
+      # ReqLLM reports its usage unpriced; under a dollar cap that left the
+      # session's spend unknown after the first answer. See the matching
+      # estimate test in ReqLLMTest for when to move this to another model.
+      owner = self()
+      model = "openai:gpt-6-luna"
+      {:ok, %{cost: %{input: input_rate, output: output_rate}}} = ReqLLM.model(model)
+
+      body =
+        openai_sse([
+          %{choices: [text_choice("ok", "stop")]},
+          %{
+            choices: [],
+            usage: %{prompt_tokens: 2_000, completion_tokens: 10, total_tokens: 2_010}
+          }
+        ])
+
+      provider = openai(owner, 200, body)
+
+      assert :ok = Provider.run(provider, openai_request(model: model), &send(owner, &1))
+      assert_receive {:usage, usage}
+
+      assert usage["input_tokens"] == 2_000
+      assert usage["pricing"]["status"] == "list_rates"
+
+      assert_in_delta usage["cost_usd"],
+                      (2_000 * input_rate + 10 * output_rate) / 1_000_000,
+                      1.0e-10
+    end
+
+    test "list-rate pricing reads OpenAI's cached count out of its input count" do
+      owner = self()
+      model = "openai:gpt-6-luna"
+      {:ok, %{cost: rates}} = ReqLLM.model(model)
+
+      body =
+        openai_sse([
+          %{choices: [text_choice("ok", "stop")]},
+          %{
+            choices: [],
+            usage: %{
+              prompt_tokens: 2_000,
+              completion_tokens: 10,
+              total_tokens: 2_010,
+              prompt_tokens_details: %{cached_tokens: 500}
+            }
+          }
+        ])
+
+      provider = openai(owner, 200, body)
+
+      assert :ok = Provider.run(provider, openai_request(model: model), &send(owner, &1))
+      assert_receive {:usage, usage}
+      assert usage["pricing"]["status"] == "list_rates"
+
+      assert_in_delta usage["cost_usd"],
+                      (1_500 * rates.input + 500 * rates.cache_read + 10 * rates.output) /
+                        1_000_000,
+                      1.0e-10
+    end
+
+    test "list-rate pricing takes Anthropic's reads and writes from beside its input count" do
+      owner = self()
+      model = "anthropic:claude-sonnet-5"
+      {:ok, %{cost: rates}} = ReqLLM.model(model)
+
+      start =
+        put_in(message_start()["message"]["usage"], %{
+          "input_tokens" => 12,
+          "cache_read_input_tokens" => 500,
+          "cache_creation_input_tokens" => 100,
+          "output_tokens" => 1
+        })
+
+      [_start | rest] = complete_answer("Cached.")
+      provider = anthropic(owner, 200, sse([start | rest]))
+
+      assert :ok = Provider.run(provider, claude_request(model: model), &send(owner, &1))
+      assert_receive {:usage, usage}
+      assert usage["pricing"]["status"] == "list_rates"
+
+      assert_in_delta usage["cost_usd"],
+                      (12 * rates.input + 500 * rates.cache_read + 100 * rates.cache_write +
+                         usage["output_tokens"] * rates.output) / 1_000_000,
+                      1.0e-10
     end
 
     test "is on by default: the tools, the system prompt and the last message carry a breakpoint" do
@@ -283,8 +380,10 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
   # -- fixtures ----------------------------------------------------------------
 
   defp claude_request(opts \\ []) do
+    {model, opts} = Keyword.pop(opts, :model, "anthropic:claude-haiku-4-5")
+
     Request.new(
-      "anthropic:claude-haiku-4-5",
+      model,
       Keyword.merge(
         [system: "Be brief.", entries: [Entry.new(:user, %{"text" => "Say something."})]],
         opts
@@ -293,8 +392,10 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
   end
 
   defp openai_request(opts \\ []) do
+    {model, opts} = Keyword.pop(opts, :model, "openai:gpt-5")
+
     Request.new(
-      "openai:gpt-5",
+      model,
       Keyword.merge([entries: [Entry.new(:user, %{"text" => "Say something."})]], opts)
     )
   end

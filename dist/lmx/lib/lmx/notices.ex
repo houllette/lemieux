@@ -32,8 +32,11 @@ defmodule Lmx.Notices do
 
   # Erlang/OTP's runtime embeds third-party code whose versions change with
   # OTP. Reviewed against erts/emulator/*/vendor.info and
-  # lib/stdlib/uc_spec/vendor.info at the tag below.
-  @otp_reviewed "29.0.2"
+  # lib/stdlib/uc_spec/vendor.info at the tag below. The move from 29.0.2 to
+  # 29.1.1 (2026-10-06) changed none of those manifests — the six files are
+  # byte-identical between the tags — so the components and versions below
+  # are the ones 29.0.2 was reviewed with.
+  @otp_reviewed "29.1.1"
   @otp_components [
     %{
       name: "PCRE2 10.47 (regular expressions, in ERTS)",

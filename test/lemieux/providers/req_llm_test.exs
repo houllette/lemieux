@@ -861,6 +861,12 @@ defmodule Lemieux.Providers.ReqLLMTest do
       assert {:unanswered, "openai:gpt-4o-mini", :incomplete} = reason
       assert ProviderError.message(reason) =~ "answered nothing"
       assert ProviderError.message(reason) =~ "credit"
+
+      # Indistinguishable, from the response, from a stream cut before the
+      # first token — so it is the provider failing, and the session asks
+      # again. A refusal that repeats fails the retries with this sentence.
+      assert ProviderError.category(reason) == :server
+      assert ProviderError.transient?(reason)
     end
 
     test "is allowed when the model simply stopped" do
@@ -1234,6 +1240,141 @@ defmodule Lemieux.Providers.ReqLLMTest do
     end
   end
 
+  describe "price_at_list_rates/2" do
+    # A usage map as req_llm normalises it and the adapter's json/1 leaves it:
+    # string keys, both counts reported, consistent cache counts, unpriced.
+    defp unpriced(fields) do
+      Map.merge(
+        %{
+          "input_includes_cached" => true,
+          "cache_read_tokens" => 0,
+          "cache_write_tokens" => 0,
+          "reasoning_tokens" => 0,
+          "add_reasoning_to_cost" => false,
+          "usage_reported" => %{"input" => true, "output" => true},
+          "billing_usage_complete" => true,
+          "pricing" => %{"status" => "unknown"}
+        },
+        fields
+      )
+    end
+
+    defp rates(model) do
+      {:ok, %{cost: cost}} = ReqLLM.model(model)
+      cost
+    end
+
+    test "cached tokens counted inside OpenAI's input are priced at the cache-read rate" do
+      model = "openai:gpt-6-luna"
+      rates = rates(model)
+
+      usage =
+        unpriced(%{
+          "input_tokens" => 2_000,
+          "cache_read_tokens" => 500,
+          "cached_tokens" => 500,
+          "output_tokens" => 10
+        })
+
+      priced = ReqLLMProvider.price_at_list_rates(usage, model)
+
+      assert priced["pricing"] == %{
+               "status" => "list_rates",
+               "currency" => "USD",
+               "total" => priced["cost_usd"]
+             }
+
+      assert_in_delta priced["cost_usd"],
+                      (1_500 * rates.input + 500 * rates.cache_read + 10 * rates.output) /
+                        1_000_000,
+                      1.0e-10
+
+      assert Lemieux.Usage.cost_usd(priced) == priced["cost_usd"]
+    end
+
+    test "Anthropic's reads and writes beside the input count are priced at their own rates" do
+      model = "anthropic:claude-sonnet-5"
+      rates = rates(model)
+
+      usage =
+        unpriced(%{
+          "input_tokens" => 1_000,
+          "cache_read_tokens" => 500,
+          "cache_write_tokens" => 100,
+          "output_tokens" => 10,
+          "input_includes_cached" => false
+        })
+
+      assert_in_delta ReqLLMProvider.price_at_list_rates(usage, model)["cost_usd"],
+                      (1_000 * rates.input + 500 * rates.cache_read + 100 * rates.cache_write +
+                         10 * rates.output) / 1_000_000,
+                      1.0e-10
+    end
+
+    test "reasoning is priced as ReqLLM would price it" do
+      # Gemini bills reasoning beside output at the output rate, and req_llm's
+      # normaliser says so; OpenAI counts it inside output_tokens, so the
+      # same count is not charged twice; DeepSeek publishes a reasoning rate.
+      gemini = "google:gemini-3.1-pro-preview"
+
+      thought =
+        unpriced(%{"input_tokens" => 100, "output_tokens" => 20, "reasoning_tokens" => 50})
+
+      assert_in_delta ReqLLMProvider.price_at_list_rates(
+                        Map.put(thought, "add_reasoning_to_cost", true),
+                        gemini
+                      )["cost_usd"],
+                      (100 * rates(gemini).input + 70 * rates(gemini).output) / 1_000_000,
+                      1.0e-10
+
+      openai = "openai:gpt-6-luna"
+
+      assert_in_delta ReqLLMProvider.price_at_list_rates(thought, openai)["cost_usd"],
+                      (100 * rates(openai).input + 20 * rates(openai).output) / 1_000_000,
+                      1.0e-10
+
+      deepseek = "deepseek:deepseek-v4-flash"
+      assert is_number(rates(deepseek).reasoning)
+
+      assert_in_delta ReqLLMProvider.price_at_list_rates(thought, deepseek)["cost_usd"],
+                      (100 * rates(deepseek).input + 20 * rates(deepseek).output +
+                         50 * rates(deepseek).reasoning) / 1_000_000,
+                      1.0e-10
+    end
+
+    test "usage req_llm priced, or that is not whole, is left exactly as it came" do
+      model = "openai:gpt-6-luna"
+      whole = unpriced(%{"input_tokens" => 100, "output_tokens" => 20})
+
+      priced_already = Map.put(whole, "total_cost", 0.01)
+      assert ReqLLMProvider.price_at_list_rates(priced_already, model) == priced_already
+
+      # A count the provider did not report, or cache counts that do not add
+      # up: an unknown cost stays unknown instead of becoming a number, so a
+      # capped session stops rather than spending against a wrong total.
+      no_output = Map.put(whole, "usage_reported", %{"input" => true, "output" => false})
+      assert ReqLLMProvider.price_at_list_rates(no_output, model) == no_output
+
+      inconsistent = Map.put(whole, "billing_usage_complete", false)
+      assert ReqLLMProvider.price_at_list_rates(inconsistent, model) == inconsistent
+    end
+
+    test "a model without usable list rates leaves the usage unpriced" do
+      usage = unpriced(%{"input_tokens" => 100, "output_tokens" => 20})
+
+      for model <- [
+            # The -1,000,000 sentinel: a negative "price".
+            "openrouter:openrouter/auto",
+            # Priced in credits, with zero rates.
+            "zai_coding_plan:glm-5.3",
+            # Tariff components, but no flat rates at all.
+            "anthropic:claude-3-haiku-20240307"
+          ] do
+        assert ReqLLMProvider.price_at_list_rates(usage, model) == usage, model
+      end
+    end
+  end
+
   describe "cost estimation" do
     test "prices conservative input plus the requested maximum output" do
       small =
@@ -1372,12 +1513,21 @@ defmodule Lemieux.Providers.ReqLLMTest do
     end
 
     test "unknown pricing is still unknown" do
-      assert Provider.estimate_cost(
-               ReqLLMProvider.new(),
-               Request.new("ollama:local-quantisation",
-                 entries: [Entry.new(:user, %{"text" => "hi"})]
-               )
-             ) == nil
+      estimate = fn model ->
+        Provider.estimate_cost(
+          ReqLLMProvider.new(),
+          Request.new(model, entries: [Entry.new(:user, %{"text" => "hi"})])
+        )
+      end
+
+      assert estimate.("ollama:local-quantisation") == nil
+
+      # Rates that are not a price are not a fallback either: OpenRouter's
+      # routers carry -1,000,000 as a "priced by whatever answers" sentinel,
+      # which would have made a cap impossible to reach; Z.AI's coding plan is
+      # priced in credits, and its zero rates would have read as free.
+      assert estimate.("openrouter:openrouter/auto") == nil
+      assert estimate.("zai_coding_plan:glm-5.3") == nil
     end
 
     test "explicit pricing context survives provider defaults and request overrides" do
@@ -1391,8 +1541,42 @@ defmodule Lemieux.Providers.ReqLLMTest do
       override = %{ordinary | params: [max_tokens: 100, pricing_context: %{api: "realtime"}]}
       assert Provider.estimate_cost(provider, override) == realtime
 
+      # A context the tariff cannot be resolved for is priced at list rates,
+      # which for this model are its realtime rates.
       unknown = %{ordinary | params: [max_tokens: 100, pricing_context: %{}]}
-      assert Provider.estimate_cost(provider, unknown) == nil
+      assert_in_delta Provider.estimate_cost(provider, unknown), realtime, 2.0e-6
+    end
+
+    test "falls back to the model's list rates when ReqLLM cannot resolve its tariff" do
+      # gpt-6-luna's catalog tariff carries service-tier modifiers (flex,
+      # priority, data residency) that no pricing context resolves, so the
+      # calculator answers nil and a metered session stopped before its first
+      # request. The flat `cost` rates are the list price. If a ReqLLM or
+      # llm_db update learns to price this tariff, move the test to a model it
+      # still cannot: the fallback is what is under test.
+      model = "openai:gpt-6-luna"
+      {:ok, %{cost: %{input: input_rate, output: output_rate}} = catalog} = ReqLLM.model(model)
+
+      probe = %{
+        input_tokens: 10,
+        output_tokens: 10,
+        cached_tokens: 0,
+        cache_creation_tokens: 0,
+        input_includes_cached: true
+      }
+
+      assert {:ok, nil} = ReqLLM.Billing.calculate(probe, catalog, %{api: "realtime"})
+
+      request =
+        Request.new(model,
+          entries: [Entry.new(:user, %{"text" => "hello"})],
+          params: [max_tokens: 4_096]
+        )
+
+      input_tokens = max(div(Request.input_bytes(request), 4), 1)
+      expected = (input_tokens * input_rate + 4_096 * output_rate) / 1_000_000
+
+      assert_in_delta Provider.estimate_cost(ReqLLMProvider.new(), request), expected, 1.0e-9
     end
   end
 

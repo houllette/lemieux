@@ -871,7 +871,7 @@ defmodule Lemieux.SessionTest do
       :ok = Session.prompt(session, "expensive")
 
       assert_receive {:lemieux, _, {:finished, {:budget, payload}}}
-      assert payload == %{spent: 0.0, estimate: 1.01, cap: 1.0}
+      assert payload == %{spent: 0.0, estimate: 1.01, cap: 1.0, model: "test:model"}
 
       assert Scripted.requests(provider) == []
       assert {:ok, entries} = Store.read(context.store, Session.id(session))
@@ -913,9 +913,19 @@ defmodule Lemieux.SessionTest do
       :ok = Session.prompt(session, "unpriced")
 
       assert_receive {:lemieux, _, {:finished, {:budget, payload}}}
-      assert payload == %{spent: 0.0, estimate: nil, cap: 1.0}
+      assert payload == %{spent: 0.0, estimate: nil, cap: 1.0, model: "test:model"}
 
       assert Scripted.requests(provider) == []
+
+      # The stop names the model, so a person can tell the gate stopped the
+      # session and which price is missing, not that the model failed.
+      assert {:ok, entries} = Store.read(context.store, Session.id(session))
+
+      assert %Entry{type: :error, payload: %{"reason" => reason}} =
+               Enum.find(entries, &(&1.type == :error))
+
+      assert reason =~ "cannot be estimated"
+      assert reason =~ "no price is known for test:model"
     end
 
     test "missing usage makes later spend unknown", context do
@@ -931,7 +941,7 @@ defmodule Lemieux.SessionTest do
       :ok = Session.prompt(session, "work")
 
       assert_receive {:lemieux, _, {:finished, {:budget, payload}}}
-      assert payload == %{spent: nil, estimate: 0.1, cap: 1.0}
+      assert payload == %{spent: nil, estimate: 0.1, cap: 1.0, model: "test:model"}
       assert length(Scripted.requests(provider)) == 1
     end
   end
