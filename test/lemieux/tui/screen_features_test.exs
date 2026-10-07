@@ -406,6 +406,39 @@ defmodule Lemieux.TUI.ScreenFeaturesTest do
       entry = Entry.new(:user, %{"text" => "[lmx verify] mix test failed"})
       state = info(tui(), {:entry, entry})
       assert Enum.any?(state.lines, &match?({:verify, "mix test failed"}, &1))
+
+      marked = Entry.new(:user, %{"text" => "[lmx verify] mix test failed", "stop_hook" => true})
+      state = info(tui(), {:entry, marked})
+      assert Enum.any?(state.lines, &match?({:verify, "mix test failed"}, &1))
+    end
+
+    test "any stop hook's message is drawn in the harness's voice, without its tag" do
+      entry =
+        Entry.new(:user, %{
+          "text" => "[lmx continue] You ended your turn, but your plan still has open tasks:",
+          "stop_hook" => true
+        })
+
+      state = info(tui(), {:entry, entry})
+
+      assert Enum.any?(
+               state.lines,
+               &match?({:hook, "You ended your turn, but your plan still has open tasks:"}, &1)
+             )
+
+      assert screen(state) =~ "↻ You ended your turn"
+
+      # A command hook's words carry no tag, and are still not the person's.
+      plain = Entry.new(:user, %{"text" => "run the linter first", "stop_hook" => true})
+
+      assert Enum.any?(
+               info(tui(), {:entry, plain}).lines,
+               &(&1 == {:hook, "run the linter first"})
+             )
+
+      # What the person typed is drawn when it is submitted, never again here.
+      typed = Entry.new(:user, %{"text" => "[lmx continue] my own words"})
+      refute Enum.any?(info(tui(), {:entry, typed}).lines, &match?({:hook, _}, &1))
     end
 
     test "an unknown context window is said once" do

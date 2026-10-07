@@ -137,6 +137,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                "Lemieux.Extensions.Search",
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",
+               "Lemieux.Extensions.Continuation",
                "Lemieux.Extensions.Delegation",
                inspect(module),
                "Lemieux.CLI.ExtensionsTest.HostAudit"
@@ -193,6 +194,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                "Lemieux.Extensions.Search",
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",
+               "Lemieux.Extensions.Continuation",
                "Lemieux.Extensions.Delegation",
                inspect(second_module),
                inspect(first_module)
@@ -404,6 +406,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",
                "Lemieux.Extensions.EnvironmentContext",
+               "Lemieux.Extensions.Continuation",
                "Lemieux.Extensions.Verify",
                "Lemieux.Extensions.Delegation",
                inspect(configured),
@@ -438,6 +441,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",
                "Lemieux.Extensions.EnvironmentContext",
+               "Lemieux.Extensions.Continuation",
                "Lemieux.Extensions.Verify",
                "Lemieux.Extensions.Delegation",
                inspect(module),

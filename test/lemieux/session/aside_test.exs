@@ -244,6 +244,22 @@ defmodule Lemieux.Session.AsideTest do
              Scripted.requests(provider)
   end
 
+  test "a stop hook is told when the stop ends an aside, and by which kind", context do
+    parent = self()
+    hooks = [stop: fn _reason, hook_context -> send(parent, {:aside, hook_context.aside}) end]
+
+    {session, _provider, id} =
+      session(context, [Scripted.complete("Built"), Scripted.complete("Verdict")], hooks: hooks)
+
+    :ok = Session.prompt(session, "build")
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert_receive {:aside, nil}
+
+    :ok = Session.aside(session, judge())
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert_receive {:aside, :judge}
+  end
+
   test "an aside needs a kind, a text and a system" do
     assert_raise ArgumentError, fn -> Aside.new(text: "/judge", system: "Judge.") end
     assert_raise ArgumentError, fn -> Aside.new(kind: :judge, system: "Judge.") end

@@ -260,16 +260,19 @@ defmodule Lemieux.CLI.RunTextsTest do
   end
 
   describe "an answer the output cap ended" do
+    # `Lemieux.Extensions.Continuation` picks up the first cut-off on its own;
+    # the second, with nothing done in between, is the one that ends the run.
+    defp cut_off_twice,
+      do: [
+        Scripted.complete("partial", finish_reason: :length),
+        Scripted.complete("still partial", finish_reason: :length)
+      ]
+
     test "keeps the partial answer, fails, and says how to have it carry on", context do
-      result =
-        lmx(
-          ["run", "work"],
-          context,
-          scripted([Scripted.complete("partial", finish_reason: :length)])
-        )
+      result = lmx(["run", "work"], context, scripted(cut_off_twice()))
 
       assert result.status == {:error, 1}
-      assert result.stdout == "partial\n"
+      assert result.stdout == "still partial\n"
 
       assert result.stderr =~
                ~r/lmx: the answer did not complete: it was cut off at the model's output limit; lmx run --resume \S+ continue picks up where it stopped/
@@ -282,7 +285,7 @@ defmodule Lemieux.CLI.RunTextsTest do
         lmx(
           ["run", "work"],
           context,
-          [program: "mix lmx"] ++ scripted([Scripted.complete("partial", finish_reason: :length)])
+          [program: "mix lmx"] ++ scripted(cut_off_twice())
         )
 
       assert result.stderr =~ ~r/mix lmx run --resume \S+ continue/

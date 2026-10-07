@@ -103,6 +103,20 @@ defmodule Lemieux.Transcript do
   end
 
   @doc """
+  Whether `entry` is feedback a `stop` hook sent the model, rather than
+  something the person said.
+
+  Both are `:user` entries, because both are what the model reads next. The
+  session marks a hook's with `"stop_hook" => true` (`Lemieux.Hooks`), and
+  this is the question that mark answers: a reader counting from "the
+  person's last prompt", or drawing who said what, asks it first. Entries
+  written before the mark existed answer false.
+  """
+  @spec stop_hook?(entry :: Entry.t()) :: boolean()
+  def stop_hook?(%Entry{type: :user, payload: %{"stop_hook" => true}}), do: true
+  def stop_hook?(%Entry{}), do: false
+
+  @doc """
   The tool calls on a transcript that nothing ever answered.
 
   A session answers every call in a wave before its next request, so a

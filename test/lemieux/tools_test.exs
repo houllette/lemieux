@@ -129,4 +129,21 @@ defmodule Lemieux.ToolsTest do
     assert result.output =~ "invalid tool arguments"
     assert result.output =~ "JSON"
   end
+
+  test "a call the output limit cut off is answered with what happened, and does not run" do
+    call = %{id: "call-1", name: "write", arguments: %{}, argument_error: :output_limit}
+
+    result = Tools.run([Lemieux.Tools.Write], [], call, %{}, fn _text -> :ok end)
+
+    assert result.error?
+    assert result.outcome == :invalid_arguments
+    assert result.output =~ "output-token limit"
+    assert result.output =~ "did not run"
+    assert result.output =~ "smaller"
+    refute result.output =~ "needs a path"
+
+    # Live, a model told to "add the rest in further calls" wrote the file
+    # again for each part, and each part replaced the one before it.
+    assert result.output =~ "adds to the file rather than replacing it"
+  end
 end

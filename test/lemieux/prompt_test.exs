@@ -24,6 +24,11 @@ defmodule Lemieux.PromptTest do
     assert prose() =~ "Do not create files nobody asked for"
   end
 
+  test "the default prompt says that ending a turn hands control back" do
+    assert prose() =~ "Keep working until the task is done"
+    assert prose() =~ "Ending your turn hands control back to the person"
+  end
+
   test "the default prompt stays short enough to pay for on every request" do
     assert byte_size(Prompt.default()) < 2_500
   end

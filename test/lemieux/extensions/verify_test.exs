@@ -258,6 +258,47 @@ defmodule Lemieux.Extensions.VerifyTest do
       assert messages(session) == []
     end
 
+    test "another stop hook's message between the edit and the stop does not hide the edit",
+         ctx do
+      # A hook ahead of Verify sends the model back once. Its message is a
+      # user entry, and Verify used to take every unmarked user entry for the
+      # person's prompt — so the edit before it no longer counted, and the
+      # check never ran.
+      nudge = fn _reason, context ->
+        if context.stop_hook_active, do: :allow, else: {:deny, "keep going"}
+      end
+
+      provider =
+        Scripted.new(
+          edit_then("Done.") ++
+            [Scripted.complete("Really done."), Scripted.complete("It was already broken.")]
+        )
+
+      {:ok, harness} =
+        Harness.assemble(Harness.append_hooks(Harness.new(), stop: nudge), [
+          {Verify, command: "echo broken; exit 1"}
+        ])
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: ctx.runtime,
+          store: ctx.store,
+          provider: provider,
+          model: "test:verify",
+          cwd: ctx.cwd,
+          subscriber: self(),
+          harness: harness
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "write the file")
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+
+      assert {:ok, %{last: %{"status" => "failed"}}} = Verify.status(session)
+      assert [feedback] = messages(session)
+      assert feedback =~ "failed with exit status 1"
+    end
+
     test "a command that cannot run is not the model's to fix", ctx do
       {session, _provider} =
         start(ctx, edit_then("Done."), command: "definitely-not-a-command-lmx-verify")

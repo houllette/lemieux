@@ -15,13 +15,17 @@ defmodule Lemieux.Extensions do
   `:hooks`, `:mcp`, `:profile` and `:elixir` likewise accept specifications.
   `:cwd`, `:subagent_options` and `:scout_model` configure the scout.
 
-  Three more entries are opt-in here and switched on by `lmx`, which is
+  Four more entries are opt-in here and switched on by `lmx`, which is
   where the decision to spend on them belongs:
 
     * `environment_context: true` — `Lemieux.Extensions.EnvironmentContext`,
       the date, platform, shell, directory and git state at the end of the
       prompt, read once from `:cwd`;
     * `planning: true` — `Lemieux.Extensions.Planning`, the `todo` tool;
+    * `continuation: true` (or its options) —
+      `Lemieux.Extensions.Continuation`, which sends the model back to work
+      when it stops with its plan open or its answer cut off. It comes
+      before `verify`, whose check then runs once the plan is done;
     * `verify: true` (or its options) — `Lemieux.Extensions.Verify`, which
       runs the project's check after a turn that edited files and lets the
       model fix what it broke.
@@ -33,6 +37,7 @@ defmodule Lemieux.Extensions do
   supplying `tools: []`, its own host tools, environment and budgets. Loading
   the library never equips a host or starts a supervisor on its behalf.
   """
+  alias Lemieux.Extensions.Continuation
   alias Lemieux.Extensions.Delegation
   alias Lemieux.Extensions.EnvironmentContext
   alias Lemieux.Extensions.Interactive
@@ -57,6 +62,7 @@ defmodule Lemieux.Extensions do
         :workspace,
         :environment_context,
         :planning,
+        :continuation,
         :verify,
         :a2a
       ])
@@ -79,6 +85,9 @@ defmodule Lemieux.Extensions do
       environment_context:
         opt_in(opts[:environment_context], EnvironmentContext, Keyword.take(opts, [:cwd])),
       planning: opt_in(opts[:planning], Planning, []),
+      # Before verify: the first stop hook to deny wins, and a model sent
+      # back to an unfinished plan should not be checked on half the work.
+      continuation: opt_in(opts[:continuation], Continuation, []),
       verify: opt_in(opts[:verify], Verify, Keyword.take(opts, [:cwd])),
       a2a: opts[:a2a],
       delegation: delegation

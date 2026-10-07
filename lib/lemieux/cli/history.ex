@@ -152,7 +152,11 @@ defmodule Lemieux.CLI.History do
   defp fork_point(%{turn: turn}) when is_integer(turn), do: fail("--at-turn must be positive")
   defp fork_point(%{entry: entry}), do: {:ok, entry}
 
-  defp render(%Entry{type: :user, payload: %{"text" => text}}, log), do: say(log, "you", text)
+  # A stop hook's message is the harness talking; the log keeps its words,
+  # tag and all, and says who wrote them.
+  defp render(%Entry{type: :user, payload: %{"text" => text}} = entry, log) do
+    if Transcript.stop_hook?(entry), do: say(log, "lmx", text), else: say(log, "you", text)
+  end
 
   defp render(%Entry{type: :assistant, payload: payload}, log) do
     payload

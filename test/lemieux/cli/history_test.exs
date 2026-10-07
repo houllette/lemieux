@@ -62,6 +62,23 @@ defmodule Lemieux.CLI.HistoryTest do
       assert output =~ "it says alpha"
     end
 
+    test "a stop hook's message is labelled as lmx's, not the person's", context do
+      :ok =
+        Store.append(context.store, "hooked", [
+          Entry.new(:user, %{"text" => "do the steps"}),
+          Entry.new(:user, %{
+            "text" => "[lmx continue] You ended your turn, but your plan still has open tasks:",
+            "stop_hook" => true
+          })
+        ])
+
+      output = lmx(["log", "hooked"], context)
+
+      assert output =~ "you: do the steps"
+      assert output =~ "lmx: [lmx continue] You ended your turn"
+      refute output =~ "you: [lmx continue]"
+    end
+
     test "shows the tools that ran, not just what was said", context do
       output = lmx(["log", "stored"], context)
 

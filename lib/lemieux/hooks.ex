@@ -80,6 +80,13 @@ defmodule Lemieux.Hooks do
   path. A host that only wants a notification should use `attention`, `error`
   or `session_end`; an invalid `stop` return is a failed decision hook.
 
+  A stop hook receives the reason the model stopped — `:stop`, `:length` when
+  the answer reached its output limit, and so on — and a context whose
+  `:aside` is the running aside's kind, or `nil` for a person's prompt. Its
+  feedback is written as a `:user` entry marked `"stop_hook" => true`
+  (`Lemieux.Transcript.stop_hook?/1`): the model reads it like any message,
+  and a reader of the transcript can still tell it from the person.
+
   A hook value may also be a `Lemieux.Hooks.Command`, normally loaded from a
   versioned JSON file or a Claude Code settings file by
   `Lemieux.Hooks.Config`. Commands receive JSON on stdin. This is the

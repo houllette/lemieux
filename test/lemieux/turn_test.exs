@@ -229,7 +229,40 @@ defmodule Lemieux.TurnTest do
     test "a call assembled with no arguments still runs" do
       effects = effects([{:tool_call, %{id: "1", name: "bash"}}, {:done, :tool_calls}])
 
-      assert {:run_tools, [%{arguments: %{}}]} = List.last(effects)
+      assert {:run_tools, [%{arguments: %{}} = call]} = List.last(effects)
+      refute Map.has_key?(call, :argument_error)
+    end
+
+    # The output limit ends a response wherever it falls, and a model writing
+    # a large file is inside the last call's arguments when it does. What
+    # arrives is a call with no usable arguments: run as it stood, `write`
+    # answered "needs a path and content", the model sent the same oversized
+    # call again, and the repeat guard ended the prompt (live, 2026-10-07).
+    test "the call the output limit cut off is marked so, and the calls before it are not" do
+      effects =
+        effects([
+          {:tool_call, call("1", "read", %{"path" => "a"})},
+          {:tool_call, %{id: "2", name: "write", arguments: %{}, argument_error: :lost}},
+          {:done, :length}
+        ])
+
+      assert {:run_tools, [first, cut]} = List.last(effects)
+      refute Map.has_key?(first, :argument_error)
+      assert cut.argument_error == :output_limit
+    end
+
+    test "a last call with no arguments in a cut-off response is taken as cut off" do
+      effects = effects([{:tool_call, %{id: "1", name: "write"}}, {:done, :length}])
+
+      assert {:run_tools, [%{argument_error: :output_limit}]} = List.last(effects)
+    end
+
+    test "a last call whose arguments arrived whole still runs after a cut-off" do
+      whole = call("1", "write", %{"path" => "a", "content" => "x"})
+      effects = effects([{:tool_call, whole}, {:done, :length}])
+
+      assert {:run_tools, [last]} = List.last(effects)
+      refute Map.has_key?(last, :argument_error)
     end
 
     test "an interrupted turn keeps what was said but drops calls nothing will answer" do

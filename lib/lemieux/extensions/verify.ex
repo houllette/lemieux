@@ -126,6 +126,7 @@ defmodule Lemieux.Extensions.Verify do
   alias Lemieux.Tool
   alias Lemieux.Tool.Descriptor
   alias Lemieux.Tools.Bash
+  alias Lemieux.Transcript
 
   @namespace "lemieux.verify"
   @marker "[lmx verify]"
@@ -363,8 +364,10 @@ defmodule Lemieux.Extensions.Verify do
   defp discover(%__MODULE__{command: :auto}, cwd), do: Discovery.discover(cwd)
   defp discover(%__MODULE__{command: command}, cwd), do: Discovery.discover(cwd, command: command)
 
-  # Everything since the person last spoke. A message this extension wrote
-  # is a continuation, not a prompt, so it does not end the run.
+  # Everything since the person last spoke. A message any stop hook wrote —
+  # this one's, or another's sending the model back to its plan — is a
+  # continuation, not a prompt, so it does not end the run. The marker
+  # check is for transcripts written before the session marked them.
   defp current_run(entries) do
     entries
     |> Enum.reverse()
@@ -372,10 +375,10 @@ defmodule Lemieux.Extensions.Verify do
     |> Enum.reverse()
   end
 
-  defp prompt?(%Entry{type: :user, payload: %{"text" => text}}) when is_binary(text),
-    do: not String.starts_with?(text, @marker)
+  defp prompt?(%Entry{type: :user} = entry) do
+    not Transcript.stop_hook?(entry) and not ours?(entry)
+  end
 
-  defp prompt?(%Entry{type: :user}), do: true
   defp prompt?(_entry), do: false
 
   defp continuations(run), do: Enum.count(run, &ours?/1)

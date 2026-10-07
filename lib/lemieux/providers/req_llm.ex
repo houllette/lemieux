@@ -2271,6 +2271,7 @@ defmodule Lemieux.Providers.ReqLLM do
         arguments: normalized_arguments(arguments)
       }
       |> put_argument_error(arguments)
+      |> put_lost_arguments(call)
     end)
   end
 
@@ -2349,6 +2350,19 @@ defmodule Lemieux.Providers.ReqLLM do
     case decode_arguments(arguments) do
       {:ok, _decoded} -> call
       {:error, reason} -> Map.put(call, :argument_error, reason)
+    end
+  end
+
+  # ReqLLM decodes streamed argument fragments itself. When they do not
+  # decode (a call the output limit cut off mid-string), it logs `args_lost`,
+  # marks the call's metadata and hands the call over with its empty default
+  # arguments, which decode perfectly well. Read only as arguments, that was
+  # a `write` with no path and no content, run as though the model had sent
+  # it; the mark is what says the call never arrived whole.
+  defp put_lost_arguments(entry, call) do
+    case ReqLLM.ToolCall.metadata(call) do
+      %{error: {:args_lost, reason}} -> Map.put_new(entry, :argument_error, {:args_lost, reason})
+      _whole -> entry
     end
   end
 

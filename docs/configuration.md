@@ -62,6 +62,7 @@ preflight](compaction.md) for the options and an Ixway timing-signal example.
 | `credential_allowlist` | none | Variable names, or `NAME_*` patterns, passed through anyway |
 | `hooks` | none | Command hooks, in `lmx`'s format or Claude Code's ([Hooks](#hooks-and-approval-policy)) |
 | `verify` | on | The project's check after a turn that edited files: `false`, or `{"command", "max_continuations", "timeout_ms"}` ([Checks after edits](#checks-after-edits)) |
+| `continuation` | on | Send the model back to its unfinished plan, or past an answer cut off at the output limit: `false`, or `{"max_continuations", "max_output_continuations"}` ([Continuing unfinished work](#continuing-unfinished-work)) |
 | `delegate` | `true` | `false` withholds the repository scout |
 | `web_search` | on when a Brave key is set | `"brave"`, or `"none"` to turn search off ([Web search](#web-search)) |
 | `web_search_providers` | none | Search keys by provider: `{"brave": {"api_key": "…"}}` |
@@ -248,6 +249,10 @@ library's four tools (`read`, `write`, `edit`, `bash`):
   repository configures (a hook, a filter, `core.fsmonitor`) runs.
   [Taking changes back](everyday.md#taking-changes-back) says what `/undo`
   can and cannot put back.
+- [Continuing unfinished work](#continuing-unfinished-work): a model that
+  stops while its own plan still has open tasks, or whose answer is cut off
+  at the output limit, is sent back to work. It reads nothing from the
+  machine, so `--config none` keeps it.
 - [System One compaction](#system-one-compaction), when its provider is set up.
 
 Off by default: [permissions](#permissions) (every tool call runs without
@@ -255,10 +260,10 @@ asking, which the startup banner calls "full auto"), [the
 sandbox](#the-sandbox), and hooks.
 
 `"disabled_extensions"` leaves shipped extensions out by name: `planning`,
-`verify`, `search`, `apply_patch`, `checkpoints`, `environment_context`,
-`mcp_discovery`, `mcp`, `interactive`, `web`, `elixir`, `workspace`,
-`delegation`, `a2a` and `systemone_compaction`. Your own extensions and an
-embedding host's policy are not affected.
+`continuation`, `verify`, `search`, `apply_patch`, `checkpoints`,
+`environment_context`, `mcp_discovery`, `mcp`, `interactive`, `web`, `elixir`,
+`workspace`, `delegation`, `a2a` and `systemone_compaction`. Your own
+extensions and an embedding host's policy are not affected.
 
 ### Running with no configuration
 
@@ -425,6 +430,24 @@ checkpoints, so `/undo` takes back what it changed in a git repository along
 with the turn's edits, as far as it would for a command, and names it as not
 undone where it could not record it. A file you save while the check runs
 goes back with that undo too; `/redo` takes the undo back.
+
+### Continuing unfinished work
+
+A model that ends its turn while the plan it wrote with `todo` during this
+prompt still has open tasks is sent back to them, with a message listing what
+is left, at most five times per prompt. It can still stop: an answer that
+calls no tool is taken as its decision (you asked it to stop there, or it is
+blocked or needs something only you can give) and ends the prompt. An answer cut off at the output-token limit
+is picked up again, at most three times; a second cut-off with nothing done in
+between ends the prompt, and `lmx` says so. A file write the limit cuts short
+is never run half-written: the model is told to write it in smaller parts. A plan left from an earlier prompt
+does not count, and neither rule touches a reflection or another aside.
+
+`"continuation": {"max_continuations": 8, "max_output_continuations": 1}`
+changes the allowances, and `"continuation": false` turns it off. It runs before
+the [check after edits](#checks-after-edits), so the check runs once the plan is
+finished rather than on half the work. [Workflows](workflows.md#continue-unfinished-work)
+has the details.
 
 ### Permissions
 

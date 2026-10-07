@@ -14,9 +14,13 @@ defmodule Lemieux.Conversation.Export do
   """
 
   alias Lemieux.ID.Shorthand
+  alias Lemieux.Transcript
 
   @max_output_lines 20
   @max_argument_chars 200
+
+  # A shipped stop hook's `[lmx …]` tag, which the heading already says.
+  @hook_tag ~r/\A\[lmx [^\]\n]*\]\s*/
 
   @doc """
   The Markdown for `snapshot` — `Lemieux.Session.snapshot/1`'s map, or
@@ -43,8 +47,12 @@ defmodule Lemieux.Conversation.Export do
   defp field(_label, nil), do: nil
   defp field(label, value), do: "- #{label}: `#{value}`"
 
-  defp section(%{type: :user, payload: %{"text" => text}}),
-    do: ["## You", String.trim(text)]
+  # Feedback a stop hook sent the model is not something the person asked.
+  defp section(%{type: :user, payload: %{"text" => text}} = entry) do
+    if Transcript.stop_hook?(entry),
+      do: ["## lmx · sent back", text |> String.replace(@hook_tag, "") |> String.trim()],
+      else: ["## You", String.trim(text)]
+  end
 
   defp section(%{type: :assistant, payload: payload}) do
     text =

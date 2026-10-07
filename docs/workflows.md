@@ -25,6 +25,11 @@ terminal UI draws the plan above the input while a task is open. A library
 host opts in through `Harness.assemble/2`, with `planning: true` in
 `Lemieux.Extensions.coding/3`, or by calling `Planning.apply(harness, [])`.
 
+The tool's description tells the model to finish the plan's tasks before
+ending its turn, unless the person asked it to stop sooner, because a plan with
+open tasks says the work is not done; [Continue unfinished
+work](#continue-unfinished-work) acts on the same signal.
+
 The ordinary way to keep a plan is `set`: the model sends the whole list, each
 task a title and a status (`pending`, `in_progress` or `completed`), whenever it
 changes. It needs no revision — `Planning.set/2` reads the current one and
@@ -61,6 +66,44 @@ extension's business. The entry type uses transcript schema 4 so older
 binaries refuse to lose it silently. This is not a cross-session work queue
 or issue database; those belong to hosts.
 
+## Continue unfinished work
+
+A response that calls no tool ends the prompt. On a long task a model often
+stops before it is done — it reports progress, says what it will do next, or
+asks whether to go on — and the session then waits for somebody to type
+"continue". `Lemieux.Extensions.Continuation` is the `/goal`-style answer that
+needs no command: the objective is the plan the model already keeps.
+
+At an ordinary stop it sends the model back, with a message starting
+`[lmx continue]` that lists what is open, when the plan has tasks still
+`pending` or `in_progress` **and** the model wrote that plan during this
+prompt (a plan left from an earlier task is not what a later question is
+about). The model can decline: an answer that calls no tool is taken as its
+decision — the person asked it to stop there, or it is blocked or needs
+something only the person can give — and ends the prompt. The message names
+the person's own "stop here" first, since the hook reads the plan and cannot
+see the prompt. Per prompt it sends the model back at most `:max_continuations`
+times (default 5).
+
+A response cut off at the output-token limit (`:length`) with no tool call is
+picked up too: a message starting `[lmx output limit]` says what happened and
+asks for smaller pieces, at most `:max_output_continuations` times (default 3).
+A second cut-off with nothing done in between ends the prompt `:length`, and
+`lmx` says so. A cut-off inside a tool call, typically a large file write, is
+the loop's rather than this extension's: the call the limit cut short is
+answered without running, telling the model to split the work into smaller
+calls ([Tool contracts](tool-contracts.md)), and the turn goes on.
+
+Neither applies to an aside, whose veto would end it as `:hook_failed`. Both
+messages are recorded as stop-hook feedback (`"stop_hook" => true`), so the
+counts are read back from the transcript and survive resume, and the terminal
+UI draws them as the harness speaking. `lmx` applies it to every session it
+equips; `"continuation": false` or `"disabled_extensions": ["continuation"]`
+leaves it out. A library host passes `continuation: true` (or its options) to
+`Lemieux.Extensions.coding/3`, which places it ahead of `verify`: the first stop
+hook to deny wins, so a model sent back to its plan is not checked on half-done
+work, and the check runs once the plan is finished.
+
 ## Verify after changes
 
 `Lemieux.Extensions.Verify` runs the project's own check after a turn that edited
@@ -72,7 +115,8 @@ and `/verify off` pauses it for a session). A library host opts in with
 `{Lemieux.Extensions.Verify, opts}`.
 
 The check runs at an ordinary stop when a `write`, `edit` or `apply_patch` call
-succeeded since the person's prompt or the last check, unless the model itself
+succeeded since the person's prompt or the last check — another stop hook's
+message is not a prompt, so edits before it still count — unless the model itself
 ran exactly that command and saw it pass after its last edit. The command is
 `:command`, or found from the repository's conventions: `tests/run.sh`, a
 `Makefile` `test` or `check` target, then `mix test`, the `package.json` test

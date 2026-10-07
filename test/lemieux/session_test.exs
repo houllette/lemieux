@@ -946,6 +946,31 @@ defmodule Lemieux.SessionTest do
     end
   end
 
+  describe "a response cut off at the output limit" do
+    test "a call it cut off is answered without running, and the loop goes on", context do
+      {session, provider} =
+        start_session(
+          context,
+          [
+            [{:tool_call, %{id: "w1", name: "write", arguments: %{}}}, {:done, :length}],
+            Scripted.complete("I will write it in smaller parts.")
+          ],
+          cwd: context.tmp_dir
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "write a large file")
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+
+      %{entries: entries} = Session.snapshot(session)
+      result = Enum.find(entries, &(&1.type == :tool_result))
+      assert result.payload["error"] == true
+      assert result.payload["output"] =~ "output-token limit"
+      assert result.payload["output"] =~ "did not run"
+      assert length(Scripted.requests(provider)) == 2
+    end
+  end
+
   describe "how a wave of tool calls is scheduled" do
     # Both tools do the same thing — count how many copies of themselves were
     # ever running at once — and differ only in what they say about being

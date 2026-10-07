@@ -291,8 +291,15 @@ defmodule Lemieux.Session.Prompts do
     if state.turns_taken < state.max_turns do
       # Not expanded: this text is a hook's, not a person's, and a policy that
       # wants a file in front of the model can put its contents there itself.
+      #
+      # Marked, because a user entry is otherwise read as the person speaking.
+      # Unmarked, another stop hook's nudge between an edit and the stop reset
+      # Verify's window, which runs from "the person's last prompt", and left
+      # the edit unchecked (reproduced in `Lemieux.Extensions.VerifyTest`); and
+      # a resumed screen drew the hook's words as a line the person had typed.
+      # `Lemieux.Transcript.stop_hook?/1` reads the mark.
       state
-      |> Core.append({:user, %{"text" => feedback}, nil})
+      |> Core.append({:user, %{"text" => feedback, "stop_hook" => true}, nil})
       |> Map.put(:stop_hook_active, true)
       |> Compacting.continue()
     else
@@ -423,6 +430,12 @@ defmodule Lemieux.Session.Prompts do
   # `environment` is here for command hooks: which credential-shaped variables
   # a hook's process may see is the environment's policy (`Lemieux.Environment`),
   # and a hook without it would inherit the whole process environment.
+  #
+  # `aside` is the running aside's kind, or nil. A stop hook that sends the
+  # model back to work has to know when nobody is waiting on that work: an
+  # aside's veto ends it as `:hook_failed`, so without this a rule meant for
+  # a person's task would turn a reflection cut off at its output limit into
+  # a failure.
   def hook_context(state) do
     %{
       cwd: state.cwd,
@@ -434,10 +447,14 @@ defmodule Lemieux.Session.Prompts do
       session: self(),
       supervisor: state.supervisor,
       stop_hook_active: state.stop_hook_active,
+      aside: aside_kind(state.aside),
       spent_usd: state.spent_usd,
       max_cost_usd: state.max_cost_usd
     }
   end
+
+  defp aside_kind(%Aside{kind: kind}), do: kind
+  defp aside_kind(nil), do: nil
 
   defp drop_provider_retry(%{provider_retry: nil} = state), do: state
 

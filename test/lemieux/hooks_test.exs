@@ -380,7 +380,7 @@ defmodule Lemieux.HooksTest do
 
       hooks = [
         stop: fn _reason, hook_context ->
-          send(parent, {:stop_hook, hook_context.stop_hook_active})
+          send(parent, {:stop_hook, hook_context.stop_hook_active, hook_context.aside})
 
           if hook_context.stop_hook_active,
             do: :allow,
@@ -402,11 +402,22 @@ defmodule Lemieux.HooksTest do
 
       assert :ok = Session.prompt(session, "work")
       assert_receive {:lemieux, _, {:finished, :stop}}
-      assert_received {:stop_hook, false}
-      assert_received {:stop_hook, true}
+      assert_received {:stop_hook, false, nil}
+      assert_received {:stop_hook, true, nil}
 
+      # Recorded as the harness speaking, so nothing reading the transcript
+      # later takes the hook's words for the person's next prompt.
       assert [_first, %Request{entries: entries}] = Scripted.requests(provider)
-      assert List.last(entries).payload == %{"text" => "verify the work before stopping"}
+      feedback = List.last(entries)
+
+      assert feedback.payload == %{
+               "text" => "verify the work before stopping",
+               "stop_hook" => true
+             }
+
+      assert Lemieux.Transcript.stop_hook?(feedback)
+      [prompt] = Enum.filter(entries, &(&1.type == :user and &1 != feedback))
+      refute Lemieux.Transcript.stop_hook?(prompt)
     end
 
     test "errorOccurred observes provider errors", context do

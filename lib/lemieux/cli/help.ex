@@ -233,6 +233,9 @@ defmodule Lemieux.CLI.Help do
       extensions            your extensions by name (lmx help extensions)
       extension_options     NAME: {options} for each extension
       verify                false, or {command, max_continuations, timeout_ms}
+      continuation          false, or {max_continuations,
+                            max_output_continuations}: how often a prompt
+                            left unfinished or cut off is sent back to work
       input_modalities      ["text", "image", "pdf"] for a model the catalog
                             does not know, so tools can show it attachments
       auto_compaction       false: a session never compacts on its own
@@ -241,8 +244,9 @@ defmodule Lemieux.CLI.Help do
       notifications         false stops the terminal UI ringing when a turn
                             ends or needs you (default true)
       disabled_extensions   shipped extensions to leave out: planning, verify,
-                            search, apply_patch, checkpoints, environment_context,
-                            mcp_discovery, elixir, delegation, …
+                            continuation, search, apply_patch, checkpoints,
+                            environment_context, mcp_discovery, elixir,
+                            delegation, …
     """
   end
 

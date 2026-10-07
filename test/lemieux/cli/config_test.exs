@@ -664,6 +664,28 @@ defmodule Lemieux.CLI.ConfigTest do
     end
   end
 
+  test "the continuation section takes a boolean or bounded allowances", %{tmp_dir: dir} do
+    path = write_config(dir, %{"version" => 1, "continuation" => %{"max_continuations" => 8}})
+    assert {:ok, config} = Config.load(path)
+    assert Config.get(config, "continuation") == %{"max_continuations" => 8}
+
+    path = write_config(dir, %{"version" => 1, "continuation" => false})
+    assert {:ok, _config} = Config.load(path)
+
+    for section <- [
+          %{"max_continuations" => 101},
+          %{"max_output_continuations" => -1},
+          %{"enabled" => "no"}
+        ] do
+      File.write!(path, JSON.encode!(%{"version" => 1, "continuation" => section}))
+      assert {:error, reason} = Config.load(path), inspect(section)
+      assert reason =~ "continuation"
+    end
+
+    File.write!(path, JSON.encode!(%{"version" => 1, "disabled_extensions" => ["continuation"]}))
+    assert {:ok, _config} = Config.load(path)
+  end
+
   test "the theme setting names a palette the screen has, and nothing else", %{tmp_dir: dir} do
     path = Path.join(dir, "config.json")
 

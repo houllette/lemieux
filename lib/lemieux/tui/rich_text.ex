@@ -72,7 +72,8 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     @typedoc "A row selected for the visible transcript window."
     @type row ::
-            {:lmx | :you | :space | :summary | :notice | :interrupted | :verify, String.t()}
+            {:lmx | :you | :space | :summary | :notice | :interrupted | :verify | :hook,
+             String.t()}
             | {:activity, String.t(), String.t()}
             | Blocks.row()
             | {:subagent_child, child()}
@@ -185,6 +186,15 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     defp styled({:verify, text}, theme),
       do: [
         {"✓ ", %Style{fg: theme.voices.activity, modifiers: [:bold]}},
+        {text, %Style{fg: theme.voices.activity}}
+      ]
+
+    # Any other stop hook sending the model back to work — an unfinished plan,
+    # an answer cut off, a host's own rule — in the same voice, with a mark
+    # that says the turn goes round again.
+    defp styled({:hook, text}, theme),
+      do: [
+        {"↻ ", %Style{fg: theme.voices.activity, modifiers: [:bold]}},
         {text, %Style{fg: theme.voices.activity}}
       ]
 

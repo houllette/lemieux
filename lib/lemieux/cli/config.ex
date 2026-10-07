@@ -134,7 +134,8 @@ defmodule Lemieux.CLI.Config do
              auto_compaction compaction_price_tiers keep_recent_tokens summary_model systemone_compaction
              systemone_providers max_turns max_requests max_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
-             extension_options scout_model verify input_modalities notifications skills)
+             extension_options scout_model verify continuation input_modalities notifications
+             skills)
   # A misspelling of one of these is refused rather than ignored: ignoring it
   # could send a request somewhere other than where the file meant, or
   # without the credential it meant to supply.
@@ -155,6 +156,7 @@ defmodule Lemieux.CLI.Config do
   @sandbox_fields ~w(enabled backend network localhost writable hidden)
   @verify_fields ~w(enabled command max_continuations timeout_ms)
   @skills_fields ~w(omarchy disabled)
+  @continuation_fields ~w(enabled max_continuations max_output_continuations)
   # What a model can be shown besides text, as the model catalog names it.
   # A fixed map rather than `String.to_existing_atom/1`: the file is data.
   @modalities %{"text" => :text, "image" => :image, "pdf" => :pdf}
@@ -168,8 +170,8 @@ defmodule Lemieux.CLI.Config do
   @systemone_typesafe_fields ~w(api_key model input_per_million output_per_million)
   @systemone_ixway_fields ~w(base_url model input_per_million output_per_million)
   @shipped_extensions ~w(mcp interactive web elixir workspace delegation a2a systemone_compaction
-                         environment_context planning verify search apply_patch checkpoints
-                         mcp_discovery)
+                         environment_context planning continuation verify search apply_patch
+                         checkpoints mcp_discovery)
 
   @doc "Returns the optional personal configuration path."
   @spec default_path() :: Path.t()
@@ -796,6 +798,7 @@ defmodule Lemieux.CLI.Config do
          :ok <- validate_section(settings, "sandbox", @sandbox_fields),
          :ok <- validate_section(settings, "verify", @verify_fields),
          :ok <- validate_skills(Map.get(settings, "skills", %{})),
+         :ok <- validate_section(settings, "continuation", @continuation_fields),
          :ok <- validate_mcp_servers(Map.get(settings, "mcp_servers", %{})),
          :ok <- validate_extension_options(Map.get(settings, "extension_options", %{})),
          :ok <- validate_web_search_providers(Map.get(settings, "web_search_providers", %{})),
@@ -806,8 +809,8 @@ defmodule Lemieux.CLI.Config do
     end
   end
 
-  # `"sandbox"` and `"verify"` also take a bare boolean; only their object
-  # form has keys to check.
+  # `"sandbox"`, `"verify"` and `"continuation"` also take a bare boolean;
+  # only their object form has keys to check.
   defp validate_section(settings, section, allowed) do
     case Map.get(settings, section) do
       fields when is_map(fields) -> validate_section_fields(fields, section, allowed)
@@ -831,8 +834,9 @@ defmodule Lemieux.CLI.Config do
   defp valid_section_entry?("permissions", {"non_interactive", value}),
     do: value in ~w(deny allow)
 
-  defp valid_section_entry?(section, {"enabled", value}) when section in ~w(sandbox verify),
-    do: is_boolean(value)
+  defp valid_section_entry?(section, {"enabled", value})
+       when section in ~w(sandbox verify continuation),
+       do: is_boolean(value)
 
   defp valid_section_entry?("sandbox", {"backend", value}),
     do: value in ~w(auto seatbelt bubblewrap)
@@ -851,6 +855,15 @@ defmodule Lemieux.CLI.Config do
 
   defp valid_section_entry?("verify", {"timeout_ms", value}),
     do: is_integer(value) and value > 0
+
+  # The bounds `Lemieux.Extensions.Continuation.init/1` enforces, checked
+  # here so a bad file is refused when it is read rather than when a session
+  # starts.
+  defp valid_section_entry?("continuation", {"max_continuations", value}),
+    do: is_integer(value) and value in 0..100
+
+  defp valid_section_entry?("continuation", {"max_output_continuations", value}),
+    do: is_integer(value) and value in 0..10
 
   defp valid_section_entry?(_section, _entry), do: false
 
@@ -1040,7 +1053,7 @@ defmodule Lemieux.CLI.Config do
   defp valid_field?("hooks", value), do: is_map(value)
   defp valid_field?("permissions", value), do: is_map(value)
 
-  defp valid_field?(key, value) when key in ~w(sandbox verify),
+  defp valid_field?(key, value) when key in ~w(sandbox verify continuation),
     do: is_boolean(value) or is_map(value)
 
   defp valid_field?("mcp_servers", value), do: is_map(value)

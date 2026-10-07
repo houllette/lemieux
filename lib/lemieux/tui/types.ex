@@ -28,7 +28,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     else is `lmx` talking about it, and `:you` is what was typed.
     """
     @type line ::
-            {:lmx | :you | :space | :summary | :notice | :interrupted | :verify, String.t()}
+            {:lmx | :you | :space | :summary | :notice | :interrupted | :verify | :hook,
+             String.t()}
             | {:steer, :pending | :sent | :not_sent, String.t()}
             | {:compacting, reference(), String.t()}
             | {:compact_space, reference()}
