@@ -674,6 +674,55 @@ defmodule Lemieux.TUI.InputTest do
       assert tui() |> type("say hello") |> press("w", ["ctrl"]) |> typed() == "say "
     end
 
+    # Cmd-Backspace arrives as Ctrl-U from most macOS terminals (#23).
+    test "ctrl-u deletes back to the start of the line" do
+      state = tui() |> type("say hello") |> press("left") |> press("left")
+
+      assert state |> press("u", ["ctrl"]) |> typed() == "lo"
+    end
+
+    test "ctrl-u held down never brings deleted text back" do
+      state =
+        tui()
+        |> type("hello")
+        |> press("backspace")
+        |> press("backspace")
+        |> press("u", ["ctrl"])
+        |> press("u", ["ctrl"])
+
+      assert typed(state) == ""
+    end
+
+    test "ctrl-u at the start of a line joins it to the line above" do
+      state = tui() |> type("one") |> press("enter", ["shift"]) |> type("two") |> press("home")
+
+      assert state |> press("u", ["ctrl"]) |> typed() == "onetwo"
+    end
+
+    test "cmd-backspace reported as itself deletes back to the start of the line" do
+      assert tui() |> type("say hello") |> press("backspace", ["super"]) |> typed() == ""
+    end
+
+    test "a character with Command, Hyper or Meta held types nothing" do
+      for modifier <- ["super", "hyper", "meta"] do
+        assert tui() |> press("k", [modifier]) |> typed() == ""
+      end
+
+      assert tui() |> press("K", ["shift"]) |> typed() == "K"
+    end
+
+    test "a control character is never typed into the box" do
+      for code <- ["\e", "\a", "\u0085"] do
+        assert tui() |> type("hi") |> press(code) |> typed() == "hi"
+      end
+    end
+
+    test "ctrl-z undoes, so the editor's undo still has a key" do
+      state = tui() |> type("say hello") |> press("u", ["ctrl"])
+
+      assert state |> press("z", ["ctrl"]) |> typed() == "say hello"
+    end
+
     test "alt-b moves back a word without deleting it" do
       assert tui() |> type("say hello") |> press("b", ["alt"]) |> type("X") |> typed() ==
                "say Xhello"

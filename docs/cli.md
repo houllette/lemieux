@@ -272,7 +272,10 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 | Enter on an empty line after a crash | Resume the crashed session |
 
 `/help` lists the same keys. Other editing keys (cursor and word motion,
-deletion, selection with Shift, paste) belong to the input box. Every binding
+deletion, selection with Shift, paste) belong to the input box. Among them,
+Ctrl-U deletes back to the start of the line, and is what most macOS
+terminals send for Cmd-Backspace; Ctrl-W and Alt-Backspace (Option-Backspace)
+delete a word; Ctrl-Z undoes. Every binding
 above can be changed with `"keys"` in `~/.lmx/config.json`; [Rebinding
 keys](terminal-ui.md#rebinding-keys) lists the action names.
 

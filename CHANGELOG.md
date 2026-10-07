@@ -7,6 +7,22 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### lmx
+
+- Ctrl-U in the input box deletes back to the start of the line, as it does
+  at a shell prompt, instead of undoing the last edit. Most macOS terminals
+  (iTerm2, Ghostty, Alacritty, VS Code) send Ctrl-U for Cmd-Backspace, so
+  Cmd-Backspace took back one typed character per press and, held after
+  deleting, brought the deleted text back. A Cmd-Backspace the terminal
+  reports as itself does the same, rather than deleting one character. Undo
+  moves to Ctrl-Z. (#23)
+- A key the screen and the input box both pass over types nothing. The input
+  box typed any character pressed without Ctrl or Alt, so a Command, Hyper
+  or Meta key the terminal reported (Cmd-K, Cmd-C) typed its letter, and a
+  control character such as ESC went into the draft as an invisible byte.
+
 ## 0.9.1 — 2026-10-07
 
 0.9.0, signed. 0.9.0 was published without `SHA256SUMS.sig` and
