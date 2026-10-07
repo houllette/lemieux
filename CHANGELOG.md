@@ -119,7 +119,10 @@ API.
   `✓` for the check), live and in a resumed session, and `lmx log` and
   `/export` label them the same way, where a resumed session drew them as
   lines you had typed. The default system prompt now says that ending a turn
-  hands control back to you, and to keep working until the task is done.
+  hands control back to you, and to keep working until the task is done, and
+  the `todo` tool's description that a plan with open tasks means the work is
+  not done, unless you asked the model to stop sooner. Neither wording change
+  is measured yet.
 
 ### Installing and updating
 
@@ -207,6 +210,12 @@ API.
   the person's prompt: it did, so edits made before such a message were never
   checked. A command hook in Claude Code's `Stop` format that sent the model
   back could do that before this release.
+
+  **Migration:** a host that compares a stop hook's `:user` entry payload
+  exactly (`payload == %{"text" => text}`) now sees the extra
+  `"stop_hook" => true` key. Match on `"text"` instead, and use
+  `Lemieux.Transcript.stop_hook?/1` to tell the hook's words from the
+  person's.
 
 ## 0.8.1 — 2026-10-06
 

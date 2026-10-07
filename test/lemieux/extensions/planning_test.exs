@@ -304,6 +304,15 @@ defmodule Lemieux.Extensions.PlanningTest do
     assert descriptor.policy["approval"] == "never"
   end
 
+  # The plan is what `Lemieux.Extensions.Continuation` reads, so the model is
+  # told that open tasks mean the work is not done.
+  test "the todo tool says open tasks mean the work is not done" do
+    description = Planning.Tool.description()
+
+    assert description =~ "finish its tasks before you end your turn"
+    assert description =~ "a plan with open tasks says the work is not done"
+  end
+
   test "document validation rejects oversized and non JSON state without killing session", ctx do
     assert {:error, :document_too_large} =
              Session.put_document(ctx.session, "test", 0, %{"x" => String.duplicate("x", 70_000)})

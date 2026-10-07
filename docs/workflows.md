@@ -25,6 +25,11 @@ terminal UI draws the plan above the input while a task is open. A library
 host opts in through `Harness.assemble/2`, with `planning: true` in
 `Lemieux.Extensions.coding/3`, or by calling `Planning.apply(harness, [])`.
 
+The tool's description tells the model to finish the plan's tasks before
+ending its turn, unless the person asked it to stop sooner, because a plan with
+open tasks says the work is not done; [Continue unfinished
+work](#continue-unfinished-work) acts on the same signal.
+
 The ordinary way to keep a plan is `set`: the model sends the whole list, each
 task a title and a status (`pending`, `in_progress` or `completed`), whenever it
 changes. It needs no revision — `Planning.set/2` reads the current one and

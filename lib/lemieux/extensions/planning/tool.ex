@@ -19,10 +19,18 @@ defmodule Lemieux.Extensions.Planning.Tool do
   @impl true
   def name, do: "todo"
 
+  # The first sentence ties stopping to the plan. `Lemieux.Extensions.Continuation`
+  # can only send a model back to a plan it wrote, and in live runs
+  # (2026-10-07) models kept one when the prompt asked for it, which a long
+  # task's prompt usually does not. Unmeasured, like the prompt's own
+  # "keep working" line. The exception is there because harness wording that
+  # named no exception carried models past a person's "stop after this".
   @impl true
   def description,
     do:
-      "Keep a plan for multi-step work. Send the whole list with action `set` whenever it " <>
+      "Keep a plan for multi-step work, and finish its tasks before you end your turn " <>
+        "unless the person asked you to stop sooner: a plan with open tasks says the work " <>
+        "is not done. Send the whole list with action `set` whenever it " <>
         "changes — each task a title and a status (pending, in_progress, completed) — and " <>
         "keep the task you are working on in_progress. `list` shows the plan. Completed means " <>
         "you report it done, not that anything verified it. The create, update, reopen and " <>
