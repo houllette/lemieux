@@ -37,6 +37,39 @@ API.
   one-file route to an OpenAI-compatible server, and
   [Adding a model route](docs/extensions.md#adding-a-model-route) is the
   guide. (#14)
+- Jev compaction chooses its **System One provider from the config file**,
+  the way `"web_search"` chooses a search backend. `jev_compaction.provider`
+  selects `typesafe`, `ixway` or a name declared in the new
+  `jev_compaction_providers` section, whose entries take a `base_url` that
+  speaks `POST /v1/systemone`, an optional `api_key` or `api_key_env` (with
+  `api_key_header` for a service that wants the key in a header rather than
+  as a bearer token), extra `headers`, a default `model` and a tariff. A
+  scorer on a machine you
+  control, or a vendor's decision API, now needs only config: no
+  `JEV_API_KEY` or Ixway key, and nothing reaches TypeSafe or Ixway. A
+  declared provider that is not selected neither switches the step on nor
+  receives anything; there is no fallback from one provider to another; and
+  a provider without a declared tariff makes no evaluation under a dollar
+  cap. TypeSafe alone keeps its default model and published rates. Existing
+  files keep working: with no `provider`, the choice between TypeSafe and
+  Ixway is the one `lmx` always made, `route` is accepted as the older
+  spelling of `provider`, and the TypeSafe key and Ixway endpoint stay where
+  they were. In `apply` and `shadow` mode an incomplete provider now stops
+  the start naming the missing piece, where it used to say only "Jev access
+  is unavailable", and `lmx explain` shows the selected provider in the
+  extension's options. In the bundled extension, `provider:` is the new
+  option for hosts; `route:` and its companions still work, and Ixway's
+  client is now the SDK's generic endpoint provider rather than TypeSafe's,
+  so a request to a gateway carries the SDK's own user agent and no
+  `X-TypeSafe-*` headers. `lmx explain` reports the step's mode and the
+  selected provider's name under `diagnostics.jev_compaction`.
+  Two choices differ from the issue's sketch, and
+  `Lemieux.CLI.JevCompaction` records why: `typesafe` and `ixway` cannot be
+  redeclared in the new section (their key and endpoint keep their one
+  place), the provider is chosen in the file alone with no flag or `LMX_`
+  variable, the step stays a bundled extension rather than a library
+  behaviour, and `jev_compaction` keeps its name.
+  ([Declaring a provider](docs/compaction.md#declaring-a-provider), #6)
 
 ### Installing and updating
 

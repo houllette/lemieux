@@ -138,6 +138,43 @@ defmodule Lemieux.CLI.ExplainTest do
     refute result.stderr =~ ~s(lmx explain: ")
   end
 
+  # Issue #6: the report says where the compaction scorer's requests would
+  # go, by provider name alone. The library suite has no Jev extension, so
+  # the shapes it can run are the switched-off ones; the release host's
+  # suite covers a selected provider (dist/lmx/test/lmx/jev_compaction_test.exs).
+  test "the report names the compaction scorer's provider, or that the step is off", %{
+    tmp_dir: dir
+  } do
+    path = Path.join(dir, "config.json")
+    File.write!(path, JSON.encode!(%{"version" => 1, "jev_compaction" => %{"mode" => "off"}}))
+    File.chmod!(path, 0o600)
+
+    result = explain(["explain", "--config", path, "--no-delegate"], cwd: dir)
+    assert result.result == :ok
+    diagnostics = JSON.decode!(result.stdout)["diagnostics"]
+    assert diagnostics["jev_compaction"] == %{"mode" => "off", "provider" => nil}
+
+    # A declared and selected provider is still off when the extension is
+    # disabled, and the report says so rather than naming it.
+    File.write!(
+      path,
+      JSON.encode!(%{
+        "version" => 1,
+        "disabled_extensions" => ["jev_compaction"],
+        "jev_compaction" => %{"mode" => "apply", "provider" => "local"},
+        "jev_compaction_providers" => %{
+          "local" => %{"base_url" => "http://127.0.0.1:8080", "model" => "jev-local-1"}
+        }
+      })
+    )
+
+    result = explain(["explain", "--config", path, "--no-delegate"], cwd: dir)
+    assert result.result == :ok
+    diagnostics = JSON.decode!(result.stdout)["diagnostics"]
+    assert diagnostics["jev_compaction"] == %{"mode" => "off", "provider" => nil}
+    refute result.stdout =~ "127.0.0.1:8080"
+  end
+
   # Issue #3: the file from the report, an empty placeholder in every key
   # field. It used to be refused as `Invalid lmx config field:
   # web_search_providers.` Now the file loads, and what stops the report is

@@ -228,7 +228,7 @@ session would apply.
 | `Lemieux.Extensions.Delegation` | The repository scout behind `delegate`, and its budgets ([Delegation](subagents.md)) | `delegation` | default | default |
 | Yours, from `--extension`, `--extension-dir` or `"extensions"` | Whatever you built; see [Installing an extension into `lmx`](#installing-an-extension-into-lmx), and [Adding a model route](#adding-a-model-route) for one that offers a route rather than shaping the harness | | flag | flag |
 | `Lemieux.Extensions.Checkpoints` | Records what tools change, for `/undo`, `/rewind` and `/redo` ([Checkpoints](tool-contracts.md#checkpoints)) | `checkpoints` | default | default |
-| `LemieuxJevCompaction` | Jev compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-jev-projection-before-compaction)) | `jev_compaction` | when a route is set | when a route is set |
+| `LemieuxJevCompaction` | Jev compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-jev-projection-before-compaction)) | `jev_compaction` | when a provider is complete | when a provider is complete |
 
 "New sessions" means a session `lmx` is equipping a fresh catalog for: a
 resumed session keeps the catalog its transcript recorded. `environment_context`,
@@ -652,7 +652,7 @@ show the shapes an extension takes:
 The [Jev compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
 lives in `dist/lmx/extensions/jev_compaction` and ships inside the `lmx`
 release; it is part of `lmx`, not an example. It attaches at
-`prepare_next_turn` when a Jev route is configured and shortens selected old
+`prepare_next_turn` when a System One provider is configured and shortens selected old
 read results in the outgoing request before summary compaction checks the
 context window and price tier;
 [Compaction](compaction.md#optional-jev-projection-before-compaction) says

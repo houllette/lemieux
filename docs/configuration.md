@@ -45,7 +45,8 @@ Every key `~/.lmx/config.json` accepts, and what applies when it is absent.
 | `keep_recent_tokens` | none | About how many tokens of recent conversation a compaction keeps ([Choosing a cut](compaction.md#choosing-a-cut)) |
 | `summary_model` | the session's model | A different model for compaction summaries |
 | `compaction_price_tiers` | none | Price bands per model, so compaction happens before a price cliff ([A price cliff](compaction.md#a-price-cliff)) |
-| `jev_compaction` | `{"mode": "auto"}` | TypeSafe's Jev model shortens old file reads; on only when a route is set up ([Jev compaction](#jev-compaction)) |
+| `jev_compaction` | `{"mode": "auto"}` | A System One scorer — TypeSafe's Jev model unless `provider` selects another — shortens old file reads; on only when the selected provider is complete ([Jev compaction](#jev-compaction)) |
+| `jev_compaction_providers` | none | System One providers besides TypeSafe and Ixway, by name: `{"local": {"base_url": "http://127.0.0.1:8080", "model": "…"}}` ([Jev compaction](#jev-compaction)) |
 
 Embedding hosts can configure preflight, price-aware and advisory compaction
 through the session API. See [Compaction and price-aware
@@ -150,7 +151,11 @@ variable that is empty or blank is different: it counts as unset, so the
 file's value applies, except that the switches `LMX_WEB_FETCH`,
 `LMX_PROJECT_MCP` and `LMX_DELEGATE` read an empty value as off. `IXWAY_API_KEY`
 overrides `ixway.api_key`, `JEV_API_KEY` overrides `jev_compaction.api_key`,
-and `BRAVE_SEARCH_API_KEY` overrides `web_search_providers.brave.api_key`.
+the variable a System One provider's `api_key_env` names overrides that
+provider's `api_key`, and `BRAVE_SEARCH_API_KEY` overrides
+`web_search_providers.brave.api_key`. Which System One provider Jev
+compaction uses is chosen in the file alone (`jev_compaction.provider`);
+there is no flag or variable for it.
 Keys stay in host state: they are never written to transcripts or request
 snapshots.
 
@@ -240,7 +245,7 @@ library's four tools (`read`, `write`, `edit`, `bash`):
   repository configures (a hook, a filter, `core.fsmonitor`) runs.
   [Taking changes back](everyday.md#taking-changes-back) says what `/undo`
   can and cannot put back.
-- [Jev compaction](#jev-compaction), when a route for it is set up.
+- [Jev compaction](#jev-compaction), when its provider is set up.
 
 Off by default: [permissions](#permissions) (every tool call runs without
 asking, which the startup banner calls "full auto"), [the
@@ -275,30 +280,59 @@ left unread.
 
 ### Jev compaction
 
-`lmx` bundles an extension that asks TypeSafe's Jev model whether old, long
-file reads in the conversation are still needed, and shortens the ones it
-marks as not needed in the next request to the model. It sends nothing until
-it has a route:
+`lmx` bundles an extension that asks a System One scorer — TypeSafe's Jev
+model, unless you select another provider — whether old, long file reads in
+the conversation are still needed, and shortens the ones it marks as not
+needed in the next request to the model. It sends nothing until the selected
+provider is complete. `jev_compaction.provider` selects one, the way
+`"web_search"` selects a search backend; two are built in:
 
-- **TypeSafe**, the usual one: `JEV_API_KEY` in the environment `lmx` runs
-  in, or `jev_compaction.api_key` in `~/.lmx/config.json`.
-- **Ixway**: an Ixway endpoint (`jev_compaction.endpoint`, or the one `lmx` is
-  routed through), a pinned `jev_compaction.model` and an Ixway key
-  (`IXWAY_API_KEY` or `ixway.api_key`). The same request then goes to that
-  endpoint, never to TypeSafe.
+- **TypeSafe** (`"provider": "typesafe"`), the usual one: `JEV_API_KEY` in
+  the environment `lmx` runs in, or `jev_compaction.api_key` in
+  `~/.lmx/config.json`.
+- **Ixway** (`"provider": "ixway"`): an Ixway endpoint
+  (`jev_compaction.endpoint`, or the one `lmx` is routed through), a pinned
+  `jev_compaction.model` and an Ixway key (`IXWAY_API_KEY` or
+  `ixway.api_key`). The same request then goes to that endpoint, never to
+  TypeSafe.
 
-With either route complete, the default `"mode": "auto"` switches it on with
-no other setting. The installed `lmx` never reads a working directory's
-`.env`, so a repository you open cannot supply a key or an endpoint.
+Any other name is a provider you declare in `jev_compaction_providers`: a
+service that implements `POST /v1/systemone`, with a `base_url`, a `model`,
+and if it wants one a key (`api_key`, or `api_key_env` naming a variable in
+your shell, with `api_key_header` when the service wants it in a header
+rather than as a bearer token), plus `headers` and a tariff. A scorer on your
+own machine needs only that:
+
+```json
+{
+  "jev_compaction": {"provider": "local"},
+  "jev_compaction_providers": {
+    "local": {"base_url": "http://127.0.0.1:8080", "model": "jev-local-1"}
+  }
+}
+```
+
+With the selected provider complete, the default `"mode": "auto"` switches
+the step on with no other setting. With no `provider`, `lmx` chooses between
+TypeSafe and Ixway as it always has: Ixway when its endpoint and a pinned
+model are set, TypeSafe otherwise; a declared provider is never chosen that
+way, and its entry sends nothing until `provider` names it. There is no
+fallback from one provider to another, and a provider without a declared
+tariff makes no evaluation under a dollar cap. [Declaring a
+provider](compaction.md#declaring-a-provider) lists an entry's keys. The
+installed `lmx` never reads a working directory's `.env`, so a repository
+you open cannot supply a key or an endpoint.
 
 **When it sends something.** Before a model request, and only when all of
 this holds: the request contains successful `read` results of at least 1,000
 characters that are older than its six most recent entries (and are not
 `AGENTS.md` or `SKILL.md`); there are at most 20 of them; the session has made
 fewer than three Jev evaluations; and the request is not a retry and has not
-been evaluated before. Each evaluation is one HTTPS request,
-`POST https://api.typesafe.ai/v1/systemone` on the TypeSafe route, with the
-key as a bearer token, no retries, no redirects and a 15-second timeout.
+been evaluated before. Each evaluation is one HTTP request,
+`POST /v1/systemone` under the selected provider's URL
+(`https://api.typesafe.ai` for TypeSafe), with the provider's key as a
+bearer token if it has one, no retries, no redirects and a 15-second
+timeout.
 
 **What it sends**, in a body of at most 60 KB (a larger one is not sent):
 
@@ -319,11 +353,13 @@ still quote files or code that were pasted into the conversation.
 request only, to its first 160 characters and a note telling the model to run
 the tool again if it needs the contents. The transcript keeps the full output
 and records each evaluation (entry ids, digests, scores, estimated savings,
-usage and latency), never tool output or credentials. TypeSafe bills each
-evaluation, and the cost counts toward `--max-cost-usd`.
+usage and latency), never tool output or credentials. The provider bills
+each evaluation, and the known cost counts toward `--max-cost-usd`; a
+provider with no declared tariff makes no evaluation under a cap.
 
 **Turning it off.** `"jev_compaction": {"mode": "off"}`, or
-`"disabled_extensions": ["jev_compaction"]`, or no route. `"mode": "shadow"`
+`"disabled_extensions": ["jev_compaction"]`, or no complete provider.
+`"mode": "shadow"`
 still sends the same data but never shortens anything. From a source
 checkout it is included only when you run from `dist/lmx`, a Mix project with
 its own dependencies:

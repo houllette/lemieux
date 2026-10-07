@@ -87,18 +87,108 @@ defmodule LemieuxJevCompactionTest do
       model: "jev-local-1"
     ]
 
+    # Ixway is one more `POST /v1/systemone` service: it goes through the
+    # SDK's generic endpoint provider, not TypeSafe's, so a gateway and a
+    # declared provider share one code path.
     client = JevCompaction.client(opts)
     assert client.base_url == "http://localhost:4003"
     assert client.api_key == "gateway-test-key"
     assert client.default_model == "jev-local-1"
-    assert client.provider == SystemOneSDK.Providers.TypeSafe
+    assert client.provider == SystemOneSDK.Providers.Endpoint
     assert client.response_contract.allowed_models == ["jev-local-1"]
+    assert JevCompaction.describe(opts)["provider"] == "ixway"
 
     missing = Keyword.put(opts, :ixway_api_key, "")
     assert JevCompaction.client(missing) == nil
 
     assert {:error, "Jev access is unavailable"} =
              JevCompaction.init(Keyword.put(missing, :enabled, true))
+  end
+
+  test "a declared provider builds an endpoint client for its URL, keyless when it has no key" do
+    provider = %{
+      name: "local",
+      type: :endpoint,
+      base_url: "http://127.0.0.1:8080/scorer",
+      api_key: nil,
+      headers: %{"X-Scorer-Tenant" => "team-a"},
+      model: "jev-local-1"
+    }
+
+    client = JevCompaction.client(provider: provider)
+    assert client.provider == SystemOneSDK.Providers.Endpoint
+    assert client.base_url == "http://127.0.0.1:8080/scorer"
+    assert client.api_key == nil
+    assert client.default_model == "jev-local-1"
+    assert client.headers["X-Scorer-Tenant"] == "team-a"
+    assert client.response_contract.allowed_models == ["jev-local-1"]
+    assert JevCompaction.describe(provider: provider)["provider"] == "local"
+
+    # A service that wants the key in a header of its own gets it there, and
+    # no bearer token.
+    headed = Map.merge(provider, %{api_key: "private-header-key", api_key_header: "X-API-Key"})
+    assert JevCompaction.client(provider: headed).api_key == nil
+    assert JevCompaction.client(provider: headed).headers["X-API-Key"] == "private-header-key"
+    assert JevCompaction.client(provider: headed).headers["X-Scorer-Tenant"] == "team-a"
+
+    # The hosted service is the one provider with TypeSafe's client, default
+    # model and published rates; a declared one is unpriced until told.
+    hosted = %{provider | name: "typesafe", type: :typesafe, base_url: "https://api.typesafe.ai"}
+
+    assert JevCompaction.client(provider: %{hosted | api_key: "hosted-test-key", model: nil}).default_model ==
+             "jev-1.13.0"
+
+    assert JevCompaction.client(provider: %{hosted | api_key: "hosted-test-key", model: nil}).provider ==
+             SystemOneSDK.Providers.TypeSafe
+
+    assert JevCompaction.client(provider: %{hosted | api_key: nil}) == nil
+    assert JevCompaction.client(provider: %{provider | model: nil}) == nil
+
+    assert JevCompaction.client(provider: %{provider | base_url: "http://user:secret@host"}) ==
+             nil
+
+    assert {:error, "Jev access is unavailable"} =
+             JevCompaction.init(provider: %{provider | model: nil}, enabled: true)
+
+    assert_raise ArgumentError, ~r/:provider must be a map/, fn ->
+      JevCompaction.hook(provider: %{name: "local"})
+    end
+  end
+
+  test "a declared provider without a declared tariff is skipped under a dollar cap", %{
+    runtime: runtime,
+    store: store
+  } do
+    {:ok, session} =
+      Lemieux.start_session(
+        supervisor: runtime,
+        provider: Lemieux.Providers.Scripted.new([]),
+        store: store,
+        model: "test:model",
+        max_cost_usd: 0.01,
+        tools: [Lemieux.Tools.Read]
+      )
+
+    {request, _result} = request("read", String.duplicate("source line\n", 500))
+
+    opts = [
+      provider: %{
+        name: "local",
+        type: :endpoint,
+        # Nothing listens here; a request would fail loudly rather than quietly.
+        base_url: "http://127.0.0.1:9",
+        api_key: nil,
+        headers: %{},
+        model: "jev-local-1"
+      },
+      preserve_recent_entries: 0,
+      min_result_chars: 1,
+      reservation_per_call_usd: 0.005
+    ]
+
+    assert {:ok, ^request} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert {:ok, %{value: nil}} = Session.document(session, "jev_compaction")
+    assert Session.budget(session).spent_usd == 0
   end
 
   test "auto selects the pinned Ixway route before hosted Jev" do

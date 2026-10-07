@@ -28,7 +28,7 @@ may change in any 0.x release.
 | Claude Code skills, commands, plugins, hooks and `.mcp.json` | A documented subset; see [Claude Code compatibility](#claude-code-compatibility) |
 | A2A 1.0 peers and the read-only A2A service | Implemented for peers you configure; see [A2A](a2a.md) |
 | The `todo` plan, verification after edits, host-verified completion, delegation to the read-only scout | Supported optional features; how well they work depends on the task and the model |
-| Jev compaction | Bundled with `lmx`, which turns it on only when you give it a key or an Ixway route ([trust model](../SECURITY.md#what-lmx-sends-and-where)); the library does not depend on it |
+| Jev compaction | Bundled with `lmx`, which turns it on only when you give it a key, an Ixway route or a System One provider you declare ([trust model](../SECURITY.md#what-lmx-sends-and-where)); the library does not depend on it |
 | Ixway gateway routing and hosted learning | Optional integration; not needed to use Lemieux (see [Ixway](ixway.md)) |
 | Harness learning, tuning, confirmation, benchmarking, feedback and checkpointed agent composition | Experimental |
 | The browser-automation example (`computer_use`) | Experimental, with its own prerequisites |

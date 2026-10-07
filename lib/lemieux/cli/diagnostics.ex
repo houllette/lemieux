@@ -2,6 +2,7 @@ defmodule Lemieux.CLI.Diagnostics do
   @moduledoc false
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.Extensions
+  alias Lemieux.CLI.JevCompaction
   alias Lemieux.CLI.Logs
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.ProviderMux
@@ -18,6 +19,7 @@ defmodule Lemieux.CLI.Diagnostics do
       "model_source" => Atom.to_string(options.host.model_source),
       "route" => route(options, prepared),
       "credentials" => credentials(options, prepared),
+      "jev_compaction" => jev_compaction(options),
       "configuration" => configuration(options),
       "tui_module_available" => Code.ensure_loaded?(ExRatatui),
       "mcp" => mcp(options, prepared),
@@ -113,6 +115,27 @@ defmodule Lemieux.CLI.Diagnostics do
   # reported as the file `""`.
   @environment ~w(LMX_MODEL LMX_ROUTER LMX_BASE_URL LMX_IXWAY_URL
                   LMX_MAX_TURNS LMX_MAX_REQUESTS LMX_MAX_COST_USD)
+
+  # Where the compaction scorer's requests go, by provider name: the one
+  # assurance a person who pointed the step at their own machine wants from
+  # this report. The name alone — never a key, an endpoint or the extension's
+  # described options, which the explanation deliberately does not copy
+  # (`Lemieux.Harness.Explanation`). In `auto` mode a `nil` provider is the
+  # step staying off.
+  defp jev_compaction(options) do
+    disabled? = "jev_compaction" in Config.get(options.config, "disabled_extensions", [])
+    settings = Config.get(options.config, "jev_compaction", %{})
+    mode = if disabled?, do: "off", else: Map.get(settings, "mode", "auto")
+
+    %{"mode" => mode, "provider" => if(mode != "off", do: selected_provider(options))}
+  end
+
+  defp selected_provider(options) do
+    case JevCompaction.provider(options.config, options.ixway) do
+      {:ok, %{name: name}} -> name
+      {:unavailable, _reason} -> nil
+    end
+  end
 
   defp configuration(options) do
     %{

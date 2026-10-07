@@ -2,12 +2,41 @@ defmodule LemieuxJevCompaction do
   @moduledoc """
   Optional Jev projection of old, reproducible tool results before dispatch.
 
-  Assemble this extension in a host with access to Jev, or install `hook/1`
-  directly as a `prepare_next_turn` hook. It runs outside the session process, before Lemieux checks
-  its context window and price tiers. It asks SystemOneSDK whether the full
-  output of each eligible old read is still needed, then replaces only selected
-  outputs in the request sent to the model. Calls, results, user text and
-  assistant text remain in order. The authoritative transcript is untouched.
+  Assemble this extension in a host with access to a System One scorer, or
+  install `hook/1` directly as a `prepare_next_turn` hook. It runs outside the
+  session process, before Lemieux checks its context window and price tiers.
+  It asks SystemOneSDK whether the full output of each eligible old read is
+  still needed, then replaces only selected outputs in the request sent to the
+  model. Calls, results, user text and assistant text remain in order. The
+  authoritative transcript is untouched.
+
+  ## Providers
+
+  The scorer is one System One provider, chosen before anything is sent:
+
+  - `provider:` describes it: `%{name: "local", type: :endpoint, base_url:
+    "http://127.0.0.1:8080", api_key: nil, headers: %{}, model: "jev-local-1"}`,
+    with an optional `api_key_header:` naming the header the key travels in
+    when the service does not take a bearer token.
+    `type: :typesafe` is TypeSafe's hosted service, reached through
+    `SystemOneSDK.Providers.TypeSafe` with its published rates and `jev-1.13.0`
+    as the default model; `type: :endpoint` is any other `POST /v1/systemone`
+    service — an Ixway gateway, a vendor's decision API, a scorer on a machine
+    you control — reached through `SystemOneSDK.Providers.Endpoint`, with no
+    key unless one is given and no price unless `:input_per_million` and
+    `:output_per_million` declare one, so a capped session fails closed rather
+    than guessing. `lmx` builds this map from `jev_compaction` and
+    `jev_compaction_providers` in its config file (`Lemieux.CLI.JevCompaction`).
+  - `client:` is a `%SystemOneSDK.Client{}` the host built itself.
+  - The older spelling still works: `route:` (`:auto`, `:typesafe` or
+    `:ixway`) with `api_key:`, `ixway_endpoint:`, `ixway_api_key:` and
+    `model:`, where `:auto` prefers a pinned Ixway route and otherwise takes
+    a hosted key.
+
+  Whichever form selects the provider, nothing is sent anywhere else: an
+  unavailable provider leaves the request as it was, and never falls back to
+  another. The vendor defaults live with `type: :typesafe` alone, so a
+  provider nobody priced is unpriced, not priced like TypeSafe.
 
   Decisions are committed through the session's revisioned extension document.
   A later turn, resume or fork can replay the same projection when the host
@@ -47,11 +76,13 @@ defmodule LemieuxJevCompaction do
   alias Lemieux.{Entry, Request, Session, Tool}
   alias LemieuxJevCompaction.Transport
   alias SystemOneSDK.{Client, NoulAnswer, SystemOneResponse}
-  alias SystemOneSDK.Providers.TypeSafe
+  alias SystemOneSDK.Providers.{Endpoint, TypeSafe}
 
   @namespace "jev_compaction"
+  @typesafe_base_url "https://api.typesafe.ai"
   @default_model "jev-1.13.0"
   @typesafe_input_per_million 0.042
+  @provider_types [:typesafe, :endpoint]
   @max_recorded_evaluations 8
   @max_candidates 20
 
@@ -87,10 +118,11 @@ defmodule LemieuxJevCompaction do
     do: %{
       "enabled" => opts[:enabled],
       "mode" => Atom.to_string(mode(opts)),
+      "provider" => provider_name(opts),
       "activation_tokens" => Keyword.get(opts, :activation_tokens, 1)
     }
 
-  @doc "Whether an explicit SDK client or a configured System One route is available."
+  @doc "Whether an explicit SDK client or a usable System One provider is available."
   @spec available?(opts :: options()) :: boolean()
   def available?(opts) when is_list(opts), do: match?(%Client{}, client(opts))
 
@@ -370,7 +402,8 @@ defmodule LemieuxJevCompaction do
 
   defp external_usage(_result, opts),
     do: %{
-      "model" => Keyword.get(opts, :model) || @default_model,
+      "model" =>
+        Keyword.get(opts, :requested_model) || Keyword.get(opts, :model) || @default_model,
       "input_tokens" => 0,
       "output_tokens" => 0,
       "cost_usd" => nil,
@@ -379,11 +412,12 @@ defmodule LemieuxJevCompaction do
       "route" => route_name(opts)
     }
 
-  defp route_name(opts) do
-    cond do
-      hosted_route?(opts) -> "typesafe"
-      match?(%Client{}, opts[:client]) -> "custom"
-      true -> "ixway"
+  defp route_name(opts), do: provider_name(opts) || "unavailable"
+
+  defp provider_name(opts) do
+    case selected(opts) do
+      {:ok, %{name: name}} -> name
+      :unavailable -> nil
     end
   end
 
@@ -404,19 +438,10 @@ defmodule LemieuxJevCompaction do
      Keyword.get(opts, :output_per_million, elem(defaults, 1))}
   end
 
-  defp hosted_route?(opts) do
-    case Keyword.get(opts, :route, :auto) do
-      :typesafe ->
-        true
-
-      :ixway ->
-        false
-
-      :auto ->
-        not match?(%Client{}, opts[:client]) and
-          not (is_binary(opts[:ixway_endpoint]) and is_binary(opts[:model]))
-    end
-  end
+  # Only TypeSafe's own service carries TypeSafe's published rates. A host's
+  # client, an Ixway gateway and a declared endpoint are unpriced until the
+  # host declares their tariff.
+  defp hosted_route?(opts), do: match?({:ok, %{type: :typesafe}}, selected(opts))
 
   defp scores(
          {:ok, %SystemOneResponse{model: model, retries: 0, unknown_answers: unknown} = response},
@@ -503,66 +528,137 @@ defmodule LemieuxJevCompaction do
   end
 
   defp configured_client(opts) do
-    case route(opts) do
-      {:ok, endpoint, key, model} ->
+    case selected(opts) do
+      {:ok, %{type: type} = provider} when type in @provider_types ->
+        {api_key, headers} = credential(provider)
+
         SystemOneSDK.new_client(
-          provider: TypeSafe,
-          api_key: key,
-          base_url: endpoint,
-          model: model,
+          provider: sdk_provider(type),
+          api_key: api_key,
+          base_url: provider.base_url,
+          model: provider.model,
           retry: false,
           timeout_ms: Keyword.get(opts, :timeout_ms, 15_000),
-          headers: %{},
+          headers: headers,
           transport: Transport,
           transport_opts: [],
-          response_contract: [allowed_models: [model], on_unknown_answer: :error]
+          response_contract: [allowed_models: [provider.model], on_unknown_answer: :error]
         )
 
-      :unavailable ->
+      _other ->
         nil
     end
   end
 
-  defp route(opts) do
+  defp sdk_provider(:typesafe), do: TypeSafe
+  defp sdk_provider(:endpoint), do: Endpoint
+
+  # The key travels as a bearer token unless the provider names the header
+  # it wants it in; then it is one more header, and no Authorization is sent.
+  defp credential(%{api_key_header: header, api_key: key} = provider)
+       when is_binary(header) and is_binary(key),
+       do: {nil, Map.put(Map.get(provider, :headers, %{}), header, key)}
+
+  defp credential(provider), do: {provider.api_key, Map.get(provider, :headers, %{})}
+
+  # The provider this hook sends to, or `:unavailable`. A host's own client
+  # counts as a provider named "custom" so usage records name it; it is never
+  # rebuilt here.
+  defp selected(opts) do
+    cond do
+      match?(%Client{}, opts[:client]) -> {:ok, %{name: "custom", type: :client}}
+      is_map(opts[:provider]) -> usable(opts[:provider])
+      true -> legacy_route(opts)
+    end
+  end
+
+  defp legacy_route(opts) do
     hosted_key = Keyword.get(opts, :api_key) || System.get_env("JEV_API_KEY")
     ixway_key = Keyword.get(opts, :ixway_api_key) || System.get_env("IXWAY_API_KEY")
     ixway_endpoint = Keyword.get(opts, :ixway_endpoint)
     model = Keyword.get(opts, :model)
 
     case Keyword.get(opts, :route, :auto) do
-      :ixway -> usable_route(ixway_endpoint, ixway_key, model)
-      :typesafe -> usable_route("https://api.typesafe.ai", hosted_key, model || @default_model)
+      :ixway -> usable(ixway(ixway_endpoint, ixway_key, model))
+      :typesafe -> usable(typesafe(hosted_key, model))
       :auto -> auto_route(ixway_endpoint, ixway_key, hosted_key, model)
     end
   end
 
   defp auto_route(endpoint, key, _hosted_key, model)
-       when is_binary(endpoint) and is_binary(model), do: usable_route(endpoint, key, model)
+       when is_binary(endpoint) and is_binary(model),
+       do: usable(ixway(endpoint, key, model))
 
-  defp auto_route(_endpoint, _key, hosted_key, model),
-    do: usable_route("https://api.typesafe.ai", hosted_key, model || @default_model)
+  defp auto_route(_endpoint, _key, hosted_key, model), do: usable(typesafe(hosted_key, model))
 
-  defp usable_route(endpoint, key, model)
-       when is_binary(endpoint) and is_binary(key) and is_binary(model) do
-    if String.trim(key) != "" and String.trim(model) != "" and valid_endpoint?(endpoint),
-      do: {:ok, endpoint, key, model},
+  defp typesafe(key, model),
+    do: %{
+      name: "typesafe",
+      type: :typesafe,
+      base_url: @typesafe_base_url,
+      api_key: key,
+      model: model
+    }
+
+  defp ixway(endpoint, key, model),
+    do: %{name: "ixway", type: :endpoint, base_url: endpoint, api_key: key, model: model}
+
+  # A provider is usable when a request to it could be built: a valid base
+  # URL, a model to name, and for TypeSafe a key. `type: :endpoint` may have
+  # no key at all — a scorer on a machine the person controls often has none.
+  defp usable(%{type: :typesafe, api_key: key} = provider) do
+    if present?(key),
+      do: usable(%{provider | model: provider.model || @default_model}, :typesafe),
       else: :unavailable
   end
 
-  defp usable_route(_endpoint, _key, _model), do: :unavailable
+  # A gateway authenticates its callers: Ixway without its key is unusable,
+  # not a keyless endpoint.
+  defp usable(%{name: "ixway", api_key: key} = provider),
+    do: if(present?(key), do: usable(provider, :endpoint), else: :unavailable)
 
-  defp valid_endpoint?(endpoint) do
-    case URI.new(endpoint) do
-      {:ok,
-       %URI{scheme: scheme, host: host, userinfo: nil, query: nil, fragment: nil, path: path}}
-      when scheme in ["http", "https"] and is_binary(host) and host != "" and
-             path in [nil, "", "/"] ->
+  defp usable(%{type: :endpoint} = provider), do: usable(provider, :endpoint)
+  defp usable(_provider), do: :unavailable
+
+  defp usable(%{base_url: url, model: model} = provider, type) do
+    if present?(model) and valid_base_url?(url) and key_or_absent?(Map.get(provider, :api_key)),
+      do:
+        {:ok, %{provider | type: type, model: String.trim(model), api_key: trimmed_key(provider)}},
+      else: :unavailable
+  end
+
+  defp key_or_absent?(nil), do: true
+  defp key_or_absent?(key) when is_binary(key), do: true
+  defp key_or_absent?(_key), do: false
+
+  defp trimmed_key(%{api_key: key}) when is_binary(key) do
+    case String.trim(key) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp trimmed_key(_provider), do: nil
+
+  defp present?(value) when is_binary(value), do: String.trim(value) != ""
+  defp present?(_value), do: false
+
+  # The root before `/v1/systemone`. A path prefix is allowed, as the SDK
+  # allows it: a vendor's decision API often lives under an account path.
+  # Credentials, a query or a fragment in the URL are refused: they would be
+  # sent on the wire or silently dropped.
+  defp valid_base_url?(url) when is_binary(url) do
+    case URI.new(String.trim(url)) do
+      {:ok, %URI{scheme: scheme, host: host, userinfo: nil, query: nil, fragment: nil}}
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
         true
 
       _ ->
         false
     end
   end
+
+  defp valid_base_url?(_url), do: false
 
   defp candidates(%Request{entries: entries, tools: tools}, opts) do
     available =
@@ -763,6 +859,8 @@ defmodule LemieuxJevCompaction do
     unless Keyword.get(opts, :route, :auto) in [:auto, :typesafe, :ixway],
       do: raise(ArgumentError, ":route must be :auto, :typesafe or :ixway")
 
+    validate_provider!(Keyword.get(opts, :provider))
+
     Enum.each(
       [:max_cost_usd, :reservation_per_call_usd, :input_per_million, :output_per_million],
       fn key ->
@@ -775,6 +873,32 @@ defmodule LemieuxJevCompaction do
 
     if Keyword.get(opts, :max_candidates, @max_candidates) > @max_candidates,
       do: raise(ArgumentError, ":max_candidates cannot exceed #{@max_candidates}")
+  end
+
+  defp validate_provider!(nil), do: :ok
+
+  defp validate_provider!(%{name: name, type: type, base_url: url} = provider)
+       when is_binary(name) and type in @provider_types and is_binary(url) do
+    unless key_or_absent?(Map.get(provider, :api_key)),
+      do: raise(ArgumentError, ":provider's api_key must be a string or nil")
+
+    unless is_map(Map.get(provider, :headers, %{})),
+      do: raise(ArgumentError, ":provider's headers must be a map")
+
+    unless is_nil(Map.get(provider, :api_key_header)) or
+             is_binary(Map.get(provider, :api_key_header)),
+           do: raise(ArgumentError, ":provider's api_key_header must be a header name or nil")
+
+    unless is_nil(Map.get(provider, :model)) or is_binary(Map.get(provider, :model)),
+      do: raise(ArgumentError, ":provider's model must be a string or nil")
+
+    :ok
+  end
+
+  defp validate_provider!(_provider) do
+    raise ArgumentError,
+          ":provider must be a map with name, type (:typesafe or :endpoint), base_url, " <>
+            "api_key, headers and model"
   end
 
   defp default(:max_evaluations), do: 3

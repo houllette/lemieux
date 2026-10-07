@@ -219,7 +219,8 @@ it also runs the check command the repository chose, unasked;
   `--sandbox` they have your network access. The bundled
   [Jev compaction](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
   extension sends abridged conversation text only once you give it a
-  TypeSafe key (`JEV_API_KEY`) or an Ixway route.
+  TypeSafe key (`JEV_API_KEY`), an Ixway route or another System One
+  provider in your config file, which can be a scorer on your own machine.
 
 The [trust model](SECURITY.md#what-lmx-trusts-by-default) lists exactly what is
 guarded and what is not.

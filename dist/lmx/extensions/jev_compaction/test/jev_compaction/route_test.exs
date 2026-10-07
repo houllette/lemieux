@@ -47,6 +47,111 @@ defmodule LemieuxJevCompaction.RouteTest do
     Task.await(server)
   end
 
+  test "a declared keyless provider receives the evaluation with its headers and no bearer token",
+       %{tmp_dir: dir} do
+    body =
+      JSON.encode!(%{
+        "model" => "decision-1",
+        "usage" => %{"input_tokens" => 30, "output_tokens" => 1},
+        "answers" => %{"keep_1" => %{"type" => "noul", "noul" => 0.01}}
+      })
+
+    {endpoint, server} = endpoint(200, body)
+    session = session(dir)
+    {request, original} = request()
+
+    opts = [
+      provider: %{
+        name: "local",
+        type: :endpoint,
+        base_url: endpoint <> "/decisions",
+        api_key: nil,
+        headers: %{"X-Decision-Tenant" => "team-a"},
+        model: "decision-1"
+      },
+      # A hosted key and an Ixway key in the same options must not be used.
+      api_key: "hosted-key-that-must-not-be-used",
+      ixway_api_key: "gateway-key-that-must-not-be-used",
+      preserve_recent_entries: 0,
+      input_per_million: 0.05,
+      output_per_million: 0.0
+    ]
+
+    assert {:ok, projected} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert List.last(projected.entries).payload["output"] =~ "rerun the tool"
+    assert_receive {:system_one_wire, wire}, 2_000
+    assert wire =~ "POST /decisions/v1/systemone HTTP/1.1"
+    assert String.downcase(wire) =~ "x-decision-tenant: team-a"
+    refute String.downcase(wire) =~ "authorization:"
+    refute wire =~ "must-not-be-used"
+    assert wire =~ ~s("model":"decision-1")
+    refute wire =~ original
+
+    assert {:ok, %{value: %{"last_outcome" => "applied", "last_usage" => usage}}} =
+             Session.document(session, "jev_compaction")
+
+    assert usage["model"] == "decision-1"
+    assert_in_delta Session.budget(session).spent_usd, 30 * 0.05 / 1_000_000, 1.0e-12
+    Task.await(server)
+  end
+
+  test "a declared provider's key travels as a bearer token", %{tmp_dir: dir} do
+    {endpoint, server} = endpoint(401, ~s({"error":"unauthorized"}))
+    session = session(dir)
+    {request, _original} = request()
+
+    opts = [
+      provider: %{
+        name: "vendor",
+        type: :endpoint,
+        base_url: endpoint,
+        api_key: "private-vendor-test-key",
+        headers: %{},
+        model: "decision-1"
+      },
+      preserve_recent_entries: 0
+    ]
+
+    assert {:ok, ^request} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert_receive {:system_one_wire, wire}, 2_000
+    assert String.downcase(wire) =~ "authorization: bearer private-vendor-test-key"
+
+    assert {:ok,
+            %{value: %{"last_outcome" => "failed", "last_usage" => %{"model" => "decision-1"}}}} =
+             Session.document(session, "jev_compaction")
+
+    refute inspect(Session.document(session, "jev_compaction")) =~ "private-vendor-test-key"
+    Task.await(server)
+  end
+
+  test "a declared provider's key travels in the header it names, with no bearer token", %{
+    tmp_dir: dir
+  } do
+    {endpoint, server} = endpoint(401, ~s({"error":"unauthorized"}))
+    session = session(dir)
+    {request, _original} = request()
+
+    opts = [
+      provider: %{
+        name: "vendor",
+        type: :endpoint,
+        base_url: endpoint,
+        api_key: "private-vendor-test-key",
+        api_key_header: "X-API-Key",
+        headers: %{"X-Account" => "acct-1"},
+        model: "decision-1"
+      },
+      preserve_recent_entries: 0
+    ]
+
+    assert {:ok, ^request} = JevCompaction.prepare(request, %{session: session}, opts)
+    assert_receive {:system_one_wire, wire}, 2_000
+    assert String.downcase(wire) =~ "x-api-key: private-vendor-test-key"
+    assert String.downcase(wire) =~ "x-account: acct-1"
+    refute String.downcase(wire) =~ "authorization:"
+    Task.await(server)
+  end
+
   test "an Ixway rejection leaves the request intact and does not try hosted Jev", %{tmp_dir: dir} do
     {endpoint, server} = endpoint(401, ~s({"error":"unauthorized"}))
     session = session(dir)

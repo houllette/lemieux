@@ -287,6 +287,52 @@ defmodule Lemieux.CLI.ConfigTest do
     assert reason =~ "jev_compaction"
   end
 
+  test "System One providers are declared in their own section and selected by name", %{
+    tmp_dir: dir
+  } do
+    settings = %{
+      "version" => 1,
+      "jev_compaction" => %{"mode" => "apply", "provider" => "local"},
+      "jev_compaction_providers" => %{
+        "local" => %{
+          "type" => "endpoint",
+          "base_url" => "http://127.0.0.1:8080/scorer",
+          "api_key_env" => "SCORER_KEY",
+          "headers" => %{"X-Scorer-Tenant" => "team-a"},
+          "model" => "jev-local-1",
+          "input_per_million" => 0.05,
+          "output_per_million" => 0
+        }
+      }
+    }
+
+    path = write_config(dir, settings)
+    assert {:ok, config} = Config.load(path)
+    assert Config.get(config, "jev_compaction")["provider"] == "local"
+    assert Config.get(config, "jev_compaction_providers")["local"]["model"] == "jev-local-1"
+
+    # Without a saved key the file holds no secret, so its mode is free.
+    File.chmod!(path, 0o644)
+    assert {:ok, _config} = Config.load(path)
+
+    # A saved key makes it one, held to the same rule as every other section.
+    keyed =
+      put_in(settings, ["jev_compaction_providers", "local", "api_key"], "private-scorer-key")
+
+    File.write!(path, JSON.encode!(keyed))
+    assert {:error, reason} = Config.load(path)
+    assert reason =~ "chmod 600"
+    refute reason =~ "private-scorer-key"
+
+    File.chmod!(path, 0o600)
+    assert {:ok, config} = Config.load(path)
+
+    assert Config.get(config, "jev_compaction_providers")["local"]["api_key"] ==
+             "private-scorer-key"
+
+    refute inspect(config) =~ "private-scorer-key"
+  end
+
   test "a Jev key in config stays private and requires private file permissions", %{tmp_dir: dir} do
     path =
       write_config(dir, %{"version" => 1, "jev_compaction" => %{"api_key" => "private-jev-key"}})
@@ -371,6 +417,9 @@ defmodule Lemieux.CLI.ConfigTest do
           "effort" => "max"
         },
         "jev_compaction" => %{"api_key" => "   "},
+        "jev_compaction_providers" => %{
+          "local" => %{"base_url" => "http://127.0.0.1:8080", "api_key" => ""}
+        },
         "web_search" => "brave",
         "web_search_providers" => %{"brave" => %{"api_key" => ""}},
         "web_fetch" => true,
@@ -381,7 +430,7 @@ defmodule Lemieux.CLI.ConfigTest do
 
     assert Config.warnings(config) ==
              Enum.map(
-               ~w(ixway.api_key jev_compaction.api_key providers.openai.api_key web_search_providers.brave.api_key),
+               ~w(ixway.api_key jev_compaction.api_key jev_compaction_providers.local.api_key providers.openai.api_key web_search_providers.brave.api_key),
                &"Empty field #{inspect(&1)} in the lmx config; it is ignored. Supply the key there, or remove the placeholder."
              )
 
@@ -390,6 +439,10 @@ defmodule Lemieux.CLI.ConfigTest do
     assert Config.get(config, "ixway")["api_key"] == nil
     assert Config.get(config, "ixway")["enabled"] == true
     assert Config.get(config, "jev_compaction") == %{}
+
+    assert Config.get(config, "jev_compaction_providers") == %{
+             "local" => %{"base_url" => "http://127.0.0.1:8080"}
+           }
 
     # Nothing left in the file is a secret, so its mode need not be private.
     File.chmod!(path, 0o644)
@@ -420,6 +473,75 @@ defmodule Lemieux.CLI.ConfigTest do
            "one line of text"},
           {%{"jev_compaction" => %{"max_cost_usd" => 1, "reservation_per_call_usd" => 2}},
            "jev_compaction.reservation_per_call_usd", "no more than max_cost_usd"},
+          {%{"jev_compaction" => %{"provider" => "Private Scorer"}}, "jev_compaction.provider",
+           "auto, typesafe, ixway or the name"},
+          {%{"jev_compaction" => %{"provider" => "local"}}, "jev_compaction.provider",
+           "does not declare"},
+          {%{"jev_compaction" => %{"provider" => "ixway", "route" => "ixway"}},
+           "jev_compaction.route", "older spelling of jev_compaction.provider"},
+          {%{"jev_compaction_providers" => %{"Private" => %{"base_url" => "http://h"}}},
+           "jev_compaction_providers", "lowercase letters"},
+          {%{"jev_compaction_providers" => %{"typesafe" => %{"base_url" => "http://h"}}},
+           "jev_compaction_providers.typesafe", "built in"},
+          {%{"jev_compaction_providers" => %{"auto" => %{"base_url" => "http://h"}}},
+           "jev_compaction_providers.auto", "default choice"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "api_key_header" => "Authorization"}
+             }
+           }, "jev_compaction_providers.local.api_key_header", "other than Authorization"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "input_per_million" => 0.05}
+             }
+           }, "jev_compaction_providers.local", "both or neither"},
+          {%{"jev_compaction_providers" => %{"local" => "private-key"}},
+           "jev_compaction_providers.local", "an object"},
+          {%{"jev_compaction_providers" => %{"local" => %{"model" => "m"}}},
+           "jev_compaction_providers.local", "must include base_url"},
+          {%{
+             "jev_compaction_providers" => %{"local" => %{"base_url" => "http://user:private@h"}}
+           }, "jev_compaction_providers.local.base_url", "without credentials"},
+          {%{"jev_compaction_providers" => %{"local" => %{"base_url" => "h.example"}}},
+           "jev_compaction_providers.local.base_url", "http(s) URL"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "type" => "contract"}
+             }
+           }, "jev_compaction_providers.local.type", "endpoint"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "api_key" => "private\nkey"}
+             }
+           }, "jev_compaction_providers.local.api_key", "one line of text"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "api_key_env" => "not a name"}
+             }
+           }, "jev_compaction_providers.local.api_key_env", "environment variable"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "headers" => "private"}
+             }
+           }, "jev_compaction_providers.local.headers", "header names to one-line values"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{
+                 "base_url" => "http://h",
+                 "headers" => %{"Authorization" => "Bearer private"}
+               }
+             }
+           }, "jev_compaction_providers.local.headers", "without Authorization"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "model" => ""}
+             }
+           }, "jev_compaction_providers.local.model", "name a model"},
+          {%{
+             "jev_compaction_providers" => %{
+               "local" => %{"base_url" => "http://h", "input_per_million" => -1}
+             }
+           }, "jev_compaction_providers.local.input_per_million", "zero or more"},
           {%{"providers" => %{"openai" => %{"model" => "anthropic:claude-sonnet-5"}}},
            "providers.openai.model", "openai:MODEL"},
           {%{"providers" => %{"openai" => %{"api_key" => "private\rkey"}}},
@@ -435,6 +557,20 @@ defmodule Lemieux.CLI.ConfigTest do
       assert reason =~ expectation
       refute reason =~ "private"
     end
+  end
+
+  test "an unknown key in a System One provider entry is refused with the section named", %{
+    tmp_dir: dir
+  } do
+    path =
+      write_config(dir, %{
+        "jev_compaction_providers" => %{
+          "local" => %{"base_url" => "http://127.0.0.1:8080", "endpoint" => "http://elsewhere"}
+        }
+      })
+
+    assert {:error, reason} = Config.load(path)
+    assert reason =~ ~s(Unknown field "endpoint" in lmx jev_compaction_providers.local section)
   end
 
   test "disabled_extensions accepts unique shipped names only", %{tmp_dir: dir} do

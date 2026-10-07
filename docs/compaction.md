@@ -220,12 +220,13 @@ discrepancy is not evidence of savings.
 
 The installed `lmx` bundles one more step that runs before compaction: the
 [Jev compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md)
-(`LemieuxJevCompaction`). It asks TypeSafe's Jev model whether old, long
-`read` results are still needed, and shortens the ones it marks as not needed
-in the next request sent to the model. The transcript keeps the full output.
-It runs as a `prepare_next_turn` hook, before the window and price checks
-above, so a successful projection may avoid a summary on the pending request;
-if it saves too little or Jev is unavailable, the ordinary summary logic still
+(`LemieuxJevCompaction`). It asks a System One scorer — TypeSafe's Jev model,
+unless you select another provider — whether old, long `read` results are
+still needed, and shortens the ones it marks as not needed in the next
+request sent to the model. The transcript keeps the full output. It runs as a
+`prepare_next_turn` hook, before the window and price checks above, so a
+successful projection may avoid a summary on the pending request; if it saves
+too little or the scorer is unavailable, the ordinary summary logic still
 applies.
 
 The extension lives in `dist/lmx/extensions/jev_compaction` and is part of
@@ -236,18 +237,35 @@ its `hook/1` directly.
 
 ### When it sends something
 
-Nothing is sent until a route is complete. `"jev_compaction"`'s `mode`
+Nothing is sent until a provider is complete. `"jev_compaction"`'s `mode`
 defaults to `"auto"`, which switches the extension on, with no other setting,
-as soon as either route is complete:
+as soon as the selected provider is complete. `jev_compaction.provider`
+selects one, the way `"web_search"` selects a search backend. Two are built
+in:
 
-- **TypeSafe**, the usual one: a Jev key, from `JEV_API_KEY` in the
-  environment `lmx` runs in or `jev_compaction.api_key` in
-  `~/.lmx/config.json`. The environment value wins.
-- **Ixway**: an Ixway endpoint (`jev_compaction.endpoint`, or the one `lmx`
-  is routed through: `--ixway`, `LMX_IXWAY_URL` or `ixway.endpoint`), a pinned
-  `jev_compaction.model` and an Ixway key (`IXWAY_API_KEY` or
-  `ixway.api_key`). The request then goes to that endpoint, never to
-  TypeSafe.
+- **TypeSafe** (`"provider": "typesafe"`), the usual one: a Jev key, from
+  `JEV_API_KEY` in the environment `lmx` runs in or `jev_compaction.api_key`
+  in `~/.lmx/config.json`. The environment value wins.
+- **Ixway** (`"provider": "ixway"`): an Ixway endpoint
+  (`jev_compaction.endpoint`, or the one `lmx` is routed through: `--ixway`,
+  `LMX_IXWAY_URL` or `ixway.endpoint`), a pinned `jev_compaction.model` and
+  an Ixway key (`IXWAY_API_KEY` or `ixway.api_key`). The request then goes to
+  that endpoint, never to TypeSafe.
+
+Any other name is a provider you declare in `jev_compaction_providers`: a
+service that implements `POST /v1/systemone`, whether a vendor's decision
+API or a scorer running on a machine you control, which keeps the excerpts
+described below off anyone else's servers ([Declaring a
+provider](#declaring-a-provider)).
+
+With no `provider`, `lmx` chooses between the two built-in ones as it always
+has: Ixway when its endpoint and a pinned model are both set, TypeSafe
+otherwise. A declared provider is never chosen that way: its entry switches
+nothing on and sends nothing until `provider` names it, so it can sit in the
+file before you want it, and `"provider": "typesafe"` switches back. There is
+no fallback from one provider to another. When the selected one is
+incomplete, `auto` mode leaves the step off; `apply` and `shadow` stop the
+start, naming the missing piece.
 
 The installed `lmx` never reads a working directory's `.env`, so a repository
 you open cannot supply a key or an endpoint.
@@ -262,10 +280,11 @@ all of these hold:
 - the session has made fewer than three evaluations;
 - the request is not a retry, and has not been evaluated before.
 
-Each evaluation is one HTTPS request: on the TypeSafe route,
-`POST https://api.typesafe.ai/v1/systemone`, with the key as a bearer token,
-no retries, no redirects and a 15-second timeout. Its body, capped at 60 KB
-(a larger one is not sent), holds:
+Each evaluation is one HTTP request, `POST /v1/systemone` under the selected
+provider's URL (`https://api.typesafe.ai` for TypeSafe), with the provider's
+key as a bearer token if it has one, no retries, no redirects and a
+15-second timeout. Its body, capped at 60 KB (a larger one is not sent),
+holds:
 
 - the model name (`jev-1.13.0` unless configured) and a fixed instruction;
 - the text of every user and assistant message in the request, each one over
@@ -290,8 +309,8 @@ transcript records each evaluation in the extension's own entry: the entry
 IDs, output digests, scores, estimated savings, token usage and latency, but
 no tool output or credential.
 
-TypeSafe bills each evaluation, and the known cost counts toward the
-session's dollar budget (`--max-cost-usd`) across resume and fork.
+The provider bills each evaluation at its tariff, and the known cost counts
+toward the session's dollar budget (`--max-cost-usd`) across resume and fork.
 
 ### Turning it off
 
@@ -299,17 +318,20 @@ Any of these keeps it from sending anything:
 
 - `"jev_compaction": {"mode": "off"}` in `~/.lmx/config.json`;
 - `"disabled_extensions": ["jev_compaction"]`;
-- leaving both routes incomplete: no `JEV_API_KEY` or
-  `jev_compaction.api_key`, and no pinned model for an Ixway endpoint.
+- leaving the selected provider incomplete: no `JEV_API_KEY` or
+  `jev_compaction.api_key` for TypeSafe, no pinned model for an Ixway
+  endpoint, and no `provider` naming a declared one.
 
 `"shadow"` mode still sends the same data, to score results, but never
-shortens anything. `"apply"` and `"shadow"` require a usable route: without
-one, the session does not start.
+shortens anything. `"apply"` and `"shadow"` require a complete provider:
+without one, the session does not start.
 
 ### Settings
 
 `"jev_compaction"` takes `mode` (`auto`, `apply`, `shadow` or `off`),
-`route` (`auto`, `typesafe` or `ixway`), `model`, `endpoint`, `api_key`,
+`provider` (`auto`, `typesafe`, `ixway` or a name declared in
+`jev_compaction_providers`; `route` is the older spelling of the same field,
+and setting both is an error), `model`, `endpoint`, `api_key`,
 `max_evaluations`, `max_cost_usd`, `reservation_per_call_usd`,
 `input_per_million` and `output_per_million`.
 
@@ -322,7 +344,7 @@ To send the requests to an Ixway endpoint that implements
   "ixway": {"enabled": false, "endpoint": "https://ixway.example"},
   "jev_compaction": {
     "mode": "apply",
-    "route": "ixway",
+    "provider": "ixway",
     "model": "jev-local-1",
     "input_per_million": 0.04,
     "output_per_million": 0.0,
@@ -332,25 +354,86 @@ To send the requests to an Ixway endpoint that implements
 }
 ```
 
-The Jev route is independent of the ordinary inference route, so this
-example keeps chat inference direct. `route: "auto"` chooses Ixway only when
-an endpoint and a pinned Jev model are both configured, and TypeSafe
-otherwise. The Ixway route uses the Ixway key, not the Jev key, and
-`route: "ixway"` never falls back to TypeSafe after a failed or unavailable
-Ixway route. An endpoint counts as configured before any network call; a
-later HTTP failure leaves the outgoing model request unprojected. Ixway's
-chat-completions endpoint is a different protocol and cannot stand in for
-`POST /v1/systemone`.
+The scorer's provider is independent of the ordinary inference route, so
+this example keeps chat inference direct. The Ixway provider uses the Ixway
+key, not the Jev key, and never falls back to TypeSafe after a failed or
+unavailable request. An endpoint counts as configured before any network
+call; a later HTTP failure leaves the outgoing model request unprojected.
+Ixway's chat-completions endpoint is a different protocol and cannot stand in
+for `POST /v1/systemone`.
+
+### Declaring a provider
+
+`"jev_compaction_providers"` declares the providers that are not built in,
+the way `"web_search_providers"` holds search keys: a name you choose, and
+under it the service's settings. The name selects it:
+
+```json
+{
+  "jev_compaction": {"mode": "auto", "provider": "local"},
+  "jev_compaction_providers": {
+    "local": {
+      "base_url": "http://127.0.0.1:8080",
+      "model": "jev-local-1"
+    }
+  }
+}
+```
+
+With this, the evaluations go to `POST http://127.0.0.1:8080/v1/systemone`
+and nowhere else: no `JEV_API_KEY` or Ixway key is needed, and nothing
+reaches TypeSafe or Ixway. An entry takes:
+
+| Key | What it does |
+| --- | --- |
+| `base_url` | Required. The root before `/v1/systemone`: an `http(s)` URL, a path prefix allowed, with no credentials, query or fragment |
+| `model` | The model to ask, unless `jev_compaction.model` names one |
+| `api_key` | A bearer token, if the service wants one; the file must then be readable only by you |
+| `api_key_env` | The name of an environment variable holding the key instead. When the variable is set it wins over `api_key`, and an empty value switches the saved key off; when it is unset and there is no `api_key`, the provider is incomplete rather than unauthenticated |
+| `api_key_header` | The header the key travels in, for a service that does not take a bearer token (`X-API-Key`, say). Without it the key is sent as `Authorization: Bearer`. Any header but `Authorization` |
+| `headers` | Extra request headers, as an object of names to one-line values. `Authorization` is refused, and a key does not belong here: `api_key` and `api_key_env` are the fields `lmx` keeps private (the file must be yours alone, and an empty value is a named placeholder), and `api_key_header` puts the key in whatever header the service wants. A header value gets neither protection |
+| `input_per_million`, `output_per_million` | The service's tariff in USD per million tokens, both or neither, unless `jev_compaction`'s own override them |
+| `type` | `endpoint`, the only kind so far: a `POST /v1/systemone` service |
+
+A vendor's hosted decision API fits the same entry, with the key kept in
+your shell:
+
+```json
+{
+  "jev_compaction": {"provider": "vendor"},
+  "jev_compaction_providers": {
+    "vendor": {
+      "base_url": "https://decisions.vendor.example/accounts/ACCOUNT_ID",
+      "api_key_env": "VENDOR_API_KEY",
+      "model": "decision-1",
+      "input_per_million": 0.05,
+      "output_per_million": 0.0
+    }
+  }
+}
+```
+
+`typesafe` and `ixway` cannot be declared here: their key and endpoint
+already have a place, and a second one would leave two fields that could
+disagree. The provider is chosen in the file alone; there is no flag or
+`LMX_` variable for it, since where the excerpts go belongs beside the
+credentials it needs. Only TypeSafe has a default model (`jev-1.13.0`) and published
+rates. Every other provider is unpriced until its tariff is declared, so a
+session with a dollar cap (`--max-cost-usd`, or `jev_compaction.max_cost_usd`)
+makes no evaluation through it: the step fails closed rather than paying an
+unknown price. `lmx explain` reports the mode and the selected provider's
+name under `diagnostics.jev_compaction`, and nothing else about it.
 
 Each call records its usage, its known USD cost (or `null` when the cost is
-unknown) and its route in the session, so `Session.snapshot/1` includes the
+unknown) and its provider (under the record's `route` key) in the session,
+so `Session.snapshot/1` includes the
 spend and `max_cost_usd` accounts for it across resume and fork. A session
 with a dollar cap needs `reservation_per_call_usd` before Jev will call the
 endpoint; `jev_compaction.max_cost_usd` caps Jev's calls separately. Both
 caps check the reservation before a call, and the reported token usage sets
 the charge afterwards. An unpriced or failed attempt has unknown cost, not
-zero. For an Ixway route, declare both rates from its tariff; the TypeSafe
-route uses the extension's dated published rate unless you override it. The
+zero. For Ixway or a declared provider, declare both rates from its tariff;
+TypeSafe uses the extension's dated published rate unless you override it. The
 byte-based trigger and reduction remain estimates, so measure task quality
 and net cost on your own work before counting on savings.
 
