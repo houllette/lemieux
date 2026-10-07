@@ -130,6 +130,25 @@ defmodule Lemieux.Tools do
           context :: Tool.context(),
           emit :: (String.t() -> any())
         ) :: result()
+  # The output limit, not a malformed call: `Lemieux.Turn` marks the last call
+  # of a response that ended at it. "Send one JSON object that matches the
+  # schema" is the wrong advice for a call that was right until it was cut,
+  # and the same call sent again is cut in the same place. Named without
+  # tools, because the catalog may not hold the ones a sentence would name.
+  # "Adds to the file rather than replacing it" is there because a model told
+  # only to "add the rest in further calls" wrote the file again for each
+  # part, and kept only the last (live, 2026-10-07).
+  def run(_tools, _hooks, %{argument_error: :output_limit} = call, _context, _emit) do
+    error(
+      call,
+      "this call was cut off at the model's output-token limit before its arguments were " <>
+        "complete, so it did not run. Split the work into smaller calls: for a large file, " <>
+        "write the first part, then add each further part with a call that adds to the " <>
+        "file rather than replacing it.",
+      :invalid_arguments
+    )
+  end
+
   def run(_tools, _hooks, %{argument_error: reason} = call, _context, _emit) do
     error(
       call,

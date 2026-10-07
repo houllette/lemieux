@@ -68,9 +68,11 @@ defmodule Lemieux.Extensions.Continuation do
   single answer cannot fit hits the limit again at once; the second time
   the prompt ends `:length` and the host says so.
 
-  A cut-off that carried a tool call is not this extension's: the loop runs
-  the call, and a call whose arguments were cut short comes back as an
-  error the model reads.
+  A cut-off that carried a tool call is not this extension's, because the
+  turn does not stop: the loop answers the call the limit cut short without
+  running it, telling the model to split the work into smaller calls
+  (`Lemieux.Turn`, `Lemieux.Tools.run/5`), and the model reads that like any
+  tool result.
 
   ## Never an aside
 

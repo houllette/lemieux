@@ -108,21 +108,25 @@ API.
   wrote with `todo` during the prompt still has open tasks is sent back to
   them with a message listing what is left, at most five times a prompt; an
   answer that calls no tool is taken as its decision to stop (you asked it to
-  stop there, or it is blocked or needs something only you can give). An answer cut off at the output-token
-  limit is picked up again, at most three times. A plan left from an earlier prompt does
-  not count, and asides such as a reflection are never sent back. It runs
-  before the check after edits, so the check runs once the plan is finished,
-  and `--config none` keeps it. `"continuation"` sets the allowances,
-  `"continuation": false` or `"disabled_extensions": ["continuation"]` turns
-  it off ([Continuing unfinished work](docs/configuration.md#continuing-unfinished-work)).
-  Messages a stop hook sends the model are drawn as `lmx` speaking (`↻`, or
-  `✓` for the check), live and in a resumed session, and `lmx log` and
-  `/export` label them the same way, where a resumed session drew them as
-  lines you had typed. The default system prompt now says that ending a turn
-  hands control back to you, and to keep working until the task is done, and
-  the `todo` tool's description that a plan with open tasks means the work is
-  not done, unless you asked the model to stop sooner. Neither wording change
-  is measured yet.
+  stop there, or it is blocked or needs something only you can give). A plan
+  left from an earlier prompt does not count, and asides such as a reflection
+  are never sent back. An answer cut off at the output-token limit is picked
+  up again, at most three times, and a file write the limit cuts short is no
+  longer run with empty arguments: the model is told it was cut off and to
+  write the file in smaller parts, where it used to be told "needs a path and
+  content", send the same oversized call again and be stopped by the repeat
+  guard. It runs before the check after edits, so the check runs once the plan
+  is finished, and `--config none` keeps it. `"continuation"` sets the
+  allowances, `"continuation": false` or `"disabled_extensions":
+  ["continuation"]` turns it off ([Continuing unfinished
+  work](docs/configuration.md#continuing-unfinished-work)). Messages a stop
+  hook sends the model are drawn as `lmx` speaking (`↻`, or `✓` for the
+  check), live and in a resumed session, and `lmx log` and `/export` label
+  them the same way, where a resumed session drew them as lines you had typed.
+  The default system prompt now says that ending a turn hands control back to
+  you, and to keep working until the task is done, and the `todo` tool's
+  description that a plan with open tasks means the work is not done, unless
+  you asked the model to stop sooner. Neither wording change is measured yet.
 
 ### Installing and updating
 
@@ -216,6 +220,14 @@ API.
   `"stop_hook" => true` key. Match on `"text"` instead, and use
   `Lemieux.Transcript.stop_hook?/1` to tell the hook's words from the
   person's.
+- A response that ended at the output-token limit (`:length`) with tool calls
+  no longer runs its last call as it arrived when that call's arguments did
+  not come whole: `Lemieux.Turn` marks it `argument_error: :output_limit`, and
+  `Lemieux.Tools.run/5` answers it as `:invalid_arguments` without running it,
+  telling the model to split the work. A last call whose arguments arrived
+  whole still runs. `Lemieux.Providers.ReqLLM` now carries ReqLLM's
+  `args_lost` mark as `argument_error`; the call used to arrive with empty
+  arguments that decoded, and ran.
 
 ## 0.8.1 — 2026-10-06
 

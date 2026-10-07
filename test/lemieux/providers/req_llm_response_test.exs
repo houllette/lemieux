@@ -156,6 +156,28 @@ defmodule Lemieux.Providers.ReqLLMResponseTest do
     assert_receive {:event, {:done, :tool_calls}}
   end
 
+  # The live failure, offline: a `write` whose arguments the output limit cut
+  # off mid-string. ReqLLM cannot decode them, logs `args_lost`, and hands the
+  # call over with empty arguments, which used to reach the tool as an empty
+  # `write` rather than as a call that never arrived whole.
+  test "a tool call whose arguments were cut off arrives flagged, never as an empty call" do
+    owner = self()
+    request = Request.new("openai:gpt-5", tools: [Lemieux.Tools.Write])
+
+    {result, _log} =
+      ExUnit.CaptureLog.with_log(fn ->
+        Provider.run(
+          provider(200, cut_off_tool_body(), owner),
+          request,
+          &send(owner, {:event, &1})
+        )
+      end)
+
+    assert result == :ok
+    assert_receive {:event, {:tool_call, %{name: "write", argument_error: _reason}}}
+    assert_receive {:event, {:done, :length}}
+  end
+
   test "invalid structured tool output fails its schema without running a tool" do
     owner = self()
     request = Request.new("openai:gpt-5", output_schema: [label: [type: :string, required: true]])
@@ -268,6 +290,23 @@ defmodule Lemieux.Providers.ReqLLMResponseTest do
 
     Enum.map_join(chunks, "", &("data: " <> JSON.encode!(&1) <> "\n\n")) <>
       "data: [DONE]\n\n"
+  end
+
+  defp cut_off_tool_body do
+    call = %{index: 0, id: "write-1", type: "function", function: %{name: "write", arguments: ""}}
+    fragment = %{index: 0, function: %{arguments: ~S({"path":"numbers.txt","content":"1\n2\n3)}}
+
+    chunks = [
+      %{model: "served-model", choices: [%{index: 0, delta: %{tool_calls: [call]}}]},
+      %{model: "served-model", choices: [%{index: 0, delta: %{tool_calls: [fragment]}}]},
+      %{
+        model: "served-model",
+        choices: [%{index: 0, delta: %{}, finish_reason: "length"}],
+        usage: %{prompt_tokens: 10, completion_tokens: 150, total_tokens: 160}
+      }
+    ]
+
+    Enum.map_join(chunks, "", &("data: " <> JSON.encode!(&1) <> "\n\n")) <> "data: [DONE]\n\n"
   end
 
   defp structured_tool_body(arguments) do

@@ -298,6 +298,12 @@ All native, configured, delegated and MCP tools use the same supervised path:
   `:timeout`, `:crashed`, `:denied`, `:unavailable`, `:invalid_arguments`,
   `:error` and `:ok` — and a lost result whose effect cannot be inspected is
   `:unknown`, see [Receipts](#receipts-and-unknown-outcomes) below;
+- a call whose arguments did not arrive whole never runs and is
+  `:invalid_arguments`: one that did not decode is told to send one JSON
+  object matching the schema, and the last call of a response that ended at
+  the output-token limit (`:length`), with arguments that did not decode or
+  none at all, is told it was cut off and to split the work into smaller
+  calls. A last call whose arguments arrived whole runs: the cut came after it;
 - duration, output bytes, descriptor identity/digest and declared external
   cost are written to the result entry.
 

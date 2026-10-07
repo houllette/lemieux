@@ -89,7 +89,10 @@ A response cut off at the output-token limit (`:length`) with no tool call is
 picked up too: a message starting `[lmx output limit]` says what happened and
 asks for smaller pieces, at most `:max_output_continuations` times (default 3).
 A second cut-off with nothing done in between ends the prompt `:length`, and
-`lmx` says so.
+`lmx` says so. A cut-off inside a tool call, typically a large file write, is
+the loop's rather than this extension's: the call the limit cut short is
+answered without running, telling the model to split the work into smaller
+calls ([Tool contracts](tool-contracts.md)), and the turn goes on.
 
 Neither applies to an aside, whose veto would end it as `:hook_failed`. Both
 messages are recorded as stop-hook feedback (`"stop_hook" => true`), so the

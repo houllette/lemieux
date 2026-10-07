@@ -439,7 +439,8 @@ is left, at most five times per prompt. It can still stop: an answer that
 calls no tool is taken as its decision (you asked it to stop there, or it is
 blocked or needs something only you can give) and ends the prompt. An answer cut off at the output-token limit
 is picked up again, at most three times; a second cut-off with nothing done in
-between ends the prompt, and `lmx` says so. A plan left from an earlier prompt
+between ends the prompt, and `lmx` says so. A file write the limit cuts short
+is never run half-written: the model is told to write it in smaller parts. A plan left from an earlier prompt
 does not count, and neither rule touches a reflection or another aside.
 
 `"continuation": {"max_continuations": 8, "max_output_continuations": 1}`

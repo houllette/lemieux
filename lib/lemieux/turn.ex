@@ -260,10 +260,32 @@ defmodule Lemieux.Turn do
   # whether a turn with both text and a tool call is `:tool_calls` or `:stop`,
   # and one of them is occasionally wrong. What decides is whether there is
   # anything to run.
+  #
+  # With one exception, which is a fact rather than advice: `:length` says the
+  # output limit ended the response, wherever it fell. A model writing a large
+  # file is inside its last call's arguments when that happens, and the call
+  # arrives with arguments that did not decode, or with none. Run as it stood,
+  # `write` answered "needs a path and content", the model sent the same
+  # oversized call again, and the repeat guard ended the prompt (live,
+  # 2026-10-07). Marked, the call is answered with what happened and not run
+  # (`Lemieux.Tools.run/5`). A last call whose arguments arrived whole runs:
+  # the cut came after it.
   defp ending(%__MODULE__{tool_calls: []}, stop_reason), do: {:finished, stop_reason}
+  defp ending(%__MODULE__{} = turn, :length), do: {:run_tools, turn |> calls() |> cut_off_last()}
   defp ending(%__MODULE__{} = turn, _stop_reason), do: {:run_tools, calls(turn)}
 
   defp calls(%__MODULE__{tool_calls: calls}), do: Enum.reverse(calls)
+
+  defp cut_off_last(calls) do
+    {last, earlier} = List.pop_at(calls, -1)
+
+    if cut_off?(last),
+      do: earlier ++ [Map.put(last, :argument_error, :output_limit)],
+      else: calls
+  end
+
+  defp cut_off?(%{argument_error: _reason}), do: true
+  defp cut_off?(call), do: Map.get(call, :arguments, %{}) == %{}
 
   defp assistant(%__MODULE__{message: payload, usage: usage} = turn) when is_map(payload) do
     payload =
