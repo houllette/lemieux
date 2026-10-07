@@ -1,11 +1,19 @@
 defmodule Mix.Tasks.Lmx.Browser do
-  @shortdoc "Run the experimental Jev/Wallaby browser extension"
+  @shortdoc "Run the experimental System One/Wallaby browser extension"
   @moduledoc """
   Run a task with `--url URL --goal TEXT --allow-host HOST`, or `--query TEXT`
   for explicit Exa search. `--demo` runs the local hotel fixture and verifies
   its outcome. `--env-file PATH` loads private credentials without printing
   them; `--text-model MODEL` selects a ReqLLM model for field text. Optional
   `--journal PATH` creates a new private JSONL file; never place it in Git.
+
+  `--systemone-provider NAME` selects the System One provider that chooses
+  each action: a name from `"systemone_providers"` in the lmx config file,
+  `typesafe`, `ixway`, or `auto` (the default: Ixway when its endpoint and a
+  model are set, TypeSafe when `JEV_API_KEY` or a saved TypeSafe key is). The
+  config file is the one `lmx` reads (`LMX_CONFIG`, `none` for none). A
+  provider that cannot be used stops the task before the browser starts,
+  with the sentence saying what is missing; nothing falls back to another.
 
   `--fetch-only --url URL --allow-host HOST` fetches without inference. Add
   `--no-browser-fetch` for HTTP-only operation without browser startup.
@@ -16,6 +24,8 @@ defmodule Mix.Tasks.Lmx.Browser do
   and local; the host owns browser network isolation.
   """
   use Mix.Task
+
+  alias Lemieux.CLI.{Config, Options, SystemOne}
 
   @impl Mix.Task
   def run(argv) do
@@ -30,6 +40,7 @@ defmodule Mix.Tasks.Lmx.Browser do
           fetch_only: :boolean,
           browser_fetch: :boolean,
           env_file: :string,
+          systemone_provider: :string,
           text_model: :string,
           journal: :string,
           max_steps: :integer,
@@ -49,6 +60,18 @@ defmodule Mix.Tasks.Lmx.Browser do
     Mix.Task.run("app.start")
     load_env(args[:env_file])
 
+    # After the env file, which may hold the provider's key; before the
+    # browser, which a task without a classifier would start for nothing.
+    args =
+      if args[:fetch_only] do
+        args
+      else
+        case system_one_provider(args[:systemone_provider]) do
+          {:ok, provider} -> Keyword.put(args, :systemone, provider: provider)
+          {:error, reason} -> Mix.raise(reason)
+        end
+      end
+
     if args[:fetch_only] == true and args[:browser_fetch] == false do
       execute(args)
     else
@@ -67,6 +90,51 @@ defmodule Mix.Tasks.Lmx.Browser do
     case Dotenvy.source([path, System.get_env()], require_files: true) do
       {:ok, values} -> System.put_env(values)
       _ -> Mix.raise("Could not load the requested environment file")
+    end
+  end
+
+  @doc false
+  # Resolves `--systemone-provider` against the lmx config file the way `lmx`
+  # does (`Lemieux.CLI.SystemOne.provider/3`), then checks the provider can
+  # be reached the way the classifier will build it. The benches use it too.
+  @spec system_one_provider(selection :: String.t() | nil) ::
+          {:ok, LemieuxComputerUse.SystemOne.provider()} | {:error, String.t()}
+  def system_one_provider(selection) do
+    with {:ok, config} <- lmx_config() do
+      case SystemOne.provider(config, selection,
+             ixway_endpoint: Options.env("LMX_IXWAY_URL"),
+             selected_by: "--systemone-provider"
+           ) do
+        {:ok, provider} ->
+          usable(provider)
+
+        {:unavailable, reason} ->
+          {:error, "The browser needs a System One provider, but #{reason}."}
+      end
+    end
+  end
+
+  # Blank counts as unset, as it does for lmx (`Lemieux.CLI.Options.env/1`).
+  defp lmx_config do
+    case Options.env("LMX_CONFIG") do
+      "none" -> {:ok, nil}
+      nil -> Config.load(Config.default_path(), optional: true)
+      path -> Config.load(Path.expand(path), [])
+    end
+  end
+
+  # A resolved provider's name matched an entry, so it is not a mistyped key
+  # and can be named.
+  defp usable(provider) do
+    case LemieuxComputerUse.SystemOne.client(provider: provider) do
+      {:ok, _client} ->
+        {:ok, provider}
+
+      {:error, _reason} ->
+        {:error,
+         "The #{provider.name} System One provider cannot be used: its base_url must be an " <>
+           "http(s) root before /v1/systemone, without credentials, query or fragment, and " <>
+           "it needs a model."}
     end
   end
 
@@ -145,6 +213,7 @@ defmodule Mix.Tasks.Lmx.Browser do
   defp run_task(input, args, extra) do
     opts =
       Keyword.take(args, [
+        :systemone,
         :text_model,
         :max_steps,
         :max_verification_retries,

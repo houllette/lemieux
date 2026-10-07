@@ -71,7 +71,7 @@ defmodule Lemieux.CLI.SystemOneCompactionTest do
       bare = config(%{"provider" => "local"}, %{"local" => Map.delete(@local, "model")})
       assert {:unavailable, reason} = SystemOneCompaction.provider(bare, nil)
       assert reason =~ "the local provider has no model"
-      assert reason =~ "systemone_compaction_providers entry"
+      assert reason =~ "systemone_providers entry"
     end
 
     test "a declared provider's key comes from its variable first, then its saved key" do
@@ -130,7 +130,7 @@ defmodule Lemieux.CLI.SystemOneCompactionTest do
       typesafe = config(%{"provider" => "typesafe"}, %{"local" => @local})
       assert {:unavailable, reason} = SystemOneCompaction.provider(typesafe, nil)
       assert reason =~ "the typesafe provider has no key"
-      assert reason =~ "systemone_compaction_providers.typesafe.api_key"
+      assert reason =~ "systemone_providers.typesafe.api_key"
       refute reason =~ "local"
     end
 
@@ -142,7 +142,7 @@ defmodule Lemieux.CLI.SystemOneCompactionTest do
         settings: %{
           "ixway" => %{"endpoint" => "http://localhost:4003"},
           "systemone_compaction" => %{"provider" => "local"},
-          "systemone_compaction_providers" => %{
+          "systemone_providers" => %{
             "local" => @local,
             "typesafe" => %{"api_key" => "saved-hosted-key"},
             "ixway" => %{"model" => "gateway-scorer-1"}
@@ -205,7 +205,7 @@ defmodule Lemieux.CLI.SystemOneCompactionTest do
       saved = %Config{
         settings: %{
           "ixway" => %{"endpoint" => "http://localhost:4005"},
-          "systemone_compaction_providers" => %{"ixway" => %{"model" => "gateway-scorer-1"}}
+          "systemone_providers" => %{"ixway" => %{"model" => "gateway-scorer-1"}}
         }
       }
 
@@ -237,7 +237,7 @@ defmodule Lemieux.CLI.SystemOneCompactionTest do
       assert reason =~ "is missing an endpoint ("
 
       assert reason =~
-               "), a model (systemone_compaction_providers.ixway.model) and the Ixway key ("
+               "), a model (systemone_providers.ixway.model) and the Ixway key ("
     end
 
     test "a selected name nobody declared is unavailable, not sent anywhere" do
@@ -252,7 +252,7 @@ defmodule Lemieux.CLI.SystemOneCompactionTest do
       do: %Config{
         settings: %{
           "systemone_compaction" => section,
-          "systemone_compaction_providers" => providers
+          "systemone_providers" => providers
         }
       }
   end

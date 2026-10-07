@@ -167,7 +167,7 @@ defmodule Lemieux.CLI.ExplainTest do
         "version" => 1,
         "disabled_extensions" => ["systemone_compaction"],
         "systemone_compaction" => %{"mode" => "apply", "provider" => "local"},
-        "systemone_compaction_providers" => %{
+        "systemone_providers" => %{
           "local" => %{"base_url" => "http://127.0.0.1:8080", "model" => "local-scorer-1"}
         }
       })
@@ -202,7 +202,7 @@ defmodule Lemieux.CLI.ExplainTest do
           "model" => "ixway:gpt-6-luna",
           "effort" => "max"
         },
-        "systemone_compaction_providers" => %{"typesafe" => %{"api_key" => ""}},
+        "systemone_providers" => %{"typesafe" => %{"api_key" => ""}},
         "web_search" => "brave",
         "web_search_providers" => %{"brave" => %{"api_key" => ""}},
         "web_fetch" => true,

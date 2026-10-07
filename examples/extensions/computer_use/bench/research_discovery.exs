@@ -1,14 +1,22 @@
 # Explicit live smoke comparison of source discovery, without synthesis or Chrome.
-# Two paid Brave calls, at most four Jev calls and twelve guarded HTTP fetches.
+# Two paid Brave calls, at most four System One calls and twelve guarded HTTP
+# fetches. --systemone-provider NAME selects the provider (default automatic).
 defmodule ResearchDiscoverySmoke do
   alias Lemieux.Extensions.Web.Brave
   alias Lemieux.Tools
   alias Lemieux.Tools.{WebFetch, WebSearch}
-  alias LemieuxComputerUse.Jev
+  alias LemieuxComputerUse.SystemOne
 
   @spec run(options :: keyword()) :: :ok
   def run(options) do
     Mix.Tasks.Lmx.Browser.load_env(options[:env_file])
+
+    provider =
+      case Mix.Tasks.Lmx.Browser.system_one_provider(options[:systemone_provider]) do
+        {:ok, provider} -> provider
+        {:error, reason} -> Mix.raise(reason)
+      end
+
     backend = Brave.new(api_key: System.fetch_env!("BRAVE_SEARCH_API_KEY"))
     search = WebSearch.new(backend: {Brave, backend}, max_results: 5, max_cost_usd: 0.005)
 
@@ -24,10 +32,15 @@ defmodule ResearchDiscoverySmoke do
       rows = get_in(receipt, [:structured_content, "results"]) || []
       if receipt.error? or rows == [], do: raise("Search failed; no discovery arms executed")
       urls = rows |> Enum.take(2) |> Enum.map(& &1["url"])
-      arms = if index == 0, do: [:serial, :parallel, :jev], else: [:jev, :parallel, :serial]
+
+      arms =
+        if index == 0,
+          do: [:serial, :parallel, :systemone],
+          else: [:systemone, :parallel, :serial]
 
       for arm <- arms do
-        {elapsed_ms, {pages, decisions}} = timed(fn -> discover(arm, rows, urls, question) end)
+        {elapsed_ms, {pages, decisions}} =
+          timed(fn -> discover(arm, rows, urls, question, provider) end)
 
         report = %{
           "scenario" => label,
@@ -42,7 +55,7 @@ defmodule ResearchDiscoverySmoke do
               pages,
               &Map.take(&1, [:url, :final_url, :bytes, :truncated, :error, :latency_ms])
             ),
-          "jev_decisions" => decisions,
+          "systemone_decisions" => decisions,
           "coverage_hint" => coverage(label, pages),
           "classifier_cost_usd" => nil,
           "synthesis_performed" => false
@@ -55,9 +68,9 @@ defmodule ResearchDiscoverySmoke do
     :ok
   end
 
-  defp discover(:serial, _, urls, _), do: {Enum.map(urls, &fetch/1), []}
+  defp discover(:serial, _, urls, _, _), do: {Enum.map(urls, &fetch/1), []}
 
-  defp discover(:parallel, _, urls, _) do
+  defp discover(:parallel, _, urls, _, _) do
     pages =
       urls
       |> Task.async_stream(&fetch/1, max_concurrency: 2, timeout: 20_000, ordered: true)
@@ -66,9 +79,9 @@ defmodule ResearchDiscoverySmoke do
     {pages, []}
   end
 
-  defp discover(:jev, rows, _, question) do
+  defp discover(:systemone, rows, _, question, provider) do
     candidates = rows |> Enum.with_index(1) |> Map.new(fn {row, id} -> {to_string(id), row} end)
-    {selected, evidence} = select(candidates, question, [], false)
+    {selected, evidence} = select(candidates, question, [], false, provider)
     first = fetch(candidates[selected]["url"])
 
     links =
@@ -88,21 +101,42 @@ defmodule ResearchDiscoverySmoke do
       |> Enum.with_index(1)
       |> Map.new(fn {url, id} -> {to_string(id), %{"url" => url}} end)
 
-    {selected, second_evidence} = select(next, question, [first], true)
+    {selected, second_evidence} = select(next, question, [first], true, provider)
     pages = if selected == "STOP", do: [first], else: [first, fetch(next[selected]["url"])]
     {pages, [evidence, second_evidence]}
   end
 
-  defp select(candidates, question, pages, stop?) do
+  # One candidate and no STOP is not a choice: it is taken without a request,
+  # since System One servers other than TypeSafe's refuse a one-option choice
+  # (LemieuxComputerUse.Decision says which). A null confidence marks it.
+  defp select(candidates, _question, _pages, false, _provider) when map_size(candidates) == 1 do
+    [{choice, row}] = Map.to_list(candidates)
+
+    {choice,
+     %{
+       "model" => nil,
+       "choice" => choice,
+       "selected_url" => row["url"],
+       "confidence" => nil,
+       "latency_ms" => 0,
+       "usage" => nil
+     }}
+  end
+
+  defp select(candidates, question, pages, stop?, provider) do
+    # Descriptions are strings, which every System One server accepts; some
+    # refuse an object (LemieuxComputerUse.Decision says which).
+    described = Map.new(candidates, fn {id, row} -> {id, JSON.encode!(row)} end)
+
     criteria =
       if stop?,
         do:
           Map.put(
-            candidates,
+            described,
             "STOP",
             "Fetched content already directly supports every part of the question"
           ),
-        else: candidates
+        else: described
 
     request = %{
       "state" => %{
@@ -127,7 +161,7 @@ defmodule ResearchDiscoverySmoke do
       }
     }
 
-    {latency, response} = timed(fn -> Jev.evaluate(request) end)
+    {latency, response} = timed(fn -> SystemOne.evaluate(request, provider: provider) end)
     {:ok, response} = response
     answer = response["answers"]["next"]
     probabilities = answer["probabilities"]
@@ -197,12 +231,14 @@ defmodule ResearchDiscoverySmoke do
 end
 
 {options, rest, invalid} =
-  OptionParser.parse(System.argv(), strict: [execute: :boolean, env_file: :string])
+  OptionParser.parse(System.argv(),
+    strict: [execute: :boolean, env_file: :string, systemone_provider: :string]
+  )
 
 if rest != [] or invalid != [] or options[:execute] != true,
   do:
     Mix.raise(
-      "Explicit --execute is required; this spends two Brave calls and up to four Jev calls"
+      "Explicit --execute is required; this spends two Brave calls and up to four System One calls"
     )
 
 ResearchDiscoverySmoke.run(options)

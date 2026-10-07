@@ -59,7 +59,7 @@ One thing to know about that switch:
 
 | Example | What it shows | Offline check | Live use needs |
 | --- | --- | --- | --- |
-| [`extensions/computer_use`](extensions/computer_use/README.md) | Experimental headless **browser** use (not desktop control) | `mix check` | Chrome and ChromeDriver, `JEV_API_KEY` (TypeSafe, billed), and a text model key |
+| [`extensions/computer_use`](extensions/computer_use/README.md) | Experimental headless **browser** use (not desktop control) | `mix check` | Chrome and ChromeDriver, a System One provider (a local model such as Ollama's, or `JEV_API_KEY` for TypeSafe, billed), and a text model key |
 
 System One compaction (formerly Jev compaction), which used to live here, is
 part of the `lmx` release:

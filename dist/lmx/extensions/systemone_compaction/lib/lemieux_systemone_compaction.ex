@@ -28,7 +28,7 @@ defmodule LemieuxSystemOneCompaction do
     `:output_per_million` declare one, so a capped session fails closed
     rather than guessing. `api_key_header` names the header the key travels
     in when the service does not take a bearer token. `lmx` builds this map
-    from `systemone_compaction` and `systemone_compaction_providers` in its
+    from `systemone_compaction` and `systemone_providers` in its
     config file (`Lemieux.CLI.SystemOneCompaction`).
   - `client:` is a `%SystemOneSDK.Client{}` the host built itself.
 

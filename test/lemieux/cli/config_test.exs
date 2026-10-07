@@ -262,7 +262,7 @@ defmodule Lemieux.CLI.ConfigTest do
         "max_cost_usd" => 0.05,
         "reservation_per_call_usd" => 0.01
       },
-      "systemone_compaction_providers" => %{
+      "systemone_providers" => %{
         "ixway" => %{
           "base_url" => "http://localhost:4003",
           "model" => "gateway-scorer-1",
@@ -296,15 +296,15 @@ defmodule Lemieux.CLI.ConfigTest do
           {%{"jev_compaction" => %{"mode" => "off"}},
            ~s(Unknown field "jev_compaction" in the lmx config: the step is now systemone_compaction)},
           {%{"jev_compaction_providers" => %{}},
-           ~s(Unknown field "jev_compaction_providers" in the lmx config: providers now live in systemone_compaction_providers)},
+           ~s(Unknown field "jev_compaction_providers" in the lmx config: providers now live in systemone_providers)},
           {%{"disabled_extensions" => ["jev_compaction"]},
            "jev_compaction is now systemone_compaction"},
           {%{"systemone_compaction" => %{"route" => "ixway"}},
            "systemone_compaction.route. It moved: it is systemone_compaction.provider."},
           {%{"systemone_compaction" => %{"api_key" => "private-key"}},
-           "It moved: the TypeSafe key is systemone_compaction_providers.typesafe.api_key."},
+           "It moved: the TypeSafe key is systemone_providers.typesafe.api_key."},
           {%{"systemone_compaction" => %{"endpoint" => "http://localhost:4003"}},
-           "It moved: the Ixway endpoint is systemone_compaction_providers.ixway.base_url."},
+           "It moved: the Ixway endpoint is systemone_providers.ixway.base_url."},
           {%{"systemone_compaction" => %{"model" => "jev-local-1"}},
            "It moved: a model is model in the selected provider's"},
           {%{"systemone_compaction" => %{"input_per_million" => 0.04}},
@@ -323,7 +323,7 @@ defmodule Lemieux.CLI.ConfigTest do
     assert {:error, reason} =
              Config.load(write_config(dir, %{"jev_compaction" => %{"api_key" => "k"}}))
 
-    assert reason =~ "systemone_compaction_providers.typesafe.api_key"
+    assert reason =~ "systemone_providers.typesafe.api_key"
   end
 
   test "System One providers are declared in their own section and selected by name", %{
@@ -332,7 +332,7 @@ defmodule Lemieux.CLI.ConfigTest do
     settings = %{
       "version" => 1,
       "systemone_compaction" => %{"mode" => "apply", "provider" => "local"},
-      "systemone_compaction_providers" => %{
+      "systemone_providers" => %{
         "local" => %{
           "type" => "endpoint",
           "base_url" => "http://127.0.0.1:8080/scorer",
@@ -349,7 +349,7 @@ defmodule Lemieux.CLI.ConfigTest do
     assert {:ok, config} = Config.load(path)
     assert Config.get(config, "systemone_compaction")["provider"] == "local"
 
-    assert Config.get(config, "systemone_compaction_providers")["local"]["model"] ==
+    assert Config.get(config, "systemone_providers")["local"]["model"] ==
              "local-scorer-1"
 
     # Without a saved key the file holds no secret, so its mode is free.
@@ -360,7 +360,7 @@ defmodule Lemieux.CLI.ConfigTest do
     keyed =
       put_in(
         settings,
-        ["systemone_compaction_providers", "local", "api_key"],
+        ["systemone_providers", "local", "api_key"],
         "private-scorer-key"
       )
 
@@ -372,7 +372,7 @@ defmodule Lemieux.CLI.ConfigTest do
     File.chmod!(path, 0o600)
     assert {:ok, config} = Config.load(path)
 
-    assert Config.get(config, "systemone_compaction_providers")["local"]["api_key"] ==
+    assert Config.get(config, "systemone_providers")["local"]["api_key"] ==
              "private-scorer-key"
 
     refute inspect(config) =~ "private-scorer-key"
@@ -384,14 +384,14 @@ defmodule Lemieux.CLI.ConfigTest do
     path =
       write_config(dir, %{
         "version" => 1,
-        "systemone_compaction_providers" => %{
+        "systemone_providers" => %{
           "typesafe" => %{"api_key" => "private-typesafe-key"}
         }
       })
 
     assert {:ok, config} = Config.load(path)
 
-    assert Config.get(config, "systemone_compaction_providers")["typesafe"]["api_key"] ==
+    assert Config.get(config, "systemone_providers")["typesafe"]["api_key"] ==
              "private-typesafe-key"
 
     refute inspect(config) =~ "private-typesafe-key"
@@ -471,7 +471,7 @@ defmodule Lemieux.CLI.ConfigTest do
           "model" => "ixway:gpt-6-luna",
           "effort" => "max"
         },
-        "systemone_compaction_providers" => %{
+        "systemone_providers" => %{
           "typesafe" => %{"api_key" => "   "},
           "local" => %{"base_url" => "http://127.0.0.1:8080", "api_key" => ""}
         },
@@ -485,7 +485,7 @@ defmodule Lemieux.CLI.ConfigTest do
 
     assert Config.warnings(config) ==
              Enum.map(
-               ~w(ixway.api_key providers.openai.api_key systemone_compaction_providers.local.api_key systemone_compaction_providers.typesafe.api_key web_search_providers.brave.api_key),
+               ~w(ixway.api_key providers.openai.api_key systemone_providers.local.api_key systemone_providers.typesafe.api_key web_search_providers.brave.api_key),
                &"Empty field #{inspect(&1)} in the lmx config; it is ignored. Supply the key there, or remove the placeholder."
              )
 
@@ -494,7 +494,7 @@ defmodule Lemieux.CLI.ConfigTest do
     assert Config.get(config, "ixway")["api_key"] == nil
     assert Config.get(config, "ixway")["enabled"] == true
 
-    assert Config.get(config, "systemone_compaction_providers") == %{
+    assert Config.get(config, "systemone_providers") == %{
              "local" => %{"base_url" => "http://127.0.0.1:8080"},
              "typesafe" => %{}
            }
@@ -530,82 +530,82 @@ defmodule Lemieux.CLI.ConfigTest do
            "systemone_compaction.provider", "auto, typesafe, ixway or the name"},
           {%{"systemone_compaction" => %{"provider" => "local"}}, "systemone_compaction.provider",
            "does not declare"},
-          {%{"systemone_compaction_providers" => %{"Private" => %{"base_url" => "http://h"}}},
-           "systemone_compaction_providers", "lowercase letters"},
-          {%{"systemone_compaction_providers" => %{"ixway" => %{"api_key" => "private-key"}}},
-           "systemone_compaction_providers.ixway.api_key", "IXWAY_API_KEY"},
-          {%{"systemone_compaction_providers" => %{"ixway" => %{"api_key" => ""}}},
-           "systemone_compaction_providers.ixway.api_key", "IXWAY_API_KEY"},
+          {%{"systemone_providers" => %{"Private" => %{"base_url" => "http://h"}}},
+           "systemone_providers", "lowercase letters"},
+          {%{"systemone_providers" => %{"ixway" => %{"api_key" => "private-key"}}},
+           "systemone_providers.ixway.api_key", "IXWAY_API_KEY"},
+          {%{"systemone_providers" => %{"ixway" => %{"api_key" => ""}}},
+           "systemone_providers.ixway.api_key", "IXWAY_API_KEY"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "ixway" => %{"base_url" => "https://gw.example/v1"}
              }
-           }, "systemone_compaction_providers.ixway.base_url", "without /v1"},
-          {%{"systemone_compaction_providers" => %{"typesafe" => %{"model" => "   "}}},
-           "systemone_compaction_providers.typesafe.model", "name a model"},
-          {%{"systemone_compaction_providers" => %{"typesafe" => %{"api_key" => 123}}},
-           "systemone_compaction_providers.typesafe.api_key", "one line of text"},
-          {%{"systemone_compaction_providers" => %{"auto" => %{"base_url" => "http://h"}}},
-           "systemone_compaction_providers.auto", "default choice"},
+           }, "systemone_providers.ixway.base_url", "without /v1"},
+          {%{"systemone_providers" => %{"typesafe" => %{"model" => "   "}}},
+           "systemone_providers.typesafe.model", "name a model"},
+          {%{"systemone_providers" => %{"typesafe" => %{"api_key" => 123}}},
+           "systemone_providers.typesafe.api_key", "one line of text"},
+          {%{"systemone_providers" => %{"auto" => %{"base_url" => "http://h"}}},
+           "systemone_providers.auto", "default choice"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "api_key_header" => "Authorization"}
              }
-           }, "systemone_compaction_providers.local.api_key_header", "other than Authorization"},
+           }, "systemone_providers.local.api_key_header", "other than Authorization"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "input_per_million" => 0.05}
              }
-           }, "systemone_compaction_providers.local", "both or neither"},
-          {%{"systemone_compaction_providers" => %{"local" => "private-key"}},
-           "systemone_compaction_providers.local", "an object"},
-          {%{"systemone_compaction_providers" => %{"local" => %{"model" => "m"}}},
-           "systemone_compaction_providers.local", "must include base_url"},
+           }, "systemone_providers.local", "both or neither"},
+          {%{"systemone_providers" => %{"local" => "private-key"}}, "systemone_providers.local",
+           "an object"},
+          {%{"systemone_providers" => %{"local" => %{"model" => "m"}}},
+           "systemone_providers.local", "must include base_url"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://user:private@h"}
              }
-           }, "systemone_compaction_providers.local.base_url", "without credentials"},
-          {%{"systemone_compaction_providers" => %{"local" => %{"base_url" => "h.example"}}},
-           "systemone_compaction_providers.local.base_url", "http(s) URL"},
+           }, "systemone_providers.local.base_url", "without credentials"},
+          {%{"systemone_providers" => %{"local" => %{"base_url" => "h.example"}}},
+           "systemone_providers.local.base_url", "http(s) URL"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "type" => "contract"}
              }
-           }, "systemone_compaction_providers.local.type", "endpoint"},
+           }, "systemone_providers.local.type", "endpoint"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "api_key" => "private\nkey"}
              }
-           }, "systemone_compaction_providers.local.api_key", "one line of text"},
+           }, "systemone_providers.local.api_key", "one line of text"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "api_key_env" => "not a name"}
              }
-           }, "systemone_compaction_providers.local.api_key_env", "environment variable"},
+           }, "systemone_providers.local.api_key_env", "environment variable"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "headers" => "private"}
              }
-           }, "systemone_compaction_providers.local.headers", "header names to one-line values"},
+           }, "systemone_providers.local.headers", "header names to one-line values"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{
                  "base_url" => "http://h",
                  "headers" => %{"Authorization" => "Bearer private"}
                }
              }
-           }, "systemone_compaction_providers.local.headers", "without Authorization"},
+           }, "systemone_providers.local.headers", "without Authorization"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "model" => ""}
              }
-           }, "systemone_compaction_providers.local.model", "name a model"},
+           }, "systemone_providers.local.model", "name a model"},
           {%{
-             "systemone_compaction_providers" => %{
+             "systemone_providers" => %{
                "local" => %{"base_url" => "http://h", "input_per_million" => -1}
              }
-           }, "systemone_compaction_providers.local.input_per_million", "zero or more"},
+           }, "systemone_providers.local.input_per_million", "zero or more"},
           {%{"providers" => %{"openai" => %{"model" => "anthropic:claude-sonnet-5"}}},
            "providers.openai.model", "openai:MODEL"},
           {%{"providers" => %{"openai" => %{"api_key" => "private\rkey"}}},
@@ -628,7 +628,7 @@ defmodule Lemieux.CLI.ConfigTest do
   } do
     path =
       write_config(dir, %{
-        "systemone_compaction_providers" => %{
+        "systemone_providers" => %{
           "local" => %{"base_url" => "http://127.0.0.1:8080", "endpoint" => "http://elsewhere"}
         }
       })
@@ -636,18 +636,18 @@ defmodule Lemieux.CLI.ConfigTest do
     assert {:error, reason} = Config.load(path)
 
     assert reason =~
-             ~s(Unknown field "endpoint" in lmx systemone_compaction_providers.local section)
+             ~s(Unknown field "endpoint" in lmx systemone_providers.local section)
 
     # TypeSafe's address is fixed, so its entry has no base_url to take.
     path =
       write_config(dir, %{
-        "systemone_compaction_providers" => %{"typesafe" => %{"base_url" => "http://elsewhere"}}
+        "systemone_providers" => %{"typesafe" => %{"base_url" => "http://elsewhere"}}
       })
 
     assert {:error, reason} = Config.load(path)
 
     assert reason =~
-             ~s(Unknown field "base_url" in lmx systemone_compaction_providers.typesafe section)
+             ~s(Unknown field "base_url" in lmx systemone_providers.typesafe section)
   end
 
   test "disabled_extensions accepts unique shipped names only", %{tmp_dir: dir} do

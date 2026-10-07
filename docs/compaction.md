@@ -243,14 +243,16 @@ naming the new ones; see [Moving from Jev compaction](#moving-from-jev-compactio
 ### Choosing a provider
 
 Choosing a provider is separate from configuring one, the way `"web_search"`
-and `"web_search_providers"` divide search. `"systemone_compaction"` holds
-the choice and the budget; `"systemone_compaction_providers"` holds, under
-each provider's name, what that provider needs:
+and `"web_search_providers"` divide search. `"systemone_providers"` declares
+each System One provider once, under a name of your choosing, with what it
+needs; the list is shared by every feature that asks such a model, and each
+feature picks its own from it. For this step, `"systemone_compaction"` holds
+the choice and the budget:
 
 ```json
 {
   "systemone_compaction": {"mode": "auto", "provider": "local"},
-  "systemone_compaction_providers": {
+  "systemone_providers": {
     "local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash",
               "input_per_million": 0.0, "output_per_million": 0.0},
     "typesafe": {"api_key": "…"}
@@ -258,8 +260,11 @@ each provider's name, what that provider needs:
 }
 ```
 
-`provider` names the one the evaluations go to. Two are built in, and need
-an entry only to change what they default to:
+`provider` names the one the evaluations go to. The computer-use and
+research examples select theirs from the same list
+([System One providers](configuration.md#system-one-providers)), so a small
+local model can serve compaction while a stronger one picks browser actions.
+Two are built in, and need an entry only to change what they default to:
 
 - **`typesafe`**, TypeSafe's hosted service at `https://api.typesafe.ai`. Its
   key is `JEV_API_KEY` in the environment `lmx` runs in, or the entry's
@@ -358,7 +363,7 @@ provider, and the name selects it:
 ```json
 {
   "systemone_compaction": {"provider": "local"},
-  "systemone_compaction_providers": {
+  "systemone_providers": {
     "local": {"base_url": "http://127.0.0.1:8080", "model": "local-scorer-1"}
   }
 }
@@ -388,7 +393,7 @@ both Apache-2.0), this is the whole configuration:
 ```json
 {
   "systemone_compaction": {"provider": "ollama", "reservation_per_call_usd": 0.001},
-  "systemone_compaction_providers": {
+  "systemone_providers": {
     "ollama": {
       "base_url": "http://127.0.0.1:11434",
       "model": "clef-flash",
@@ -412,7 +417,7 @@ your shell:
 ```json
 {
   "systemone_compaction": {"provider": "vendor"},
-  "systemone_compaction_providers": {
+  "systemone_providers": {
     "vendor": {
       "base_url": "https://decisions.vendor.example/accounts/ACCOUNT_ID",
       "api_key_env": "VENDOR_API_KEY",
@@ -437,7 +442,7 @@ key in the `ixway` section or `IXWAY_API_KEY`:
     "max_cost_usd": 0.05,
     "reservation_per_call_usd": 0.01
   },
-  "systemone_compaction_providers": {
+  "systemone_providers": {
     "ixway": {"model": "gateway-scorer-1", "input_per_million": 0.04, "output_per_million": 0.0}
   }
 }
@@ -498,11 +503,11 @@ The old settings map onto the new ones like this:
 | --- | --- |
 | `jev_compaction.mode`, `.max_evaluations`, `.max_cost_usd`, `.reservation_per_call_usd` | the same fields under `systemone_compaction` |
 | `jev_compaction.route` or `.provider` | `systemone_compaction.provider` |
-| `jev_compaction.api_key` | `systemone_compaction_providers.typesafe.api_key` |
-| `jev_compaction.endpoint` | `systemone_compaction_providers.ixway.base_url` |
+| `jev_compaction.api_key` | `systemone_providers.typesafe.api_key` |
+| `jev_compaction.endpoint` | `systemone_providers.ixway.base_url` |
 | `jev_compaction.model` | `model` in the selected provider's entry |
 | `jev_compaction.input_per_million`, `.output_per_million` | the same fields in the selected provider's entry |
-| `jev_compaction_providers.NAME` | `systemone_compaction_providers.NAME` |
+| `jev_compaction_providers.NAME` | `systemone_providers.NAME` |
 | `"disabled_extensions": ["jev_compaction"]` | `"disabled_extensions": ["systemone_compaction"]` |
 
 Under the old automatic choice, a `jev_compaction.model` beside an Ixway

@@ -9,16 +9,27 @@ defmodule LemieuxComputerUse.Runner do
 
   `:on_event` receives ordered JSON receipts (including intent before input),
   allowing a host to retain evidence even if it cancels the outer tool. The
-  standalone command can write these to a private JSONL journal. No raw Jev
-  requests, API keys or browser handles are evidence.
+  standalone command can write these to a private JSONL journal. No raw
+  System One requests, API keys or browser handles are evidence.
+
+  Each step's choices come from `:classify`, a host's callback, or else from
+  the System One provider in `:systemone` (`provider:` or `client:`, and
+  `timeout_ms:`; see `LemieuxComputerUse.SystemOne`). The classifier is
+  settled before discovery or the browser starts: a run with neither stops
+  with "no System One provider is configured" instead of opening a page it
+  cannot act on.
   """
-  alias LemieuxComputerUse.{Action, Decision, Discovery, Jev, Policy, Search, Text}
+  alias LemieuxComputerUse.{Action, Decision, Discovery, Policy, Search, SystemOne, Text}
   alias Lemieux.Tools
   alias Lemieux.Tools.WebSearch
 
   @spec run(args :: map(), opts :: keyword(), context :: map()) :: {:ok | :error, map()}
   def run(args, opts, context \\ %{}) do
-    with {:ok, opts} <- LemieuxComputerUse.validate(opts), :ok <- input(args) do
+    with {:ok, opts} <- LemieuxComputerUse.validate(opts),
+         :ok <- input(args),
+         {:ok, classify} <- classifier(opts) do
+      opts = Keyword.put(opts, :classify, classify)
+
       context =
         Map.merge(
           %{
@@ -58,6 +69,22 @@ defmodule LemieuxComputerUse.Runner do
   end
 
   defp input(_), do: {:error, "Supply a nonempty goal of at most 4000 bytes"}
+
+  # One SDK client per run, built before anything is fetched or opened.
+  defp classifier(opts) do
+    case Keyword.fetch(opts, :classify) do
+      {:ok, classify} ->
+        {:ok, classify}
+
+      :error ->
+        systemone = Keyword.get(opts, :systemone, [])
+
+        with {:ok, client} <- SystemOne.client(systemone) do
+          options = [client: client] ++ Keyword.take(systemone, [:timeout_ms])
+          {:ok, &SystemOne.evaluate(&1, options)}
+        end
+    end
+  end
 
   defp perform(args, opts, context) do
     started = System.monotonic_time(:millisecond)
@@ -172,9 +199,7 @@ defmodule LemieuxComputerUse.Runner do
           state.verification_feedback
         )
 
-      classify =
-        Keyword.get(state.opts, :classify, &Jev.evaluate(&1, Keyword.get(state.opts, :jev, [])))
-
+      classify = Keyword.fetch!(state.opts, :classify)
       {micros, response} = :timer.tc(fn -> classify.(request) end)
       state = %{state | attempts: state.attempts + 1}
 
@@ -356,17 +381,18 @@ defmodule LemieuxComputerUse.Runner do
   # diagnostics and a numeric HTTP status are safe for retained evidence.
   defp diagnostic(reason) when is_binary(reason) do
     known = [
-      "JEV_API_KEY is required",
-      "Jev client is invalid",
-      "Jev request is invalid",
-      "Jev returned an invalid response",
-      "Jev transport failed",
+      "no System One provider is configured",
+      "System One provider is unusable",
+      "System One client is invalid",
+      "System One request is invalid",
+      "System One returned an invalid response",
+      "System One transport failed",
       "TYPE_TEXT requires a configured text_model through ReqLLM",
       "Text model did not return a valid field value",
       "Text model request failed"
     ]
 
-    if reason in known or Regex.match?(~r/^Jev returned HTTP [1-5][0-9]{2}$/, reason),
+    if reason in known or Regex.match?(~r/^System One returned HTTP [1-5][0-9]{2}$/, reason),
       do: reason,
       else: nil
   end

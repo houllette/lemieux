@@ -641,13 +641,15 @@ show the shapes an extension takes:
   `lmx explain --extension-dir examples/extensions/planning`, which makes no
   model call. The root test suite checks it.
 - The [computer-use extension](https://github.com/houllette/lemieux/blob/main/examples/extensions/computer_use/README.md)
-  is experimental: a separate Mix host with bounded web discovery, Jev
-  classification (TypeSafe, billed) and headless browser actions through
-  Wallaby. It demonstrates a composed tool inheriting the current host's
-  policy for inner fetches and browser input. Its browser dependencies and
-  lifecycle remain outside the core application. Its page-observation design
-  and parts of its browser script are adapted from the MIT-licensed
-  jev-ultrafast project; its `NOTICE` file carries that license.
+  is experimental: a separate Mix host with bounded web discovery, System
+  One classification (any `systemone_providers` entry — a local model, or
+  TypeSafe and other hosted ones, which bill) and headless browser actions
+  through Wallaby. It demonstrates a composed tool inheriting the current
+  host's policy for inner fetches and browser input. Its browser
+  dependencies and lifecycle remain outside the core application. Its
+  page-observation design and parts of its browser script are adapted from
+  the MIT-licensed jev-ultrafast project; its `NOTICE` file carries that
+  license.
 
 The [System One compaction extension](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
 lives in `dist/lmx/extensions/systemone_compaction` and ships inside the `lmx`

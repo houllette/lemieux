@@ -1,19 +1,20 @@
 # Run from this example to reuse its explicit env-file loader with research.
-# Discovery selects its default hosted classifier from the configured key.
+# Discovery asks the System One provider --systemone-provider names, or the
+# automatic choice from the lmx config file.
 {options, rest, invalid} =
   OptionParser.parse(System.argv(),
-    strict: [execute: :boolean, env_file: :string, question: :string]
+    strict: [execute: :boolean, env_file: :string, question: :string, systemone_provider: :string]
   )
 
 if rest != [] or invalid != [] or options[:execute] != true,
   do:
     Mix.raise(
-      "Explicit --execute is required: one Brave search, at most three Jev calls, three HTTP fetches and one configured synthesis request"
+      "Explicit --execute is required: one Brave search, at most three System One calls, three HTTP fetches and one configured synthesis request"
     )
 
 :ok = Mix.Tasks.Lmx.Browser.load_env(options[:env_file])
 
-for file <- ["jev.ex", "discovery.ex", "pipeline.ex"],
+for file <- ["system_one.ex", "discovery.ex", "pipeline.ex"],
     do: Code.require_file("../research/lib/research_extension/" <> file)
 
 alias Lemieux.CLI.{Config, Options, Runtime}
@@ -51,7 +52,9 @@ File.mkdir_p!("/tmp/lemieux-guided-research")
       max_total_bytes: 393_216,
       timeout_ms: 60_000,
       cwd: "/tmp/lemieux-guided-research",
-      discovery: [candidate_limit: 5, max_depth: 1],
+      discovery:
+        [candidate_limit: 5, max_depth: 1] ++
+          if(options[:systemone_provider], do: [provider: options[:systemone_provider]], else: []),
       session: [
         provider: prepared.options[:provider],
         model: prepared.model,

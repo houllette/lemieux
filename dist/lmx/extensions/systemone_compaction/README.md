@@ -26,20 +26,21 @@ its harness.
 
 It sends nothing until it is given a provider. In `lmx`,
 `"systemone_compaction"` holds the choice (`provider`), the `mode` and the
-budget, and `"systemone_compaction_providers"` holds what each provider
+budget, and `"systemone_providers"`, shared with the other features that
+ask a System One model, holds what each provider
 needs. `mode` defaults to `"auto"`, which switches the extension on, with no
 other setting, as soon as the selected provider is complete. Two providers
 are built in:
 
 - **`typesafe`**, TypeSafe's hosted service: a key from `JEV_API_KEY` in the
-  environment `lmx` runs in, or `systemone_compaction_providers.typesafe.api_key`
+  environment `lmx` runs in, or `systemone_providers.typesafe.api_key`
   in `~/.lmx/config.json`;
 - **`ixway`**, an Ixway gateway: an endpoint (the entry's `base_url`, or the
   route `lmx` uses: `--ixway`, `LMX_IXWAY_URL` or `ixway.endpoint`), the
   entry's `model` and the Ixway key (`IXWAY_API_KEY` or `ixway.api_key`). The
   request then goes to that endpoint, and never to TypeSafe.
 
-Any other name is a provider declared in `systemone_compaction_providers`: a
+Any other name is a provider declared in `systemone_providers`: a
 `base_url` that implements `POST /v1/systemone`, with an optional key, extra
 headers, a model and a tariff — an open model on your own machine, or a
 vendor's decision API. A declared provider is never selected by default and
@@ -140,7 +141,7 @@ person's own machine are all this kind, and none is priced until
 makes no evaluation through an unpriced one. `type: :typesafe` is priced as
 TypeSafe whatever its `base_url` says, so a proxy you price yourself is an
 `:endpoint`. `lmx` builds the map from `systemone_compaction` and
-`systemone_compaction_providers` in its config file
+`systemone_providers` in its config file
 (`Lemieux.CLI.SystemOneCompaction`). A selected provider never falls back to
 another on missing credentials or HTTP failure; the request stays as it was.
 

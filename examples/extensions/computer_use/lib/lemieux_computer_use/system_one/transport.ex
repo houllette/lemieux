@@ -1,12 +1,14 @@
-defmodule LemieuxComputerUse.Jev.Transport do
+defmodule LemieuxComputerUse.SystemOne.Transport do
   @moduledoc """
   Unary HTTP transport for SystemOneSDK with redirects and retries disabled.
 
   The SDK's default Pristine transport delegates to `:httpc`, whose defaults
   follow redirects and can retry a response carrying Retry-After. Neither is
-  acceptable for a step that sends a bearer credential and has a one-request
-  budget. TypeSafe paths, authentication, serialization and response decoding
-  remain owned by SystemOneSDK and its TypeSafe provider.
+  acceptable for a step that may send a credential and has a one-request
+  budget: a redirect would forward the key to wherever it points. Paths,
+  authentication, serialization and response decoding remain owned by
+  SystemOneSDK and its providers (`TypeSafe` for TypeSafe's hosted service,
+  `Endpoint` for any other `POST /v1/systemone` service).
   """
 
   @behaviour Pristine.Ports.Transport

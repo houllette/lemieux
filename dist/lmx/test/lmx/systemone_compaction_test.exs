@@ -47,7 +47,7 @@ defmodule Lmx.SystemOneCompactionTest do
           "api_key" => "private-test-gateway-key"
         },
         "systemone_compaction" => %{"mode" => "apply", "provider" => "ixway"},
-        "systemone_compaction_providers" => %{"ixway" => %{"model" => "gateway-scorer-1"}}
+        "systemone_providers" => %{"ixway" => %{"model" => "gateway-scorer-1"}}
       })
 
     assert {:ok, options} = Options.parse(["--config", path, "--no-delegate"])
@@ -85,7 +85,7 @@ defmodule Lmx.SystemOneCompactionTest do
           "api_key" => "gateway-key-that-must-not-be-used"
         },
         "systemone_compaction" => %{"mode" => "apply", "provider" => "local"},
-        "systemone_compaction_providers" => %{
+        "systemone_providers" => %{
           "typesafe" => %{"api_key" => "saved-key-that-must-not-be-used"},
           "ixway" => %{"model" => "gateway-scorer-1"},
           "local" => %{
@@ -135,13 +135,13 @@ defmodule Lmx.SystemOneCompactionTest do
   test "a declared provider that is not selected leaves the step off, and a selected incomplete one stops an apply start" do
     local = %{"base_url" => "http://127.0.0.1:8080", "model" => "local-scorer-1"}
 
-    declared = %Config{settings: %{"systemone_compaction_providers" => %{"local" => local}}}
+    declared = %Config{settings: %{"systemone_providers" => %{"local" => local}}}
     assert SystemOneCompaction.spec(declared, nil) == {:ok, nil}
 
     incomplete = %Config{
       settings: %{
         "systemone_compaction" => %{"mode" => "apply", "provider" => "local"},
-        "systemone_compaction_providers" => %{"local" => Map.delete(local, "model")}
+        "systemone_providers" => %{"local" => Map.delete(local, "model")}
       }
     }
 
@@ -150,7 +150,7 @@ defmodule Lmx.SystemOneCompactionTest do
     assert message =~
              "System One compaction is set to apply, but the local provider has no model"
 
-    assert message =~ "systemone_compaction_providers entry."
+    assert message =~ "systemone_providers entry."
 
     # In auto mode the same incomplete selection is simply off.
     auto = put_in(incomplete.settings, ["systemone_compaction", "mode"], "auto")
@@ -164,7 +164,7 @@ defmodule Lmx.SystemOneCompactionTest do
     path =
       write_config(dir, %{
         "version" => 1,
-        "systemone_compaction_providers" => %{"typesafe" => %{"api_key" => "private-hosted-key"}}
+        "systemone_providers" => %{"typesafe" => %{"api_key" => "private-hosted-key"}}
       })
 
     assert {:ok, config} = Config.load(path)

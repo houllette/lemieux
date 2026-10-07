@@ -176,7 +176,7 @@ and `--config none` without `LMX_HOME` does not run it.
     it, the choice is automatic: an Ixway gateway when the `ixway` entry has
     a model and `lmx` has the gateway's address and key, otherwise TypeSafe
     when `JEV_API_KEY` is set or a key is saved in
-    `systemone_compaction_providers.typesafe.api_key`. It then sends one HTTP
+    `systemone_providers.typesafe.api_key`. It then sends one HTTP
     request to that provider's address, and never to another, before a
     model request that carries long, older `read` results, and at most three
     such requests a session by default.
@@ -191,7 +191,7 @@ and `--config none` without `LMX_HOME` does not run it.
     request under a cap.
   - *Off:* `"systemone_compaction": {"mode": "off"}` or
     `"disabled_extensions": ["systemone_compaction"]`. A provider entry in
-    `systemone_compaction_providers` that is not selected receives nothing.
+    `systemone_providers` that is not selected receives nothing.
     The
     [extension's README](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
     has the details.

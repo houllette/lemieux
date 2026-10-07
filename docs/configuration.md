@@ -46,7 +46,7 @@ Every key `~/.lmx/config.json` accepts, and what applies when it is absent.
 | `summary_model` | the session's model | A different model for compaction summaries |
 | `compaction_price_tiers` | none | Price bands per model, so compaction happens before a price cliff ([A price cliff](compaction.md#a-price-cliff)) |
 | `systemone_compaction` | `{"mode": "auto"}` | A System One model shortens old file reads before a request; `provider` chooses which, and it is on only when that provider is complete ([System One compaction](#system-one-compaction)) |
-| `systemone_compaction_providers` | none | What each System One provider needs, by name: `{"local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash"}}`, or `typesafe` and `ixway` settings ([System One compaction](#system-one-compaction)) |
+| `systemone_providers` | none | System One providers declared once, by name, for every feature that asks one: `{"local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash"}}`, or `typesafe` and `ixway` settings ([System One providers](#system-one-providers)) |
 
 Embedding hosts can configure preflight, price-aware and advisory compaction
 through the session API. See [Compaction and price-aware
@@ -151,7 +151,7 @@ variable that is empty or blank is different: it counts as unset, so the
 file's value applies, except that the switches `LMX_WEB_FETCH`,
 `LMX_PROJECT_MCP` and `LMX_DELEGATE` read an empty value as off. `IXWAY_API_KEY`
 overrides `ixway.api_key`, `JEV_API_KEY` overrides
-`systemone_compaction_providers.typesafe.api_key`,
+`systemone_providers.typesafe.api_key`,
 the variable a System One provider's `api_key_env` names overrides that
 provider's `api_key`, and `BRAVE_SEARCH_API_KEY` overrides
 `web_search_providers.brave.api_key`. Which System One provider compaction
@@ -168,7 +168,7 @@ checkout's own `.env` ([Environment variables](cli.md#environment-variables)).
 stop startup. An unknown key is named at startup, with a suggestion, and
 ignored, except a likely misspelling of a routing or credential field
 (`model`, `providers`, `base_url`, `ixway`, `systemone_compaction`,
-`systemone_compaction_providers`) and the retired `api_keys`,
+`systemone_providers`) and the retired `api_keys`,
 `preferred_models`, `jev_compaction` and `jev_compaction_providers`, which
 stop startup with a sentence saying where their contents moved. Inside a section such as
 `providers`, `ixway` or `permissions`, any unknown key stops startup. So does
@@ -281,6 +281,17 @@ has a state directory again, and with it the remembered model and the
 choice of a model from your keys or a local Ollama; only the config file is
 left unread.
 
+### System One providers
+
+A System One model answers typed questions about a state (`noul` yes/no,
+`choice` among options, `score` on a scale) with calibrated probabilities
+over `POST /v1/systemone`. Several features ask one: the bundled compaction
+step below, and the computer-use and research examples. Their providers are
+declared once, in `"systemone_providers"`, and each feature selects its own
+by name, so they can differ — a small local model for compaction, a stronger
+one for browser actions — and two entries can point at one server with
+different models. An entry nobody selects receives nothing.
+
 ### System One compaction
 
 `lmx` bundles an extension that asks a System One model whether old, long
@@ -290,12 +301,12 @@ the selected provider is complete.
 
 `"systemone_compaction"` holds the choice and the budget (`mode`, `provider`,
 `max_evaluations`, `max_cost_usd`, `reservation_per_call_usd`), and
-`"systemone_compaction_providers"` holds what each provider needs, the way
+`"systemone_providers"` holds what each provider needs, the way
 `"web_search"` and `"web_search_providers"` divide search. Two providers are
 built in:
 
 - **`typesafe`**, TypeSafe's hosted Jev: `JEV_API_KEY` in the environment
-  `lmx` runs in, or `systemone_compaction_providers.typesafe.api_key` in
+  `lmx` runs in, or `systemone_providers.typesafe.api_key` in
   `~/.lmx/config.json`.
 - **`ixway`**, an Ixway gateway: an endpoint (the entry's `base_url`, or the
   Ixway route `lmx` uses), the entry's `model` and the Ixway key
@@ -312,7 +323,7 @@ your own machine needs only that:
 ```json
 {
   "systemone_compaction": {"provider": "local"},
-  "systemone_compaction_providers": {
+  "systemone_providers": {
     "local": {"base_url": "http://127.0.0.1:11434", "model": "clef-flash",
               "input_per_million": 0.0, "output_per_million": 0.0}
   }
@@ -378,8 +389,8 @@ stops the start with a message saying so.
 **Moving from Jev compaction.** The step was called Jev compaction, under
 `"jev_compaction"`; that key now stops the start with a sentence naming the
 new ones. The TypeSafe key moves to
-`systemone_compaction_providers.typesafe.api_key`, the Ixway endpoint to
-`systemone_compaction_providers.ixway.base_url`, and a model or tariff to the
+`systemone_providers.typesafe.api_key`, the Ixway endpoint to
+`systemone_providers.ixway.base_url`, and a model or tariff to the
 selected provider's entry; [Compaction](compaction.md#moving-from-jev-compaction)
 has the whole table. The
 [extension's README](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
