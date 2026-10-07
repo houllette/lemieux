@@ -123,11 +123,18 @@ defmodule Lemieux.Provider.Route do
   @doc """
   Readies the route to answer: discovery, a catalogue refresh, a policy read.
 
-  Optional. Called before a startup model is resolved and before an
-  interactive host offers the route's models, and possibly more than once,
-  so a route whose state already holds what it needs returns it unchanged
-  rather than asking again. A failure is the route's own typed reason and
-  stops the start. Absent, the state is ready as it is.
+  Optional. A host runs it for the route the start model is on — before the
+  terminal UI opens, and in `prepare/2` before a session starts — and may
+  run it more than once, so a route whose state already holds what it needs
+  returns it unchanged rather than asking again. A failure is the route's
+  own typed reason and stops the start.
+
+  It is not run for every registered route: a host may ask a route it has
+  not readied about its models — the terminal UI's `/provider NAME` lists
+  them — so `c:available_models/2` and `c:validate_model/3` must answer
+  from an unreadied state as well, from a catalogue the state already holds
+  or by discovering then, as `Lemieux.Ixway` does. Absent, the state is
+  ready as it is.
   """
   @callback ready(state :: term()) :: {:ok, state :: term()} | {:error, term()}
 

@@ -28,10 +28,11 @@ defmodule Lemieux.Extension.Routes do
         @behaviour Lemieux.Extension.Routes
 
         @impl true
-        def routes(config: %{"endpoint" => endpoint}) do
-          case System.get_env("RELAY_API_KEY") do
-            nil -> {:error, "RELAY_API_KEY is not set"}
-            key -> {:ok, [%{name: "relay", route: {MyApp.Relay.Route, MyApp.Relay.Route.new(endpoint, key)}}]}
+        def routes(config: config) do
+          case {config["endpoint"], System.get_env("RELAY_API_KEY")} do
+            {nil, _key} -> {:error, "relay needs an \"endpoint\" option"}
+            {_endpoint, nil} -> {:error, "RELAY_API_KEY is not set"}
+            {endpoint, key} -> {:ok, [%{name: "relay", route: {MyApp.Relay.Route, MyApp.Relay.Route.new(endpoint, key)}}]}
           end
         end
       end
@@ -40,15 +41,24 @@ defmodule Lemieux.Extension.Routes do
   manifest's `options` with the person's `"extension_options"` merged over
   it, string keys and all — and builds route state without I/O: discovery
   belongs in `c:Lemieux.Provider.Route.ready/1`, where the host runs it at
-  the right moment and reports its failure in a sentence. Start no process
-  here; a route that needs one belongs in a host that supervises it. Read a
-  credential from the environment or from the options and never return it
-  from `c:Lemieux.Extension.describe/1`: the loader records the module and
-  the route's name, and nothing of its state, in the transcript, and the
-  adapter the host wraps a route in shows nothing of that state when
-  inspected. A compiled bundle should still derive a quiet `Inspect` for
-  its own state (`@derive {Inspect, only: []}`); a script compiled by the
-  running host cannot, as the protocols are consolidated by then.
+  the right moment and reports its failure in a sentence. The host readies
+  only the route the start model is on, so a route must also list and check
+  its models from an unreadied state (`c:Lemieux.Provider.Route.ready/1`
+  says how). Start no process here; a route that needs one belongs in a
+  host that supervises it. A refusal is the clause's own `{:error, reason}`,
+  never a clause that does not match: the host calls `routes/1` as it is
+  and renders what it returns.
+
+  Read a credential from the environment or from the options and never
+  return it from `c:Lemieux.Extension.describe/1`: the loader records the
+  module and that it offers routes, and nothing of its state, in the
+  transcript, and the adapter the host wraps a route in shows nothing of
+  that state when inspected. A compiled bundle should still derive a quiet
+  `Inspect` for its own state (`@derive {Inspect, only: []}`). A script
+  compiled by the running host cannot, as the protocols are consolidated by
+  then, so a script keeps a credential out of its state altogether and
+  reads it when a request is sent — the shipped example keeps only the
+  variable's name.
 
   ## Names
 
@@ -115,8 +125,23 @@ defmodule Lemieux.Extension.Routes do
     end
   end
 
-  def validate(other),
-    do: {:error, "routes/1 must return {:ok, [routes]}, got: #{inspect(other)}"}
+  def validate(other), do: {:error, "routes/1 must return {:ok, [routes]}, got #{shape(other)}"}
+
+  @doc """
+  Names a value by its shape and never by its contents, for a refusal about
+  a registration built wrong: the value may hold a credential, and a
+  sentence on standard error must not.
+  """
+  @spec shape(value :: term()) :: String.t()
+  def shape(%{__struct__: struct}), do: "a #{inspect(struct)} struct"
+  def shape(value) when is_map(value), do: "a map with keys #{inspect(Map.keys(value))}"
+  def shape(value) when is_atom(value), do: inspect(value)
+  def shape(value) when is_tuple(value), do: "a #{tuple_size(value)}-tuple"
+  def shape(value) when is_list(value), do: "a list of #{length(value)}"
+  def shape(value) when is_binary(value), do: "a string"
+  def shape(value) when is_number(value), do: "a number"
+  def shape(value) when is_function(value), do: "a function"
+  def shape(_value), do: "a value of another type"
 
   defp each(list, check) do
     Enum.reduce_while(list, :ok, fn item, :ok ->
@@ -153,6 +178,5 @@ defmodule Lemieux.Extension.Routes do
   defp registration(other),
     do:
       {:error,
-       "each route must be %{name: \"NAME\", route: {module, state}}, got: " <>
-         inspect(other, limit: 5, printable_limit: 80)}
+       "each route must be %{name: \"NAME\", route: {module, state}}, got #{shape(other)}"}
 end

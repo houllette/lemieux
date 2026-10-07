@@ -198,7 +198,12 @@ defmodule Lemieux.CLI.Errors do
   def unknown_model(spec, :unknown_provider, program),
     do:
       "#{spec} names a provider lmx does not know (#{ModelSpec.provider(spec)})" <>
-        if(program, do: "; #{program} help models lists the usual ones", else: "")
+        if(program,
+          do:
+            "; #{program} help models lists the usual ones, and an extension that registers " <>
+              "a model route by that name is selected with --extension NAME or --extension-dir PATH",
+          else: ""
+        )
 
   def unknown_model(spec, hint, _program),
     do: "#{spec} is not a model lmx can reach: #{ProviderError.message(hint)}"

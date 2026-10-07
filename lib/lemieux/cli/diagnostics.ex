@@ -92,11 +92,15 @@ defmodule Lemieux.CLI.Diagnostics do
   # a base URL points at, else direct.
   defp route(%{ixway: endpoint}, _prepared) when is_binary(endpoint), do: "ixway"
   defp route(%{host: %{route: name}}, _prepared) when is_binary(name), do: name
-  defp route(%{base_url: url}, _prepared) when is_binary(url), do: "provider_compatible_gateway"
 
-  defp route(_options, %{model: model} = prepared) do
+  defp route(%{base_url: url}, %{model: model} = prepared) do
     name = ModelSpec.provider(model)
-    if name in Map.get(prepared, :routes, []), do: name, else: "direct"
+
+    cond do
+      name in Map.get(prepared, :routes, []) -> name
+      is_binary(url) -> "provider_compatible_gateway"
+      true -> "direct"
+    end
   end
 
   # Only names and presence are returned. URLs, configuration values, headers

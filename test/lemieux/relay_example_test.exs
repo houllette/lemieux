@@ -65,7 +65,11 @@ defmodule Lemieux.RelayExampleTest do
              Provider.validate_model(provider, "relay:other", [])
 
     assert Exception.message(error) =~ "relay:other is not a model the relay serves"
-    refute inspect(provider) =~ @key
+    # The key is in no state at all: the route holds the variable's name and
+    # reads it per request, so even the route's own struct shows nothing.
+    {_module, state} = Adapter.route(provider)
+    refute inspect(state) =~ @key
+    assert inspect(state) =~ "RELAY_API_KEY"
   end
 
   test "a missing key, a bad endpoint and an unknown default are sentences, not a silent start" do
@@ -153,7 +157,22 @@ defmodule Lemieux.RelayExampleTest do
       refute File.read!(file) =~ @key, "#{file} holds the relay key"
     end
 
-    assert Path.wildcard(Path.join([dir, "sessions", "**", "*.jsonl"])) != []
+    transcripts = Path.wildcard(Path.join([dir, "sessions", "**", "*.jsonl"]))
+    assert transcripts != []
+
+    # Resuming one of them without the extension refuses before a session
+    # exists, and says what brings the route back; it used to start, append
+    # the prompt and fail the first request as an unknown provider.
+    id = transcripts |> hd() |> Path.basename(".jsonl")
+    before = File.read!(hd(transcripts))
+
+    {status, _stdout, stderr} =
+      run_lmx(["run", "--config", config, "--resume", id, "Again?"], dir)
+
+    assert {:error, _status} = status
+    assert stderr =~ "relay:qwen3-32b names relay, which is not a provider lmx knows"
+    assert stderr =~ "--extension-dir PATH"
+    assert File.read!(hd(transcripts)) == before
   end
 
   test "a model the relay does not serve, and a route nobody registered, are refused", %{
@@ -176,6 +195,26 @@ defmodule Lemieux.RelayExampleTest do
     {status, _stdout, stderr} = run_lmx(argv, dir)
     assert {:error, _status} = status
     assert stderr =~ "relay:other is not a model the relay serves"
+
+    # Under `--router relay` the relay is the sole connection: a direct model
+    # is refused by the route, never sent to the direct provider.
+    argv = [
+      "run",
+      "--config",
+      config,
+      "--router",
+      "relay",
+      "--model",
+      "openai:gpt-5",
+      "--no-delegate",
+      "--extension-dir",
+      @example,
+      "Ok?"
+    ]
+
+    {status, _stdout, stderr} = run_lmx(argv, dir)
+    assert {:error, _status} = status
+    assert stderr =~ "openai:gpt-5 is not a model the relay serves"
 
     # Without the extension there is no `relay` route: the model is a
     # provider lmx does not know, and `--router relay` says what registers one.

@@ -160,10 +160,15 @@ defmodule Lemieux.CLI.ProviderMux do
     route_models ++ direct_models
   end
 
+  # Under its own name only, like the catalogue: metadata a route attached
+  # to another provider's model would change how the picker orders it.
   @impl Provider
   def model_metadata(%__MODULE__{routes: routes, direct: direct}) do
-    Enum.reduce(routes, Provider.model_metadata(direct), fn {_name, child}, metadata ->
-      Map.merge(metadata, Provider.model_metadata(child))
+    Enum.reduce(routes, Provider.model_metadata(direct), fn {name, child}, metadata ->
+      child
+      |> Provider.model_metadata()
+      |> Map.filter(fn {spec, _entry} -> own?(spec, name) end)
+      |> then(&Map.merge(metadata, &1))
     end)
   end
 

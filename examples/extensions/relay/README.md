@@ -27,8 +27,11 @@ is a model like any other, served by this route and nothing else.
 
 ## Configure it
 
-Point it at your server in `~/.lmx/config.json`, over the manifest's
-defaults, and give it the bearer token the server expects:
+Copy the directory to `~/.lmx/extensions/relay` so `"extensions": ["relay"]`
+and `--extension relay` find it (or load it straight from this checkout with
+`--extension-dir`, below). Then point it at your server in
+`~/.lmx/config.json`, over the manifest's defaults, and give it the bearer
+token the server expects:
 
 ```json
 {
@@ -83,9 +86,9 @@ credential as `route_managed`, and `relay:qwen3-32b` as the model that
   session starts; so is a missing `RELAY_API_KEY` or a malformed endpoint.
   Nothing falls back to another provider.
 
-To load it by name, copy the directory to `~/.lmx/extensions/relay` and use
-`lmx --extension relay`, or add `"relay"` to `"extensions"` in your
-`~/.lmx/config.json` as above. To stop using it, stop selecting it.
+To stop using it, stop selecting it: take `"relay"` out of `"extensions"`
+or leave the flag off. A transcript that recorded a `relay:` model then
+refuses to resume until the extension is selected again, and says so.
 
 ## Write your own
 
@@ -96,8 +99,12 @@ encoding and sends every request to the configured origin with the
 configured key while letting only generation parameters cross from the
 session. `ready/1` is where a server that lists its own models would be
 asked, once; `default_model/1` is what `relay:@default` resolves to. The key
-is private state: the adapter `lmx` wraps a route in shows nothing of it when
-inspected, and nothing writes it to a transcript. A compiled bundle should
-derive a quiet `Inspect` for its own state as well; a script cannot, since
-the protocols are consolidated before it compiles. See
+never enters the route's state: the state names the variable, `target/3`
+reads it for each request, and nothing writes it to a transcript. A script
+compiled by the running `lmx` cannot derive a quiet `Inspect`, since the
+protocols are consolidated before it compiles, so that is the shape a script
+route keeps; a compiled bundle may hold a key and derive `Inspect` instead.
+`lmx` readies only the start model's route, so a route switched to with
+`/provider` must list its models from the state it has — this one keeps its
+catalogue there from the start. See
 [Adding a model route](../../../docs/extensions.md#adding-a-model-route).

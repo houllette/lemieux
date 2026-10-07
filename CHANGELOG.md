@@ -27,7 +27,9 @@ API.
   route's. A name nobody registered, a route that would shadow a `req_llm`
   provider or another route, a malformed registration, and a `routes/1`
   that cannot build its routes (a credential not set) each stop the start in
-  a sentence naming the extension. `lmx explain` reports the route under
+  a sentence naming the extension, and so does resuming a transcript whose
+  route's extension is no longer selected, before a session exists and with
+  the flags that bring the route back. `lmx explain` reports the route under
   `diagnostics.route` and a route's credential as `route_managed`. The
   loader accepts a module exporting `apply/2`, `routes/1` or both, and
   records `"routes": true` for one that offers routes.

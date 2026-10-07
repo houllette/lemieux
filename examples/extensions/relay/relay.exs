@@ -25,11 +25,16 @@ defmodule LemieuxRelayExample do
       unless named. A server that checks no key still needs the variable
       set, to anything (`RELAY_API_KEY=none`): a request with no key would
       make `req_llm` look for `OPENAI_API_KEY`, and your OpenAI key must not
-      leave for a server that is not OpenAI.
+      leave for a server that is not OpenAI. The route keeps the variable's
+      name, not the key: a script compiled by the running `lmx` cannot hide
+      its state from `inspect/1`, so the key is read when a request is sent
+      and lives in no struct, log line or crash report.
 
   `routes/1` builds state and does no I/O. A server that could list its own
-  models would ask it in `ready/1`, which `lmx` runs before the start model
-  is resolved and again before the terminal UI offers the route's models.
+  models would ask it in `ready/1`, which `lmx` runs for the route the
+  start model is on; a route the person switches to with `/provider` is
+  asked about its models before it is readied, so this one keeps its
+  catalogue in its state from the start.
   """
 
   @behaviour Lemieux.Extension.Routes
@@ -43,13 +48,13 @@ defmodule LemieuxRelayExample do
     with {:ok, endpoint} <- endpoint(config),
          {:ok, models} <- models(config),
          {:ok, default} <- default(config, models),
-         {:ok, api_key} <- api_key(config) do
+         {:ok, variable} <- api_key_env(config) do
       route =
         LemieuxRelayExample.Route.new(
           endpoint: endpoint,
           models: models,
           default: default,
-          api_key: api_key,
+          api_key_env: variable,
           context_window: config["context_window"]
         )
 
@@ -92,12 +97,14 @@ defmodule LemieuxRelayExample do
 
   defp default(_config, _models), do: {:ok, nil}
 
-  defp api_key(config) do
+  # Checked now, so an unset variable is a sentence at startup rather than a
+  # refused request; read again at each request (`LemieuxRelayExample.Route`).
+  defp api_key_env(config) do
     variable = Map.get(config, "api_key_env", "RELAY_API_KEY")
 
     case System.get_env(variable) do
       key when is_binary(key) and key != "" ->
-        {:ok, key}
+        {:ok, variable}
 
       _unset ->
         {:error,
@@ -136,18 +143,21 @@ defmodule LemieuxRelayExample.Route do
 
     def message(%{reason: :no_default}),
       do: "the relay has no \"default\" configured: choose a model with --model relay:ID"
+
+    def message(%{reason: {:key_unset, variable}}),
+      do: "#{variable} is no longer set in the environment, so the relay cannot send the request"
   end
 
-  # The key is private state. The adapter around a route never shows its
-  # state (`Lemieux.Providers.ReqLLM`'s own `Inspect` hides everything), and
-  # that is what keeps it out of logs and crash reports: a script compiled by
-  # the running `lmx` cannot derive `Inspect` itself, because the protocols
-  # are consolidated by then. A compiled bundle can and should.
-  defstruct [:endpoint, :api_key, :default, :context_window, models: []]
+  # No credential here: the state names the variable, and `target/3` reads
+  # it for each request. A script compiled by the running `lmx` cannot derive
+  # `Inspect`, because the protocols are consolidated by then, so a key held
+  # in this struct would show in any crash report that printed it. A compiled
+  # bundle may hold one and derive a quiet `Inspect` instead.
+  defstruct [:endpoint, :api_key_env, :default, :context_window, models: []]
 
   @type t :: %__MODULE__{
           endpoint: String.t(),
-          api_key: String.t(),
+          api_key_env: String.t(),
           default: String.t() | nil,
           context_window: pos_integer() | nil,
           models: [String.t()]
@@ -192,6 +202,7 @@ defmodule LemieuxRelayExample.Route do
   @impl true
   def target(%__MODULE__{} = state, request, options) do
     with :ok <- validate_model(state, request.model, request.tools),
+         {:ok, api_key} <- api_key(state),
          {:ok, model} <-
            ReqLLM.model(%{
              provider: :openai,
@@ -212,7 +223,14 @@ defmodule LemieuxRelayExample.Route do
           :max_retries
         ])
 
-      {:ok, {model, options ++ [base_url: state.endpoint <> "/v1", api_key: state.api_key]}}
+      {:ok, {model, options ++ [base_url: state.endpoint <> "/v1", api_key: api_key]}}
+    end
+  end
+
+  defp api_key(%__MODULE__{api_key_env: variable}) do
+    case System.get_env(variable) do
+      key when is_binary(key) and key != "" -> {:ok, key}
+      _unset -> {:error, %Error{reason: {:key_unset, variable}}}
     end
   end
 end

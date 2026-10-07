@@ -438,10 +438,11 @@ defmodule MyApp.Relay do
   @behaviour Lemieux.Extension.Routes
 
   @impl true
-  def routes(config: %{"endpoint" => endpoint}) do
-    case System.get_env("RELAY_API_KEY") do
-      nil -> {:error, "RELAY_API_KEY is not set"}
-      key -> {:ok, [%{name: "relay", route: {MyApp.Relay.Route, MyApp.Relay.Route.new(endpoint, key)}}]}
+  def routes(config: config) do
+    case {config["endpoint"], System.get_env("RELAY_API_KEY")} do
+      {nil, _key} -> {:error, "relay needs an \"endpoint\" option"}
+      {_endpoint, nil} -> {:error, "RELAY_API_KEY is not set"}
+      {endpoint, key} -> {:ok, [%{name: "relay", route: {MyApp.Relay.Route, MyApp.Relay.Route.new(endpoint, key)}}]}
     end
   end
 end
@@ -449,12 +450,16 @@ end
 
 `routes/1` receives the same `[config: map]` as `init/1` — the manifest's
 `options` with your `"extension_options"` merged over them — and builds
-state without I/O. Discovery belongs in the route's optional `ready/1`,
-which `lmx` runs before the start model is resolved and before the terminal
-UI offers the route's models; its optional `default_model/1` is what
-`relay:@default` resolves to. A module may export `apply/2` as well and do
-both; one that exports neither is refused. The loaded form is the same as
-for any extension: a script or a compiled bundle, selected with
+state without I/O; a refusal is an `{:error, reason}` it returns, which
+`lmx` prints as it is. Discovery belongs in the route's optional `ready/1`,
+which `lmx` runs for the route the start model is on, before the terminal
+UI opens and before a session starts. It is not run for every route: one
+the person switches to with `/provider` is asked about its models
+unreadied, so a route lists and checks its models from a catalogue it holds
+or by discovering then, as Ixway does. Its optional `default_model/1` is
+what `relay:@default` resolves to. A module may export `apply/2` as well
+and do both; one that exports neither is refused. The loaded form is the
+same as for any extension: a script or a compiled bundle, selected with
 `--extension`, `--extension-dir` or the config file's `"extensions"`.
 
 The **name** is the provider prefix of the route's models, lowercase
@@ -482,24 +487,28 @@ every other:
   to any other provider never goes to the relay; a route lists models under
   its own name only. Compaction's summary request and a delegated
   investigator on a `relay:` model follow the same rule, because they go
-  through the same provider.
+  through the same provider; under `--router relay`, a `summary_model` or
+  `scout_model` naming a direct model is refused by the route rather than
+  sent to the direct provider.
 - The route cannot price its requests unless it implements
   `estimate_cost/2`, so a session under `max_cost_usd` refuses them rather
   than counting them as free; bound such a session with `max_requests` or
   `max_turns`.
 
-Credentials live in the route's state and nowhere else: read them from the
-environment or the options in `routes/1` and never return them from
-`describe/1`. The adapter `lmx` wraps a route in shows nothing of the
-route's state when inspected; a compiled bundle should derive a quiet
-`Inspect` for its own state too, which a script compiled by the running
-`lmx` cannot (the protocols are consolidated by then). The transcript
+Credentials never reach a transcript: read them from the environment or
+the options in `routes/1` and never return them from `describe/1`. The
+adapter `lmx` wraps a route in shows nothing of the route's state when
+inspected. A compiled bundle should derive a quiet `Inspect` for its own
+state too; a script compiled by the running `lmx` cannot (the protocols are
+consolidated by then), so a script keeps a credential out of its state and
+reads it when a request is sent, as the example does. The transcript
 records the extension as loaded, with `"routes": true`, and records it
 under `"applied"` only if it also shaped the harness; `lmx explain` reports
 the route under `diagnostics.route` and its credential as `route_managed`.
 To stop using a route, stop selecting its extension: a transcript that
-recorded one of its models then says the provider is unknown until the
-extension is selected again. Upgrading is the same as for any extension —
+recorded one of its models then refuses to resume, before a session starts,
+with a sentence naming the extension flags that bring the route back.
+Upgrading is the same as for any extension —
 a script needs only its declared Lemieux requirement, a bundle a compatible
 build — and `Lemieux.Extension.api_version/0` moves if this contract does.
 
@@ -511,7 +520,8 @@ reports the session it would start, with no model call.
 
 ## Provenance
 
-A loaded extension is recorded twice. `harness_context["extensions"]["loaded"]`
+A loaded extension is recorded twice — once, as loaded, when it only
+offers a model route and so shapes no harness. `harness_context["extensions"]["loaded"]`
 says what was loaded, from where, and which build: the name, the directory,
 the manifest's SHA-256, and for the `ebin` form three facts about the beams
 it carries — `module_digest`, the md5 of the extension module's own beam;

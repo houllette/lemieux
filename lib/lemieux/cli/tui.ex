@@ -722,7 +722,7 @@ defmodule Lemieux.CLI.TUI do
   end
 
   defp provider_options(options, provider, opts) do
-    case {provider_model(options, provider), provider} do
+    case {provider_model(options, provider, opts), provider} do
       {nil, "ollama"} -> local_options(options, opts)
       {model, _provider} -> {:ok, chosen(options, model)}
     end
@@ -755,9 +755,20 @@ defmodule Lemieux.CLI.TUI do
     put_in(options.host.model_source, :flag)
   end
 
-  defp provider_model(options, provider) do
+  # The configured model for the provider, the table's, or — for a registered
+  # route, which the table does not know — the route's advertised default,
+  # which the restart resolves (`Lemieux.CLI.Runtime.prepare/2`). Without the
+  # last, `/provider relay` after a failed start restarted on the same
+  # failing model and said nothing.
+  defp provider_model(options, provider, opts) do
     Config.preferred_models(options.config)[provider] ||
-      Enum.find_value(Models.recommended(), &(&1.provider == provider && &1.model))
+      Enum.find_value(Models.recommended(), &(&1.provider == provider && &1.model)) ||
+      route_default(opts, provider)
+  end
+
+  defp route_default(opts, provider) do
+    default = ModelSpec.default_selection(provider)
+    if Runtime.route?(opts, default), do: default
   end
 
   @doc """

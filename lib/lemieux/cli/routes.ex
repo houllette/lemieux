@@ -46,6 +46,7 @@ defmodule Lemieux.CLI.Routes do
   alias Lemieux.CLI.Options
   alias Lemieux.Extension.Routes, as: Offered
   alias Lemieux.Ixway
+  alias Lemieux.ModelCatalog
   alias Lemieux.Providers.ReqLLM, as: Adapter
 
   @typedoc "Registered routes in order: each name with the routed connection that serves it."
@@ -147,15 +148,16 @@ defmodule Lemieux.CLI.Routes do
   def selected(%Options{host: %{route: nil}}, _routes), do: :ok
 
   def selected(%Options{host: %{route: name}}, routes) do
-    if registered?(routes, name) do
-      :ok
-    else
-      {:error,
-       "no model route named #{name} is registered: --router/LMX_ROUTER takes direct, ixway " <>
-         "or the name of a route an extension registers (one that exports routes/1, selected " <>
-         "with --extension NAME, --extension-dir PATH or the config file's \"extensions\")" <>
-         known(routes)}
-    end
+    if registered?(routes, name), do: :ok, else: {:error, unregistered(name, routes)}
+  end
+
+  @doc "The sentence for a `--router NAME` that names no registered route, and what would register one."
+  @spec unregistered(name :: String.t(), routes :: t()) :: String.t()
+  def unregistered(name, routes) when is_binary(name) and is_list(routes) do
+    "no model route named #{name} is registered: --router/LMX_ROUTER takes direct, ixway " <>
+      "or the name of a route an extension registers (one that exports routes/1, selected " <>
+      "with --extension NAME, --extension-dir PATH or the config file's \"extensions\")" <>
+      known(routes)
   end
 
   defp known([]), do: "; no loaded extension registers one"
@@ -175,7 +177,7 @@ defmodule Lemieux.CLI.Routes do
       other ->
         {:error,
          "#{source}: routes/1 must return {:ok, [routes]} or {:error, reason}, got " <>
-           inspect(other, limit: 5, printable_limit: 80)}
+           Offered.shape(other)}
     end
   end
 
@@ -199,10 +201,10 @@ defmodule Lemieux.CLI.Routes do
           "#{source} offers a route named #{name}, which #{sources[name]} already registered; " <>
             "every route needs its own name"}}
 
-      direct_provider?(name) ->
+      direct_name?(name) ->
         {:halt,
          {:error,
-          "#{source} offers a route named #{name}, which would shadow req_llm's #{name} " <>
+          "#{source} offers a route named #{name}, which would shadow the direct #{name} " <>
             "provider; a route needs a name of its own"}}
 
       true ->
@@ -211,8 +213,14 @@ defmodule Lemieux.CLI.Routes do
     end
   end
 
-  defp direct_provider?(name) do
+  # The names the direct connection answers for: req_llm's providers, and
+  # the transport aliases this library adds in front of them (`ollama_cloud`,
+  # `Lemieux.ModelCatalog`). A route under either name would be found first
+  # by `Lemieux.CLI.ProviderMux` and take every request a resumed transcript
+  # recorded for the direct provider.
+  defp direct_name?(name) do
     {:ok, _started} = Application.ensure_all_started(:req_llm)
-    Enum.any?(ReqLLM.Providers.list(), &(Atom.to_string(&1) == name))
+    aliases = ModelCatalog.provider_options() |> Keyword.get(:transport_routes, %{}) |> Map.keys()
+    name in aliases or Enum.any?(ReqLLM.Providers.list(), &(Atom.to_string(&1) == name))
   end
 end

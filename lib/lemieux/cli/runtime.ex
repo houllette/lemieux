@@ -170,6 +170,7 @@ defmodule Lemieux.CLI.Runtime do
   alias Lemieux.ModelCatalog
   alias Lemieux.ModelSpec
   alias Lemieux.Prompt
+  alias Lemieux.Provider
   alias Lemieux.Providers.ReqLLM, as: ReqLLMProvider
   alias Lemieux.Store.JSONL
   alias Lemieux.Tools
@@ -382,6 +383,7 @@ defmodule Lemieux.CLI.Runtime do
          {:ok, loaded} <- loaded(options, opts),
          {:ok, routes} <- routes(options, opts, loaded),
          provider = Keyword.get_lazy(opts, :provider, fn -> provider(options, routes) end),
+         :ok <- reachable(opts, provider, requested_model(options, recorded)),
          {:ok, provider, model} <-
            prepare_provider(provider, requested_model(options, recorded)),
          opts = configured_effort(opts, options.config, model, resume),
@@ -629,6 +631,41 @@ defmodule Lemieux.CLI.Runtime do
       nil -> opts
       effort -> Keyword.put_new(opts, :reasoning_effort, effort)
     end
+  end
+
+  # A model whose provider is neither one req_llm knows nor a registered
+  # route cannot be served by the connection lmx built. A new session is
+  # told so before this, by the hosts' own model check; a resumed transcript
+  # whose route's extension is no longer selected is told here, before a
+  # session exists and with what brings the route back — it used to start,
+  # append the prompt and fail the first request as a provider unknown.
+  # Only the direct connection is asked, and only its own "unknown provider"
+  # is refused: a route's model goes to the route's preparation next, a
+  # missing key and a blocked provider keep the path they had, and a host's
+  # own provider serves whatever names it serves.
+  defp reachable(opts, provider, model) do
+    connection = connection(provider, model)
+
+    if Keyword.has_key?(opts, :provider) or ReqLLMProvider.route(connection) != nil do
+      :ok
+    else
+      case Provider.validate_model(connection, model, []) do
+        {:error, {:unknown_model, _spec, :unknown_provider}} -> {:error, unreachable(model)}
+        _served_or_refused_on_its_own_path -> :ok
+      end
+    end
+  end
+
+  defp connection({ProviderMux, _state} = provider, model), do: ProviderMux.child(provider, model)
+  defp connection(provider, _model), do: provider
+
+  defp unreachable(model) do
+    provider = ModelSpec.provider(model)
+
+    "#{model} names #{provider}, which is not a provider lmx knows and not a model route a " <>
+      "loaded extension registers: if an extension registers #{provider}, select it " <>
+      "(--extension NAME, --extension-dir PATH or the config file's \"extensions\"); " <>
+      "otherwise choose another model with --model"
   end
 
   # The start model's route is readied and the model resolved on it, for a
@@ -1612,11 +1649,23 @@ defmodule Lemieux.CLI.Runtime do
   end
 
   @doc """
-  Builds the CLI connection with its runtime route and credential policy,
-  with the shipped routes alone: `provider/2` over `Lemieux.CLI.Routes.builtin/1`.
+  Builds the CLI connection with its runtime route and credential policy:
+  `provider/2` over the routes the options register — the shipped Ixway
+  route when it is configured, and the routes of the extensions the options
+  select, loaded from the personal root. A route that cannot be registered,
+  or a `--router NAME` nobody registers, raises with the sentence a host
+  would print, as `provider/0` raises for options that do not parse: the
+  callers of this arity are tooling with no sentence of their own.
   """
   @spec provider(options :: Options.t()) :: Lemieux.Provider.t()
-  def provider(%Options{} = options), do: provider(options, Routes.builtin(options))
+  def provider(%Options{} = options) do
+    with {:ok, loaded} <- loaded(options, []),
+         {:ok, routes} <- routes(options, [], loaded) do
+      provider(options, routes)
+    else
+      {:error, reason} -> raise ArgumentError, reason
+    end
+  end
 
   @doc """
   Builds the connection `lmx run` sends through, given the registered routes.
@@ -1638,13 +1687,13 @@ defmodule Lemieux.CLI.Runtime do
   end
 
   # `Routes.selected/2` has already refused a `--router NAME` nobody
-  # registered; Ixway is built on the spot for a caller that passed a list
-  # without it.
+  # registered where a host prepares; Ixway is built on the spot for a
+  # caller that passed a list without it.
   defp sole(routes, name, options) do
     case Routes.fetch(routes, name) do
       {:ok, provider} -> provider
       :error when name == "ixway" -> Routes.ixway(options)
-      :error -> raise ArgumentError, "no model route named #{name} is registered"
+      :error -> raise ArgumentError, Routes.unregistered(name, routes)
     end
   end
 

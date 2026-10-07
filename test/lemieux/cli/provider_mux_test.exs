@@ -2,6 +2,7 @@ defmodule Lemieux.CLI.ProviderMuxTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.CLI.ProviderMux
+  alias Lemieux.Extensions.Delegation
   alias Lemieux.Ixway
   alias Lemieux.Provider
   alias Lemieux.Providers.ReqLLM
@@ -130,14 +131,17 @@ defmodule Lemieux.CLI.ProviderMuxTest do
       )
     end
 
-    defp relay_server do
+    defp relay_server(requests) do
       parent = self()
 
       {endpoint, listener, server} =
-        HTTPFixture.server(fn headers, body, _socket ->
-          send(parent, {:relay_request, headers["authorization"], JSON.decode!(body)["model"]})
-          %{status: 200, headers: [{"content-type", "text/event-stream"}], body: @sse}
-        end)
+        HTTPFixture.server(
+          fn headers, body, _socket ->
+            send(parent, {:relay_request, headers["authorization"], JSON.decode!(body)["model"]})
+            %{status: 200, headers: [{"content-type", "text/event-stream"}], body: @sse}
+          end,
+          requests: requests
+        )
 
       on_exit(fn ->
         Process.exit(server, :kill)
@@ -149,7 +153,7 @@ defmodule Lemieux.CLI.ProviderMuxTest do
 
     test "is prepared, listed and dispatched under its own name, and never falls back" do
       direct = ReqLLM.new(api_keys: %{"openai" => "direct-key"})
-      relay = relay(default: "relay:qwen", endpoint: relay_server(), window: 8_000)
+      relay = relay(default: "relay:qwen", endpoint: relay_server(2), window: 8_000)
       mux = ProviderMux.new([{"relay", relay}], direct)
 
       assert ProviderMux.route_names(mux) == ["relay"]
@@ -185,9 +189,55 @@ defmodule Lemieux.CLI.ProviderMuxTest do
       assert_received {:route_target, "relay:qwen"}
 
       assert ProviderMux.child(prepared, "openai:gpt-4o-mini") == direct
-      assert {ReqLLM, _} = ProviderMux.child(prepared, "relay:qwen")
-      refute inspect(prepared) =~ "relay-key"
+      assert {ReqLLM, _} = relay_child = ProviderMux.child(prepared, "relay:qwen")
+      refute inspect(ReqLLM.route(relay_child)) =~ "relay-key"
       refute inspect(prepared) =~ "direct-key"
+
+      # Session parameters cross to the route, which lets only generation
+      # settings through: a destination or a key among them changes nothing.
+      hijack =
+        Request.new("relay:qwen",
+          params: [base_url: "http://127.0.0.1:9/v1", api_key: "stolen", temperature: 0.2]
+        )
+
+      assert :ok = Provider.run(prepared, hijack, fn _ -> :ok end)
+      assert_receive {:relay_request, "Bearer relay-key", "qwen"}
+
+      # The scout's budget is asked of the provider: unpriced on the route,
+      # priced on the direct model beside it.
+      refute Delegation.priced?(prepared, "relay:qwen")
+      assert Delegation.priced?(prepared, "openai:gpt-4o-mini")
+    end
+
+    # The host readies the start model's route and no other, so a route the
+    # person switches to answers from the state it has: the contract
+    # `Lemieux.Provider.Route.ready/1` documents, seen from a session.
+    test "a route that is not the start model's answers /provider unreadied", %{tmp_dir: dir} do
+      runtime = :"lemieux_mux_route_#{System.unique_integer([:positive])}"
+      start_supervised!({Lemieux.Supervisor, name: runtime})
+
+      mux =
+        ProviderMux.new(
+          [{"relay", relay(default: "relay:qwen")}],
+          ReqLLM.new(api_keys: %{"openai" => "test-key"})
+        )
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: runtime,
+          store: JSONL.new(dir),
+          provider: mux,
+          model: "openai:gpt-4o-mini",
+          tools: [],
+          subscriber: self()
+        )
+
+      assert "relay" in Session.available_providers(session)
+      assert Session.available_models(session, "relay") == ["relay:qwen", "relay:glm"]
+      assert {:ok, "relay:qwen"} = Session.set_provider(session, "relay")
+      assert {:ok, "relay:glm"} = Session.set_model(session, "relay:glm")
+      assert {:error, {:unknown_model, "relay:nope"}} = Session.set_model(session, "relay:nope")
+      refute_received {:route_ready, "relay"}
     end
 
     # A route lists models under its own name; one that listed another
@@ -196,6 +246,7 @@ defmodule Lemieux.CLI.ProviderMuxTest do
       defmodule Leaky do
         @behaviour Lemieux.Provider.Route
         def available_models(_state, _opts), do: ["relay:a", "openai:gpt-5", "ixway:x"]
+        def model_metadata(_state), do: %{"relay:a" => %{}, "openai:gpt-5" => %{kind: "hijacked"}}
         def validate_model(_state, _spec, _tools), do: :ok
         def context_window(_state, _spec), do: nil
         def reasoning_efforts(_state, _spec), do: []
@@ -208,6 +259,7 @@ defmodule Lemieux.CLI.ProviderMuxTest do
       assert Provider.available_models(mux, provider: "relay") == ["relay:a"]
       assert Provider.available_models(mux, provider: "openai") == []
       assert Provider.available_models(mux) == ["relay:a"]
+      assert Map.keys(Provider.model_metadata(mux)) == ["relay:a"]
     end
 
     test "ready/2 readies one route and discover/1 every route" do
