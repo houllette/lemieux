@@ -62,7 +62,10 @@ API.
   client is now the SDK's generic endpoint provider rather than TypeSafe's,
   so a request to a gateway carries the SDK's own user agent and no
   `X-TypeSafe-*` headers. `lmx explain` reports the step's mode and the
-  selected provider's name under `diagnostics.jev_compaction`.
+  selected provider's name under `diagnostics.jev_compaction`. Verified
+  end to end against two open decision models served by Ollama 0.35 on this
+  machine, Bespoke Labs' Nimble and Cloudflare's Clef-flash; the extension's
+  suite keeps that as a live test you run by naming the server.
   Two choices differ from the issue's sketch, and
   `Lemieux.CLI.JevCompaction` records why: `typesafe` and `ixway` cannot be
   redeclared in the new section (their key and endpoint keep their one

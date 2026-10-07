@@ -280,3 +280,18 @@ LEMIEUX_EXTENSION_BASE="$PWD/../../../.." mise exec -- mix check
 
 `mix check` formats, compiles with warnings as errors and runs the tests,
 which make no network calls.
+
+One more test runs only when you name a System One server on your own
+machine, and scores a fixture through it over the real wire — the check
+that a local open model is a provider like any other. Ollama 0.35 and later
+serves Bespoke Labs' Nimble and Cloudflare's Clef on `/v1/systemone`:
+
+```sh
+ollama pull clef-flash
+LOCAL_SYSTEM_ONE_URL=http://127.0.0.1:11434 LOCAL_SYSTEM_ONE_MODEL=clef-flash \
+  LEMIEUX_EXTENSION_BASE="$PWD/../../../.." mise exec -- mix test test/jev_compaction/local_server_test.exs
+```
+
+It prints the model's keep probability and whether it shortened the read;
+`LOCAL_SYSTEM_ONE_KEY` supplies a bearer token for a server that wants one.
+Nimble and Clef-flash both passed it on 2026-10-06.

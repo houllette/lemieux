@@ -395,6 +395,34 @@ reaches TypeSafe or Ixway. An entry takes:
 | `input_per_million`, `output_per_million` | The service's tariff in USD per million tokens, both or neither, unless `jev_compaction`'s own override them |
 | `type` | `endpoint`, the only kind so far: a `POST /v1/systemone` service |
 
+An open decision model served on your own machine is the shortest entry of
+all. Ollama 0.35 and later serves System One models on the same
+`POST /v1/systemone` path as its chat models, so with Bespoke Labs' Nimble
+or Cloudflare's Clef pulled (`ollama pull nimble`, `ollama pull clef-flash`;
+both Apache-2.0), this is the whole configuration:
+
+```json
+{
+  "jev_compaction": {"provider": "ollama", "reservation_per_call_usd": 0.001},
+  "jev_compaction_providers": {
+    "ollama": {
+      "base_url": "http://127.0.0.1:11434",
+      "model": "clef-flash",
+      "input_per_million": 0.0,
+      "output_per_million": 0.0
+    }
+  }
+}
+```
+
+The zero tariff says what a local model costs, so a session with a dollar
+cap still runs the step; the reservation is what a capped session asks for
+before any paid call, and a local one is held to the same rule. Any other
+server that implements the protocol — Laya ships one, as does TypeSafe's
+own SDK ecosystem — takes the same entry with its URL and model name. The
+extension's suite has a live check for exactly this
+([Checking it](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/jev_compaction/README.md#checking-it)).
+
 A vendor's hosted decision API fits the same entry, with the key kept in
 your shell:
 
