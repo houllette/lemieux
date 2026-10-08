@@ -1835,7 +1835,7 @@ defmodule Lemieux.Providers.ReqLLM do
   # `route` is nil on the direct path; the route hooks are identity for it.
   # `served`, also direct-only, asks what window the answer was served with.
   defp stream_at(request, target, options, emit, route, metadata_options, served \\ nil) do
-    options = with_prompt_cache(options, target, route)
+    options = with_prompt_cache(options, target, request, route)
     emit = price_usage(emit, request, route)
     # Private to this request: a route's own stream bookkeeping uses another
     # reference, and must never receive these messages as its own.
@@ -1914,15 +1914,61 @@ defmodule Lemieux.Providers.ReqLLM do
   # explicit `anthropic_prompt_cache: false` — in provider options or request
   # params — turns it off. A route owns its own request shape, so routed
   # requests are left exactly as the route sent them.
-  defp with_prompt_cache(options, _target, route) when not is_nil(route), do: options
+  #
+  # OpenAI caches without being asked, but routes a hit by `prompt_cache_key`:
+  # a request without one may land on a machine that never saw the prefix. A
+  # benchmark of `openai_codex:` sessions (#34) read 7.7% and 11% of its input
+  # from cache, where every request resent the one before it. So a request
+  # sent directly to `openai` or `openai_codex`, for a model of that provider,
+  # carries a key derived from its session: a hash of the session's id, so no
+  # local identifier leaves the machine, and stable across resume. A host's own
+  # key wins, and `prompt_cache_key: false` turns it off.
+  defp with_prompt_cache(options, _target, _request, route) when not is_nil(route), do: options
 
-  defp with_prompt_cache(options, target, nil) do
-    if claude_wire?(target) do
-      options
-      |> Keyword.put_new(:anthropic_prompt_cache, true)
-      |> with_rolling_breakpoint()
-    else
-      options
+  defp with_prompt_cache(options, target, request, nil) do
+    cond do
+      claude_wire?(target) ->
+        options
+        |> Keyword.put_new(:anthropic_prompt_cache, true)
+        |> with_rolling_breakpoint()
+
+      cache_key_wire?(target, request) ->
+        with_cache_key(options, request)
+
+      true ->
+        options
+    end
+  end
+
+  # Named rather than every OpenAI-compatible wire: a server behind a transport
+  # route may refuse a field it does not know, and `req_llm` declares this
+  # one only for providers whose APIs take it.
+  @cache_key_providers ~w(openai openai_codex)
+
+  defp cache_key_wire?(target, %Request{model: model}) do
+    provider = wire_provider(target)
+    provider in @cache_key_providers and ModelSpec.provider(model) == provider
+  end
+
+  defp with_cache_key(options, request) do
+    case {Keyword.fetch(options, :prompt_cache_key), session_cache_key(request)} do
+      {{:ok, false}, _key} -> Keyword.delete(options, :prompt_cache_key)
+      {{:ok, _host_key}, _key} -> options
+      {:error, nil} -> options
+      {:error, key} -> Keyword.put(options, :prompt_cache_key, key)
+    end
+  end
+
+  # The session's own id rather than its root's: a subagent's system prompt
+  # and tools are its own, so its prefix is too.
+  defp session_cache_key(%Request{context: context}) do
+    case Map.get(context, :agent_id) || Map.get(context, :session_id) do
+      id when is_binary(id) and id != "" ->
+        digest = :crypto.hash(:sha256, id) |> Base.encode16(case: :lower)
+        "lemieux-" <> binary_part(digest, 0, 32)
+
+      _none ->
+        nil
     end
   end
 

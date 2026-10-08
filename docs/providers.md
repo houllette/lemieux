@@ -716,6 +716,16 @@ at a tenth of the input price. Cache reads and writes appear in usage as
 it off. Routed requests are left as the route shapes them, and no other
 provider is sent the options, which it would reject as unknown.
 
+OpenAI caches a prefix without being asked, but routes a cache hit by
+`prompt_cache_key`, and a request without one may reach a machine that never
+saw the prefix. For an `openai:` or `openai_codex:` model the adapter sends
+directly, a request from a session carries a key derived from that session: a
+hash of its id, so the id itself is not sent, the same for every request of
+the session and across a resume, and its own for each subagent. Pass your own
+`prompt_cache_key` to choose the key, or `prompt_cache_key: false` to send
+none. A transport route that speaks OpenAI's wire for another provider is not
+sent one.
+
 ## Cost estimates
 
 The adapter's cost estimate (`Lemieux.Provider.estimate_cost/2`), which a

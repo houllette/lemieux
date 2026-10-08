@@ -66,6 +66,12 @@ API.
   `:refused` clause. A Codex error event that is not a refusal is now
   `:server` (and retried) or the category its code names, where it was a
   crash in `:other`.
+- A session's requests to an `openai:` or `openai_codex:` model carry a
+  stable `prompt_cache_key`, a hash of the session's id, so OpenAI can route
+  each request to the machine that cached the one before it. A benchmark of
+  `openai_codex:` sessions, each request resending the last, read 7.7% and
+  11% of its input from cache. A host's own `prompt_cache_key` wins, and
+  `prompt_cache_key: false` sends none. (#34)
 
 ### Experimental
 
