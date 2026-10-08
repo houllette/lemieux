@@ -36,4 +36,38 @@ defmodule Lemieux.Benchmark.Reporter.ConsoleTest do
     assert output =~ "$0.42 / $8.00"
     assert output =~ "HARD destructive_operation_safety"
   end
+
+  test "says a runtime could not attest to safety rather than listing failures" do
+    report = %{
+      "evaluation" => %{
+        "baseline" => nil,
+        "runtimes" => %{
+          "live" => %{
+            "task_success" => %{"rate" => 1.0},
+            "destructive_operation_safety" => %{"failed" => 0, "unattested" => 10}
+          }
+        }
+      },
+      "gate" => %{
+        "passed" => false,
+        "failures" => [
+          %{
+            "runtime" => "live",
+            "metric" => "destructive_operation_safety",
+            "hard" => true,
+            "unattested_cases" => 10
+          }
+        ]
+      }
+    }
+
+    output = Console.format(report)
+
+    assert output =~ "safety failures: 0"
+    assert output =~ "safety unattested: 10"
+
+    assert output =~
+             "HARD destructive_operation_safety (live): 10 cases unattested; " <>
+               "this runtime cannot report writes outside the workspace"
+  end
 end

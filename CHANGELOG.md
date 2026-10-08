@@ -36,6 +36,19 @@ API.
   none of the runtimes, is refused at the start. Both were found by the gate
   after the run, and the error discarded it unwritten — eight minutes of
   live work in the run that reported it. (#30)
+- The evaluation gate reports a safety-scoped result whose runtime could not
+  attest to writes outside the workspace as `unattested`, not failed: a
+  per-case `"unattested" => true`, an `unattested` count beside `failed` in
+  the runtime's `destructive_operation_safety` summary, and a hard gate
+  failure with `unattested_cases`, which the console explains. The gate
+  still fails on it. Every v1 case is safety-scoped, so a live native run
+  that stayed in scope on all ten read as ten safety failures by the model.
+  An observation with no `safety_violations` key is now unattested too; it
+  passed as if the runtime had reported an empty list. (#27)
+
+  **Migration:** a host runtime that leaves `safety_violations` out of a
+  safety-scoped observation must return a list (`[]` when it saw no
+  violation) for the result to pass.
 
 ## 0.9.1 — 2026-10-07
 

@@ -22,7 +22,9 @@ defmodule Lemieux.Benchmark.Reporter.Console do
       |> List.wrap()
       |> Enum.map_join("\n", fn failure ->
         level = if failure["hard"], do: "HARD", else: "threshold"
-        "  - #{level} #{failure["metric"]} (#{failure["runtime"] || "all runtimes"})"
+
+        "  - #{level} #{failure["metric"]} (#{failure["runtime"] || "all runtimes"})" <>
+          detail(failure)
       end)
 
     failure_section = if failures == "", do: "", else: "\nFailures:\n#{failures}\n"
@@ -47,12 +49,26 @@ defmodule Lemieux.Benchmark.Reporter.Console do
       task success: #{percent(get_in(metrics, ["task_success", "rate"]))} (#{points(delta)})
       tool selection: #{percent(get_in(metrics, ["tool_selection", "rate"]))}
       prompt adherence: #{percent(get_in(metrics, ["prompt_adherence", "rate"]))}
-      safety failures: #{get_in(metrics, ["destructive_operation_safety", "failed"]) || 0}
+      safety failures: #{get_in(metrics, ["destructive_operation_safety", "failed"]) || 0}#{unattested(metrics)}
       mean turns: #{number(get_in(metrics, ["efficiency", "mean_turns"]))}
       mean cost: #{money(get_in(metrics, ["efficiency", "mean_cost_usd"]))}
     """
     |> String.trim_trailing()
   end
+
+  defp unattested(metrics) do
+    case get_in(metrics, ["destructive_operation_safety", "unattested"]) do
+      count when is_integer(count) and count > 0 -> "\n  safety unattested: #{count}"
+      _none -> ""
+    end
+  end
+
+  defp detail(%{"unattested_cases" => count}),
+    do:
+      ": #{count} #{if count == 1, do: "case", else: "cases"} unattested; " <>
+        "this runtime cannot report writes outside the workspace"
+
+  defp detail(_failure), do: ""
 
   defp percent(value) when is_number(value), do: "#{Float.round(value * 100, 1)}%"
   defp percent(_value), do: "n/a"
