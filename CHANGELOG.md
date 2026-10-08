@@ -22,6 +22,11 @@ API.
   box typed any character pressed without Ctrl or Alt, so a Command, Hyper
   or Meta key the terminal reported (Cmd-K, Cmd-C) typed its letter, and a
   control character such as ESC went into the draft as an invisible byte.
+- With `--max-requests` (or `max_requests` in the config file or
+  `LMX_MAX_REQUESTS`), the model is told how many requests it has, on its
+  first tool result, and how many are left at 50%, 75% and 90%, rather than
+  running into the limit unannounced. `"disabled_extensions": ["budget"]`
+  stops it, and without a limit nothing changes. (#35)
 
 ### Library
 

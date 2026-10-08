@@ -170,8 +170,8 @@ defmodule Lemieux.CLI.Config do
   @systemone_typesafe_fields ~w(api_key model input_per_million output_per_million)
   @systemone_ixway_fields ~w(base_url model input_per_million output_per_million)
   @shipped_extensions ~w(mcp interactive web elixir workspace delegation a2a systemone_compaction
-                         environment_context planning continuation verify search apply_patch
-                         checkpoints mcp_discovery)
+                         environment_context planning continuation verify budget search
+                         apply_patch checkpoints mcp_discovery)
 
   @doc "Returns the optional personal configuration path."
   @spec default_path() :: Path.t()
