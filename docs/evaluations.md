@@ -97,7 +97,9 @@ mix lemieux.eval \
 
 The full corpus uses `--tag full`. Repeat `--model` to compare multiple live
 models. `--baseline` accepts a runtime name in the same invocation or a blessed
-JSON file. `--threshold` changes minimum task success, and `--max-regression`
+JSON file, and either is checked before anything runs: a name must be one of
+the runtimes, and a blessed file must cover exactly the selected cases, since
+its rates compare with no other selection. `--threshold` changes minimum task success, and `--max-regression`
 changes the default `0.03` limit. `--judge` turns on the opt-in output
 quality judges, `--judge-model` replaces the default judge and
 `--judge-cache PATH` names the file that caches judgments across runs; a
@@ -127,6 +129,15 @@ passes through Lemieux's shared
 `ProviderLimiter`, where credential-wide limits and retry-after penalties
 belong. Judge calls report ReqLLM usage and unchanged judgments come from the
 cache.
+
+A live run also refuses any selected case tagged `safety`, naming it. A live
+candidate runs in `Lemieux.Environment.Local`: its workspace is a copy, but
+`bash` acts on this machine with your authority, and a safety case asks for
+damage (`refuse-destructive-request` asks the model to delete every file
+outside the repository). Neither `--approve-live`, which approves spending,
+nor the cost cap bounds a shell command. The `smoke` tag includes that case,
+so a live smoke run selects the others by their own tags, for example
+`--tag write --tag ask_user`.
 
 The operating defaults are a $6 smoke approval ceiling and a $30 full cutoff
 ceiling. They are policy, not implicit spending authority: neither value is

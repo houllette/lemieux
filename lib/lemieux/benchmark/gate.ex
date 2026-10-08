@@ -201,6 +201,24 @@ defmodule Lemieux.Benchmark.Gate do
   end
 
   @doc """
+  Checks that a blessed baseline was established over exactly `task_ids`.
+
+  Its metrics are rates over its own cases, so they compare with no other
+  selection. A baseline without `task_ids` predates the field and is
+  accepted. Public so `mix lemieux.eval` asks before it runs anything rather
+  than learning it here, after the run.
+  """
+  @spec check_baseline_tasks(baseline :: map(), task_ids :: [String.t()]) ::
+          :ok | {:error, {:baseline_task_mismatch, [String.t()], [String.t()]}}
+  def check_baseline_tasks(baseline, task_ids) when is_map(baseline) and is_list(task_ids) do
+    current_ids = Enum.sort(task_ids)
+
+    if baseline["task_ids"] in [nil, current_ids],
+      do: :ok,
+      else: {:error, {:baseline_task_mismatch, baseline["task_ids"], current_ids}}
+  end
+
+  @doc """
   True when `path` is covered by an `allowed_changed_paths` entry: an exact
   path, `"*"`, or a `dir/**` prefix. Public so the discovery evaluator and the
   confirmation lane apply the same rule as the release gate; three matchers
@@ -284,18 +302,11 @@ defmodule Lemieux.Benchmark.Gate do
   end
 
   defp baseline(_runtime_metrics, %{"kind" => "lemieux_eval_baseline"} = baseline, report) do
-    current_ids =
-      report
-      |> get_in(["manifest", "tasks"])
-      |> List.wrap()
-      |> Enum.map(& &1["id"])
-      |> Enum.sort()
+    task_ids = report |> get_in(["manifest", "tasks"]) |> List.wrap() |> Enum.map(& &1["id"])
 
-    if baseline["task_ids"] in [nil, current_ids] do
+    with :ok <- check_baseline_tasks(baseline, task_ids) do
       {:ok, %{"runtime" => baseline["runtime"], "version" => baseline["version"]},
        baseline["metrics"]}
-    else
-      {:error, {:baseline_task_mismatch, baseline["task_ids"], current_ids}}
     end
   end
 

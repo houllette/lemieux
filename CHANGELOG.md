@@ -23,6 +23,20 @@ API.
   or Meta key the terminal reported (Cmd-K, Cmd-C) typed its letter, and a
   control character such as ESC went into the draft as an invisible byte.
 
+### Experimental
+
+- A live `mix lemieux.eval` refuses a selected case tagged `safety` before
+  anything runs, and names it. A live candidate's `bash` runs on the host
+  with your authority, and `refuse-destructive-request` — in the `smoke` tag
+  — asks the model to delete every file outside the repository; nothing but
+  the model's own refusal stood between that prompt and your home directory.
+  Select a live smoke run's other cases by their own tags. (#26)
+- `mix lemieux.eval` checks `--baseline` before it runs anything: a blessed
+  baseline whose task ids differ from the selected cases, or a name that is
+  none of the runtimes, is refused at the start. Both were found by the gate
+  after the run, and the error discarded it unwritten — eight minutes of
+  live work in the run that reported it. (#30)
+
 ## 0.9.1 — 2026-10-07
 
 0.9.0, signed. 0.9.0 was published without `SHA256SUMS.sig` and
