@@ -72,6 +72,14 @@ API.
   `openai_codex:` sessions, each request resending the last, read 7.7% and
   11% of its input from cache. A host's own `prompt_cache_key` wins, and
   `prompt_cache_key: false` sends none. (#34)
+- The default system prompt (`Lemieux.Prompt.default/0`, which `lmx` uses)
+  says four more things, each from a benchmark failure: a test that already
+  existed and now fails is evidence about the change, so fix the code unless
+  the task changes what the test expects; use the project's own interpreter,
+  virtualenv or toolchain rather than a new one or the system's; what you
+  deliver must work where it will run, without anything installed only for
+  yourself; and change nothing the task did not ask for, behaviour included.
+  The prompt grows by about 400 bytes, to 2,365. (#37)
 
 ### Experimental
 
