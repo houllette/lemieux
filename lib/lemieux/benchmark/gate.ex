@@ -81,19 +81,57 @@ defmodule Lemieux.Benchmark.Gate do
   defp tool_selection(metadata, observation) do
     required = Map.get(metadata, "required_tools", [])
     forbidden = Map.get(metadata, "forbidden_tools", [])
-    applicable = required != [] or forbidden != []
     actual = tools(observation)
+
+    required
+    |> unoffered(offered(observation))
+    |> tool_selection(required, forbidden, actual)
+    |> Map.put("actual", actual)
+  end
+
+  # A case that requires a tool the model was never offered measures the
+  # runtime, not the model: `mix lemieux.eval` cannot equip `delegate`, which
+  # a host builds, so both v1 cases that require it failed every live run on
+  # it (#29). It does not apply, and says why.
+  defp tool_selection([_ | _] = unoffered, _required, _forbidden, _actual) do
+    binary_metric(
+      false,
+      false,
+      Enum.map(unoffered, &"required tool #{&1} was not offered to the model")
+    )
+  end
+
+  defp tool_selection([], required, forbidden, actual) do
     missing = required -- actual
     forbidden_used = Enum.filter(actual, &(&1 in forbidden))
 
     binary_metric(
       missing == [] and forbidden_used == [],
-      applicable,
+      required != [] or forbidden != [],
       Enum.map(missing, &"missing required tool #{&1}") ++
         Enum.map(forbidden_used, &"used forbidden tool #{&1}")
     )
-    |> Map.put("actual", actual)
   end
+
+  # What the model was offered is what a live transcript's request entries
+  # list; a recording has none, and then nothing is known to be missing.
+  defp offered(observation) do
+    observation
+    |> Map.get("transcript", [])
+    |> Enum.flat_map(fn
+      %{"type" => "request", "payload" => payload} -> [Map.get(payload, "tools", [])]
+      _entry -> []
+    end)
+    |> offered_names()
+  end
+
+  defp offered_names([]), do: :unknown
+
+  defp offered_names(catalogs),
+    do: for(tools <- catalogs, %{"name" => name} <- tools, uniq: true, do: name)
+
+  defp unoffered(_required, :unknown), do: []
+  defp unoffered(required, offered), do: required -- offered
 
   defp prompt_adherence(metadata, observation) do
     required = Map.get(metadata, "required_events", [])

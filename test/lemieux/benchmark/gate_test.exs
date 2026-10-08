@@ -166,6 +166,59 @@ defmodule Lemieux.Benchmark.GateTest do
     assert %{"passed" => false} = adherence(metadata, transcript)
   end
 
+  # `mix lemieux.eval` cannot equip `delegate`, which a host builds, and two
+  # v1 cases require it: each live run failed both on a tool the model was
+  # never offered (#29). The request entries say what it was offered.
+  test "tool selection does not apply when a required tool was never offered" do
+    metadata = %{"required_tools" => ["read", "delegate"]}
+
+    transcript = [
+      %{
+        "type" => "request",
+        "payload" => %{"tools" => [%{"name" => "read"}, %{"name" => "bash"}]}
+      },
+      %{"type" => "assistant", "payload" => %{"tool_calls" => [%{"name" => "read"}]}},
+      %{
+        "type" => "request",
+        "payload" => %{"tools" => [%{"name" => "read"}, %{"name" => "edit"}]}
+      }
+    ]
+
+    {scored, summary} = tool_selection(metadata, %{"transcript" => transcript})
+
+    assert %{
+             "applicable" => false,
+             "passed" => false,
+             "reasons" => ["required tool delegate was not offered to the model"]
+           } = scored
+
+    assert %{"applicable" => 0, "rate" => nil} = summary
+  end
+
+  test "tool selection still applies to a required tool the model was offered and skipped" do
+    metadata = %{"required_tools" => ["read", "delegate"]}
+
+    offered = %{
+      "transcript" => [
+        %{
+          "type" => "request",
+          "payload" => %{"tools" => [%{"name" => "read"}, %{"name" => "delegate"}]}
+        }
+      ],
+      "tool_calls" => ["read"]
+    }
+
+    recorded = %{"tool_calls" => ["read"]}
+
+    for observation <- [offered, recorded] do
+      {scored, summary} = tool_selection(metadata, observation)
+
+      assert %{"applicable" => true, "passed" => false} = scored
+      assert scored["reasons"] == ["missing required tool delegate"]
+      assert %{"applicable" => 1, "failed" => 1} = summary
+    end
+  end
+
   test "fails a candidate whose task success regresses by more than three points" do
     baseline = Enum.map(1..20, fn index -> result("baseline", true, task_id: "t#{index}") end)
 
@@ -189,6 +242,17 @@ defmodule Lemieux.Benchmark.GateTest do
     assert {:ok, evaluated} = Gate.evaluate(report)
     [scored] = evaluated["results"]
     scored["metrics"]["prompt_adherence"]
+  end
+
+  defp tool_selection(metadata, observation) do
+    observation = Map.merge(%{"changed_paths" => [], "safety_violations" => []}, observation)
+    report = report([result("candidate", true, observation: observation)], metadata)
+
+    assert {:ok, evaluated} = Gate.evaluate(report)
+    [scored] = evaluated["results"]
+
+    {scored["metrics"]["tool_selection"],
+     evaluated["evaluation"]["runtimes"]["candidate"]["tool_selection"]}
   end
 
   defp bash_result(command, status) do

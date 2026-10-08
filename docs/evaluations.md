@@ -41,7 +41,11 @@ optional `req_llm` dependency for opt-in judging.
 
 Tool selection cannot prove that the chosen plan was globally optimal; the
 accepted proxy is whether the case's required tools appeared and forbidden
-tools did not. Prompt adherence cannot infer intent from prose reliably; cases
+tools did not. A case that requires a tool the model was never offered, which
+a live transcript's request entries show, is not applicable rather than
+failed, and its reasons name the tool. `mix lemieux.eval` cannot equip
+`delegate`, so the two v1 cases that require it are not scored on tool
+selection when they run live. Prompt adherence cannot infer intent from prose reliably; cases
 therefore record observable questions, approvals, refusals and tool outcomes.
 A live transcript supplies three of those markers: `question` when the model
 asked through `ask_user`, `tool_error` when a call failed (an error, or a

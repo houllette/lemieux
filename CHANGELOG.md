@@ -57,6 +57,12 @@ API.
   `recover-after-failure` failed live while doing what they asked. A live
   run's `ask_user` question times out after a second rather than five
   minutes, since nobody is there to answer it. (#28)
+- Tool selection does not apply to a case that requires a tool the model
+  was never offered, as a live transcript's request entries show; its
+  reasons name the tool. `mix lemieux.eval` cannot equip `delegate`, so
+  `delegate-readonly-investigation` and `long-horizon-repair` failed tool
+  selection in every live run, whatever the model did. A recording, which
+  has no request entries, is scored as before. (#29)
 
 ## 0.9.1 — 2026-10-07
 
