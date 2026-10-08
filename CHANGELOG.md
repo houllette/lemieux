@@ -38,6 +38,60 @@ API.
 
   **Migration:** to keep the old bound, pass
   `receive_timeout: :timer.minutes(2)`.
+- `bash` fits a `timeout_ms` or `wait_ms` to the call's own deadline (the
+  session's `:tool_timeout_ms`, when that is under bash's ten minutes)
+  instead of letting the session stop the call. A wait cut that way returns
+  the background task's state, as a shorter wait would, and a foreground
+  command cut that way is reported as timed out, with the advice to start it
+  in the background; both say the limit was the session's. Under a
+  three-minute limit, a `wait_ms: 180000` poll of a running task came back
+  as a failed call, under a schema that allows 600000. The schema's
+  descriptions now say a session may allow less. (#38)
+- A request the provider declined on policy grounds is its own category,
+  `:refused`, and is never retried: a code such as `cyber_policy`,
+  `content_policy_violation` or `invalid_prompt` in the failure's body or its
+  stream's error event, or an answer that ended `:content_filter` with
+  nothing in it. `Lemieux.Provider.Error.code/1` returns the provider's code,
+  and the error entry and a native benchmark observation's `provider_error`
+  carry it as `code` beside `category` and `http_status`. `req_llm` 1.26's
+  `openai_codex` provider raises a stream's error event inside its stream
+  server, which recorded the Codex backend's refusal of a benchmark task as
+  `{:provider_crashed, …}` in `:other`; `Lemieux.Provider.Error.recognize_crash/1`
+  reads that event back out of the crash, so it is the refusal it was, and
+  any other Codex error event is classified by its code like the same event
+  from `openai:`. `lmx run` exits 6 on a refusal, and the terminal UI says
+  what to change rather than offering `/retry`. (#32)
+
+  **Migration:** a host that matches on `category/1` exhaustively needs a
+  `:refused` clause. A Codex error event that is not a refusal is now
+  `:server` (and retried) or the category its code names, where it was a
+  crash in `:other`.
+- A session's requests to an `openai:` or `openai_codex:` model carry a
+  stable `prompt_cache_key`, a hash of the session's id, so OpenAI can route
+  each request to the machine that cached the one before it. A benchmark of
+  `openai_codex:` sessions, each request resending the last, read 7.7% and
+  11% of its input from cache. A host's own `prompt_cache_key` wins, and
+  `prompt_cache_key: false` sends none. (#34)
+- The default system prompt (`Lemieux.Prompt.default/0`, which `lmx` uses)
+  says four more things, each from a benchmark failure: a test that already
+  existed and now fails is evidence about the change, so fix the code unless
+  the task changes what the test expects; use the project's own interpreter,
+  virtualenv or toolchain rather than a new one or the system's; what you
+  deliver must work where it will run, without anything installed only for
+  yourself; and change nothing the task did not ask for, behaviour included.
+  The prompt grows by about 400 bytes, to 2,365. (#37)
+- `Lemieux.Extensions.Continuation` takes `completion_check: true` (off by
+  default; `"continuation": {"completion_check": true}` in `lmx`'s config
+  file). When a prompt in which the model used a tool ends at an ordinary
+  stop with no plan of its own left open, the model is asked once, in a
+  message starting `[lmx requirements]`, to list the request's explicit
+  requirements (names, paths, field names and types, formats, sizes and
+  limits, the person's exact commands), check each against the machine, and
+  fix what does not match or say it all does. Benchmark misses it is meant
+  for: an `int32 val` field where the task said `value`, a clone tested from
+  a local path rather than the SSH command the task gave, and a file over
+  its stated size that was never measured. It costs one request per prompt
+  when nothing is wrong. (#36)
 
 ### Experimental
 

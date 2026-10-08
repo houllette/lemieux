@@ -672,10 +672,15 @@ defmodule Lemieux.CLI.ConfigTest do
     path = write_config(dir, %{"version" => 1, "continuation" => false})
     assert {:ok, _config} = Config.load(path)
 
+    path = write_config(dir, %{"version" => 1, "continuation" => %{"completion_check" => true}})
+    assert {:ok, config} = Config.load(path)
+    assert Config.get(config, "continuation") == %{"completion_check" => true}
+
     for section <- [
           %{"max_continuations" => 101},
           %{"max_output_continuations" => -1},
-          %{"enabled" => "no"}
+          %{"enabled" => "no"},
+          %{"completion_check" => "yes"}
         ] do
       File.write!(path, JSON.encode!(%{"version" => 1, "continuation" => section}))
       assert {:error, reason} = Config.load(path), inspect(section)

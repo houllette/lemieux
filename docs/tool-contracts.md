@@ -314,10 +314,16 @@ still pass through ordinary hooks and transcript results. A wait deadline does
 not cancel the resource. See [Background commands](tool-contracts.md#background-commands).
 
 The host deadline is an execution cap; it does not rewrite a tool's declared
-input schema. Set `tool_timeout_ms` at or above every timeout maximum advertised
-by the catalog, or wrap the tool in a session-local descriptor whose schema and
+input schema. `bash` fits itself to it: a `timeout_ms` or `wait_ms` that would
+outlast the call's `deadline_ms` is cut to end shortly before it, a wait cut
+that way returns the background task's current state, and a foreground command
+cut that way is reported as timed out, each saying the limit was the
+session's. Any other tool that advertises a duration should do the same, or
+set `tool_timeout_ms` at or above every timeout maximum the catalog
+advertises, or wrap the tool in a session-local descriptor whose schema and
 runtime deadline both state the lower limit. Otherwise the model can validly
-request a duration that the host will stop early.
+request a duration that the host will stop early, and the call ends as a
+`:timeout` error that says nothing about what it was waiting for.
 
 Approval is inside that same execution clock. Keep `tool_timeout_ms` at least
 as large as `approval_timeout` for tools that can park (`ask_user`, approvals,
@@ -739,8 +745,11 @@ snapshot. The model can work on something else, poll again, await again, or
 cancel it — a dev server started to check one page otherwise holds its port
 until the session ends.
 `background_timeout_ms` controls the command's lifetime independently of any
-individual wait; it defaults to one hour and is capped at 24 hours. Ordinary
-synchronous bash retains its existing `timeout_ms` behavior.
+individual wait; it defaults to one hour and is capped at 24 hours. A wait
+longer than the call's own deadline is cut to fit it and returns the current
+snapshot the same way (see [Execution envelope](#execution-envelope)).
+Ordinary synchronous bash retains its existing `timeout_ms` behavior, under
+the same cut.
 
 Every observation includes a typed structured result as well as model text:
 task and session ids, command, status, exit status, captured output and byte

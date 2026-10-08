@@ -2082,6 +2082,9 @@ defmodule Lemieux.Conversation do
     * The provider refused the key, or the account has no credit or quota:
       what to fix, and that retrying will not help — the session does not
       retry these either.
+    * Refused on policy grounds: that sending it again is usually refused
+      again, and what to change instead. No `/retry`: the session does not
+      retry it, and each attempt is another flagged request on the account.
     * Rate limited: how long the provider asked for, then `/retry`.
     * The conversation no longer fits: `/compact`, then `/retry`.
     * A model specification that does not resolve: how to write one, and
@@ -2107,6 +2110,11 @@ defmodule Lemieux.Conversation do
         "#{provider_name(conversation)} refused for billing or quota: " <>
           "#{error_description(conversation, reason)} · add credit or switch with " <>
           "/provider · retrying will not help"
+
+      :refused ->
+        "#{provider_name(conversation)} refused the request: " <>
+          "#{error_description(conversation, reason)} · sent again, it is usually refused " <>
+          "again · change the request, or switch with /model"
 
       :rate_limit ->
         "rate limited: #{error_description(conversation, reason)} · " <>
@@ -2180,6 +2188,7 @@ defmodule Lemieux.Conversation do
     end
   end
 
+  defp category_kind(:refused), do: :refused
   defp category_kind(:rate_limit), do: :rate_limit
   defp category_kind(:context_limit), do: :context_limit
   defp category_kind(_category), do: :other

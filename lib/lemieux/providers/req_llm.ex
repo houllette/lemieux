@@ -1835,7 +1835,7 @@ defmodule Lemieux.Providers.ReqLLM do
   # `route` is nil on the direct path; the route hooks are identity for it.
   # `served`, also direct-only, asks what window the answer was served with.
   defp stream_at(request, target, options, emit, route, metadata_options, served \\ nil) do
-    options = with_prompt_cache(options, target, route)
+    options = with_prompt_cache(options, target, request, route)
     emit = price_usage(emit, request, route)
     # Private to this request: a route's own stream bookkeeping uses another
     # reference, and must never receive these messages as its own.
@@ -1889,8 +1889,13 @@ defmodule Lemieux.Providers.ReqLLM do
   # `200` stream, mid-answer — as the bare sentence, which classified as
   # `:other` and was never retried. `process/4` saw the event itself, so the
   # sentence is known to be the provider breaking off, not an untyped mystery.
-  defp stream_error(detail, %{error: detail}, target) when is_binary(detail),
-    do: %Interrupted{provider: wire_provider(target), finish_reason: :error, detail: detail}
+  defp stream_error(detail, %{error: detail} = stream, target) when is_binary(detail),
+    do: %Interrupted{
+      provider: wire_provider(target),
+      finish_reason: :error,
+      detail: detail,
+      code: Map.get(stream, :code)
+    }
 
   defp stream_error(error, _stream, _target), do: error
 
@@ -1909,15 +1914,61 @@ defmodule Lemieux.Providers.ReqLLM do
   # explicit `anthropic_prompt_cache: false` — in provider options or request
   # params — turns it off. A route owns its own request shape, so routed
   # requests are left exactly as the route sent them.
-  defp with_prompt_cache(options, _target, route) when not is_nil(route), do: options
+  #
+  # OpenAI caches without being asked, but routes a hit by `prompt_cache_key`:
+  # a request without one may land on a machine that never saw the prefix. A
+  # benchmark of `openai_codex:` sessions (#34) read 7.7% and 11% of its input
+  # from cache, where every request resent the one before it. So a request
+  # sent directly to `openai` or `openai_codex`, for a model of that provider,
+  # carries a key derived from its session: a hash of the session's id, so no
+  # local identifier leaves the machine, and stable across resume. A host's own
+  # key wins, and `prompt_cache_key: false` turns it off.
+  defp with_prompt_cache(options, _target, _request, route) when not is_nil(route), do: options
 
-  defp with_prompt_cache(options, target, nil) do
-    if claude_wire?(target) do
-      options
-      |> Keyword.put_new(:anthropic_prompt_cache, true)
-      |> with_rolling_breakpoint()
-    else
-      options
+  defp with_prompt_cache(options, target, request, nil) do
+    cond do
+      claude_wire?(target) ->
+        options
+        |> Keyword.put_new(:anthropic_prompt_cache, true)
+        |> with_rolling_breakpoint()
+
+      cache_key_wire?(target, request) ->
+        with_cache_key(options, request)
+
+      true ->
+        options
+    end
+  end
+
+  # Named rather than every OpenAI-compatible wire: a server behind a transport
+  # route may refuse a field it does not know, and `req_llm` declares this
+  # one only for providers whose APIs take it.
+  @cache_key_providers ~w(openai openai_codex)
+
+  defp cache_key_wire?(target, %Request{model: model}) do
+    provider = wire_provider(target)
+    provider in @cache_key_providers and ModelSpec.provider(model) == provider
+  end
+
+  defp with_cache_key(options, request) do
+    case {Keyword.fetch(options, :prompt_cache_key), session_cache_key(request)} do
+      {{:ok, false}, _key} -> Keyword.delete(options, :prompt_cache_key)
+      {{:ok, _host_key}, _key} -> options
+      {:error, nil} -> options
+      {:error, key} -> Keyword.put(options, :prompt_cache_key, key)
+    end
+  end
+
+  # The session's own id rather than its root's: a subagent's system prompt
+  # and tools are its own, so its prefix is too.
+  defp session_cache_key(%Request{context: context}) do
+    case Map.get(context, :agent_id) || Map.get(context, :session_id) do
+      id when is_binary(id) and id != "" ->
+        digest = :crypto.hash(:sha256, id) |> Base.encode16(case: :lower)
+        "lemieux-" <> binary_part(digest, 0, 32)
+
+      _none ->
+        nil
     end
   end
 
@@ -1957,13 +2008,18 @@ defmodule Lemieux.Providers.ReqLLM do
   defp wire_model_id(_target), do: nil
 
   # What the stream said about itself while it ran: whether the provider sent
-  # the terminal marker a finished answer carries, and the sentence of an error
-  # it reported inside a successful response. Gathered from the process's own
-  # mailbox, where `process/4` left them.
-  defp stream_facts(facts, acc \\ %{terminal?: false, error: nil}) do
+  # the terminal marker a finished answer carries, and the sentence and code of
+  # an error it reported inside a successful response. The code is what tells
+  # a policy refusal (`cyber_policy`) or an overflow from the provider breaking
+  # off (#32). Gathered from the process's own mailbox, where `process/4` left
+  # them.
+  defp stream_facts(facts, acc \\ %{terminal?: false, error: nil, code: nil}) do
     receive do
-      {^facts, :terminal} -> stream_facts(facts, %{acc | terminal?: true})
-      {^facts, :error, detail} -> stream_facts(facts, %{acc | error: acc.error || detail})
+      {^facts, :terminal} ->
+        stream_facts(facts, %{acc | terminal?: true})
+
+      {^facts, :error, detail, code} ->
+        stream_facts(facts, %{acc | error: acc.error || detail, code: acc.code || code})
     after
       0 -> acc
     end
@@ -1994,7 +2050,11 @@ defmodule Lemieux.Providers.ReqLLM do
   """
   @spec check_complete(
           result :: map(),
-          stream :: %{terminal?: boolean(), error: String.t() | nil},
+          stream :: %{
+            required(:terminal?) => boolean(),
+            required(:error) => String.t() | nil,
+            optional(:code) => String.t() | nil
+          },
           target :: ReqLLM.model_input(),
           emit :: Lemieux.Provider.emit()
         ) :: :ok | {:error, Interrupted.t()}
@@ -2010,13 +2070,19 @@ defmodule Lemieux.Providers.ReqLLM do
   end
 
   defp interruption(%{finish_reason: :error}, stream, target),
-    do: %Interrupted{provider: wire_provider(target), finish_reason: :error, detail: stream.error}
+    do: %Interrupted{
+      provider: wire_provider(target),
+      finish_reason: :error,
+      detail: stream.error,
+      code: Map.get(stream, :code)
+    }
 
-  defp interruption(result, %{error: detail}, target) when is_binary(detail),
+  defp interruption(result, %{error: detail} = stream, target) when is_binary(detail),
     do: %Interrupted{
       provider: wire_provider(target),
       finish_reason: Map.get(result, :finish_reason),
-      detail: detail
+      detail: detail,
+      code: Map.get(stream, :code)
     }
 
   # ReqLLM calls a stream that ended without its terminal event `:incomplete`.
@@ -2431,12 +2497,23 @@ defmodule Lemieux.Providers.ReqLLM do
       do: send(self(), {facts, :terminal})
 
     case metadata[:error] || metadata["error"] do
-      detail when is_binary(detail) and detail != "" -> send(self(), {facts, :error, detail})
-      _none -> :ok
+      detail when is_binary(detail) and detail != "" ->
+        send(self(), {facts, :error, detail, error_code(metadata)})
+
+      _none ->
+        :ok
     end
   end
 
   defp note_stream_fact(_chunk, _facts), do: :ok
+
+  defp error_code(metadata) do
+    case metadata[:error_code] || metadata["error_code"] do
+      code when is_binary(code) and code != "" -> code
+      code when is_integer(code) -> Integer.to_string(code)
+      _none -> nil
+    end
+  end
 
   defp call_opened(chunk) do
     index = chunk.metadata[:index] || chunk.metadata["index"]

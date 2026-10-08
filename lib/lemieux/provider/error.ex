@@ -14,12 +14,14 @@ defmodule Lemieux.Provider.Error do
   mutate it. Unknown shapes remain unknown rather than being classified from
   provider prose.
 
-  Two exceptions to that last rule are deliberate and narrow. A provider that
+  Three exceptions to that last rule are deliberate and narrow. A provider that
   gives a context overflow no code — Anthropic, Gemini — is recognised by its
   own sentence, but only by the adapter, which knows which provider a request
-  went to: see `recognize_overflow/2`. And a stream that ended before the
-  answer did becomes a `Lemieux.Provider.Interrupted`, because `req_llm`
-  reports two such endings as success.
+  went to: see `recognize_overflow/2`. A stream that ended before the answer
+  did becomes a `Lemieux.Provider.Interrupted`, because `req_llm` reports two
+  such endings as success. And the error event `req_llm`'s Codex provider
+  raises, rather than returns, is read back out of the crash it causes: see
+  `recognize_crash/1`.
   """
 
   alias Lemieux.Provider.Interrupted
@@ -78,8 +80,23 @@ defmodule Lemieux.Provider.Error do
                    "quota_exceeded"
                  ])
 
+  # A request the provider declined to answer on policy grounds. Asked again,
+  # it is usually refused again, and each attempt is one more flagged request
+  # on the account (#32), so none is retried. Names seen in the `code` of a
+  # failure's body or of a stream's error event.
+  @refusal_codes MapSet.new([
+                   # Azure OpenAI, when its content filter stops the prompt.
+                   "content_filter",
+                   "content_policy_violation",
+                   # The ChatGPT Codex backend.
+                   "cyber_policy",
+                   # OpenAI, for a prompt "flagged as potentially violating our
+                   # usage policy".
+                   "invalid_prompt"
+                 ])
+
   @typedoc "A stable policy category derived from typed fields, never error prose."
-  @type category :: :context_limit | :rate_limit | :server | :timeout | :other
+  @type category :: :context_limit | :refused | :rate_limit | :server | :timeout | :other
 
   # A gateway in development answers a failed request with its whole debug page —
   # eleven kilobytes of stylesheet with the one line that matters buried in it, and
@@ -205,12 +222,28 @@ defmodule Lemieux.Provider.Error do
   the two apart, and a refusal that repeats fails the bounded retries with
   the same sentence, while a gateway that dropped the stream is answered on
   the second try instead of being recorded as the model failing.
+
+  A request the provider declined on policy grounds is `:refused`: a code
+  such as `cyber_policy` or `content_policy_violation` in its body or its
+  stream's error event, or an answer that ended `:content_filter` with
+  nothing in it (Anthropic's `refusal`). It was `:other`, or a crash, so a
+  report could not say "refused by the provider" rather than "failed".
+  `transient?/2` never retries one.
   """
   @spec category(reason :: term()) :: category()
   def category(reason) do
     cond do
       context_limit?(reason) -> :context_limit
+      refused?(reason) -> :refused
       rate_limit?(reason) -> :rate_limit
+      true -> failure_category(reason)
+    end
+  end
+
+  # What the codes did not name, read from how the request failed: its status,
+  # or what happened to the connection.
+  defp failure_category(reason) do
+    cond do
       match?(status when status >= 500 and status <= 599, http_status(reason)) -> :server
       http_status(reason) == 408 -> :timeout
       timeout?(reason) -> :timeout
@@ -218,6 +251,117 @@ defmodule Lemieux.Provider.Error do
       true -> :other
     end
   end
+
+  @doc """
+  The provider's own code for the failure, when it gave one: a typed
+  `provider_code`, the code its response body or its stream's error event
+  carried (`"cyber_policy"`, `"context_length_exceeded"`), or, failing a
+  code, the body's error `type` (`"overloaded_error"`).
+
+  A category is policy; the code is the fact behind it, for a host whose own
+  policy, or report, needs more than the category.
+  """
+  @spec code(reason :: term()) :: String.t() | nil
+  def code({:context_limit, reason}), do: code(reason)
+  def code(%Interrupted{code: code}) when is_binary(code), do: code
+  def code(%{provider_code: code}) when is_binary(code) and code != "", do: code
+
+  def code(%{provider_code: code}) when is_atom(code) and code not in [nil, true, false],
+    do: Atom.to_string(code)
+
+  def code(%{} = reason) do
+    with nil <- reason |> Map.get(:response_body) |> body_error_code(),
+         %{cause: cause} when not is_nil(cause) <- reason do
+      code(cause)
+    else
+      code when is_binary(code) -> code
+      _none -> nil
+    end
+  end
+
+  def code(_reason), do: nil
+
+  # The innermost error object's code, else its type: a body's top-level
+  # `type` is often only `"error"`, which says nothing.
+  defp body_error_code(body) when is_binary(body) do
+    case JSON.decode(body) do
+      {:ok, decoded} -> body_error_code(decoded)
+      {:error, _reason} -> nil
+    end
+  end
+
+  defp body_error_code(%{} = body) do
+    body_error_code(nested_error(body)) ||
+      first_code(Map.get(body, "code") || Map.get(body, :code)) ||
+      first_code(Map.get(body, "type") || Map.get(body, :type))
+  end
+
+  defp body_error_code(_body), do: nil
+
+  defp first_code(value) do
+    case code_string(value) do
+      [code | _] when code != "" -> code
+      _none -> nil
+    end
+  end
+
+  @doc """
+  Reads a provider's error out of a provider task that crashed on it.
+
+  `req_llm` 1.26's `openai_codex` provider raises a `RuntimeError` inside its
+  stream server when the stream carries an `error` or `response.failed`
+  event (agentjido/req_llm#1079), and the server's crash takes the provider
+  task with it. The session saw that as `{:provider_crashed, reason}`, the
+  shape of a bug in an adapter, so the ChatGPT Codex backend's `cyber_policy`
+  refusal of a benchmark task was recorded as a crash in `:other` (#32).
+
+  Only an exception raised by that provider's stream decoder is read: its
+  message is the event, as JSON (`"Codex error: {…}"`) or as the event's own
+  sentence, and it becomes the `Lemieux.Provider.Interrupted` that `req_llm`'s
+  OpenAI Responses decoder already makes of the same event, with the event's
+  code. Anything else returns `{:provider_crashed, reason}`, as before.
+  """
+  @spec recognize_crash(reason :: term()) :: Interrupted.t() | {:provider_crashed, term()}
+  def recognize_crash(reason),
+    do: reason |> raised() |> recognize_raised() || {:provider_crashed, reason}
+
+  # The stream server's own exit reason, or the same reason as a consumer whose
+  # call to that server failed saw it.
+  defp raised({{%RuntimeError{}, _stack} = raised, {GenServer, :call, _args}}), do: raised
+  defp raised(reason), do: reason
+
+  defp recognize_raised(
+         {%RuntimeError{message: message},
+          [{ReqLLM.Providers.OpenAICodex, :normalize_stream_event!, _arity, _location} | _rest]}
+       )
+       when is_binary(message) do
+    {detail, code} =
+      case message do
+        "Codex error: " <> event -> codex_event(event)
+        failed -> {failed, nil}
+      end
+
+    %Interrupted{provider: "openai_codex", finish_reason: :error, detail: detail, code: code}
+  end
+
+  defp recognize_raised(_reason), do: nil
+
+  defp codex_event(event) do
+    case JSON.decode(event) do
+      {:ok, %{} = decoded} ->
+        error = nested_error(decoded)
+        error = if is_map(error), do: error, else: decoded
+
+        {first_text(Map.get(error, "message")) || event,
+         first_code(Map.get(error, "code")) || first_code(Map.get(decoded, "code"))}
+
+      _sentence ->
+        {event, nil}
+    end
+  end
+
+  defp first_text(text) when is_binary(text) and text != "", do: text
+  defp first_text(_text), do: nil
 
   @doc "Returns the HTTP status retained by the provider error, when present."
   @spec http_status(reason :: term()) :: non_neg_integer() | nil
@@ -310,15 +454,24 @@ defmodule Lemieux.Provider.Error do
   @spec account?(reason :: term()) :: boolean()
   def account?(reason) do
     http_status(reason) in [401, 402, 403] or
-      Enum.any?(account_codes(reason), &MapSet.member?(@account_codes, &1))
+      Enum.any?(typed_codes(reason), &MapSet.member?(@account_codes, &1))
   end
 
-  # Every code and type a failure carries, its cause's included. A body's
-  # `type` counts as well as its `code`: OpenAI names an exhausted quota in
-  # both, and some imitators only in the type.
-  defp account_codes({:context_limit, reason}), do: account_codes(reason)
+  defp refused?({:unanswered, _model, :content_filter}), do: true
 
-  defp account_codes(%{} = reason) do
+  defp refused?(reason),
+    do: Enum.any?(typed_codes(reason), &MapSet.member?(@refusal_codes, &1))
+
+  # Every code and type a failure carries, its cause's included, and the code
+  # of an interrupted stream's error event. A body's `type` counts as well as
+  # its `code`: OpenAI names an exhausted quota in both, and some imitators
+  # only in the type.
+  defp typed_codes({:context_limit, reason}), do: typed_codes(reason)
+
+  defp typed_codes(%Interrupted{code: code}),
+    do: code |> code_string() |> Enum.map(&normalize_code/1)
+
+  defp typed_codes(%{} = reason) do
     own =
       [Map.get(reason, :provider_code) | codes_and_types(Map.get(reason, :response_body))]
       |> Enum.flat_map(&code_string/1)
@@ -326,11 +479,11 @@ defmodule Lemieux.Provider.Error do
 
     case Map.get(reason, :cause) do
       nil -> own
-      cause -> own ++ account_codes(cause)
+      cause -> own ++ typed_codes(cause)
     end
   end
 
-  defp account_codes(_reason), do: []
+  defp typed_codes(_reason), do: []
 
   defp codes_and_types(body) when is_binary(body) do
     case JSON.decode(body) do
@@ -349,14 +502,22 @@ defmodule Lemieux.Provider.Error do
 
   defp codes_and_types(_body), do: []
 
-  @doc "Whether the failure is safe for a transport-level retry before output."
-  @spec retryable?(reason :: term()) :: boolean()
-  def retryable?(%{retryable: retryable}) when is_boolean(retryable), do: retryable
+  @doc """
+  Whether the failure is safe for a transport-level retry before output.
 
-  def retryable?({:unanswered, _model, finish}) when finish in @unanswered_cut_finishes,
+  Never a refusal on policy grounds (`category/1`'s `:refused`), whatever
+  else it says: an interrupted stream is retryable by default, and the
+  refusal its error event names is not.
+  """
+  @spec retryable?(reason :: term()) :: boolean()
+  def retryable?(reason), do: not refused?(reason) and typed_retryable?(reason)
+
+  defp typed_retryable?(%{retryable: retryable}) when is_boolean(retryable), do: retryable
+
+  defp typed_retryable?({:unanswered, _model, finish}) when finish in @unanswered_cut_finishes,
     do: true
 
-  def retryable?(reason) do
+  defp typed_retryable?(reason) do
     case http_status(reason) do
       status when status in [408, 409, 425, 429] -> true
       status when is_integer(status) and status >= 500 and status <= 599 -> true
@@ -375,7 +536,8 @@ defmodule Lemieux.Provider.Error do
   produced no output is worth sending again.
 
   Without a classifier this is the rule the session has always applied: a
-  server error, a rate limit, a stalled stream, or a typed `retryable` flag.
+  server error, a rate limit, a stalled stream, or a typed `retryable` flag,
+  and never a refusal on policy grounds.
   A host that knows its gateway better — one that answers 503 to a policy
   refusal that will never clear, say, or 400 to a transient upstream hiccup —
   passes a classifier. Its verdict wins in either direction, and `:default`
@@ -588,6 +750,7 @@ defmodule Lemieux.Provider.Error do
 
   defp code_string(_code), do: []
 
+  defp provider_code(%Interrupted{code: code}), do: code
   defp provider_code(%{provider_code: code}) when is_atom(code), do: Atom.to_string(code)
   defp provider_code(%{provider_code: code}) when is_binary(code), do: code
 

@@ -22,10 +22,19 @@ defmodule Lemieux.Extensions.ContinuationTest do
       assert {:error, _} = Continuation.init(max_continuations: -1)
       assert {:error, _} = Continuation.init(max_output_continuations: 11)
       assert {:error, _} = Continuation.init(enabled: "yes")
+      assert {:error, message} = Continuation.init(completion_check: "yes")
+      assert message =~ "completion_check"
 
       assert {:ok,
-              %Continuation{max_continuations: 5, max_output_continuations: 3, enabled: true}} =
-               Continuation.init([])
+              %Continuation{
+                max_continuations: 5,
+                max_output_continuations: 3,
+                enabled: true,
+                completion_check: false
+              }} = Continuation.init([])
+
+      assert {:ok, %Continuation{completion_check: true}} =
+               Continuation.init(completion_check: true)
     end
 
     test "the coding recipe offers it by name, off unless asked, ahead of verify" do
@@ -231,6 +240,114 @@ defmodule Lemieux.Extensions.ContinuationTest do
         )
 
       assert run(session, "do the steps") == :stop
+      assert sent_back(session) == []
+      assert length(Scripted.requests(provider)) == 2
+    end
+
+    # The 0.9.1 benchmark's agent checked its work against its own reading of
+    # the task: an `int32 val` field where the task said `value`, a file 684
+    # bytes over the stated cap (#36).
+    defp wrote(path),
+      do:
+        Scripted.tool_call("w#{System.unique_integer([:positive])}", "write", %{
+          "path" => path,
+          "content" => "done\n"
+        })
+
+    test "the completion check asks a prompt that worked, once, to check the task as written",
+         ctx do
+      {session, provider} =
+        start(
+          ctx,
+          [
+            wrote("kv.proto"),
+            Scripted.complete("The service is written and tested."),
+            Scripted.complete("Every requirement matches.")
+          ],
+          completion_check: true
+        )
+
+      assert run(session, "add SetValRequest with a key and a value") == :stop
+      assert length(Scripted.requests(provider)) == 3
+
+      assert [message] = sent_back(session)
+      assert String.starts_with?(message, Continuation.check_marker())
+      assert message =~ "as the person wrote it"
+      assert message =~ "names, paths, field names"
+      assert message =~ "exact commands"
+      assert message =~ "end your turn without calling a tool"
+    end
+
+    test "the completion check is asked once a prompt, even after a fix", ctx do
+      {session, provider} =
+        start(
+          ctx,
+          [
+            wrote("kv.proto"),
+            Scripted.complete("Done."),
+            wrote("kv.proto"),
+            Scripted.complete("Fixed: the field is now called value.")
+          ],
+          completion_check: true
+        )
+
+      assert run(session, "add SetValRequest") == :stop
+      assert [_one] = sent_back(session)
+      assert length(Scripted.requests(provider)) == 4
+    end
+
+    test "the completion check is not asked of a prompt answered without a tool", ctx do
+      {session, provider} =
+        start(ctx, [Scripted.complete("It parses the config.")], completion_check: true)
+
+      assert run(session, "what does load/1 do?") == :stop
+      assert sent_back(session) == []
+      assert length(Scripted.requests(provider)) == 1
+    end
+
+    test "the completion check waits for an open plan, and spares a model that is blocked", ctx do
+      {session, provider} =
+        start(
+          ctx,
+          [
+            plan(~w(in_progress pending)),
+            Scripted.complete("Starting on step 1."),
+            Scripted.complete("I need the staging password before step 1 can go further.")
+          ],
+          completion_check: true
+        )
+
+      assert run(session, "do the steps") == :stop
+      assert [plan_message] = sent_back(session)
+      assert plan_message =~ Continuation.marker()
+      assert length(Scripted.requests(provider)) == 3
+    end
+
+    test "the completion check comes after the plan is finished", ctx do
+      {session, provider} =
+        start(
+          ctx,
+          [
+            plan(~w(in_progress pending)),
+            Scripted.complete("Step 1 is done."),
+            plan(~w(completed completed)),
+            Scripted.complete("Both steps are done."),
+            Scripted.complete("Both match what was asked.")
+          ],
+          completion_check: true
+        )
+
+      assert run(session, "do the steps") == :stop
+      assert [plan_message, check_message] = sent_back(session)
+      assert plan_message =~ Continuation.marker()
+      assert check_message =~ Continuation.check_marker()
+      assert length(Scripted.requests(provider)) == 5
+    end
+
+    test "the completion check is off unless asked for", ctx do
+      {session, provider} = start(ctx, [wrote("a.txt"), Scripted.complete("Done.")])
+
+      assert run(session, "write a.txt") == :stop
       assert sent_back(session) == []
       assert length(Scripted.requests(provider)) == 2
     end

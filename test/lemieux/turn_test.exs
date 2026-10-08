@@ -177,6 +177,16 @@ defmodule Lemieux.TurnTest do
                effects([{:error, stall}])
 
       refute Map.has_key?(stall_payload, "http_status")
+      refute Map.has_key?(stall_payload, "code")
+
+      # The provider's code is the fact behind a refusal, beside its category.
+      refusal = %Lemieux.Provider.Interrupted{detail: "flagged", code: "cyber_policy"}
+
+      assert [_emit, {:append, {:error, refusal_payload, nil}}, _finished] =
+               effects([{:error, refusal}])
+
+      assert %{"category" => "refused", "code" => "cyber_policy"} = refusal_payload
+      refute Map.has_key?(refusal_payload, "http_status")
     end
   end
 

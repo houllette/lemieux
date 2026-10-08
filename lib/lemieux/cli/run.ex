@@ -36,7 +36,7 @@ defmodule Lemieux.CLI.Run do
 
   The status says why the command stopped, as `Lemieux.CLI.Errors` defines
   it: 0 answered, 2 usage, 3 credentials, 4 a limit, 5 cancelled, 6 the
-  provider failed after the session's retries, 1 anything else. A model
+  provider failed or refused after the session's retries, 1 anything else. A model
   specification that does not parse and a missing key are both found before
   a session exists: the first is status 2 and says how to write one, the
   second status 3 with the variable to set, and neither leaves a transcript

@@ -129,13 +129,183 @@ defmodule Lemieux.Provider.ErrorTest do
       assert Error.message(cut) =~ "cut off before the first token"
     end
 
-    # A provider that finished on purpose and said so is not a cut stream.
+    # A provider that finished on purpose and said so is not a cut stream. (A
+    # filtered answer is a refusal: see "a refusal on policy grounds".)
     for finish <- [:length, :content_filter] do
       ended = {:unanswered, "openai:gpt-5", finish}
 
-      assert Error.category(ended) == :other
+      refute Error.category(ended) == :server
       refute Error.transient?(ended)
       refute Error.retryable?(ended)
+    end
+  end
+
+  # The ChatGPT Codex backend refused a benchmark task with `cyber_policy`, and
+  # the session recorded a crash in `:other` (#32). A host could not tell a
+  # refusal from a bug in an adapter, and a refusal retried is one more flagged
+  # request on the account.
+  describe "a refusal on policy grounds" do
+    test "is :refused by its code, wherever the failure carries it, and never retried" do
+      refusals = [
+        RequestError.exception(reason: "flagged", status: 400, provider_code: "cyber_policy"),
+        RequestError.exception(
+          reason: "flagged",
+          status: 400,
+          response_body: ~s({"error":{"code":"invalid_prompt","type":"invalid_request_error"}})
+        ),
+        RequestError.exception(
+          reason: "filtered",
+          status: 400,
+          response_body: %{"error" => %{"code" => "Content_Filter"}}
+        ),
+        StreamError.exception(
+          reason: "stream failed",
+          cause:
+            RequestError.exception(
+              reason: "policy",
+              status: 400,
+              provider_code: "content_policy_violation"
+            )
+        ),
+        %Lemieux.Provider.Interrupted{
+          provider: "openai",
+          detail: "flagged",
+          code: "cyber_policy"
+        },
+        # Anthropic's `refusal` stop reason, with nothing said before it.
+        {:unanswered, "anthropic:claude-sonnet-5", :content_filter}
+      ]
+
+      for refusal <- refusals do
+        assert Error.category(refusal) == :refused, inspect(refusal)
+        refute Error.transient?(refusal), inspect(refusal)
+        refute Error.retryable?(refusal), inspect(refusal)
+        refute Error.account?(refusal), inspect(refusal)
+      end
+    end
+
+    test "is not read from prose, and a cut answer is still the provider failing" do
+      prose = RequestError.exception(reason: "cyber_policy: content blocked", status: 400)
+
+      assert Error.category(prose) == :other
+      assert Error.category({:unanswered, "openai:gpt-5", :length}) == :other
+
+      # An interrupted stream's other codes classify as they would anywhere.
+      overflow = %Lemieux.Provider.Interrupted{code: "context_length_exceeded"}
+      assert Error.category(overflow) == :context_limit
+
+      assert Error.category(%Lemieux.Provider.Interrupted{code: "rate_limit_exceeded"}) ==
+               :rate_limit
+    end
+
+    test "names the provider's code in its message" do
+      refusal = %Lemieux.Provider.Interrupted{
+        provider: "openai_codex",
+        finish_reason: :error,
+        detail: "This request was flagged.",
+        code: "cyber_policy"
+      }
+
+      assert Error.message(refusal) =~ "cyber_policy"
+      assert Error.message(refusal) =~ "This request was flagged."
+    end
+  end
+
+  describe "code/1" do
+    test "is the provider's own code, from a typed field, a body or a stream's error event" do
+      assert Error.code(RequestError.exception(reason: "x", status: 400, provider_code: "a_b")) ==
+               "a_b"
+
+      assert Error.code(%Lemieux.Provider.Interrupted{code: "cyber_policy"}) == "cyber_policy"
+
+      # A body's nested error says more than its top-level `type`, which for
+      # Anthropic is the word "error".
+      anthropic =
+        RequestError.exception(
+          reason: "Overloaded",
+          status: 529,
+          response_body: %{"type" => "error", "error" => %{"type" => "overloaded_error"}}
+        )
+
+      assert Error.code(anthropic) == "overloaded_error"
+
+      codex =
+        RequestError.exception(
+          reason: "flagged",
+          status: 400,
+          response_body: ~s({"error":{"code":"cyber_policy","type":"invalid_request"}})
+        )
+
+      assert Error.code(codex) == "cyber_policy"
+      assert Error.code(StreamError.exception(reason: "wrapped", cause: codex)) == "cyber_policy"
+      assert Error.code({:context_limit, codex}) == "cyber_policy"
+    end
+
+    test "is nil when the failure carries none" do
+      assert Error.code(RequestError.exception(reason: "HTTP 408", status: 408)) == nil
+      assert Error.code(:timeout) == nil
+      assert Error.code("cyber_policy") == nil
+      assert Error.code(%Lemieux.Provider.Interrupted{detail: "overloaded"}) == nil
+    end
+  end
+
+  # req_llm 1.26's `openai_codex` provider raises a stream's `error` event
+  # inside its stream server (agentjido/req_llm#1079), which takes the
+  # provider task down with it. That is the provider answering, not a bug.
+  describe "recognize_crash/1" do
+    defp codex_crash(message),
+      do:
+        {%RuntimeError{message: message},
+         [{ReqLLM.Providers.OpenAICodex, :normalize_stream_event!, 1, [line: 505]}]}
+
+    test "reads a Codex stream error event out of the crash it caused" do
+      event =
+        JSON.encode!(%{
+          "type" => "error",
+          "error" => %{
+            "code" => "cyber_policy",
+            "type" => "invalid_request",
+            "message" => "This request was flagged."
+          }
+        })
+
+      for crash <- [
+            codex_crash("Codex error: " <> event),
+            # Seen by a consumer whose call to the stream server failed.
+            {codex_crash("Codex error: " <> event), {GenServer, :call, [:server, :next, 5_000]}}
+          ] do
+        assert %Lemieux.Provider.Interrupted{
+                 provider: "openai_codex",
+                 finish_reason: :error,
+                 code: "cyber_policy",
+                 detail: "This request was flagged."
+               } = refusal = Error.recognize_crash(crash)
+
+        assert Error.category(refusal) == :refused
+        refute Error.transient?(refusal)
+      end
+    end
+
+    test "keeps the sentence of an event that carried no code, as the provider failing" do
+      assert %Lemieux.Provider.Interrupted{code: nil, detail: "upstream overloaded"} =
+               interrupted =
+               Error.recognize_crash(codex_crash("Codex error: upstream overloaded"))
+
+      assert Error.category(interrupted) == :server
+
+      assert %Lemieux.Provider.Interrupted{detail: "Codex response failed"} =
+               Error.recognize_crash(codex_crash("Codex response failed"))
+    end
+
+    test "leaves every other crash a crash" do
+      elsewhere =
+        {%RuntimeError{message: "Codex error: {}"}, [{SomeAdapter, :decode, 1, []}]}
+
+      called = {elsewhere, {GenServer, :call, [:server, :next, 5_000]}}
+
+      for reason <- [elsewhere, called, :killed, {%ArgumentError{}, []}, {:shutdown, :normal}] do
+        assert Error.recognize_crash(reason) == {:provider_crashed, reason}
+      end
     end
   end
 

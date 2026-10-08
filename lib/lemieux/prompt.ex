@@ -48,6 +48,32 @@ defmodule Lemieux.Prompt do
       Codex's prompt carries the same instruction. It is not measured here,
       and it does not carry the fix alone — `Lemieux.Extensions.Continuation`
       is the part that does not depend on the model reading it.
+
+  Four more came from the failures of one benchmark run of 0.9.1 on
+  `openai_codex:gpt-6.1-sol` (Terminal-Bench 2.1 and a SWE-bench Verified
+  sample, #37). None is a benchmark trick: each is what an engineer new to
+  a repository is told on their first day. None is measured yet either;
+  the issue's author offered the before-and-after run.
+
+    * **An existing test that fails is evidence.** On
+      `matplotlib__matplotlib-25479` the agent rewrote an existing
+      assertion before running any test — the one assertion that would have
+      shown its fix incomplete. It stays a default, with its exception
+      named, because a task sometimes does change what a test should
+      expect (`django__django-13933` was resolved by doing exactly that).
+    * **The project's own environment.** 32 of 50 SWE-bench sessions never
+      used the repository's prepared interpreter, and many installed
+      packages beside it or built a fresh virtualenv: turns spent, and
+      failures that only happen under the wrong Python.
+    * **A deliverable works where it runs.** On Terminal-Bench
+      `filter-js-from-html` the agent installed two packages for its script,
+      and the program that later ran the script had neither, so every case
+      failed on an import.
+    * **No behaviour nobody asked for.** Three SymPy misses added
+      restrictions beyond the issue, which asked, for one, to "return None
+      if it cannot decide". The most speculative of the four, and folded
+      into the line that was already about scope rather than given one of
+      its own.
   """
 
   @default """
@@ -63,8 +89,14 @@ defmodule Lemieux.Prompt do
   - Prefer a small, verifiable change to a large speculative one. When there is
     a way to check your work on this machine (a test suite, a compiler, a
     linter), run it.
-  - Change what the task needs and nothing more. Do not create files nobody
-    asked for, such as notes, summaries or scratch scripts left behind.
+  - A test that already existed and now fails is evidence about your change:
+    fix the code, unless the task changes what the test expects.
+  - Use the project's own environment — its interpreter, virtualenv or
+    toolchain — rather than a new one or the system's. What you deliver must
+    work where it will run, without anything you installed only for yourself.
+  - Change what the task needs and nothing more: no behaviour it did not ask
+    for. Do not create files nobody asked for, such as notes, summaries or
+    scratch scripts left behind.
   - When something fails, read the error. Do not retry the same call hoping for
     a different answer.
   - Leave version control to the person. Do not commit, push, reset, rebase,

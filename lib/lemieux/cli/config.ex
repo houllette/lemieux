@@ -156,7 +156,7 @@ defmodule Lemieux.CLI.Config do
   @sandbox_fields ~w(enabled backend network localhost writable hidden)
   @verify_fields ~w(enabled command max_continuations timeout_ms)
   @skills_fields ~w(omarchy disabled)
-  @continuation_fields ~w(enabled max_continuations max_output_continuations)
+  @continuation_fields ~w(enabled max_continuations max_output_continuations completion_check)
   # What a model can be shown besides text, as the model catalog names it.
   # A fixed map rather than `String.to_existing_atom/1`: the file is data.
   @modalities %{"text" => :text, "image" => :image, "pdf" => :pdf}
@@ -864,6 +864,9 @@ defmodule Lemieux.CLI.Config do
 
   defp valid_section_entry?("continuation", {"max_output_continuations", value}),
     do: is_integer(value) and value in 0..10
+
+  defp valid_section_entry?("continuation", {"completion_check", value}),
+    do: is_boolean(value)
 
   defp valid_section_entry?(_section, _entry), do: false
 

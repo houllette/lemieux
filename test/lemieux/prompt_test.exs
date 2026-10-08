@@ -29,6 +29,25 @@ defmodule Lemieux.PromptTest do
     assert prose() =~ "Ending your turn hands control back to the person"
   end
 
+  # Four gaps the 0.9.1 benchmark failures showed (#37): an existing assertion
+  # rewritten before any test ran, sessions that pip-installed beside the
+  # project's prepared interpreter, a script whose packages the program that
+  # ran it did not have, and fixes that added behaviour nobody asked for.
+  test "the default prompt treats a failing existing test as evidence, by default" do
+    assert prose() =~ "A test that already existed and now fails is evidence about your change"
+    assert prose() =~ "unless the task changes what the test expects"
+  end
+
+  test "the default prompt keeps work in the project's own environment" do
+    assert prose() =~ "Use the project's own environment"
+    assert prose() =~ "What you deliver must work where it will run"
+  end
+
+  test "the default prompt asks for no behaviour the task did not ask for" do
+    assert prose() =~
+             "Change what the task needs and nothing more: no behaviour it did not ask for"
+  end
+
   test "the default prompt stays short enough to pay for on every request" do
     assert byte_size(Prompt.default()) < 2_500
   end

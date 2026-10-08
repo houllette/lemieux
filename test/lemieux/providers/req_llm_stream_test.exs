@@ -232,6 +232,78 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
     end
   end
 
+  # OpenAI routes a cache hit by `prompt_cache_key`; without one, a benchmark
+  # of Codex sessions read 7.7–11% of its input from cache (#34).
+  describe "OpenAI prompt cache key" do
+    test "a session's requests carry one stable key, and another session's another" do
+      owner = self()
+      first = session_request("01SESSIONA")
+
+      assert :ok = Provider.run(openai(owner, 200, answer()), first, &send(owner, &1))
+      assert_receive {:wire, %{"prompt_cache_key" => key}}
+      assert key =~ ~r/^lemieux-[0-9a-f]{32}$/
+      refute key =~ "01SESSIONA"
+
+      assert :ok = Provider.run(openai(owner, 200, answer()), first, &send(owner, &1))
+      assert_receive {:wire, %{"prompt_cache_key" => ^key}}
+
+      other = session_request("01SESSIONB")
+      assert :ok = Provider.run(openai(owner, 200, answer()), other, &send(owner, &1))
+      assert_receive {:wire, %{"prompt_cache_key" => other_key}}
+      refute other_key == key
+    end
+
+    test "reaches the Codex backend's request body" do
+      owner = self()
+      completed = %{"type" => "response.completed", "response" => %{"id" => "r", "output" => []}}
+
+      request =
+        Request.new("openai_codex:gpt-5.1-codex",
+          entries: [Entry.new(:user, %{"text" => "Say something."})],
+          context: %{agent_id: "01SESSIONA"}
+        )
+
+      assert :ok = Provider.run(codex(owner, sse([completed])), request, &send(owner, &1))
+      assert_receive {:wire, %{"prompt_cache_key" => "lemieux-" <> _digest}}
+    end
+
+    test "a host's own key wins, and false turns it off" do
+      owner = self()
+
+      own = session_request("01SESSIONA", params: [prompt_cache_key: "tenant-7"])
+      assert :ok = Provider.run(openai(owner, 200, answer()), own, &send(owner, &1))
+      assert_receive {:wire, %{"prompt_cache_key" => "tenant-7"}}
+
+      off = session_request("01SESSIONA", params: [prompt_cache_key: false])
+      assert :ok = Provider.run(openai(owner, 200, answer()), off, &send(owner, &1))
+      assert_receive {:wire, body}
+      refute Map.has_key?(body, "prompt_cache_key")
+    end
+
+    test "a request with no session behind it carries none" do
+      owner = self()
+
+      assert :ok = Provider.run(openai(owner, 200, answer()), openai_request(), &send(owner, &1))
+      assert_receive {:wire, body}
+      refute Map.has_key?(body, "prompt_cache_key")
+    end
+
+    test "is never sent to a provider that did not ask for it" do
+      owner = self()
+      request = claude_request(context: %{agent_id: "01SESSIONA"})
+
+      assert :ok =
+               Provider.run(
+                 anthropic(owner, 200, sse(complete_answer("ok"))),
+                 request,
+                 &send(owner, &1)
+               )
+
+      assert_receive {:wire, body}
+      refute JSON.encode!(body) =~ "prompt_cache_key"
+    end
+  end
+
   describe "a stream that broke off" do
     test "Anthropic's error event mid-answer is an interrupted, retryable failure" do
       # Anthropic sends `event: error` and closes the stream; ReqLLM's decoder
@@ -292,6 +364,36 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
 
       # ReqLLM assembles no message for this one; the deltas are what arrived.
       assert_receive {:text_delta, "partial answer"}
+      refute_receive {:done, _stop}
+    end
+
+    # The ChatGPT Codex backend refused a benchmark task with this event (#32).
+    # Its code is what tells a policy refusal from the provider breaking off,
+    # which would be retried, and every retry another flagged request.
+    test "an OpenAI Responses error event keeps its code, and a refusal is not retried" do
+      owner = self()
+
+      events = [
+        %{"type" => "response.created", "response" => %{"id" => "resp_1"}},
+        %{
+          "type" => "error",
+          "error" => %{
+            "code" => "cyber_policy",
+            "type" => "invalid_request",
+            "message" => "This request was flagged."
+          }
+        }
+      ]
+
+      provider = openai(owner, 200, sse(events), "openai_responses")
+
+      assert {:error,
+              %Interrupted{code: "cyber_policy", detail: "This request was flagged."} = reason} =
+               Provider.run(provider, openai_request(), &send(owner, &1))
+
+      assert ProviderError.category(reason) == :refused
+      assert ProviderError.code(reason) == "cyber_policy"
+      refute ProviderError.transient?(reason)
       refute_receive {:done, _stop}
     end
 
@@ -379,6 +481,12 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
 
   # -- fixtures ----------------------------------------------------------------
 
+  # The correlation a session puts on every request it sends.
+  defp session_request(agent_id, opts \\ []),
+    do: openai_request(Keyword.put(opts, :context, %{agent_id: agent_id, session_id: "01ROOT"}))
+
+  defp answer, do: openai_sse([%{choices: [text_choice("ok", "stop")]}])
+
   defp claude_request(opts \\ []) do
     {model, opts} = Keyword.pop(opts, :model, "anthropic:claude-haiku-4-5")
 
@@ -411,7 +519,7 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
     )
   end
 
-  defp openai(owner, status, body) do
+  defp openai(owner, status, body, wire_protocol \\ "openai_chat") do
     url = serve(owner, status, body)
 
     Adapter.new(
@@ -419,8 +527,21 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
       api_key_provider: :openai,
       max_retries: 0,
       transport_routes: %{
-        "openai" => [provider: "openai", base_url: url, wire_protocol: "openai_chat"]
+        "openai" => [provider: "openai", base_url: url, wire_protocol: wire_protocol]
       }
+    )
+  end
+
+  # Codex signs in with a ChatGPT token; these are placeholders the fixture
+  # never checks.
+  defp codex(owner, body) do
+    Adapter.new(
+      api_key: "fixture-key",
+      api_key_provider: :openai_codex,
+      access_token: "fixture-token",
+      chatgpt_account_id: "fixture-account",
+      base_url: serve(owner, 200, body),
+      max_retries: 0
     )
   end
 

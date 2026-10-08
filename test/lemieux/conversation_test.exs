@@ -1715,6 +1715,23 @@ defmodule Lemieux.ConversationTest do
       assert Enum.count(reasons, &ProviderError.account?/1) == 6
     end
 
+    # Sent again, a refusal on policy grounds is usually refused again, and
+    # each attempt is another flagged request on the account (#32).
+    test "a policy refusal says what to change, and does not offer /retry" do
+      refusal = %Lemieux.Provider.Interrupted{
+        provider: "openai_codex",
+        detail: "This request was flagged.",
+        code: "cyber_policy"
+      }
+
+      line = failure_line(conversation(model: "openai_codex:gpt-6.1-sol"), refusal)
+
+      assert line =~ "openai_codex refused the request"
+      assert line =~ "cyber_policy"
+      assert line =~ "change the request"
+      refute line =~ "/retry"
+    end
+
     test "a rate limit says how long the provider asked for" do
       [error: reason] =
         Scripted.http_error(429, reason: "slow down", headers: [{"retry-after", "30"}])

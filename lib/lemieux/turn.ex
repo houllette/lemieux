@@ -229,17 +229,21 @@ defmodule Lemieux.Turn do
   # answers a streaming POST with a bare 414 is `:other` by status, and a host
   # that has seen that CDN do it may still want to retry once — which it cannot
   # decide from "other" and a sentence.
+  #
+  # So does the provider's own code, when it gave one: `"cyber_policy"` says
+  # which refusal a `"refused"` was, where the sentence is whatever the
+  # provider chose to write (#32).
   defp error_payload(reason) do
-    payload = %{
+    %{
       "reason" => ProviderError.message(reason),
       "category" => Atom.to_string(ProviderError.category(reason))
     }
-
-    case ProviderError.http_status(reason) do
-      status when is_integer(status) -> Map.put(payload, "http_status", status)
-      nil -> payload
-    end
+    |> put_present("http_status", ProviderError.http_status(reason))
+    |> put_present("code", ProviderError.code(reason))
   end
+
+  defp put_present(payload, _key, nil), do: payload
+  defp put_present(payload, key, value), do: Map.put(payload, key, value)
 
   defp partial(turn) do
     case checkpoint(turn) do

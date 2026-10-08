@@ -205,12 +205,17 @@ contract is documented in [Governed tool contracts](tool-contracts.md).
 
 A native observation whose attempt ended on a provider failure carries
 `provider_error` at its top level: the failure's `category` (`timeout`,
-`server`, `rate_limit`, `context_limit` or `other`, as
-`Lemieux.Provider.Error.category/1` files it), its `reason` as a sentence, and
-its `http_status` (`null` when the failure had none). A `retry: [max: n,
-when: predicate]` option to `Lemieux.Benchmark.run/3` reads them to tell the
-apparatus failing from the model failing; the status is there so a predicate
-can retry a gateway's bare `414` once without retrying every `other`.
+`server`, `rate_limit`, `context_limit`, `refused` or `other`, as
+`Lemieux.Provider.Error.category/1` files it), its `reason` as a sentence, its
+`http_status` and the provider's own `code` (each `null` when the failure had
+none). A `retry: [max: n, when: predicate]` option to
+`Lemieux.Benchmark.run/3` reads them to tell the apparatus failing from the
+model failing; the status is there so a predicate can retry a gateway's bare
+`414` once without retrying every `other`. `refused` is a request the
+provider declined on policy grounds (a code such as `cyber_policy`, or an
+answer its filter stopped), which a predicate should not retry: it is
+usually refused again, and each attempt is another flagged request on the
+account.
 
 Native observations include `tool_metrics`: catalog bytes and exact tokens
 when supplied, tokenizer names, calls, errors, denials, unavailable calls,

@@ -668,7 +668,7 @@ writes its sentence there.
 | 3 | credentials: no API key, or the provider refused the one given |
 | 4 | a limit stopped the work: requests, spend, turns, or no progress |
 | 5 | the work was cancelled |
-| 6 | the provider failed, after the session's own retries |
+| 6 | the provider failed or refused, after the session's own retries |
 
 The installed `lmx` exits 130 when Ctrl-C stopped it, 129 when its terminal
 closed and 143 for SIGTERM; see [Signals](#signals-and-closed-terminals).

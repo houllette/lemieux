@@ -1050,7 +1050,8 @@ defmodule Lemieux.CLI.Runtime do
       %{} = settings ->
         [
           max_continuations: Map.get(settings, "max_continuations"),
-          max_output_continuations: Map.get(settings, "max_output_continuations")
+          max_output_continuations: Map.get(settings, "max_output_continuations"),
+          completion_check: Map.get(settings, "completion_check")
         ]
         |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 

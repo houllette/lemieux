@@ -15,7 +15,7 @@ defmodule Lemieux.CLI.Errors do
   | 3 | credentials: no API key, or the provider refused the one given |
   | 4 | a limit stopped the work: requests, spend, turns, or no progress |
   | 5 | the work was cancelled |
-  | 6 | the provider failed, after the session's own retries |
+  | 6 | the provider failed or refused, after the session's own retries |
 
   The categories are derived from typed values — the session's stop reason
   and `Lemieux.Provider.Error`'s projection of the provider's failure —
@@ -64,7 +64,7 @@ defmodule Lemieux.CLI.Errors do
   end
 
   defp provider_category(category)
-       when category in [:rate_limit, :server, :timeout, :context_limit],
+       when category in [:rate_limit, :server, :timeout, :context_limit, :refused],
        do: :provider
 
   defp provider_category(_other), do: :other
