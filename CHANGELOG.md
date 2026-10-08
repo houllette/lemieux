@@ -38,6 +38,15 @@ API.
 
   **Migration:** to keep the old bound, pass
   `receive_timeout: :timer.minutes(2)`.
+- `bash` fits a `timeout_ms` or `wait_ms` to the call's own deadline (the
+  session's `:tool_timeout_ms`, when that is under bash's ten minutes)
+  instead of letting the session stop the call. A wait cut that way returns
+  the background task's state, as a shorter wait would, and a foreground
+  command cut that way is reported as timed out, with the advice to start it
+  in the background; both say the limit was the session's. Under a
+  three-minute limit, a `wait_ms: 180000` poll of a running task came back
+  as a failed call, under a schema that allows 600000. The schema's
+  descriptions now say a session may allow less. (#38)
 
 ### Experimental
 

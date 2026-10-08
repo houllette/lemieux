@@ -47,6 +47,25 @@ defmodule Lemieux.Tools.Bash do
   a model that had no way to stop it either left it holding the port the next
   attempt needed or reached for `kill` with a pid it had to guess.
 
+  ## Inside the call's deadline
+
+  The session stops any one tool call at its deadline, `deadline_ms` in the
+  context: this tool's ten minutes under the host's `:tool_timeout_ms`. A
+  call stopped there ends as an error that says nothing about the command,
+  so a `timeout_ms` or `wait_ms` that would outlast it is cut to end shortly
+  before it, and the result says the cut was this session's limit. A
+  benchmark host with a three-minute limit (#38) saw a `wait_ms: 180000`
+  poll of a running task come back as a failed call, under a schema that
+  allowed 600000; the model fell back to one-minute polls, 42 of them. Cut,
+  the same poll answers "still running", as a shorter wait would, and a
+  foreground command that runs out of time is reported as timed out, with
+  the advice to start it in the background.
+
+  The schema's maxima stay the tool's own and say a session may allow
+  less. A schema is the same for every session that uses the tool, and the
+  limit is each session's, which the model learns from the first result
+  that reaches it.
+
   ## Nobody is at this terminal
 
   Every command runs with `PAGER` and `GIT_PAGER` set to `cat`,
@@ -108,6 +127,12 @@ defmodule Lemieux.Tools.Bash do
   @default_background_timeout :timer.hours(1)
   @max_background_timeout :timer.hours(24)
   @max_wait 600_000
+
+  # What a timeout or a wait cut to fit the call's deadline leaves before it,
+  # to kill the command and report: see "Inside the call's deadline" above.
+  # A tenth of a short deadline, so a test's or a host's one-second limit
+  # still leaves the command most of it.
+  @deadline_margin 5_000
 
   # See "Nobody is at this terminal" above.
   @non_interactive [
@@ -198,7 +223,8 @@ defmodule Lemieux.Tools.Bash do
           "minimum" => 0,
           "maximum" => @max_wait,
           "description" =>
-            "With task_id, wait this long for completion. Omit or use 0 to poll immediately."
+            "With task_id, wait this long for completion. Omit or use 0 to poll immediately. " <>
+              "A session may allow one call less."
         },
         "timeout_ms" => %{
           "type" => "integer",
@@ -206,7 +232,8 @@ defmodule Lemieux.Tools.Bash do
           "maximum" => @max_timeout,
           "description" =>
             "How long to wait before killing it, in milliseconds. " <>
-              "Defaults to #{@default_timeout}, maximum #{@max_timeout}."
+              "Defaults to #{@default_timeout}, maximum #{@max_timeout}; " <>
+              "a session may allow one call less."
         },
         "background_timeout_ms" => %{
           "type" => "integer",
@@ -294,19 +321,21 @@ defmodule Lemieux.Tools.Bash do
 
   defp dispatch(%{"command" => command} = args, context, nil)
        when is_binary(command) and command != "" do
+    {timeout, cut} = timeout(args, context)
+
     case Environment.run(Environment.from_context(context), command,
            cwd: context.cwd,
-           timeout_ms: timeout(args),
+           timeout_ms: timeout,
            env: @non_interactive
          ) do
-      {:ok, events} -> {:stream, render_events(events)}
+      {:ok, events} -> {:stream, render_events(events, cut)}
       {:error, reason} -> {:error, "could not run the command: #{describe_start(reason)}"}
     end
   end
 
   defp dispatch(%{"command" => command} = args, context, runner)
        when is_binary(command) and command != "" do
-    timeout = timeout(args)
+    {timeout, cut} = timeout(args, context)
     caller = self()
     result_ref = make_ref()
 
@@ -344,7 +373,7 @@ defmodule Lemieux.Tools.Bash do
         Process.exit(pid, :kill)
 
         {:ok,
-         command_result(render([], "[timed out after #{timeout}ms and was killed]"), %{
+         command_result(render([], timed_out(timeout, cut)), %{
            "status" => "timed_out",
            "timeout_ms" => timeout
          })}
@@ -386,8 +415,27 @@ defmodule Lemieux.Tools.Bash do
     kind, reason -> {:runner_crashed, {kind, reason}}
   end
 
-  defp timeout(%{"timeout_ms" => ms}) when is_integer(ms) and ms > 0, do: min(ms, @max_timeout)
-  defp timeout(_args), do: @default_timeout
+  defp timeout(%{"timeout_ms" => ms}, context) when is_integer(ms) and ms > 0,
+    do: within_deadline(min(ms, @max_timeout), context)
+
+  defp timeout(_args, context), do: within_deadline(@default_timeout, context)
+
+  # `{ms, cut}`: what the command or wait gets, and whether the deadline is
+  # what decided it. A context without one (a host calling the tool itself)
+  # keeps what was asked.
+  defp within_deadline(ms, %{deadline_ms: deadline}) when is_integer(deadline) and deadline > 0 do
+    limit = max(deadline - min(@deadline_margin, div(deadline, 10)), 1)
+    if ms > limit, do: {limit, true}, else: {ms, false}
+  end
+
+  defp within_deadline(ms, _context), do: {ms, false}
+
+  defp timed_out(timeout, false), do: "[timed out after #{timeout}ms and was killed]"
+
+  defp timed_out(timeout, true),
+    do:
+      "[timed out after #{timeout}ms and was killed: that is the longest one call may run in " <>
+        "this session, so start a longer command with background and poll it]"
 
   defp background_timeout(%{"background_timeout_ms" => ms})
        when is_integer(ms) and ms > 0,
@@ -395,8 +443,10 @@ defmodule Lemieux.Tools.Bash do
 
   defp background_timeout(_args), do: @default_background_timeout
 
-  defp wait(%{"wait_ms" => ms}) when is_integer(ms) and ms >= 0, do: min(ms, @max_wait)
-  defp wait(_args), do: 0
+  defp wait(%{"wait_ms" => ms}, context) when is_integer(ms) and ms >= 0,
+    do: within_deadline(min(ms, @max_wait), context)
+
+  defp wait(_args, _context), do: {0, false}
 
   defp start_background(command, args, context, runner) do
     opts = [
@@ -439,7 +489,7 @@ defmodule Lemieux.Tools.Bash do
   end
 
   defp observe(task_id, args, context) do
-    wait_ms = wait(args)
+    {wait_ms, cut} = wait(args, context)
 
     result =
       if wait_ms == 0,
@@ -451,13 +501,20 @@ defmodule Lemieux.Tools.Bash do
         {:ok, background_result(snapshot)}
 
       {:error, {:timeout, snapshot}} ->
-        prefix = "Background task #{task_id} is still running after waiting #{wait_ms}ms."
-        {:ok, background_result(snapshot, prefix)}
+        {:ok, background_result(snapshot, still_running(task_id, wait_ms, cut))}
 
       {:error, :not_found} ->
         {:error, "background task #{inspect(task_id)} was not found for this session"}
     end
   end
+
+  defp still_running(task_id, wait_ms, false),
+    do: "Background task #{task_id} is still running after waiting #{wait_ms}ms."
+
+  defp still_running(task_id, wait_ms, true),
+    do:
+      "Background task #{task_id} is still running after waiting #{wait_ms}ms, the longest " <>
+        "one call may wait in this session. Call again to keep waiting."
 
   defp background_result(snapshot, prefix \\ nil) do
     status = background_status(snapshot)
@@ -494,7 +551,7 @@ defmodule Lemieux.Tools.Bash do
   # model yet, and an escape sequence cut off at the end of the last chunk
   # (see `Lemieux.Tool.Escapes.strip_chunk/2`). An unfinished sequence left
   # at the end of the stream is dropped with it.
-  defp render_events(events) do
+  defp render_events(events, cut) do
     Stream.transform(
       events,
       fn -> {false, ""} end,
@@ -529,7 +586,7 @@ defmodule Lemieux.Tools.Bash do
 
         {:timeout, timeout}, {seen?, _pending} ->
           result =
-            command_result(note(seen?, "[timed out after #{timeout}ms and was killed]"), %{
+            command_result(note(seen?, timed_out(timeout, cut)), %{
               "status" => "timed_out",
               "timeout_ms" => timeout
             })

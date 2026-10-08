@@ -341,6 +341,88 @@ defmodule Lemieux.Tools.BashTest do
     assert message =~ "not found"
   end
 
+  # The session stops a call at `deadline_ms` and reports an error that says
+  # nothing about the command (#38): a 180-second host limit turned a
+  # `wait_ms: 180000` poll of a running task into a failed call.
+  describe "the call's deadline" do
+    defmodule RecordingEnvironment do
+      @moduledoc false
+      @behaviour Lemieux.Environment
+
+      @impl Lemieux.Environment
+      def read_file(_state, _cwd, _path), do: {:error, :enoent}
+
+      @impl Lemieux.Environment
+      def write_file(_state, _cwd, _path, _contents), do: {:error, :enotsup}
+
+      @impl Lemieux.Environment
+      def run(caller, _command, opts) do
+        send(caller, {:timeout_ms, opts[:timeout_ms]})
+        {:ok, [{:data, "partial\n"}, {:timeout, opts[:timeout_ms]}]}
+      end
+    end
+
+    setup %{ctx: ctx} do
+      %{ctx: Map.merge(ctx, %{environment: {RecordingEnvironment, self()}, deadline_ms: 180_000})}
+    end
+
+    test "cuts a longer timeout to end before it, and says why the command stopped", %{
+      ctx: ctx
+    } do
+      assert {:ok, output} = run(%{"command" => "train", "timeout_ms" => 600_000}, ctx)
+
+      assert_received {:timeout_ms, 175_000}
+      assert output =~ "partial"
+      assert output =~ "timed out after 175000ms"
+      assert output =~ "longest one call may run in this session"
+      assert output =~ "background"
+    end
+
+    test "leaves a timeout that fits alone", %{ctx: ctx} do
+      assert {:ok, output} = run(%{"command" => "check", "timeout_ms" => 60_000}, ctx)
+
+      assert_received {:timeout_ms, 60_000}
+      assert output =~ "timed out after 60000ms"
+      refute output =~ "in this session"
+    end
+
+    test "cuts the default timeout when the deadline is shorter than it", %{ctx: ctx} do
+      ctx = %{ctx | deadline_ms: 30_000}
+
+      assert {:ok, _output} = run(%{"command" => "check"}, ctx)
+      assert_received {:timeout_ms, 27_000}
+    end
+
+    test "cuts a host runner's timeout the same way", %{ctx: ctx} do
+      bash = Bash.new(runner: fn _command, _opts -> receive do: (:stop -> :ok) end)
+      ctx = %{ctx | deadline_ms: 200}
+
+      assert {:ok, output} =
+               Tool.invoke(bash, %{"command" => "sleep forever", "timeout_ms" => 600_000}, ctx)
+
+      assert output.model_text =~ "timed out after 180ms"
+      assert output.model_text =~ "longest one call may run in this session"
+      assert output.structured_content == %{"status" => "timed_out", "timeout_ms" => 180}
+    end
+
+    test "a wait that would outlast the call ends as still running, not as an error", %{
+      ctx: ctx
+    } do
+      ctx = ctx |> Map.put(:environment, Lemieux.Environment.local()) |> background_context()
+      assert {:ok, started} = run(%{"command" => "sleep 30", "background" => true}, ctx)
+      [task_id] = Regex.run(~r/[0-9A-HJKMNP-TV-Z]{26}/, started)
+
+      ctx = %{ctx | deadline_ms: 1_000}
+      assert {:ok, output} = run(%{"task_id" => task_id, "wait_ms" => 600_000}, ctx)
+
+      assert output =~ "still running after waiting 900ms"
+      assert output =~ "longest one call may wait in this session"
+      assert output =~ "Status: running"
+
+      assert {:ok, _cancelled} = run(%{"task_id" => task_id, "cancel" => true}, ctx)
+    end
+  end
+
   defp background_context(ctx) do
     runtime = :"lemieux_bash_test_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
