@@ -2,6 +2,7 @@ defmodule Lemieux.Session.Mailbox do
   @moduledoc false
 
   alias Lemieux.Clock
+  alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Session.Accounting
   alias Lemieux.Session.Approvals
   alias Lemieux.Session.Catalog
@@ -188,8 +189,11 @@ defmodule Lemieux.Session.Mailbox do
     {:noreply, Recovery.close(%{state | task: nil}, result)}
   end
 
+  # A provider task that died is a crash, unless what killed it was the
+  # provider's own error event raised inside `req_llm` (#32).
   def message({:DOWN, ref, :process, _pid, reason}, %{task: %Task{ref: ref}} = state) do
-    {:noreply, Recovery.close(%{state | task: nil}, {:error, {:provider_crashed, reason}})}
+    {:noreply,
+     Recovery.close(%{state | task: nil}, {:error, ProviderError.recognize_crash(reason)})}
   end
 
   def message({ref, result}, state) when is_map_key(state.wave.tool_tasks, ref) do

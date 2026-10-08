@@ -174,8 +174,48 @@ defmodule Lemieux.AgentTest do
     assert observation["provider_error"] == %{
              "category" => "timeout",
              "reason" => "HTTP 408",
-             "http_status" => 408
+             "http_status" => 408,
+             "code" => nil
            }
+  end
+
+  # req_llm's Codex provider raises the stream's error event inside its stream
+  # server, which takes the provider task down. The benchmark recorded the
+  # `cyber_policy` refusal as `{:provider_crashed, …}` in `"other"` (#32).
+  test "a Codex refusal reaches the observation as refused, with its code", context do
+    supervisor = :"agent_session_refusal_#{System.unique_integer([:positive])}"
+
+    event =
+      JSON.encode!(%{
+        "type" => "error",
+        "error" => %{"code" => "cyber_policy", "message" => "This request was flagged."}
+      })
+
+    refused =
+      Scripted.new([
+        fn _request ->
+          exit(
+            {%RuntimeError{message: "Codex error: " <> event},
+             [{ReqLLM.Providers.OpenAICodex, :normalize_stream_event!, 1, []}]}
+          )
+        end
+      ])
+
+    assert {:error, :agent_failed, observation} =
+             CustomAgent.run(
+               AgentSession,
+               %{prompt: "work", cwd: context.tmp_dir, timeout_ms: 60_000},
+               provider: refused,
+               model: "test:model",
+               supervisor: supervisor,
+               sessions_dir: Path.join(context.tmp_dir, "sessions")
+             )
+
+    assert %{"category" => "refused", "code" => "cyber_policy", "http_status" => nil} =
+             observation["provider_error"]
+
+    assert observation["provider_error"]["reason"] =~ "This request was flagged."
+    refute observation["provider_error"]["reason"] =~ "provider_crashed"
   end
 
   test "the reusable session deadline is measured on the clock it is given", context do

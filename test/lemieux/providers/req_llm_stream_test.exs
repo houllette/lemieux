@@ -295,6 +295,36 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
       refute_receive {:done, _stop}
     end
 
+    # The ChatGPT Codex backend refused a benchmark task with this event (#32).
+    # Its code is what tells a policy refusal from the provider breaking off,
+    # which would be retried, and every retry another flagged request.
+    test "an OpenAI Responses error event keeps its code, and a refusal is not retried" do
+      owner = self()
+
+      events = [
+        %{"type" => "response.created", "response" => %{"id" => "resp_1"}},
+        %{
+          "type" => "error",
+          "error" => %{
+            "code" => "cyber_policy",
+            "type" => "invalid_request",
+            "message" => "This request was flagged."
+          }
+        }
+      ]
+
+      provider = openai(owner, 200, sse(events), "openai_responses")
+
+      assert {:error,
+              %Interrupted{code: "cyber_policy", detail: "This request was flagged."} = reason} =
+               Provider.run(provider, openai_request(), &send(owner, &1))
+
+      assert ProviderError.category(reason) == :refused
+      assert ProviderError.code(reason) == "cyber_policy"
+      refute ProviderError.transient?(reason)
+      refute_receive {:done, _stop}
+    end
+
     test "a stream without a terminal marker is only suspect on Claude's wire" do
       # OpenAI-compatible servers are not all as careful about `[DONE]`; a
       # finish reason there is enough, and its absence is not treated as a cut.
@@ -411,7 +441,7 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
     )
   end
 
-  defp openai(owner, status, body) do
+  defp openai(owner, status, body, wire_protocol \\ "openai_chat") do
     url = serve(owner, status, body)
 
     Adapter.new(
@@ -419,7 +449,7 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
       api_key_provider: :openai,
       max_retries: 0,
       transport_routes: %{
-        "openai" => [provider: "openai", base_url: url, wire_protocol: "openai_chat"]
+        "openai" => [provider: "openai", base_url: url, wire_protocol: wire_protocol]
       }
     )
   end

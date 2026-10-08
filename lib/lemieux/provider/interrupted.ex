@@ -16,23 +16,32 @@ defmodule Lemieux.Provider.Interrupted do
   `Lemieux.Provider.Error` classifies as `:server`, the same as a `5xx` —
   the provider broke off, and asking again is the ordinary remedy.
 
-  `detail` is the provider's own sentence when it sent one. `finish_reason` is
-  what the stream reported, `nil` when it stopped without saying.
+  `detail` is the provider's own sentence when it sent one, and `code` the
+  code its error event carried (`"cyber_policy"`, `"context_length_exceeded"`).
+  A code is what `Lemieux.Provider.Error` classifies by, so an event that
+  names an overflow, a rate limit or a policy refusal is that, not `:server`;
+  and a refusal is never retried, whatever `retryable` says. `finish_reason`
+  is what the stream reported, `nil` when it stopped without saying.
   """
 
-  defexception [:provider, :finish_reason, :detail, retryable: true]
+  defexception [:provider, :finish_reason, :detail, :code, retryable: true]
 
   @type t :: %__MODULE__{
           provider: String.t() | nil,
           finish_reason: atom() | nil,
           detail: String.t() | nil,
+          code: String.t() | nil,
           retryable: boolean()
         }
 
   @impl true
-  def message(%__MODULE__{detail: detail}) when is_binary(detail) and detail != "",
-    do: "the provider ended the stream before the answer was complete: " <> detail
+  def message(%__MODULE__{} = interrupted),
+    do: "the provider ended the stream before the answer was complete" <> said(interrupted)
 
-  def message(%__MODULE__{}),
-    do: "the provider ended the stream before the answer was complete"
+  defp said(%{code: code, detail: detail}) when is_binary(code) and is_binary(detail),
+    do: " (#{code}): " <> detail
+
+  defp said(%{code: code}) when is_binary(code), do: " (#{code})"
+  defp said(%{detail: detail}) when is_binary(detail) and detail != "", do: ": " <> detail
+  defp said(_interrupted), do: ""
 end

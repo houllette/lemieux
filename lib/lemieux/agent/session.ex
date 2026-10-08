@@ -281,7 +281,9 @@ defmodule Lemieux.Agent.Session do
   # transcript can read it: the evaluation lane retries a timeout and never a wrong
   # answer. The HTTP status rides along (`nil` when the failure had none) so a
   # host's retry predicate can decide on the status itself — a 408 or an
-  # empty-body 414 from a CDN — rather than retrying every `:other`.
+  # empty-body 414 from a CDN — rather than retrying every `:other`. The
+  # provider's code rides along the same way (`nil` without one): a
+  # `"refused"` attempt says which policy refused it (#32).
   defp provider_error(entries) do
     entries
     |> Enum.reverse()
@@ -294,7 +296,8 @@ defmodule Lemieux.Agent.Session do
         %{
           "category" => payload["category"],
           "reason" => payload["reason"],
-          "http_status" => payload["http_status"]
+          "http_status" => payload["http_status"],
+          "code" => payload["code"]
         }
     end
   end

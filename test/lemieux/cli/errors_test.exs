@@ -29,6 +29,11 @@ defmodule Lemieux.CLI.ErrorsTest do
     assert Errors.exit_status(Errors.category(:error, {:missing_api_key, "x", "h"})) == 3
     assert Errors.exit_status(Errors.category(:error, %{status: 401})) == 3
     assert Errors.exit_status(Errors.category(:error, %{status: 503})) == 6
+
+    # A policy refusal arrives in a stream with no status (#32); it is the
+    # provider's answer, not an unexpected error.
+    refusal = %Lemieux.Provider.Interrupted{provider: "openai_codex", code: "cyber_policy"}
+    assert Errors.exit_status(Errors.category(:error, refusal)) == 6
     assert Errors.exit_status(Errors.category(:error, :something_else)) == 1
   end
 end

@@ -47,6 +47,25 @@ API.
   three-minute limit, a `wait_ms: 180000` poll of a running task came back
   as a failed call, under a schema that allows 600000. The schema's
   descriptions now say a session may allow less. (#38)
+- A request the provider declined on policy grounds is its own category,
+  `:refused`, and is never retried: a code such as `cyber_policy`,
+  `content_policy_violation` or `invalid_prompt` in the failure's body or its
+  stream's error event, or an answer that ended `:content_filter` with
+  nothing in it. `Lemieux.Provider.Error.code/1` returns the provider's code,
+  and the error entry and a native benchmark observation's `provider_error`
+  carry it as `code` beside `category` and `http_status`. `req_llm` 1.26's
+  `openai_codex` provider raises a stream's error event inside its stream
+  server, which recorded the Codex backend's refusal of a benchmark task as
+  `{:provider_crashed, …}` in `:other`; `Lemieux.Provider.Error.recognize_crash/1`
+  reads that event back out of the crash, so it is the refusal it was, and
+  any other Codex error event is classified by its code like the same event
+  from `openai:`. `lmx run` exits 6 on a refusal, and the terminal UI says
+  what to change rather than offering `/retry`. (#32)
+
+  **Migration:** a host that matches on `category/1` exhaustively needs a
+  `:refused` clause. A Codex error event that is not a refusal is now
+  `:server` (and retried) or the category its code names, where it was a
+  crash in `:other`.
 
 ### Experimental
 

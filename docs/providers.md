@@ -588,12 +588,22 @@ How a failure that arrives after output has begun is handled — kept as a
 checkpoint, retried or left to `/retry` — is the session's `:provider_retry`
 policy, not the adapter's.
 
+A request the provider declined on policy grounds is `:refused`: a code such
+as `cyber_policy`, `content_policy_violation` or `invalid_prompt` in the
+failure's body or in its stream's error event, or an answer that ended
+`:content_filter` with nothing in it. It is never retried, and the error
+entry records the code beside the category (`Lemieux.Provider.Error.code/1`).
+`req_llm` 1.26's `openai_codex` provider raises a stream's error event
+rather than returning it, which takes the provider task down with it;
+`Lemieux.Provider.Error.recognize_crash/1` reads that one event back out of
+the crash, so a Codex refusal is a refusal and not a crash.
+
 Which failures are worth a transport-level retry is
 `Lemieux.Provider.Error.transient?/2`. Without a classifier it is the
 built-in rule: a server error (a dropped connection and an interrupted stream
 count as one), a rate limit, a stalled stream (an HTTP `408` is one, seen
 from the server's end, and is classified `:timeout`), or a typed `retryable`
-flag. A
+flag, and never a policy refusal. A
 host whose gateway means something else by a status passes a classifier,
 `(reason -> :transient | :fatal | :default)`, through the session's
 `:provider_retry` option as `classify:`; its verdict wins in either direction

@@ -1889,8 +1889,13 @@ defmodule Lemieux.Providers.ReqLLM do
   # `200` stream, mid-answer — as the bare sentence, which classified as
   # `:other` and was never retried. `process/4` saw the event itself, so the
   # sentence is known to be the provider breaking off, not an untyped mystery.
-  defp stream_error(detail, %{error: detail}, target) when is_binary(detail),
-    do: %Interrupted{provider: wire_provider(target), finish_reason: :error, detail: detail}
+  defp stream_error(detail, %{error: detail} = stream, target) when is_binary(detail),
+    do: %Interrupted{
+      provider: wire_provider(target),
+      finish_reason: :error,
+      detail: detail,
+      code: Map.get(stream, :code)
+    }
 
   defp stream_error(error, _stream, _target), do: error
 
@@ -1957,13 +1962,18 @@ defmodule Lemieux.Providers.ReqLLM do
   defp wire_model_id(_target), do: nil
 
   # What the stream said about itself while it ran: whether the provider sent
-  # the terminal marker a finished answer carries, and the sentence of an error
-  # it reported inside a successful response. Gathered from the process's own
-  # mailbox, where `process/4` left them.
-  defp stream_facts(facts, acc \\ %{terminal?: false, error: nil}) do
+  # the terminal marker a finished answer carries, and the sentence and code of
+  # an error it reported inside a successful response. The code is what tells
+  # a policy refusal (`cyber_policy`) or an overflow from the provider breaking
+  # off (#32). Gathered from the process's own mailbox, where `process/4` left
+  # them.
+  defp stream_facts(facts, acc \\ %{terminal?: false, error: nil, code: nil}) do
     receive do
-      {^facts, :terminal} -> stream_facts(facts, %{acc | terminal?: true})
-      {^facts, :error, detail} -> stream_facts(facts, %{acc | error: acc.error || detail})
+      {^facts, :terminal} ->
+        stream_facts(facts, %{acc | terminal?: true})
+
+      {^facts, :error, detail, code} ->
+        stream_facts(facts, %{acc | error: acc.error || detail, code: acc.code || code})
     after
       0 -> acc
     end
@@ -1994,7 +2004,11 @@ defmodule Lemieux.Providers.ReqLLM do
   """
   @spec check_complete(
           result :: map(),
-          stream :: %{terminal?: boolean(), error: String.t() | nil},
+          stream :: %{
+            required(:terminal?) => boolean(),
+            required(:error) => String.t() | nil,
+            optional(:code) => String.t() | nil
+          },
           target :: ReqLLM.model_input(),
           emit :: Lemieux.Provider.emit()
         ) :: :ok | {:error, Interrupted.t()}
@@ -2010,13 +2024,19 @@ defmodule Lemieux.Providers.ReqLLM do
   end
 
   defp interruption(%{finish_reason: :error}, stream, target),
-    do: %Interrupted{provider: wire_provider(target), finish_reason: :error, detail: stream.error}
+    do: %Interrupted{
+      provider: wire_provider(target),
+      finish_reason: :error,
+      detail: stream.error,
+      code: Map.get(stream, :code)
+    }
 
-  defp interruption(result, %{error: detail}, target) when is_binary(detail),
+  defp interruption(result, %{error: detail} = stream, target) when is_binary(detail),
     do: %Interrupted{
       provider: wire_provider(target),
       finish_reason: Map.get(result, :finish_reason),
-      detail: detail
+      detail: detail,
+      code: Map.get(stream, :code)
     }
 
   # ReqLLM calls a stream that ended without its terminal event `:incomplete`.
@@ -2431,12 +2451,23 @@ defmodule Lemieux.Providers.ReqLLM do
       do: send(self(), {facts, :terminal})
 
     case metadata[:error] || metadata["error"] do
-      detail when is_binary(detail) and detail != "" -> send(self(), {facts, :error, detail})
-      _none -> :ok
+      detail when is_binary(detail) and detail != "" ->
+        send(self(), {facts, :error, detail, error_code(metadata)})
+
+      _none ->
+        :ok
     end
   end
 
   defp note_stream_fact(_chunk, _facts), do: :ok
+
+  defp error_code(metadata) do
+    case metadata[:error_code] || metadata["error_code"] do
+      code when is_binary(code) and code != "" -> code
+      code when is_integer(code) -> Integer.to_string(code)
+      _none -> nil
+    end
+  end
 
   defp call_opened(chunk) do
     index = chunk.metadata[:index] || chunk.metadata["index"]
