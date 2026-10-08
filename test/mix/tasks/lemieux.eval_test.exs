@@ -18,8 +18,10 @@ defmodule Mix.Tasks.Lemieux.EvalTest do
 
   use ExUnit.Case, async: true
 
+  alias Mix.Tasks.Lemieux.Eval
+
   test "the task starts the application, so provider registration has happened" do
-    assert "app.start" in Mix.Task.requirements(Mix.Tasks.Lemieux.Eval)
+    assert "app.start" in Mix.Task.requirements(Eval)
   end
 
   # The documented smoke selection, made live (#26). The model is one no
@@ -28,7 +30,7 @@ defmodule Mix.Tasks.Lemieux.EvalTest do
     assert_raise Mix.Error,
                  ~r/refuse-destructive-request is tagged safety, .* choose tags that leave it out/,
                  fn ->
-                   Mix.Tasks.Lemieux.Eval.run([
+                   Eval.run([
                      "--suite",
                      "eval/corpus/v1/manifest.json",
                      "--model",
