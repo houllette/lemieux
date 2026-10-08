@@ -23,6 +23,63 @@ API.
   or Meta key the terminal reported (Cmd-K, Cmd-C) typed its letter, and a
   control character such as ESC went into the draft as an invisible byte.
 
+### Library
+
+- `Lemieux.Providers.ReqLLM.new/1` defaults to the timeout pair `lmx`
+  already used: `receive_timeout: :infinity`, so the connection may stay
+  quiet while a model reasons, and `stream_idle_timeout` of five minutes,
+  which still fails a stream that makes no semantic progress, including one
+  that never answers. The two-minute `receive_timeout` it replaces failed
+  `gpt-6.1-sol` at xhigh on two Terminal-Bench tasks that pass without it,
+  and `mix lemieux.eval`, its judge, `Lemieux.Extension.Profile` and every
+  embedder copying the `Lemieux.run/2` example used it while `lmx` did not.
+  A host that passes `:receive_timeout` keeps exactly what it chose, and a
+  `config :req_llm, stream_idle_timeout:` is not overridden. (#31)
+
+  **Migration:** to keep the old bound, pass
+  `receive_timeout: :timer.minutes(2)`.
+
+### Experimental
+
+- A live `mix lemieux.eval` refuses a selected case tagged `safety` before
+  anything runs, and names it. A live candidate's `bash` runs on the host
+  with your authority, and `refuse-destructive-request` — in the `smoke` tag
+  — asks the model to delete every file outside the repository; nothing but
+  the model's own refusal stood between that prompt and your home directory.
+  Select a live smoke run's other cases by their own tags. (#26)
+- `mix lemieux.eval` checks `--baseline` before it runs anything: a blessed
+  baseline whose task ids differ from the selected cases, or a name that is
+  none of the runtimes, is refused at the start. Both were found by the gate
+  after the run, and the error discarded it unwritten — eight minutes of
+  live work in the run that reported it. (#30)
+- The evaluation gate reports a safety-scoped result whose runtime could not
+  attest to writes outside the workspace as `unattested`, not failed: a
+  per-case `"unattested" => true`, an `unattested` count beside `failed` in
+  the runtime's `destructive_operation_safety` summary, and a hard gate
+  failure with `unattested_cases`, which the console explains. The gate
+  still fails on it. Every v1 case is safety-scoped, so a live native run
+  that stayed in scope on all ten read as ten safety failures by the model.
+  An observation with no `safety_violations` key is now unattested too; it
+  passed as if the runtime had reported an empty list. (#27)
+
+  **Migration:** a host runtime that leaves `safety_violations` out of a
+  safety-scoped observation must return a list (`[]` when it saw no
+  violation) for the result to pass.
+- Prompt adherence reads the corpus's `question`, `tool_error` and
+  `recovery` markers from a live transcript: an `ask_user` question, a call
+  that failed (including a command that exited non-zero or timed out), and a
+  failed call made again with the same arguments that succeeded. Only
+  recordings carried them, so `ask-before-guessing` and
+  `recover-after-failure` failed live while doing what they asked. A live
+  run's `ask_user` question times out after a second rather than five
+  minutes, since nobody is there to answer it. (#28)
+- Tool selection does not apply to a case that requires a tool the model
+  was never offered, as a live transcript's request entries show; its
+  reasons name the tool. `mix lemieux.eval` cannot equip `delegate`, so
+  `delegate-readonly-investigation` and `long-horizon-repair` failed tool
+  selection in every live run, whatever the model did. A recording, which
+  has no request entries, is scored as before. (#29)
+
 ## 0.9.1 — 2026-10-07
 
 0.9.0, signed. 0.9.0 was published without `SHA256SUMS.sig` and

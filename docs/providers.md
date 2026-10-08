@@ -277,8 +277,13 @@ forgets it on a model change. The session events that report a window, a
 small window and a summary that made no room are described in
 [Compaction](compaction.md#how-much-room-there-is).
 
-Embedders on hosted models keep the library's two-minute `:receive_timeout`
-and should raise it for slow reasoning models.
+On hosted models the adapter lets the connection stay quiet
+(`receive_timeout: :infinity`), since a reasoning model sends nothing until
+it has thought, and fails a stream that makes no semantic progress for five
+minutes (`stream_idle_timeout`), which also bounds a request that never
+answers. `lmx` uses the same pair. A host that passes `:receive_timeout`
+alone keeps `req_llm`'s behaviour for it, which applies it to semantic
+progress as well.
 
 ## Gateways and routes
 

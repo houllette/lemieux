@@ -611,13 +611,25 @@ defmodule Lemieux.Providers.ReqLLMTest do
 
     # Found live: `gpt-5.6` at medium effort spent longer than req_llm's
     # thirty-second default thinking before its first token, and the harness
-    # reported a timeout the provider was never going to produce.
-    test "a stream is given longer to go quiet than a web request would be" do
+    # reported a timeout the provider was never going to produce. Then
+    # `gpt-6.1-sol` at xhigh sent nothing for two minutes, the default that
+    # replaced it, on two Terminal-Bench tasks that pass without it (#31).
+    test "a stream may stay quiet on the wire while its semantic idle stays bounded" do
       {_module, state} = ReqLLMProvider.new()
-      assert state.options[:receive_timeout] == :timer.minutes(2)
+      assert state.options[:receive_timeout] == :infinity
+      assert state.options[:stream_idle_timeout] == :timer.minutes(5)
 
+      {_module, idle} = ReqLLMProvider.new(stream_idle_timeout: 900)
+      assert idle.options[:receive_timeout] == :infinity
+      assert idle.options[:stream_idle_timeout] == 900
+    end
+
+    # Without a stream idle timeout, req_llm applies `:receive_timeout` to
+    # semantic progress too: a host that set it low to fail fast keeps that.
+    test "a host's own receive timeout is left to mean what it meant" do
       {_module, explicit} = ReqLLMProvider.new(receive_timeout: 5_000)
       assert explicit.options[:receive_timeout] == 5_000
+      refute Keyword.has_key?(explicit.options, :stream_idle_timeout)
     end
 
     test "an API-compatible transport route does not leak into another provider" do

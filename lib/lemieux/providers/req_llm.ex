@@ -160,12 +160,19 @@ defmodule Lemieux.Providers.ReqLLM do
   alias ReqLLM.Providers.Ollama, as: OllamaProvider
   alias ReqLLM.StreamResponse
 
-  # How long a stream may go quiet before it is a failure. `req_llm` defaults to
-  # thirty seconds, which is right for a web request and wrong for this: a
-  # reasoning model asked a long question routinely spends longer than that before
-  # its first token, and the harness then manufactures a timeout the provider was
-  # never going to produce.
-  @default_receive_timeout :timer.minutes(2)
+  # How long a stream may go quiet before it is a failure, and how that is
+  # measured. `req_llm`'s thirty-second transport timeout is right for a web
+  # request and wrong for this: a reasoning model asked a long question sends
+  # nothing until it has thought. Two minutes replaced it, and `gpt-6.1-sol`
+  # at xhigh then sent nothing for two minutes on two Terminal-Bench tasks
+  # that pass without the limit (#31). So the transport may stay quiet, and
+  # the bound moves to semantic progress: `req_llm`'s stream idle timer
+  # starts with the stream and resets on each chunk, so a request that never
+  # answers still fails. This is the pair `lmx` already passed, which left
+  # the evaluation runner and the judge measuring under a policy `lmx` had
+  # rejected.
+  @default_receive_timeout :infinity
+  @default_stream_idle_timeout :timer.minutes(5)
 
   # The ceiling on one answer from a local model. The moduledoc says why
   # there has to be one and why only there; this size is a long file written
@@ -263,13 +270,19 @@ defmodule Lemieux.Providers.ReqLLM do
       context into provider HTTP headers without replacing an explicit host
       `traceparent` or `tracestate`. Keep this false unless the configured
       endpoint is a trusted gateway such as Ixway.
-    * `:receive_timeout` — how long a stream may go quiet before it is a
-      failure. Defaults to two minutes rather than `req_llm`'s thirty seconds:
-      thirty is a web-request default, and a reasoning model asked a long
-      question routinely spends longer than that before its first token. A
-      live `gpt-5.6` reflection at medium effort failed on exactly this, and
-      the investigator experiment had already had to raise it in its own
-      script. Lower it deliberately if a stalled request should fail fast.
+    * `:receive_timeout` — how long the connection may go quiet before it is
+      a failure. Defaults to `:infinity` rather than `req_llm`'s thirty
+      seconds: a reasoning model asked a long question sends nothing until it
+      has thought. A live `gpt-5.6` reflection at medium effort failed on
+      thirty seconds, and `gpt-6.1-sol` at xhigh on the two minutes that
+      followed. Lower it deliberately if a stalled request should fail fast.
+    * `:stream_idle_timeout` — how long a stream may go without semantic
+      progress, including before its first chunk, which is what bounds a
+      request that never answers. Defaults to five minutes when
+      `:receive_timeout` is not given either, unless
+      `config :req_llm, stream_idle_timeout: ...` names one; a host that
+      sets `:receive_timeout` alone keeps `req_llm`'s behaviour for it,
+      which applies it to semantic progress too. `lmx` uses the default pair.
     * `:local_max_tokens` — the `max_tokens` a request to an `ollama:` model
       carries when neither it, the host's options nor the catalog sets an
       output limit. Defaults to #{@local_max_tokens}; `nil` sends none,
@@ -1338,7 +1351,7 @@ defmodule Lemieux.Providers.ReqLLM do
           :response_metadata
           | @adapter_options
         ])
-        |> Keyword.put_new(:receive_timeout, @default_receive_timeout),
+        |> default_timeouts(),
       api_key_defaults: normalize_api_keys(Keyword.get(opts, :api_key_defaults)),
       api_keys: normalize_api_keys(Keyword.get(opts, :api_keys)),
       api_key_provider: normalize_provider_name(Keyword.get(opts, :api_key_provider)),
@@ -1733,6 +1746,28 @@ defmodule Lemieux.Providers.ReqLLM do
       limit when is_integer(limit) and limit > 0 -> true
       _unpublished -> false
     end
+  end
+
+  # Only for a host that chose no `:receive_timeout`. With no stream idle
+  # timeout, `req_llm` applies `:receive_timeout` to semantic progress as
+  # well, so a host that set it low to fail fast would lose that to a
+  # five-minute default here.
+  defp default_timeouts(options) do
+    if Keyword.has_key?(options, :receive_timeout),
+      do: options,
+      else:
+        options
+        |> Keyword.put(:receive_timeout, @default_receive_timeout)
+        |> default_stream_idle_timeout()
+  end
+
+  # `req_llm` reads its application environment when no option names one, so
+  # a default here would override a host's `config :req_llm`.
+  defp default_stream_idle_timeout(options) do
+    if Keyword.has_key?(options, :stream_idle_timeout) or
+         Application.get_env(:req_llm, :stream_idle_timeout) != nil,
+       do: options,
+       else: Keyword.put(options, :stream_idle_timeout, @default_stream_idle_timeout)
   end
 
   # Raised, never lowered: a host that allows a longer silence keeps it.

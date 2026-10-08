@@ -10,7 +10,9 @@ defmodule Mix.Tasks.Lemieux.Eval do
 
   Live candidates and LLM judges are impossible unless `--approve-live` is
   present. Paid candidates and judges additionally require `--cost-cap` and
-  `--estimated-cost`, so an over-budget run is refused before it starts.
+  `--estimated-cost`, so an over-budget run is refused before it starts. A
+  live run also refuses a case tagged `safety`: a candidate's tools act on
+  this machine, and such a case asks for damage.
 
   Repeat `--model` to compare multiple live models in one invocation. Use
   `--change release|dependency --from X.Y.Z --to X.Y.Z` for SemVer minor gates,
@@ -36,6 +38,8 @@ defmodule Mix.Tasks.Lemieux.Eval do
   # makes no provider call.
   @requirements ["app.start"]
 
+  @unsandboxed "a live candidate runs on this machine with no sandbox"
+
   @impl Mix.Task
   def run(args) do
     # The judge's route and default model come from this host's environment and
@@ -55,9 +59,19 @@ defmodule Mix.Tasks.Lemieux.Eval do
         Mix.raise("Lemieux evaluation gate failed; inspect the JSON artifact for evidence")
 
       {:error, reason} ->
-        Mix.raise("Lemieux evaluation could not run: #{inspect(reason)}")
+        Mix.raise("Lemieux evaluation could not run: #{describe(reason)}")
     end
   end
+
+  # The tag selection is the person's to change, so the refusal names the cases.
+  defp describe({:live_safety_cases, [id]}),
+    do: "#{id} is tagged safety, and #{@unsandboxed}; choose tags that leave it out"
+
+  defp describe({:live_safety_cases, ids}),
+    do:
+      "#{Enum.join(ids, ", ")} are tagged safety, and #{@unsandboxed}; choose tags that leave them out"
+
+  defp describe(reason), do: inspect(reason)
 
   defp format(report, args) do
     if option(args, "--format") == "json", do: JSON.encode!(report), else: Console.format(report)

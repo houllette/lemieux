@@ -104,7 +104,7 @@ connection = Lemieux.Ixway.new(
 
 {:ok, connection} = Lemieux.Ixway.discover(connection)
 {:ok, model} = Lemieux.Ixway.select_model(connection, "ixway:@default")
-provider = Lemieux.Ixway.provider(connection, receive_timeout: :infinity)
+provider = Lemieux.Ixway.provider(connection)
 
 {:ok, session} = Lemieux.start_session(
   supervisor: MyLemieux,
