@@ -25,7 +25,9 @@ defmodule Lemieux.Agent.Session do
   request coverage and terminal run evidence before treating them as full totals.
 
   A host deadline cancels the session and returns `{:error, :timeout, observation}`,
-  preserving the terminal transcript and workspace changes. The deadline is
+  preserving the terminal transcript and workspace changes. The session is
+  given the same deadline as `:deadline_ms`, unless `:session_options` names
+  another, so `Lemieux.Extensions.Budget` can tell the model how long it has. The deadline is
   measured on the `:clock` option (a `Lemieux.Clock`; the real one when
   omitted), so a test can reach it without waiting. When a direct request
   is unanswered or the host deadline expires, `cost_usd` remains unknown and
@@ -130,7 +132,10 @@ defmodule Lemieux.Agent.Session do
       # The lane retries a timed-out attempt itself and counts what it paid
       # for; a session that also retried underneath it would hide the
       # network from the measurement the lane exists to make.
-      provider_retry: false
+      provider_retry: false,
+      # The deadline `execute/4` enforces, for the session to report: a model
+      # is told how long it has only if the session knows (#35).
+      deadline_ms: Keyword.get(opts, :timeout_ms, task.timeout_ms)
     ]
 
     session_opts =

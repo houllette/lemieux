@@ -92,6 +92,15 @@ API.
   a local path rather than the SSH command the task gave, and a file over
   its stated size that was never measured. It costs one request per prompt
   when nothing is wrong. (#36)
+- A session takes `:deadline_ms`: how long its host gives it, from when it
+  starts or resumes, on its `:clock`. The session does not stop at it; the
+  host that set it does. `Lemieux.Session.budget/1` reports what is left of
+  it as `time_left_ms`, beside `requests` and `max_requests`, and the run's
+  recorded limits include it. `Lemieux.Agent.Session` passes its own
+  `timeout_ms` unless `:session_options` names another deadline. (#35)
+
+  **Migration:** `Lemieux.Session.budget/1` returns four more keys; a caller
+  that compares its whole map needs them, or a match on the keys it reads.
 
 ### Experimental
 
