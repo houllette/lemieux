@@ -50,7 +50,8 @@ defmodule Lemieux.Extensions.BudgetTest do
 
       assert {:error, _} = Budget.init(enabled: "yes")
 
-      assert {:ok, %Budget{thresholds: [0.0, 0.5, 0.75, 0.9], enabled: true}} = Budget.init([])
+      assert {:ok, %Budget{enabled: true} = defaults} = Budget.init([])
+      assert defaults.thresholds == [0.0, 0.5, 0.75, 0.9]
       assert {:ok, %Budget{thresholds: [0.25, 0.8]}} = Budget.init(thresholds: [0.8, 0.25])
     end
 
