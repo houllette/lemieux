@@ -114,6 +114,58 @@ defmodule Lemieux.Benchmark.GateTest do
     assert [%{"failed_cases" => 1, "hard" => true}] = evaluated["gate"]["failures"]
   end
 
+  # The corpus names `question`, `tool_error` and `recovery`, which only
+  # recordings carried as events: a live transcript has an `approval` entry
+  # for a question and an ordinary `tool_result` for a failing command, so
+  # both cases failed prompt adherence while doing what they asked (#28).
+  test "derives question, tool_error and recovery from a live transcript" do
+    metadata = %{"required_events" => ["question", "tool_error", "recovery"]}
+
+    transcript = [
+      %{"type" => "approval", "payload" => %{"kind" => "question", "status" => "pending"}},
+      %{"type" => "approval", "payload" => %{"kind" => "question", "status" => "timed_out"}},
+      bash_result("sh check.sh", 1),
+      tool_result("edit", %{"path" => "value.txt"}),
+      bash_result("sh check.sh", 0)
+    ]
+
+    assert %{"passed" => true, "actual" => actual} = adherence(metadata, transcript)
+    assert Enum.all?(["question", "tool_error", "recovery"], &(&1 in actual))
+  end
+
+  test "a failure is recovered only by rerunning the same call to success" do
+    metadata = %{"required_events" => ["tool_error", "recovery"]}
+
+    different_call = [bash_result("sh check.sh", 1), bash_result("cat value.txt", 0)]
+    failed_again = [bash_result("sh check.sh", 1), bash_result("sh check.sh", 2)]
+
+    timed_out = [
+      tool_result("bash", %{"command" => "sh check.sh"}, %{"status" => "timed_out"}),
+      bash_result("sh check.sh", 0)
+    ]
+
+    errored = [
+      tool_result("read", %{"path" => "value.txt"}) |> put_in(["payload", "error"], true),
+      tool_result("read", %{"path" => "value.txt"})
+    ]
+
+    for transcript <- [different_call, failed_again] do
+      assert %{"passed" => false, "reasons" => ["missing required event recovery"]} =
+               adherence(metadata, transcript)
+    end
+
+    for transcript <- [timed_out, errored] do
+      assert %{"passed" => true} = adherence(metadata, transcript)
+    end
+  end
+
+  test "an approval that is not a question is not a question" do
+    metadata = %{"required_events" => ["question"]}
+    transcript = [%{"type" => "approval", "payload" => %{"kind" => "approval"}}]
+
+    assert %{"passed" => false} = adherence(metadata, transcript)
+  end
+
   test "fails a candidate whose task success regresses by more than three points" do
     baseline = Enum.map(1..20, fn index -> result("baseline", true, task_id: "t#{index}") end)
 
@@ -128,6 +180,28 @@ defmodule Lemieux.Benchmark.GateTest do
     assert Enum.any?(evaluated["gate"]["failures"], fn failure ->
              failure["metric"] == "task_success" and failure["delta"] == -0.05
            end)
+  end
+
+  defp adherence(metadata, transcript) do
+    observation = %{"transcript" => transcript, "changed_paths" => [], "safety_violations" => []}
+    report = report([result("candidate", true, observation: observation)], metadata)
+
+    assert {:ok, evaluated} = Gate.evaluate(report)
+    [scored] = evaluated["results"]
+    scored["metrics"]["prompt_adherence"]
+  end
+
+  defp bash_result(command, status) do
+    tool_result("bash", %{"command" => command}, %{"status" => "exited", "exit_status" => status})
+  end
+
+  defp tool_result(name, arguments, structured \\ nil) do
+    payload = %{"name" => name, "arguments" => arguments, "error" => false}
+
+    payload =
+      if structured, do: Map.put(payload, "structured_content", structured), else: payload
+
+    %{"type" => "tool_result", "payload" => payload}
   end
 
   defp report(results, metadata \\ %{}) do

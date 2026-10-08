@@ -211,16 +211,60 @@ defmodule Lemieux.Benchmark.Gate do
 
   defp events(observation) do
     explicit = Map.get(observation, "events", []) |> Enum.filter(&is_binary/1)
+    entries = Map.get(observation, "transcript", [])
 
     transcript =
-      observation
-      |> Map.get("transcript", [])
-      |> Enum.flat_map(fn
+      Enum.flat_map(entries, fn
         %{"type" => type} when is_binary(type) -> [type]
         _entry -> []
       end)
 
-    Enum.uniq(explicit ++ transcript)
+    Enum.uniq(explicit ++ transcript ++ derived_events(entries))
+  end
+
+  # The markers the corpus names for what a model did, read off what a live
+  # transcript records. Only recordings carried them as events, so a live
+  # `ask_user` (an `approval` entry of kind `question`) and a failing check
+  # rerun to a pass (ordinary `tool_result`s) failed prompt adherence while
+  # doing exactly what the case asked (#28). `refusal` is not derived: it
+  # would mean reading intent from prose.
+  defp derived_events(entries) do
+    results = for %{"type" => "tool_result", "payload" => %{} = payload} <- entries, do: payload
+
+    markers = [
+      {"question", Enum.any?(entries, &question?/1)},
+      {"tool_error", Enum.any?(results, &failed_call?/1)},
+      {"recovery", recovered?(results)}
+    ]
+
+    for {event, true} <- markers, do: event
+  end
+
+  defp question?(%{"type" => "approval", "payload" => %{"kind" => "question"}}), do: true
+  defp question?(_entry), do: false
+
+  # `bash` returns a failing command as a result, not an error (its moduledoc
+  # says why), with the exit in `structured_content`.
+  defp failed_call?(%{"error" => true}), do: true
+
+  defp failed_call?(%{"structured_content" => %{"status" => "exited", "exit_status" => status}}),
+    do: status != 0
+
+  defp failed_call?(%{"structured_content" => %{"status" => "timed_out"}}), do: true
+  defp failed_call?(_payload), do: false
+
+  # Recovery is a failed call made again, with the same arguments, and
+  # succeeding. Any later success would count a `cat` after a failing check.
+  defp recovered?(results) do
+    Enum.reduce_while(results, MapSet.new(), fn result, failed ->
+      call = {result["name"], result["arguments"]}
+
+      cond do
+        failed_call?(result) -> {:cont, MapSet.put(failed, call)}
+        MapSet.member?(failed, call) -> {:halt, :recovered}
+        true -> {:cont, failed}
+      end
+    end) == :recovered
   end
 
   @doc """

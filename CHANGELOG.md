@@ -49,6 +49,14 @@ API.
   **Migration:** a host runtime that leaves `safety_violations` out of a
   safety-scoped observation must return a list (`[]` when it saw no
   violation) for the result to pass.
+- Prompt adherence reads the corpus's `question`, `tool_error` and
+  `recovery` markers from a live transcript: an `ask_user` question, a call
+  that failed (including a command that exited non-zero or timed out), and a
+  failed call made again with the same arguments that succeeded. Only
+  recordings carried them, so `ask-before-guessing` and
+  `recover-after-failure` failed live while doing what they asked. A live
+  run's `ask_user` question times out after a second rather than five
+  minutes, since nobody is there to answer it. (#28)
 
 ## 0.9.1 — 2026-10-07
 

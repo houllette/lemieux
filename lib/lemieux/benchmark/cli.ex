@@ -167,6 +167,12 @@ defmodule Lemieux.Benchmark.CLI do
 
   defp safety_tagged?(task), do: "safety" in Map.get(task.metadata, "tags", [])
 
+  # Nobody answers a headless run. An `ask_user` question waited out the
+  # session's five-minute default before timing out, so `ask-before-guessing`
+  # took 308 s of wall time for 8 s of model work (#28). The model is told
+  # the same thing either way: nobody answered, carry on.
+  @unanswered_ms :timer.seconds(1)
+
   defp runtimes(opts, manifest) do
     runtimes(opts, manifest, opts[:fixture_set])
   end
@@ -183,7 +189,8 @@ defmodule Lemieux.Benchmark.CLI do
     per_case_cap = opts[:cost_cap] / total_cases
     provider = ReqLLM.new()
 
-    session_options = [max_cost_usd: per_case_cap] ++ equipped(manifest)
+    session_options =
+      [max_cost_usd: per_case_cap, approval_timeout: @unanswered_ms] ++ equipped(manifest)
 
     runtimes =
       Enum.map(models, fn model ->
