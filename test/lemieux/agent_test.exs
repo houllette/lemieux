@@ -218,6 +218,33 @@ defmodule Lemieux.AgentTest do
     refute observation["provider_error"]["reason"] =~ "provider_crashed"
   end
 
+  # The host's deadline is the session's to report (#35): a model told nothing
+  # about one worked as though it had none.
+  test "the session is given the run's own deadline, unless the host names another", context do
+    limits = fn observation ->
+      observation["transcript"]
+      |> Enum.find(&(&1["type"] == "harness_snapshot"))
+      |> get_in(["payload", "context_limits"])
+    end
+
+    for {session_options, expected} <- [{[], 60_000}, {[deadline_ms: 45_000], 45_000}] do
+      supervisor = :"agent_session_deadline_#{System.unique_integer([:positive])}"
+
+      assert {:ok, observation} =
+               CustomAgent.run(
+                 AgentSession,
+                 %{prompt: "work", cwd: context.tmp_dir, timeout_ms: 60_000},
+                 provider: Scripted.new([Scripted.complete("done")]),
+                 model: "test:model",
+                 supervisor: supervisor,
+                 sessions_dir: Path.join(context.tmp_dir, "sessions"),
+                 session_options: session_options
+               )
+
+      assert limits.(observation)["deadline_ms"] == expected
+    end
+  end
+
   test "the reusable session deadline is measured on the clock it is given", context do
     clock = Manual.new()
     supervisor = :"agent_session_clock_#{System.unique_integer([:positive])}"

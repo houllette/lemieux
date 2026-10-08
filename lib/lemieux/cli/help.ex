@@ -246,9 +246,9 @@ defmodule Lemieux.CLI.Help do
       notifications         false stops the terminal UI ringing when a turn
                             ends or needs you (default true)
       disabled_extensions   shipped extensions to leave out: planning, verify,
-                            continuation, search, apply_patch, checkpoints,
-                            environment_context, mcp_discovery, elixir,
-                            delegation, …
+                            continuation, budget, search, apply_patch,
+                            checkpoints, environment_context, mcp_discovery,
+                            elixir, delegation, …
     """
   end
 

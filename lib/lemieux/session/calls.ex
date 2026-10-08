@@ -1,6 +1,7 @@
 defmodule Lemieux.Session.Calls do
   @moduledoc false
 
+  alias Lemieux.Clock
   alias Lemieux.MCP
   alias Lemieux.MCP.RemoteTool
   alias Lemieux.ModelSpec
@@ -285,8 +286,18 @@ defmodule Lemieux.Session.Calls do
 
   def call(:tool_catalog, _from, state), do: {:reply, state.tools, state}
 
-  def call(:budget, _from, state),
-    do: {:reply, %{spent_usd: state.spent_usd, max_cost_usd: state.max_cost_usd}, state}
+  def call(:budget, _from, state) do
+    budget = %{
+      spent_usd: state.spent_usd,
+      max_cost_usd: state.max_cost_usd,
+      requests: state.request_count,
+      max_requests: state.max_requests,
+      deadline_ms: state.deadline_ms,
+      time_left_ms: time_left(state)
+    }
+
+    {:reply, budget, state}
+  end
 
   def call({:document, namespace}, _from, state),
     do: {:reply, Document.read(state.reversed_entries, namespace), state}
@@ -637,4 +648,8 @@ defmodule Lemieux.Session.Calls do
 
   def cast({:publish_subagent_event, event}, state),
     do: {:noreply, Core.emit(state, event)}
+
+  # What is left of the host's deadline, never less than nothing.
+  defp time_left(%{deadline_at: nil}), do: nil
+  defp time_left(state), do: max(state.deadline_at - Clock.now_ms(state.clock), 0)
 end

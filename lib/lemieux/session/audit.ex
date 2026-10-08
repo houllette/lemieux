@@ -56,6 +56,7 @@ defmodule Lemieux.Session.Audit do
           "context_window" => state.context_window,
           "max_turns" => state.max_turns,
           "max_requests" => state.max_requests,
+          "deadline_ms" => state.deadline_ms,
           "max_cost_usd" => state.max_cost_usd,
           "tool_timeout_ms" => state.tool_timeout_ms,
           "tool_output_bytes" => state.tool_output_bytes

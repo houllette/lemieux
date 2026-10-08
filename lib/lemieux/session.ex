@@ -544,6 +544,15 @@ defmodule Lemieux.Session do
     * `:max_requests` — optional positive session-wide limit over direct provider
       requests, including retries, compaction and restored requests. Independent of prices.
       Hosts must resupply this execution policy when resuming a transcript.
+    * `:deadline_ms` — how long the host gives this session, in milliseconds
+      from when it starts (or resumes), measured on `:clock`. The session
+      does not stop at it: the host that set it does, as
+      `Lemieux.Agent.Session` cancels at its own `timeout_ms`, which it passes
+      here. It is what `budget/1` reports as `time_left_ms`, so that the model
+      can be told how long it has (`Lemieux.Extensions.Budget`); a model told
+      nothing about a deadline worked as though it had none, and a benchmark
+      task ended at its limit with a passing model in the wrong place (#35).
+      Recorded with the run's other limits; like them, resupply it on resume.
     * `:max_turns` — how many model requests one prompt may take before the
       session stops on its own. Defaults to #{@max_turns}.
     * `:max_cost_usd` — maximum measured plus estimated provider and native
@@ -1141,8 +1150,23 @@ defmodule Lemieux.Session do
          do: GenServer.call(session, {:put_document, namespace, revision, value, usage})
   end
 
-  @doc "Returns measured spend and the host's cap for a bounded external operation."
-  @spec budget(session :: session()) :: %{spent_usd: number() | nil, max_cost_usd: number() | nil}
+  @doc """
+  What the session has used of the bounds its host set, and what they are.
+
+  `spent_usd` against `max_cost_usd`, for a bounded external operation;
+  `requests` against `max_requests`, counted as `info/1` counts them; and the
+  `:deadline_ms` the host gave, with `time_left_ms` of it on the session's
+  clock (`0` once it has passed). A bound the host did not set is `nil`.
+  `Lemieux.Extensions.Budget` reads this to tell the model what it has left.
+  """
+  @spec budget(session :: session()) :: %{
+          spent_usd: number() | nil,
+          max_cost_usd: number() | nil,
+          requests: non_neg_integer(),
+          max_requests: pos_integer() | nil,
+          deadline_ms: pos_integer() | nil,
+          time_left_ms: non_neg_integer() | nil
+        }
   def budget(session), do: GenServer.call(session, :budget)
 
   @doc false

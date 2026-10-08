@@ -154,6 +154,8 @@ defmodule Lemieux.Session.Boot do
            max_turns: Keyword.get(opts, :max_turns, @max_turns),
            max_cost_usd: Setup.max_cost_usd(opts),
            max_requests: Setup.optional_positive_option(opts, :max_requests),
+           deadline_ms: Setup.optional_positive_option(opts, :deadline_ms),
+           deadline_at: Setup.deadline_at(Keyword.get(opts, :clock), opts[:deadline_ms]),
            spent_usd: Accounting.measured_spend(entries),
            request_cost_pending?: false,
            # The model's own window, or nil when nobody knows it: a status line

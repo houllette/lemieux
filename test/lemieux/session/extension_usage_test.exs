@@ -41,7 +41,7 @@ defmodule Lemieux.Session.ExtensionUsageTest do
              )
 
     assert_receive {:lemieux, ^id, {:usage, ^usage}}
-    assert Session.budget(session) == %{spent_usd: 0.005, max_cost_usd: 0.01}
+    assert %{spent_usd: 0.005, max_cost_usd: 0.01} = Session.budget(session)
     assert Session.snapshot(session).usage.direct["input_tokens"] == 100
     refute Session.snapshot(session).context.measured?
 
@@ -63,7 +63,7 @@ defmodule Lemieux.Session.ExtensionUsageTest do
         max_cost_usd: 0.01
       )
 
-    assert Session.budget(resumed) == %{spent_usd: 0.005, max_cost_usd: 0.01}
+    assert %{spent_usd: 0.005, max_cost_usd: 0.01} = Session.budget(resumed)
 
     assert {:ok, %{revision: 1, value: %{"attempts" => 1}}} =
              Session.document(resumed, "systemone_compaction")

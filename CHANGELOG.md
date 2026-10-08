@@ -22,6 +22,11 @@ API.
   box typed any character pressed without Ctrl or Alt, so a Command, Hyper
   or Meta key the terminal reported (Cmd-K, Cmd-C) typed its letter, and a
   control character such as ESC went into the draft as an invisible byte.
+- With `--max-requests` (or `max_requests` in the config file or
+  `LMX_MAX_REQUESTS`), the model is told how many requests it has, on its
+  first tool result, and how many are left at 50%, 75% and 90%, rather than
+  running into the limit unannounced. `"disabled_extensions": ["budget"]`
+  stops it, and without a limit nothing changes. (#35)
 
 ### Library
 
@@ -92,6 +97,26 @@ API.
   a local path rather than the SSH command the task gave, and a file over
   its stated size that was never measured. It costs one request per prompt
   when nothing is wrong. (#36)
+- A session takes `:deadline_ms`: how long its host gives it, from when it
+  starts or resumes, on its `:clock`. The session does not stop at it; the
+  host that set it does. `Lemieux.Session.budget/1` reports what is left of
+  it as `time_left_ms`, beside `requests` and `max_requests`, and the run's
+  recorded limits include it. `Lemieux.Agent.Session` passes its own
+  `timeout_ms` unless `:session_options` names another deadline. (#35)
+
+  **Migration:** `Lemieux.Session.budget/1` returns four more keys; a caller
+  that compares its whole map needs them, or a match on the keys it reads.
+- `Lemieux.Extensions.Budget` tells the model what is left of its session's
+  `:max_requests` and `:deadline_ms`, in a notice starting `[lmx budget]`
+  appended to a tool result: the first, with what the session has, and the
+  first after each of 50%, 75% and 90% is used, with what is left and the
+  advice to put a valid result where the task requires it as soon as there
+  is one and improve it in place. Each threshold is told once, also across
+  calls made together and a resume, and a session without either limit is
+  told nothing. `Lemieux.Extensions.coding/3` takes `budget: true`. In the
+  0.9.1 benchmark runs no transcript mentioned the deadline, and
+  `train-fasttext` ended at its hour with a working model in `/tmp` and none
+  at the path the task required. (#35)
 
 ### Experimental
 

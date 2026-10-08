@@ -132,6 +132,12 @@ defmodule Lemieux.Session.Setup do
     Enum.map(order, &Map.fetch!(latest, &1))
   end
 
+  # Counted from when this process starts, on the session's clock, so a
+  # resumed session's time is the host's new allowance rather than whatever
+  # was left of an old one.
+  def deadline_at(clock, ms) when is_integer(ms) and ms > 0, do: Clock.now_ms(clock) + ms
+  def deadline_at(_clock, _ms), do: nil
+
   def optional_positive_option(opts, key) do
     if is_nil(opts[key]), do: nil, else: positive_option(opts, key, nil)
   end

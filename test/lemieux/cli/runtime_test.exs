@@ -112,6 +112,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.ApplyPatch",
              "Lemieux.Extensions.Planning",
              "Lemieux.Extensions.Continuation",
+             "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
              "Lemieux.CLI.RuntimeTest.Audit"
            ]
@@ -169,6 +170,19 @@ defmodule Lemieux.CLI.RuntimeTest do
         refute "Lemieux.Extensions.Continuation" in modules(applied(tmp_dir, settings)),
                inspect(settings)
       end
+    end
+  end
+
+  # A session started with `--max-requests` tells the model what is left of
+  # it (#35); one without a limit is told nothing, so lmx can always apply it.
+  describe "budget" do
+    test "lmx tells the model what is left of its limits by default", %{tmp_dir: tmp_dir} do
+      assert "Lemieux.Extensions.Budget" in modules(applied(tmp_dir, %{}))
+    end
+
+    test "disabled_extensions leaves it out", %{tmp_dir: tmp_dir} do
+      applied = applied(tmp_dir, %{"disabled_extensions" => ["budget"]})
+      refute "Lemieux.Extensions.Budget" in modules(applied)
     end
   end
 
@@ -399,6 +413,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Interactive",
              "Lemieux.Extensions.Elixir",
              "Lemieux.Extensions.Continuation",
+             "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation"
            ]
 

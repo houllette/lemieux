@@ -188,6 +188,11 @@ defmodule Lemieux.Session.State do
     max_turns: nil,
     max_cost_usd: nil,
     max_requests: nil,
+    # The host's deadline for this session, as it was given and as the
+    # monotonic instant on `clock` it falls at. Information only: see
+    # `:deadline_ms` in `Lemieux.Session`.
+    deadline_ms: nil,
+    deadline_at: nil,
     spent_usd: nil,
     request_cost_pending?: false,
     context_window: nil,

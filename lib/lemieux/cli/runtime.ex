@@ -30,7 +30,8 @@ defmodule Lemieux.CLI.Runtime do
       `Lemieux.Extensions.Web` for configured Brave research or explicit web
       flags, `Lemieux.Extensions.Elixir` for `--elixir`, the coding recipe's
       `environment_context`, `planning` (the `todo` tool), `continuation`
-      (unfinished plans and cut-off answers are sent back) and `verify`,
+      (unfinished plans and cut-off answers are sent back), `verify` and
+      `budget` (what is left of `--max-requests`),
       `Lemieux.Extensions.Delegation` unless `--no-delegate`, then
       `Lemieux.Extensions.Search` (`grep`, `glob`),
       `Lemieux.Extensions.ApplyPatch` (for GPT-5-family models) and, last
@@ -964,6 +965,8 @@ defmodule Lemieux.CLI.Runtime do
       # Reads nothing from the machine, so unlike verify it does not need a
       # state directory: `--config none` runs keep it too.
       continuation: if(not profile?, do: continuation(options)),
+      # Says nothing without a limit, and `lmx run --max-requests` is one.
+      budget: not profile?,
       verify: if(personal?, do: verify(options, checkpoints_dir(options, disabled(options)))),
       a2a: a2a(options),
       delegate: delegate?(options, context),
