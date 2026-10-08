@@ -101,6 +101,17 @@ API.
 
   **Migration:** `Lemieux.Session.budget/1` returns four more keys; a caller
   that compares its whole map needs them, or a match on the keys it reads.
+- `Lemieux.Extensions.Budget` tells the model what is left of its session's
+  `:max_requests` and `:deadline_ms`, in a notice starting `[lmx budget]`
+  appended to a tool result: the first, with what the session has, and the
+  first after each of 50%, 75% and 90% is used, with what is left and the
+  advice to put a valid result where the task requires it as soon as there
+  is one and improve it in place. Each threshold is told once, also across
+  calls made together and a resume, and a session without either limit is
+  told nothing. `Lemieux.Extensions.coding/3` takes `budget: true`. In the
+  0.9.1 benchmark runs no transcript mentioned the deadline, and
+  `train-fasttext` ended at its hour with a working model in `/tmp` and none
+  at the path the task required. (#35)
 
 ### Experimental
 

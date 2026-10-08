@@ -28,7 +28,10 @@ defmodule Lemieux.Extensions do
       before `verify`, whose check then runs once the plan is done;
     * `verify: true` (or its options) — `Lemieux.Extensions.Verify`, which
       runs the project's check after a turn that edited files and lets the
-      model fix what it broke.
+      model fix what it broke;
+    * `budget: true` (or its options) — `Lemieux.Extensions.Budget`, which
+      tells the model what is left of the session's `:max_requests` and
+      `:deadline_ms`, and says nothing in a session with neither.
 
   Each entry is named, so a host removes one with `Keyword.delete/2` and
   `lmx`'s `disabled_extensions` names it the same way.
@@ -37,6 +40,7 @@ defmodule Lemieux.Extensions do
   supplying `tools: []`, its own host tools, environment and budgets. Loading
   the library never equips a host or starts a supervisor on its behalf.
   """
+  alias Lemieux.Extensions.Budget
   alias Lemieux.Extensions.Continuation
   alias Lemieux.Extensions.Delegation
   alias Lemieux.Extensions.EnvironmentContext
@@ -64,6 +68,7 @@ defmodule Lemieux.Extensions do
         :planning,
         :continuation,
         :verify,
+        :budget,
         :a2a
       ])
 
@@ -89,6 +94,7 @@ defmodule Lemieux.Extensions do
       # back to an unfinished plan should not be checked on half the work.
       continuation: opt_in(opts[:continuation], Continuation, []),
       verify: opt_in(opts[:verify], Verify, Keyword.take(opts, [:cwd])),
+      budget: opt_in(opts[:budget], Budget, []),
       a2a: opts[:a2a],
       delegation: delegation
     ]

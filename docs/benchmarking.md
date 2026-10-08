@@ -94,6 +94,21 @@ wrapped =
   )
 ```
 
+A native attempt's session is given the task's `timeout_ms` as its
+`:deadline_ms`, and it enforces nothing by itself: the runtime cancels the
+attempt at that deadline. To tell the model what is left of it, and of
+`max_requests`, apply `Lemieux.Extensions.Budget`:
+
+```elixir
+{:ok, harness} = Lemieux.Harness.assemble(Lemieux.Harness.new(), [Lemieux.Extensions.Budget])
+
+session_options: [max_turns: 40, max_cost_usd: 5.00, harness: harness]
+```
+
+Leave it out of one arm and in the other to measure whether telling the
+model changes how many attempts end at the deadline with nothing where the
+task required it ([Tell the model what is left](workflows.md#tell-the-model-what-is-left)).
+
 `:repetitions` defaults to 1. `:max_concurrency`, the number of attempts in
 flight at once, also defaults to 1; the cost admission below works per
 batch of that size.

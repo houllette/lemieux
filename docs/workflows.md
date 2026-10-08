@@ -116,6 +116,31 @@ leaves it out. A library host passes `continuation: true` (or its options) to
 hook to deny wins, so a model sent back to its plan is not checked on half-done
 work, and the check runs once the plan is finished.
 
+## Tell the model what is left
+
+A host can bound a session with `:max_requests`, or with a deadline it
+enforces itself and passes as `:deadline_ms`. Nothing told the model, which
+then worked as though it had all the time it wanted: a benchmark task ended
+at its hour with a working model in `/tmp` and none where the task required
+it. `Lemieux.Extensions.Budget` appends a notice starting `[lmx budget]` to
+a tool result: the first one, saying what the session has, and the first
+after each of 50%, 75% and 90% of the budget is used (of the time or the
+requests, whichever is further along), saying what is left:
+
+```text
+[lmx budget] About 4 minutes and 6 requests are left (90% used). If a valid
+result is not yet where the task requires it, put one there now, then
+improve it in place.
+```
+
+Each threshold is told once, recorded in a session document so that calls
+made together give one notice between them and a resumed session does not
+repeat one. A session without either limit is told nothing. Pass
+`budget: true` (or its options, `:thresholds` and `:enabled`) to
+`Lemieux.Extensions.coding/3`, or apply the extension yourself.
+`Lemieux.Agent.Session`, and so the benchmark's native runtime, gives the
+session its own `timeout_ms` as `:deadline_ms`.
+
 ## Verify after changes
 
 `Lemieux.Extensions.Verify` runs the project's own check after a turn that edited
