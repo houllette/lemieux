@@ -236,6 +236,14 @@ defmodule Lemieux.Provider.Error do
       context_limit?(reason) -> :context_limit
       refused?(reason) -> :refused
       rate_limit?(reason) -> :rate_limit
+      true -> failure_category(reason)
+    end
+  end
+
+  # What the codes did not name, read from how the request failed: its status,
+  # or what happened to the connection.
+  defp failure_category(reason) do
+    cond do
       match?(status when status >= 500 and status <= 599, http_status(reason)) -> :server
       http_status(reason) == 408 -> :timeout
       timeout?(reason) -> :timeout
@@ -339,14 +347,16 @@ defmodule Lemieux.Provider.Error do
   defp recognize_raised(_reason), do: nil
 
   defp codex_event(event) do
-    with {:ok, %{} = decoded} <- JSON.decode(event) do
-      error = nested_error(decoded)
-      error = if is_map(error), do: error, else: decoded
+    case JSON.decode(event) do
+      {:ok, %{} = decoded} ->
+        error = nested_error(decoded)
+        error = if is_map(error), do: error, else: decoded
 
-      {first_text(Map.get(error, "message")) || event,
-       first_code(Map.get(error, "code")) || first_code(Map.get(decoded, "code"))}
-    else
-      _sentence -> {event, nil}
+        {first_text(Map.get(error, "message")) || event,
+         first_code(Map.get(error, "code")) || first_code(Map.get(decoded, "code"))}
+
+      _sentence ->
+        {event, nil}
     end
   end
 
