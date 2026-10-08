@@ -94,10 +94,22 @@ the loop's rather than this extension's: the call the limit cut short is
 answered without running, telling the model to split the work into smaller
 calls ([Tool contracts](tool-contracts.md)), and the turn goes on.
 
-Neither applies to an aside, whose veto would end it as `:hook_failed`. Both
-messages are recorded as stop-hook feedback (`"stop_hook" => true`), so the
-counts are read back from the transcript and survive resume, and the terminal
-UI draws them as the harness speaking. `lmx` applies it to every session it
+With `:completion_check` (off by default; `"continuation":
+{"completion_check": true}` in `lmx`), the first ordinary stop of a prompt in
+which the model called a tool, with no plan of its own left open, gets one
+more message, starting `[lmx requirements]`: list the request's explicit
+requirements (names, paths, field names and types, formats, sizes and limits,
+the person's exact commands), check each against the machine, and fix what
+does not match or say it all does. It is asked once per prompt, so it costs
+one request when nothing is wrong. It catches work checked against the
+model's own reading of the task, such as a field named `val` where the task
+said `value`, or a file over a stated size it never measured; it cannot make
+a genuinely ambiguous requirement come out the way the person meant.
+
+None of these applies to an aside, whose veto would end it as
+`:hook_failed`. Every message is recorded as stop-hook feedback
+(`"stop_hook" => true`), so the counts are read back from the transcript and
+survive resume, and the terminal UI draws them as the harness speaking. `lmx` applies it to every session it
 equips; `"continuation": false` or `"disabled_extensions": ["continuation"]`
 leaves it out. A library host passes `continuation: true` (or its options) to
 `Lemieux.Extensions.coding/3`, which places it ahead of `verify`: the first stop

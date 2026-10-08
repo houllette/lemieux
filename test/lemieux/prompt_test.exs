@@ -44,7 +44,8 @@ defmodule Lemieux.PromptTest do
   end
 
   test "the default prompt asks for no behaviour the task did not ask for" do
-    assert prose() =~ "Change what the task needs and nothing more: no behaviour it did not ask for"
+    assert prose() =~
+             "Change what the task needs and nothing more: no behaviour it did not ask for"
   end
 
   test "the default prompt stays short enough to pay for on every request" do

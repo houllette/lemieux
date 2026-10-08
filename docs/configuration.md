@@ -62,7 +62,7 @@ preflight](compaction.md) for the options and an Ixway timing-signal example.
 | `credential_allowlist` | none | Variable names, or `NAME_*` patterns, passed through anyway |
 | `hooks` | none | Command hooks, in `lmx`'s format or Claude Code's ([Hooks](#hooks-and-approval-policy)) |
 | `verify` | on | The project's check after a turn that edited files: `false`, or `{"command", "max_continuations", "timeout_ms"}` ([Checks after edits](#checks-after-edits)) |
-| `continuation` | on | Send the model back to its unfinished plan, or past an answer cut off at the output limit: `false`, or `{"max_continuations", "max_output_continuations"}` ([Continuing unfinished work](#continuing-unfinished-work)) |
+| `continuation` | on | Send the model back to its unfinished plan, or past an answer cut off at the output limit: `false`, or `{"max_continuations", "max_output_continuations", "completion_check"}` ([Continuing unfinished work](#continuing-unfinished-work)) |
 | `delegate` | `true` | `false` withholds the repository scout |
 | `web_search` | on when a Brave key is set | `"brave"`, or `"none"` to turn search off ([Web search](#web-search)) |
 | `web_search_providers` | none | Search keys by provider: `{"brave": {"api_key": "…"}}` |
@@ -444,7 +444,17 @@ is never run half-written: the model is told to write it in smaller parts. A pla
 does not count, and neither rule touches a reflection or another aside.
 
 `"continuation": {"max_continuations": 8, "max_output_continuations": 1}`
-changes the allowances, and `"continuation": false` turns it off. It runs before
+changes the allowances, and `"continuation": false` turns it off.
+
+`"continuation": {"completion_check": true}` adds one more step, off by
+default: when a prompt in which the model used a tool ends with no plan of
+its left open, the model is asked once to check its work against your request
+as you wrote it (names, paths, field names and types, formats, sizes and
+limits, and any exact commands you gave), and to fix what does not match or
+say that it all does. It costs one more request per prompt when nothing is
+wrong.
+
+Continuation runs before
 the [check after edits](#checks-after-edits), so the check runs once the plan is
 finished rather than on half the work. [Workflows](workflows.md#continue-unfinished-work)
 has the details.

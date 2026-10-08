@@ -74,12 +74,37 @@ defmodule Lemieux.Extensions.Continuation do
   (`Lemieux.Turn`, `Lemieux.Tools.run/5`), and the model reads that like any
   tool result.
 
+  ## When it asks for a check against the task as written
+
+  With `:completion_check` (off by default), the first ordinary stop of a
+  prompt that called a tool, with no plan of its own left open, is answered
+  once with a message starting `check_marker/0`: list the task's explicit
+  requirements — names, paths, field names and types, formats, sizes and
+  limits, the person's exact commands — check each against what is on the
+  machine now, fix what does not match, or say it all matches and stop. It
+  costs one request a prompt when nothing is wrong.
+
+  The 0.9.1 benchmark's agent always checked its work, but against its own
+  reading of the task (#36): it defined `int32 val` where the task said the
+  request "includes a key (string) and a value (int)", and its own RPCs
+  passed against its own proto; it cloned from a local path where the task
+  gave the person's `git clone user@server:…`; it left a file 684 bytes over
+  the stated cap and never measured it. The plan cannot catch these, because
+  the plan is the model's reading too. A literal check helps only where the
+  task is literal: where a requirement is genuinely ambiguous, nothing here
+  makes the model choose as the person would have.
+
+  An open plan comes first: a model with tasks left is not done, and one
+  that declined to go on — asked to stop there, or blocked — is not asked
+  to check work it says it has not finished. A prompt answered without a
+  tool did nothing to check.
+
   ## Never an aside
 
   An aside (`Lemieux.Session.aside/2`) is one request a program composed,
   and a stop hook's veto ends it as `:hook_failed`. Nobody is waiting on
-  further work from it, so neither rule applies there; a reflection cut off
-  at its limit must still end `:length` so its host can say so.
+  further work from it, so none of these rules applies there; a reflection
+  cut off at its limit must still end `:length` so its host can say so.
 
   ## Order
 
@@ -92,7 +117,8 @@ defmodule Lemieux.Extensions.Continuation do
   ## What it keeps
 
   Nothing in a process. The counts are read from the transcript: this
-  extension's messages start with `marker/0` or `output_marker/0`, and the
+  extension's messages start with `marker/0`, `output_marker/0` or
+  `check_marker/0`, and the
   session marks every stop hook's message (`Lemieux.Transcript.stop_hook?/1`),
   so "this prompt" is everything since the person last spoke. They survive
   resume, and a cancelled turn leaves nothing half-updated. The turn budget,
@@ -111,6 +137,7 @@ defmodule Lemieux.Extensions.Continuation do
 
   @marker "[lmx continue]"
   @output_marker "[lmx output limit]"
+  @check_marker "[lmx requirements]"
 
   # Enough of the open plan for the model to see what is left without a
   # 64-task plan becoming the longest message in the request.
@@ -119,17 +146,22 @@ defmodule Lemieux.Extensions.Continuation do
   @type t :: %__MODULE__{
           max_continuations: non_neg_integer(),
           max_output_continuations: non_neg_integer(),
-          enabled: boolean()
+          enabled: boolean(),
+          completion_check: boolean()
         }
 
-  defstruct max_continuations: 5, max_output_continuations: 3, enabled: true
+  defstruct max_continuations: 5,
+            max_output_continuations: 3,
+            enabled: true,
+            completion_check: false
 
   @doc """
   Options: `:max_continuations` (0–100, default 5) bounds how often one
   prompt is sent back to its plan; `:max_output_continuations` (0–10,
-  default 3) how often a cut-off answer is picked up; `:enabled` (default
-  true). Unknown or malformed options are an error rather than a policy
-  that silently never applies.
+  default 3) how often a cut-off answer is picked up; `:completion_check`
+  (default false) asks a prompt that worked to check the task as written
+  before it ends; `:enabled` (default true). Unknown or malformed options
+  are an error rather than a policy that silently never applies.
   """
   @impl Lemieux.Extension
   @spec init(opts :: keyword()) :: {:ok, t()} | {:error, String.t()}
@@ -149,7 +181,8 @@ defmodule Lemieux.Extensions.Continuation do
          "max_continuations must be an integer from 0 to 100"},
         {bounded?(config.max_output_continuations, 10),
          "max_output_continuations must be an integer from 0 to 10"},
-        {is_boolean(config.enabled), "enabled must be true or false"}
+        {is_boolean(config.enabled), "enabled must be true or false"},
+        {is_boolean(config.completion_check), "completion_check must be true or false"}
       ],
       {:ok, config},
       fn
@@ -170,7 +203,8 @@ defmodule Lemieux.Extensions.Continuation do
     %{
       "max_continuations" => config.max_continuations,
       "max_output_continuations" => config.max_output_continuations,
-      "enabled" => config.enabled
+      "enabled" => config.enabled,
+      "completion_check" => config.completion_check
     }
   end
 
@@ -182,24 +216,21 @@ defmodule Lemieux.Extensions.Continuation do
   @spec output_marker() :: String.t()
   def output_marker, do: @output_marker
 
+  @doc "The prefix of the message that asks for a check against the task as written."
+  @spec check_marker() :: String.t()
+  def check_marker, do: @check_marker
+
   @doc false
   @spec stop(config :: t(), reason :: atom(), context :: map()) :: :allow | {:deny, String.t()}
   def stop(%__MODULE__{enabled: false}, _reason, _context), do: :allow
   def stop(_config, _reason, %{aside: kind}) when not is_nil(kind), do: :allow
 
   # The plan is read first: most stops have nothing open, and those never
-  # copy the transcript out of the session.
+  # copy the transcript out of the session unless the completion check is on.
   def stop(%__MODULE__{} = config, :stop, %{session: session}) do
-    with {:ok, %{value: plan}} <- Planning.read(session),
-         [_ | _] = open <- open_tasks(plan),
-         run = current_run(session),
-         true <- planned?(run),
-         used = count(run, @marker),
-         true <- used < config.max_continuations,
-         true <- worked_since?(run, @marker) do
-      {:deny, plan_message(open, used + 1, config.max_continuations)}
-    else
-      _ordinary_stop -> :allow
+    case open_plan(session) do
+      [] -> completion_check(config, session)
+      open -> plan_continuation(config, current_run(session), open)
     end
   end
 
@@ -213,6 +244,41 @@ defmodule Lemieux.Extensions.Continuation do
   end
 
   def stop(_config, _reason, _context), do: :allow
+
+  defp open_plan(session) do
+    case Planning.read(session) do
+      {:ok, %{value: plan}} -> open_tasks(plan)
+      _no_plan -> []
+    end
+  end
+
+  # A plan open but written before this prompt is not this prompt's work, and
+  # does not hold the completion check back either.
+  defp plan_continuation(config, run, open) do
+    used = count(run, @marker)
+
+    cond do
+      not planned?(run) ->
+        check_requirements(config, run)
+
+      used < config.max_continuations and worked_since?(run, @marker) ->
+        {:deny, plan_message(open, used + 1, config.max_continuations)}
+
+      true ->
+        :allow
+    end
+  end
+
+  defp completion_check(%__MODULE__{completion_check: false}, _session), do: :allow
+  defp completion_check(config, session), do: check_requirements(config, current_run(session))
+
+  defp check_requirements(%__MODULE__{completion_check: false}, _run), do: :allow
+
+  defp check_requirements(_config, run) do
+    if count(run, @check_marker) == 0 and Enum.any?(run, &match?(%Entry{type: :tool_result}, &1)),
+      do: {:deny, check_message()},
+      else: :allow
+  end
 
   defp open_tasks(plan) do
     plan
@@ -278,6 +344,18 @@ defmodule Lemieux.Extensions.Continuation do
     something only the person can give, say so in a sentence or two and end your turn without \
     calling a tool. Either way you will not be sent back again. \
     (Continuation #{attempt} of #{allowance}.)\
+    """
+  end
+
+  defp check_message do
+    """
+    #{@check_marker} Before you finish, check your work against the task as the person wrote \
+    it, not as you summarised it. List each explicit requirement in their request: names, \
+    paths, field names and types, formats, sizes and limits, and any exact commands they gave. \
+    Check each one against what is on this machine now, running their exact commands where they \
+    gave them, and fix anything that does not match. If everything matches, if the task asked \
+    only for an answer, or if you need something only the person can give, say so in a sentence \
+    and end your turn without calling a tool. You will not be asked this again for this prompt.\
     """
   end
 

@@ -80,6 +80,18 @@ API.
   deliver must work where it will run, without anything installed only for
   yourself; and change nothing the task did not ask for, behaviour included.
   The prompt grows by about 400 bytes, to 2,365. (#37)
+- `Lemieux.Extensions.Continuation` takes `completion_check: true` (off by
+  default; `"continuation": {"completion_check": true}` in `lmx`'s config
+  file). When a prompt in which the model used a tool ends at an ordinary
+  stop with no plan of its own left open, the model is asked once, in a
+  message starting `[lmx requirements]`, to list the request's explicit
+  requirements (names, paths, field names and types, formats, sizes and
+  limits, the person's exact commands), check each against the machine, and
+  fix what does not match or say it all does. Benchmark misses it is meant
+  for: an `int32 val` field where the task said `value`, a clone tested from
+  a local path rather than the SSH command the task gave, and a file over
+  its stated size that was never measured. It costs one request per prompt
+  when nothing is wrong. (#36)
 
 ### Experimental
 

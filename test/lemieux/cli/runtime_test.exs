@@ -145,7 +145,11 @@ defmodule Lemieux.CLI.RuntimeTest do
     test "the config's allowances reach the extension", %{tmp_dir: tmp_dir} do
       applied =
         applied(tmp_dir, %{
-          "continuation" => %{"max_continuations" => 8, "max_output_continuations" => 1}
+          "continuation" => %{
+            "max_continuations" => 8,
+            "max_output_continuations" => 1,
+            "completion_check" => true
+          }
         })
 
       assert %{"options" => options} =
@@ -153,6 +157,7 @@ defmodule Lemieux.CLI.RuntimeTest do
 
       assert options["max_continuations"] == 8
       assert options["max_output_continuations"] == 1
+      assert options["completion_check"] == true
     end
 
     test "\"continuation\": false and disabled_extensions both leave it out", %{tmp_dir: tmp_dir} do

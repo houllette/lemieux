@@ -235,7 +235,9 @@ defmodule Lemieux.CLI.Help do
       verify                false, or {command, max_continuations, timeout_ms}
       continuation          false, or {max_continuations,
                             max_output_continuations}: how often a prompt
-                            left unfinished or cut off is sent back to work
+                            left unfinished or cut off is sent back to work;
+                            {completion_check: true} also asks a finished
+                            one to check the task as written, once
       input_modalities      ["text", "image", "pdf"] for a model the catalog
                             does not know, so tools can show it attachments
       auto_compaction       false: a session never compacts on its own
