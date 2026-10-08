@@ -23,6 +23,22 @@ API.
   or Meta key the terminal reported (Cmd-K, Cmd-C) typed its letter, and a
   control character such as ESC went into the draft as an invisible byte.
 
+### Library
+
+- `Lemieux.Providers.ReqLLM.new/1` defaults to the timeout pair `lmx`
+  already used: `receive_timeout: :infinity`, so the connection may stay
+  quiet while a model reasons, and `stream_idle_timeout` of five minutes,
+  which still fails a stream that makes no semantic progress, including one
+  that never answers. The two-minute `receive_timeout` it replaces failed
+  `gpt-6.1-sol` at xhigh on two Terminal-Bench tasks that pass without it,
+  and `mix lemieux.eval`, its judge, `Lemieux.Extension.Profile` and every
+  embedder copying the `Lemieux.run/2` example used it while `lmx` did not.
+  A host that passes `:receive_timeout` keeps exactly what it chose, and a
+  `config :req_llm, stream_idle_timeout:` is not overridden. (#31)
+
+  **Migration:** to keep the old bound, pass
+  `receive_timeout: :timer.minutes(2)`.
+
 ### Experimental
 
 - A live `mix lemieux.eval` refuses a selected case tagged `safety` before

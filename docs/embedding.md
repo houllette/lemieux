@@ -552,8 +552,9 @@ routes Ollama traffic elsewhere (`:route`, or a `:transport_routes` entry).
 - **The first token may be minutes away.** Ollama sends nothing while it
   reads a long prompt, so the transport and stream-idle timeouts are raised to
   at least 15 minutes, never lowered. `:local_idle_timeout` changes the floor;
-  `nil` leaves the timeouts as configured. Hosted models keep the adapter's
-  two-minute `:receive_timeout`; raise it for slow reasoning models.
+  `nil` leaves the timeouts as configured. Hosted models get the adapter's
+  default, the pair `lmx` uses: no transport `:receive_timeout`, and five
+  minutes without semantic progress (`:stream_idle_timeout`).
 - **The window is the daemon's.** Ollama sizes a model's context window when
   it loads the model and silently drops what does not fit, so the adapter
   asks the daemon (`Lemieux.Providers.OllamaWindow`: `/api/ps` for a loaded
