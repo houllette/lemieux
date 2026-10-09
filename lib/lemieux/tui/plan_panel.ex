@@ -23,6 +23,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias ExRatatui.Widgets.Paragraph
     alias Lemieux.Extensions.Planning
     alias Lemieux.TUI
+    alias Lemieux.TUI.Art
     alias Lemieux.TUI.Screen
 
     @doc """
@@ -35,11 +36,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
           payload: %{"namespace" => namespace, "value" => value}
         }) do
       if namespace == Planning.namespace(),
-        do: put_in(state.session_view.plan, Planning.tasks(value)),
+        do: put_plan(state, Planning.tasks(value)),
         else: state
     end
 
     def observe(state, _entry), do: state
+
+    defp put_plan(state, tasks) do
+      done = Enum.count(tasks, &(&1["status"] == "completed"))
+      progress = if tasks != [], do: Art.progress(100 * done / length(tasks), "plan")
+
+      state
+      |> put_in([Access.key!(:session_view), :plan], tasks)
+      |> put_in([Access.key!(:session_view), :plan_progress], progress)
+    end
 
     @doc "The newest plan in `entries`, as `observe/2` would have kept it."
     @spec restore(TUI.t(), [map()]) :: TUI.t()
@@ -54,7 +64,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def rows(state, available) do
       case visible(state) do
         [] -> 0
-        tasks -> min(length(tasks) + 2, max(div(available, 3), 3))
+        tasks -> min(length(tasks) + 3, max(div(available, 3), 3))
       end
     end
 
@@ -62,7 +72,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @spec render(TUI.t(), Rect.t()) :: [{term(), Rect.t()}]
     def render(state, %Rect{height: height} = area) when height >= 3 do
       tasks = visible(state)
-      room = height - 2
+      progress? = height >= 5 and area.width >= 28
+      room = height - 2 - if(progress?, do: 1, else: 0)
       theme = Screen.theme(state)
       current = Enum.find_index(tasks, &(&1["status"] == "in_progress")) || 0
       start = max(min(current - div(room, 2), length(tasks) - room), 0)
@@ -72,6 +83,19 @@ if Code.ensure_loaded?(ExRatatui.App) do
         tasks
         |> Enum.slice(start, room)
         |> Enum.map(&line(&1, theme, area.width - 4))
+
+      lines =
+        if progress? and not is_nil(state.session_view.plan_progress) do
+          {:model_art, animation, description} = state.session_view.plan_progress
+
+          bar =
+            Art.lines(animation, description, max(area.width - 4, 1), theme)
+            |> Enum.at(1)
+
+          [bar | lines]
+        else
+          lines
+        end
 
       panel = %Paragraph{
         text: lines,

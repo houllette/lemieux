@@ -6,7 +6,6 @@ defmodule Lemieux.TUI.SessionsTest do
 
   alias ExRatatui.Frame
   alias ExRatatui.Layout.Rect
-  alias ExRatatui.Widgets.BigText
   alias ExRatatui.Widgets.Clear
   alias ExRatatui.Widgets.Paragraph
   alias ExRatatui.Widgets.Textarea
@@ -484,21 +483,30 @@ defmodule Lemieux.TUI.SessionsTest do
       # on a pinned frame, and that the frames move on the live process.
       first = put_in(loading.overlay.frame, 0)
 
-      assert [{%Clear{}, area}, {%BigText{lines: [banner]}, banner_area}] =
+      assert [{%Clear{}, area}, {%Paragraph{text: banner}, banner_area}, {_boot, _boot_area}] =
                TUI.render(first, @frame)
 
       assert area == %Rect{x: 0, y: 0, width: 80, height: 24}
-      assert banner_area.height == 4
-      assert Enum.map_join(banner.spans, & &1.content) == "GO "
+      assert banner_area.height == 10
+      assert first.overlay.text == "GO HABS GO"
+
+      assert Enum.any?(banner, fn line ->
+               Enum.any?(line.spans, &String.contains?(&1.content, "█"))
+             end)
+
       assert loading.terminal.cursor_blink.tick == nil
 
       resized_frame = %Frame{width: 42, height: 17}
 
-      assert [{%Clear{}, resized_area}, {%BigText{}, resized_banner_area}] =
+      assert [
+               {%Clear{}, resized_area},
+               {%Paragraph{text: "GO HABS GO"}, resized_banner_area},
+               {_boot, _boot_area}
+             ] =
                TUI.render(first, resized_frame)
 
       assert resized_area == %Rect{x: 0, y: 0, width: 42, height: 17}
-      assert resized_banner_area.height == 4
+      assert resized_banner_area.height == 1
 
       # Different rather than later: by the time the test looks, the frames
       # may have wrapped round past the last.
@@ -513,10 +521,14 @@ defmodule Lemieux.TUI.SessionsTest do
       assert {:noreply, moving} = TUI.handle_info({:habs_tick, first.overlay.tick}, first)
       assert moving.overlay.frame == 1
 
-      assert [{%Clear{}, _area}, {%BigText{lines: [moving_banner]}, _banner_area}] =
+      assert [
+               {%Clear{}, _area},
+               {%Paragraph{text: moving_banner}, _banner_area},
+               {_boot, _boot_area}
+             ] =
                TUI.render(moving, @frame)
 
-      assert Enum.map_join(moving_banner.spans, & &1.content) == "GO HABS "
+      assert moving_banner != banner
 
       last_visible = %{loading | overlay: %{loading.overlay | frame: 8}}
 
@@ -539,31 +551,13 @@ defmodule Lemieux.TUI.SessionsTest do
       assert ready.status.words == ["Deking"]
       assert is_reference(ready.terminal.cursor_blink.tick)
 
-      # The banner is not dropped with the message that made the session
-      # ready: it plays out to its blank frame over the ready screen, as
-      # `/habs` does, and only then hands the screen back — so a start that
-      # took one frame still shows it whole (issue #4). The frame it holds
-      # here depends on how long preparation took.
-      assert %{frame: frame, tick: tick} = ready.overlay
-      assert tick == loading.overlay.tick
-      assert frame in 0..8
-      assert {:noreply, playing} = TUI.handle_info({:habs_tick, tick}, ready)
-      assert playing.overlay.frame == frame + 1
-      assert [{%Clear{}, _area}, {%BigText{}, _banner_area}] = TUI.render(playing, @frame)
-
-      finished =
-        Enum.reduce(1..10, playing, fn _tick, state ->
-          assert {:noreply, state} = TUI.handle_info({:habs_tick, tick}, state)
-          state
-        end)
-
-      assert finished.overlay == nil
-      assert screen(finished) =~ "ready"
-      assert screen(finished) =~ "version 0.2.0 available"
-      assert "ollama:local" in finished.catalog.discovered
-      refute screen(finished) =~ "Starting session"
-
-      assert {:noreply, ^finished} = TUI.handle_info({:habs_tick, tick}, finished)
+      # Startup ends with real readiness, even if the marquee has just begun.
+      assert ready.overlay == nil
+      assert screen(ready) =~ "ready"
+      assert screen(ready) =~ "version 0.2.0 available"
+      assert "ollama:local" in ready.catalog.discovered
+      refute screen(ready) =~ "Starting session"
+      assert {:noreply, ^ready} = TUI.handle_info({:habs_tick, loading.overlay.tick}, ready)
     end
 
     test "shows preparation errors without accepting a prompt into a missing session" do
@@ -918,15 +912,14 @@ defmodule Lemieux.TUI.SessionsTest do
   # A full-screen application covers standard error, so anything a host wrote
   # there before opening the screen is read on the way out instead of on the
   # way in — which for "this repository has config I am not running" is hours
-  # after the decision it was about. It goes to the notice box, which closes
-  # itself, rather than into the transcript for the whole sitting.
+  # after the decision it was about. It goes to a temporary transcript box.
   describe "what the host noticed on the way in" do
     test "a newer version found after startup is news in the notice box" do
       state = tui()
       notice = "Lemieux v0.2.0 is available; see https://hex.pm/packages/lemieux"
 
       assert {:noreply, updated} = TUI.handle_info({:version_notice, notice}, state)
-      assert updated.lines == []
+      assert [{:notice_box, _id, [%{kind: :info, text: ^notice}]}] = updated.lines
       assert Notices.items(updated) == [%{kind: :info, text: notice}]
       assert screen(sized(updated)) =~ "Lemieux v0.2.0 is available"
     end
@@ -939,7 +932,8 @@ defmodule Lemieux.TUI.SessionsTest do
 
       assert {:ok, state} = TUI.mount(test_mode: {80, 24}, notices: found)
 
-      assert state.lines == []
+      assert [{:notice_box, _id, items}] = state.lines
+      assert items == Notices.items(state)
 
       assert Enum.map(Notices.items(state), &{&1.kind, &1.text}) ==
                Enum.map(found, &{:warning, &1})
@@ -992,7 +986,7 @@ defmodule Lemieux.TUI.SessionsTest do
                  notices: ["a repository file that is not run"]
                )
 
-      assert state.lines == [{:lmx, "welcome to lemieux"}]
+      assert [{:notice_box, _id, _items}, {:lmx, "welcome to lemieux"}] = state.lines
       assert %{kind: :warning, text: "a repository file that is not run"} in Notices.items(state)
     end
 
@@ -1008,6 +1002,30 @@ defmodule Lemieux.TUI.SessionsTest do
   end
 
   describe "the terminal's own title" do
+    test "exit reports the displayed session and local caption, including after async startup" do
+      owner = self()
+      tasks = start_supervised!({Task.Supervisor, []})
+      session = fake_session(snapshot("02EXITRECEIPT"))
+
+      {:ok, app} =
+        TUI.start_link(
+          test_mode: {80, 24},
+          name: nil,
+          task_supervisor: tasks,
+          on_exit: fn receipt -> send(owner, {:closed, receipt}) end,
+          start_async: fn _app -> {:ok, session, []} end
+        )
+
+      assert :ok = LemieuxTest.Sync.state(app, &(&1.user_state.id == "02EXITRECEIPT"))
+
+      :sys.replace_state(app, fn state ->
+        put_in(state.user_state.appearance.name, "my actual session")
+      end)
+
+      GenServer.stop(app)
+      assert_receive {:closed, %{id: "02EXITRECEIPT", name: "my actual session"}}
+    end
+
     defp titling do
       owner = self()
 

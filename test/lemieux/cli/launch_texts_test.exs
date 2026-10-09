@@ -78,7 +78,7 @@ defmodule Lemieux.CLI.LaunchTextsTest do
   test "without the terminal UI built in, says how to build it into a path dependency" do
     assert {:error, message} = TUI.available({:error, :bad_name})
 
-    assert message =~ ~s({:ex_ratatui, "~> 0.16"})
+    assert message =~ ~s({:ex_ratatui, "~> 0.17"})
     assert message =~ "mix deps.compile lemieux --force"
   end
 

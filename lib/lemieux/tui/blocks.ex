@@ -48,11 +48,21 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     difference is visible: a paragraph row parses `*` and `` ` `` as markup and
     collapses runs of spaces, so a line of code streamed as a paragraph
     flickered through italics and lost its indentation until it closed.
+
+    Visualization fences (`a2ui` and `mermaid`) instead accumulate in one
+    bounded `:model_drawing` row, whose info-string caption labels Drawing.
+    `start_line/2` replaces that row as source arrives; `close/2` only compiles
+    a matching closing fence. `finish/2` turns an interrupted drawing into a
+    diagnostic. The original answer remains in the session, including source
+    that this compact projection omits, for export and `/copy source`.
     """
 
     alias ExRatatui.CodeBlock
     alias ExRatatui.Style
     alias ExRatatui.Text.Span
+    alias Lemieux.TUI.A2UI
+    alias Lemieux.TUI.Diagrams
+    alias Lemieux.TUI.Drawing
     alias Lemieux.TUI.Theme
 
     @typedoc "The first word of a fence's info string, lower-cased, or `nil`."
@@ -87,6 +97,8 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       * `{:model_code, language, text, spans}` — a line inside a fence;
         `spans` is `nil` while the line is still being written.
       * `{:model_table, table}` — a whole pipe table.
+      * `{:model_drawing, drawing}` — one open visualization placeholder.
+      * `{:model_drawing_error, message}` — a compact rejected-drawing diagnostic.
     """
     @type row ::
             {:model, String.t()}
@@ -97,6 +109,11 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
             | {:model_fence, :open | :close, language(), String.t()}
             | {:model_code, language(), String.t(), [Span.t()] | nil}
             | {:model_table, table()}
+            | {:model_art, term(), String.t()}
+            | {:model_ui, map()}
+            | {:model_diagram, map()}
+            | {:model_drawing, map()}
+            | {:model_drawing_error, String.t()}
 
     # `\#`: a bare `#{` in a sigil would start an interpolation.
     @fence ~r/^\s{0,3}(`{3,}|~{3,})\s*([^\s`]*)/u
@@ -130,6 +147,9 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     @spec extend(head :: row(), text :: String.t()) :: row()
     def extend({:model, answer}, text), do: {:model, answer <> text}
 
+    def extend({:model_drawing, drawing}, text),
+      do: {:model_drawing, Drawing.extend(drawing, text)}
+
     def extend({:model_code, language, answer, nil}, text),
       do: {:model_code, language, answer <> code_text(text), nil}
 
@@ -137,6 +157,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     @spec open?(row :: term()) :: boolean()
     def open?({:model, _text}), do: true
     def open?({:model_code, _language, _text, nil}), do: true
+    def open?({:model_drawing, _drawing}), do: true
     def open?(_row), do: false
 
     @doc "Whether a row is part of the model's answer rather than somebody else's."
@@ -150,7 +171,12 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         :model_item,
         :model_fence,
         :model_code,
-        :model_table
+        :model_table,
+        :model_art,
+        :model_ui,
+        :model_diagram,
+        :model_drawing,
+        :model_drawing_error
       ]
     end
 
@@ -170,6 +196,29 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     unconditionally before anything else is appended.
     """
     @spec close(newest_first :: [term()], theme :: Theme.t()) :: {non_neg_integer(), [row()]}
+    def close([{:model_drawing, drawing} | _rest], %Theme{}) do
+      with text when is_binary(text) <- drawing.current,
+           {:ok, closing} <- closing_fence(text),
+           true <- String.first(closing) == String.first(drawing.fence),
+           true <- String.length(closing) >= String.length(drawing.fence) do
+        result =
+          if drawing.oversized?,
+            do: {:error, Drawing.failure(drawing)},
+            else: visualization(drawing.language, Drawing.source(drawing))
+
+        replacement =
+          case result do
+            {:ok, rows} -> Enum.reverse(rows)
+            {:error, message} -> [{:model_drawing_error, message}]
+            :error -> [{:model_drawing_error, "This host cannot render this visualization."}]
+          end
+
+        {1, replacement}
+      else
+        _not_closed -> {0, []}
+      end
+    end
+
     def close([{:model_code, language, text, nil} | rest], %Theme{} = theme) do
       with {:ok, closing} <- closing_fence(text),
            {:ok, code, opener} <- block(rest, closing) do
@@ -190,6 +239,27 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     def close(_rows, %Theme{}), do: {0, []}
 
+    @doc "Starts the next logical line, replacing the single placeholder inside a drawing."
+    @spec start_line(newest_first :: [term()], text :: String.t()) :: {non_neg_integer(), row()}
+    def start_line([{:model_drawing, drawing} | _rest], text),
+      do: {1, {:model_drawing, Drawing.next(drawing, text)}}
+
+    def start_line(rows, text), do: {0, open(List.first(rows), text)}
+
+    @doc "Finishes a model fragment, including an interrupted or unclosed visualization."
+    @spec finish(newest_first :: [term()], theme :: Theme.t()) :: {non_neg_integer(), [row()]}
+    def finish(rows, theme) do
+      {count, replacement} = close(rows, theme)
+
+      case replacement ++ Enum.drop(rows, count) do
+        [{:model_drawing, drawing} | _rest] ->
+          {1, [{:model_drawing_error, Drawing.failure(drawing)}]}
+
+        _complete ->
+          {count, replacement}
+      end
+    end
+
     @doc """
     The rows of a complete answer, oldest-first.
 
@@ -203,10 +273,16 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       |> String.split("\n")
       |> Enum.reduce([], fn line, acc ->
         acc = closed(acc, theme)
-        [open(List.first(acc), line) | acc]
+        {count, row} = start_line(acc, line)
+        [row | Enum.drop(acc, count)]
       end)
-      |> closed(theme)
+      |> finished(theme)
       |> Enum.reverse()
+    end
+
+    defp finished(lines, theme) do
+      {count, rows} = finish(lines, theme)
+      rows ++ Enum.drop(lines, count)
     end
 
     defp closed(lines, theme) do
@@ -222,7 +298,14 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     defp fence_row(text) do
       [_whole, fence, info] = Regex.run(@fence, text)
-      {:model_fence, :open, language(info), fence}
+      language = language(info)
+
+      if language in ["a2ui", "mermaid"] do
+        caption = Regex.replace(@fence, text, "") |> String.trim()
+        {:model_drawing, Drawing.new(language, fence, caption)}
+      else
+        {:model_fence, :open, language, fence}
+      end
     end
 
     defp closing_fence(text) do
@@ -252,6 +335,27 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     defp closed_block(code, opener, closing, language, theme) do
       source = Enum.map_join(code, "\n", fn {:model_code, _language, text, _spans} -> text end)
+
+      case visualization(language, source) do
+        {:ok, rows} ->
+          Enum.reverse(rows)
+
+        :error ->
+          highlighted_block(code, opener, closing, language, theme, source)
+
+        {:error, message} ->
+          [
+            {:model_quote, "Diagram could not render: " <> message}
+            | highlighted_block(code, opener, closing, language, theme, source)
+          ]
+      end
+    end
+
+    defp visualization("a2ui", source), do: A2UI.rows(source)
+    defp visualization("mermaid", source), do: Diagrams.rows(source)
+    defp visualization(_language, _source), do: :error
+
+    defp highlighted_block(code, opener, closing, language, theme, source) do
       lines = highlight_lines(source, length(code), language, theme)
 
       highlighted =

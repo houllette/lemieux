@@ -3,7 +3,7 @@ defmodule Lemieux.MixProject do
 
   # Dependabot evaluates a temporary copy of mix.exs without copying VERSION.
   # Keep this literal in sync with VERSION; MixProjectTest enforces the pair.
-  @version "0.9.1"
+  @version "0.10.0"
   @source_url "https://github.com/houllette/lemieux"
   @description "The Elixir runtime behind the lmx coding agent: runs the model/tool loop " <>
                  "itself and records every session as an append-only transcript you can " <>
@@ -127,7 +127,7 @@ defmodule Lemieux.MixProject do
       # through req_llm; hand-rolled provider adapters are out of scope by
       # decision, so "add a provider" is an upstream concern rather than a
       # module in this tree.
-      {:req_llm, "~> 1.26"},
+      {:req_llm, "~> 1.27"},
       # Already in the tree through req_llm, and declared here because the MCP
       # client's HTTP transport calls it directly. Depending on a transitive
       # dependency works right up until the package that brought it swaps it
@@ -158,7 +158,8 @@ defmodule Lemieux.MixProject do
       # `Lemieux.TUI` is the only module that references it, nothing in the
       # core references `Lemieux.TUI`. The standalone host under `dist/lmx`
       # packages its NIF in a real release `priv` directory.
-      {:ex_ratatui, "~> 0.16", optional: true},
+      {:ex_ratatui, "~> 0.17", optional: true},
+      {:ascii, "~> 0.4.1", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
@@ -446,6 +447,7 @@ defmodule Lemieux.MixProject do
         "priv/skills",
         # `lmx desktop install` copies the icon from here.
         "priv/desktop",
+        "priv/a2ui",
         # Publish current guides; campaign artifacts stay outside the package.
         "docs/**/*.md",
         "VERSION",
@@ -552,7 +554,7 @@ defmodule Lemieux.MixProject do
       # reviewed: the bundled System One compaction extension's SDK pulls
       # in sinter 0.3.2, which pins jsv ~> 0.21.2 (and with it texture 1.x),
       # and pristine 0.4.0, which pins finch ~> 0.23.0. The library resolves
-      # jsv 0.25.0 and finch 0.24.0. Drop each exception when its upstream
+      # jsv 0.26.0 and finch 0.24.0. Drop each exception when its upstream
       # constraint relaxes; the check says when that happens.
       "deps.drift":
         "cmd elixir scripts/check_lock_drift.exs --allow finch,jsv,texture mix.lock dist/lmx/mix.lock",

@@ -63,11 +63,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
         scrollback_marker_at?(state, event) ->
           {:noreply, %{state | scroll: 0, selection: nil}}
 
-        # The notice box is drawn above the transcript, not in it: a click
-        # there opens its item's link, if it has one, and selects nothing.
-        in_notices?(state, event) ->
-          {:noreply, open_notice_link(state, event)}
-
         tab = Composer.tab_at(state, event) ->
           {:ok, field, tab} = tab
           {:noreply, %{Map.put(state, field, tab) | command_index: 0}}
@@ -216,25 +211,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    defp in_notices?(state, %ExRatatui.Event.Mouse{x: x, y: y}),
-      do: Notices.inside?(Map.get(Screen.panes(state), :notices), x, y)
-
-    defp open_notice_link(state, %ExRatatui.Event.Mouse{x: x, y: y}) do
-      case Notices.link_at(state, Map.get(Screen.panes(state), :notices), {x, y}) do
-        nil -> state
-        target -> open_target(state, target)
-      end
-    end
-
     defp clicked_link(state, event) do
       visible = view(state)
 
       with point when not is_nil(point) <- cell(state, visible, event),
            target when not is_nil(target) <-
-             Links.target_at(visible, point, state.references.cwd, Screen.columns(state)) do
+             notice_or_transcript_link(state, visible, point) do
         {target, point}
       else
         _other -> nil
+      end
+    end
+
+    defp notice_or_transcript_link(state, visible, {depth, _column} = point) do
+      case Notices.link_at(state, depth, Screen.columns(state)) do
+        {:notice, target} -> target
+        :outside -> Links.target_at(visible, point, state.references.cwd, Screen.columns(state))
       end
     end
 

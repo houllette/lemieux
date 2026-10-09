@@ -138,8 +138,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Session
     alias Lemieux.TUI.Appearance
     alias Lemieux.TUI.Background
+    alias Lemieux.TUI.Boot
     alias Lemieux.TUI.Choices
     alias Lemieux.TUI.Composer
+    alias Lemieux.TUI.DiffPanel
     alias Lemieux.TUI.Effects
     alias Lemieux.TUI.Events
     alias Lemieux.TUI.Flash
@@ -203,7 +205,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     lower rail.
 
     `:harness` is a `Lemieux.Harness`, and each of `:theme`, `:themes`,
-    `:keys`, `:layout`, `:status_line`, `:followups`, `:processing`,
+    `:keys`, `:layout`, `:status_line`, `:followups`, `:processing`, `:startup_animation`,
     `:skills`, `:notices`, `:renderers` and `:commands` is read from it when
     the option itself is absent — so a host that assembled a harness for the session passes it
     once, and the screen cannot disagree with the session it shows about
@@ -231,6 +233,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     setup and the `:mcp_trust` question — are answered
     (`Lemieux.TUI.History.hold/2`). It is how `lmx --prompt TEXT` opens an
     interactive session with a task.
+
+    `:on_exit` is an optional host callback taking the final screen's
+    `%{id: session_id, name: local_caption, cwd: directory}` when the app
+    terminates. The CLI uses it to print a resume hint for that exact session;
+    scanning recent history can instead choose another session, since the
+    picker omits idle new sessions. The callback must return promptly.
 
     All options are also passed to `mount/1`; pass `:size` so paging is correct
     before the first resize event.
@@ -363,11 +371,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
               feedback: %{text: String.t(), token: reference()} | nil,
               notices: Lemieux.TUI.Notices.t(),
               row_cache: %{width: pos_integer(), theme: Theme.t(), rows: map()} | nil,
+              boot: %{steps: [map()], animation: term()},
               scroll_coalesce?: boolean(),
               scroll_pending: %{token: reference()} | nil,
               clipboard: (String.t() -> :ok | {:error, term()}),
               open_link: (String.t() -> :ok | {:error, term()}),
               title: (String.t() -> :ok | {:error, term()}),
+              on_exit: (map() -> term()),
               notify: (String.t() -> :ok | {:error, term()}),
               notifications?: boolean(),
               editor: (String.t() -> {:ok, String.t()} | {:error, term()}) | nil,
@@ -390,7 +400,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
             feedback_opts: keyword(),
             elixir_mode?: boolean(),
             turn: turn(),
-            overlay: %{frame: non_neg_integer(), tick: reference()} | nil,
+            overlay:
+              %{
+                frame: non_neg_integer(),
+                tick: reference(),
+                frames: pos_integer(),
+                time: float(),
+                animation: term(),
+                art: map() | nil,
+                text: String.t(),
+                background: String.t() | nil
+              }
+              | nil,
             clock: (-> integer()),
             tools: in_flight(),
             references: %{
@@ -408,6 +429,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               line: module() | nil,
               compact_at: number() | nil,
               words: [String.t()] | nil,
+              startup_animation: map() | false,
               followups: module() | nil,
               renderers: Renderer.registry() | nil,
               keys: module() | Keys.t() | nil,
@@ -600,6 +622,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 mcp_ready?: true,
                 mcp_announced?: false,
                 plan: nil,
+                plan_progress: nil,
                 requests: 0,
                 request_cap: nil,
                 sandbox: nil,
@@ -759,7 +782,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
          put_in(
            state.terminal,
            %{state.terminal | width: max(width, 1), height: max(height, 1)}
-         )}
+         )
+         |> DiffPanel.resize()}
 
     def handle_event(_event, state), do: {:noreply, state}
 
@@ -789,6 +813,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       :clear_result,
       :diff_result,
       :export_result,
+      :copy_result,
       :doctor_result,
       :undo_result,
       :rewind_result,
@@ -937,6 +962,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def handle_info({:ctrl_c_expired, token}, state), do: Composer.exit_expired(state, token)
     def handle_info({:cursor_blink, tick}, state), do: Composer.blink(state, tick)
     def handle_info({:habs_tick, token}, state), do: Lifecycle.habs_tick(state, token)
+
+    def handle_info({:startup_step, id, text, status}, state),
+      do: {:noreply, Boot.observe(state, id, text, status)}
+
+    def handle_info({kind, _token, _result} = message, state)
+        when kind in [:diff_files, :diff_preview],
+        do: {:noreply, DiffPanel.answer(state, message)}
+
     def handle_info({:activity_tick, token}, state), do: Turn.tick(state, token)
 
     def handle_info(_message, state), do: {:noreply, state}

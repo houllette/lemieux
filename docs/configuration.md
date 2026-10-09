@@ -92,6 +92,7 @@ preflight](compaction.md) for the options and an Ixway timing-signal example.
 | `themes` | none | Palettes of your own ([Adding a theme](terminal-ui.md#adding-a-theme)) |
 | `keys` | the shipped bindings | Key bindings of your own, such as `{"ctrl-j": "submit"}` ([Rebinding keys](terminal-ui.md#rebinding-keys)) |
 | `processing` | the shipped word list | The words the live row calls a running turn; a list of one keeps a single word |
+| `startup_animation` | Habs marquee | `false` disables the decoration; a data object customizes the piece, text, speed, colours and duration ([Startup animation](terminal-ui.md#startup-animation)) |
 | `mouse` | `true` | `false` gives the mouse back to the terminal |
 | `notifications` | `true` | `false` stops the notification when a turn ends or needs you |
 
@@ -262,7 +263,8 @@ sandbox](#the-sandbox), and hooks.
 `"disabled_extensions"` leaves shipped extensions out by name: `planning`,
 `continuation`, `verify`, `search`, `apply_patch`, `checkpoints`,
 `environment_context`, `mcp_discovery`, `mcp`, `interactive`, `web`, `elixir`,
-`workspace`, `delegation`, `a2a` and `systemone_compaction`. Your own
+`workspace`, `delegation`, `a2a`, `a2ui` (terminal visualization instructions)
+and `systemone_compaction`. Your own
 extensions and an embedding host's policy are not affected.
 
 ### Running with no configuration

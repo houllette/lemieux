@@ -247,6 +247,7 @@ defmodule Lemieux.Conversation do
           | {:resume, String.t()}
           | :toggle_elixir_mode
           | :copy
+          | {:copy, :source}
           | :habs
           | :tools_status
           | {:enable_tools, [String.t()]}
@@ -1833,6 +1834,10 @@ defmodule Lemieux.Conversation do
 
   @doc "Applies a TUI host's command policy, failing closed on invalid decisions."
   @spec command_decision(command_policy(), effect()) :: :allow | {:deny, String.t()}
+  # Source copying is the same clipboard permission as the bare command.
+  def command_decision(command_policy, {:copy, :source}),
+    do: command_decision(command_policy, :copy)
+
   def command_decision(nil, _action), do: :allow
 
   def command_decision(command_policy, action) when is_function(command_policy, 1) do

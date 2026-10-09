@@ -71,6 +71,18 @@ defmodule Lemieux.CLI.TUIOpeningTest do
     assert opened(options).appearance.theme == nil
   end
 
+  test "startup customization is available before asynchronous preparation", %{tmp_dir: dir} do
+    settings = %{"options" => %{"text" => "HELLO LMX"}}
+    options = configured(dir, %{"startup_animation" => settings})
+    assert Keyword.fetch!(opening(options), :harness).startup_animation == settings
+    assert opened(options).status.startup_animation["options"]["text"] == "HELLO LMX"
+    assert opened(options, startup_animation: false).status.startup_animation == false
+    path = Path.join(dir, "invalid.json")
+    File.write!(path, JSON.encode!(%{"startup_animation" => %{"piece" => "File"}}))
+    assert {:error, reason} = Options.parse(["--config", path])
+    assert reason =~ "startup_animation"
+  end
+
   # What `lmx` passes beside the harness is in the same list, so the screen
   # has them before any session.
   test "the host's fields and the runtime are in the list beside it", %{tmp_dir: dir} do

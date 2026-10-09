@@ -15,10 +15,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Session
     alias Lemieux.TUI
     alias Lemieux.TUI.Appearance
+    alias Lemieux.TUI.Art
     alias Lemieux.TUI.Choices
+    alias Lemieux.TUI.Clipboard
     alias Lemieux.TUI.Composer
+    alias Lemieux.TUI.DiffPanel
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.Lifecycle
+    alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Submission
     alias Lemieux.TUI.Transcript
     alias Lemieux.TUI.Turn
@@ -80,6 +84,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp perform(state, :context_status), do: Transcript.append_rows(state, context_rows(state))
+    defp perform(state, :diff), do: DiffPanel.open(state)
+
+    # Only the TUI's default copy projects visualizations; source copying and
+    # non-terminal hosts retain the transcript's original Markdown/JSON.
+    defp perform(state, :copy) do
+      host = host(state)
+      clipboard = host.clipboard
+      width = Screen.columns(state)
+      theme = Screen.theme(state)
+
+      projected =
+        if clipboard,
+          do: fn source -> clipboard.(Clipboard.presentation(source, width, theme)) end
+
+      Dispatch.perform(state, %{host | clipboard: projected}, :copy)
+    end
 
     defp perform(state, :model_status) do
       available = length(state.catalog.models)
@@ -351,6 +371,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         segments ->
           [
             {:lmx, "Context window · #{Context.describe(context)}"},
+            Art.progress(100 * (1 - free_fraction(segments)), "context"),
             {:context_bar, Enum.map(segments, &{&1.key, &1.fraction})},
             {:context_key, Enum.map(segments, &{&1.key, legend_label(&1)})},
             {:lmx, last_request(context)},
@@ -358,6 +379,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
           ]
       end
     end
+
+    defp free_fraction(segments),
+      do:
+        Enum.find_value(segments, 0.0, fn segment ->
+          if segment.key == :free, do: segment.fraction
+        end)
 
     defp legend_label(%{label: label, tokens: tokens}),
       do: "#{label} #{Context.abbreviate(tokens)}"

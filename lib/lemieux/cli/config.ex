@@ -116,6 +116,7 @@ defmodule Lemieux.CLI.Config do
   alias Lemieux.ModelSpec
   alias Lemieux.TUI.Keys
   alias Lemieux.TUI.Processing
+  alias Lemieux.TUI.StartupAnimation
   alias Lemieux.TUI.Theme
 
   @derive {Inspect, only: []}
@@ -130,7 +131,7 @@ defmodule Lemieux.CLI.Config do
         }
 
   @fields ~w(version model providers base_url ixway system sessions_dir context_window web_search
-             web_search_providers web_fetch mouse project_mcp delegate a2a_peers theme themes keys processing extensions disabled_extensions
+             web_search_providers web_fetch mouse project_mcp delegate a2a_peers theme themes keys processing startup_animation extensions disabled_extensions
              auto_compaction compaction_price_tiers keep_recent_tokens summary_model systemone_compaction
              systemone_providers max_turns max_requests max_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
@@ -1075,6 +1076,7 @@ defmodule Lemieux.CLI.Config do
   # label too long for the row pushes the measured half of the line off the edge,
   # and a setting silently ignored when it is wrong is one nobody can debug.
   defp valid_field?("processing", value), do: Processing.valid?(value)
+  defp valid_field?("startup_animation", value), do: StartupAnimation.valid?(value)
 
   defp valid_field?(key, value) when key in ["system", "sessions_dir"],
     do: is_binary(value) and value != ""

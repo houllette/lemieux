@@ -19,6 +19,8 @@ defmodule Lemieux.Conversation.Command.Diff do
 
   alias Lemieux.Conversation.Dispatch
   alias Lemieux.Conversation.Shell
+  alias Lemieux.Environment
+  alias Lemieux.Tools.Bash
 
   @max_lines 300
   @max_untracked 30
@@ -67,13 +69,135 @@ defmodule Lemieux.Conversation.Command.Diff do
   Public so a host can put the same answer somewhere else — and so it can be
   tested against a real repository without a front end.
   """
-  @spec diff(environment :: Lemieux.Environment.t(), cwd :: Path.t()) ::
+  @spec diff(environment :: Environment.t(), cwd :: Path.t()) ::
           {:ok, String.t()} | {:error, String.t()}
   def diff(environment, cwd) do
     with {:ok, result} <- Shell.run(environment, @script, cwd, keep_bytes: 400_000) do
       {:ok, render(result)}
     end
   end
+
+  @doc """
+  Changed files for an interactive host, including renames and untracked files.
+
+  Git's NUL framing is retained until paths are decoded: splitting on lines
+  makes a file containing a newline into two files. Collection is bounded and
+  rejects incomplete output rather than presenting a truncated path as real.
+  The environment is the same boundary the session's tools use.
+  """
+  @spec files(environment :: Environment.t(), cwd :: Path.t()) ::
+          {:ok, map()} | {:error, String.t()}
+  def files(environment, cwd) do
+    command = "git -c core.fsmonitor= --no-pager status --porcelain=v1 -z --untracked-files=all"
+
+    with {:ok, events} <-
+           Environment.run(environment, command,
+             cwd: cwd,
+             timeout_ms: 120_000,
+             max_output_bytes: 200_000,
+             env: Bash.non_interactive_env()
+           ),
+         {:ok, output} <- status_output(events),
+         {:ok, entries} <- status_entries(String.split(output, <<0>>, trim: true), []) do
+      {:ok, %{files: Enum.take(entries, 256), omitted: max(length(entries) - 256, 0)}}
+    else
+      _failed ->
+        {:error,
+         "could not list changes · /diff needs a git working tree and complete status output"}
+    end
+  end
+
+  @doc "A bounded per-file patch, with literal pathspecs and no external diff drivers."
+  @spec preview(environment :: Environment.t(), cwd :: Path.t(), file :: map()) ::
+          {:ok, String.t()} | {:error, String.t()}
+  def preview(environment, cwd, %{path: path, status: status} = file) do
+    if safe_path?(path) and safe_path?(Map.get(file, :previous, path)) do
+      paths = [path, Map.get(file, :previous)] |> Enum.reject(&is_nil/1) |> Enum.uniq()
+      quoted = Enum.map_join(paths, " ", &quote_path/1)
+
+      flags =
+        "git --literal-pathspecs -C \"$root\" -c core.fsmonitor= --no-pager diff --no-color --no-ext-diff --no-textconv"
+
+      command =
+        if status == "??" do
+          flags <> " --no-index -- /dev/null " <> quote_path(path)
+        else
+          "if git rev-parse --verify -q HEAD >/dev/null 2>&1; then base=HEAD; else base=$(git hash-object -t tree /dev/null); fi\n" <>
+            flags <> " \"$base\" -- " <> quoted
+        end
+
+      command = "root=$(git rev-parse --show-toplevel) || exit 2\n" <> command
+
+      with {:ok, result} <- Shell.run(environment, command, cwd, keep_bytes: 100_000),
+           do: preview_result(result)
+    else
+      {:error, "could not read an invalid repository path"}
+    end
+  end
+
+  defp preview_result(%{outcome: :exited, exit_status: exit, output: output})
+       when exit in [0, 1] do
+    text =
+      if String.trim(output) == "",
+        do: "No patch for this file (its status may have changed).",
+        else: output
+
+    {:ok, bounded(text)}
+  end
+
+  defp preview_result(result), do: {:error, "could not read file diff: #{Shell.ending(result)}"}
+
+  defp status_output(events) do
+    events
+    |> Enum.reduce({[], 0, false}, fn
+      {:data, bytes}, {parts, size, ok?} when size + byte_size(bytes) <= 200_000 ->
+        {[bytes | parts], size + byte_size(bytes), ok?}
+
+      {:exit_status, 0}, {parts, size, _ok?} ->
+        {parts, size, true}
+
+      _failure, {parts, _size, _ok?} ->
+        {parts, 200_001, false}
+    end)
+    |> then(fn
+      {parts, size, true} when size <= 200_000 ->
+        output = parts |> Enum.reverse() |> IO.iodata_to_binary()
+
+        if String.valid?(output) and (output == "" or String.ends_with?(output, <<0>>)),
+          do: {:ok, output},
+          else: :error
+
+      _failed ->
+        :error
+    end)
+  end
+
+  defp status_entries([], acc), do: {:ok, Enum.reverse(acc)}
+
+  defp status_entries([<<x, y, 32, path::binary>> | rest], acc) when path != "" do
+    status = <<x, y>>
+
+    if x in ~c"RC" or y in ~c"RC" do
+      case rest do
+        [previous | rest] ->
+          status_entries(rest, [%{path: path, status: status, previous: previous} | acc])
+
+        [] ->
+          :error
+      end
+    else
+      status_entries(rest, [%{path: path, status: status} | acc])
+    end
+  end
+
+  defp status_entries(_unexpected, _acc), do: :error
+
+  defp safe_path?(path),
+    do:
+      is_binary(path) and path != "" and Path.type(path) == :relative and
+        not String.contains?(path, <<0>>) and ".." not in Path.split(path)
+
+  defp quote_path(path), do: "'" <> String.replace(path, "'", "'\\''") <> "'"
 
   defp render(%{outcome: :exited, output: output}) do
     if String.contains?(output, @not_git),

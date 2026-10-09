@@ -8,7 +8,7 @@ defmodule SecurityExample.MixProject do
       elixir: "~> 1.19",
       deps: [
         lemieux(),
-        {:ex_ratatui, "~> 0.16", optional: true}
+        {:ex_ratatui, "~> 0.17", optional: true}
       ]
     ]
   end

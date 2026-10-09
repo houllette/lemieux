@@ -44,6 +44,10 @@ defmodule Lmx.NoticesTest do
     package_names = Enum.map(inventory.packages, & &1.name)
     assert "req_llm" in package_names
     assert "ex_ratatui" in package_names
+    assert "ascii" in package_names
+    assert text =~ "Copyright (c) 2026 bas3line"
+    assert text =~ "THIRD_PARTY_NOTICES.md"
+    assert text =~ "Unicode License v3"
     refute Enum.any?(package_names, &(&1 in ~w(lmx lemieux lemieux_systemone_compaction)))
     refute Enum.any?(package_names, &(&1 in ~w(kernel stdlib elixir logger)))
 

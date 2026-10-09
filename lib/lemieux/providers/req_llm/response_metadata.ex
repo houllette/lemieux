@@ -8,6 +8,9 @@ defmodule Lemieux.Providers.ReqLLM.ResponseMetadata do
   # process_stream closes its metadata handle before returning, including on
   # errors. A forwarding handle lets us observe the public metadata once,
   # without another stream consumer, Finch internals or global telemetry.
+  # ReqLLM 1.27 also invokes cancel on errors, which closes the original
+  # handle. This boundary owns cancellation instead: read the terminal
+  # metadata before closing it, and always close the transport before return.
   @spec capture(
           response :: ReqLLM.StreamResponse.t(),
           options :: map(),
@@ -21,7 +24,7 @@ defmodule Lemieux.Providers.ReqLLM.ResponseMetadata do
       end)
 
     try do
-      result = consume.(%{response | metadata_handle: handle})
+      result = consume.(%{response | metadata_handle: handle, cancel: fn -> :ok end})
       {result, select(available_metadata(response.metadata_handle), options)}
     after
       MetadataHandle.stop(handle)

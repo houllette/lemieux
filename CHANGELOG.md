@@ -7,10 +7,59 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 0.10.0 — 2026-10-09
+
+This release requires restarting `lmx` on every platform. Save an unsent draft,
+quit after the update is staged, and run `lmx -c` or the named `--resume` command
+printed on exit. Script extensions pinned to the 0.9 release line need their
+code and manifest reviewed for 0.10; compiled bundles retain extension API 1.
 
 ### lmx
 
+- Failed A2UI or Mermaid drawings send their validation errors back to the
+  agent for one automatic repair continuation per user prompt. The allowance
+  survives resume and respects session budgets and cancellation. Valid drawings
+  add no model turn. Sparkline feedback explains the numeric sampling rate.
+- Streamed A2UI and Mermaid show one captioned Drawing placeholder, then their
+  validated rendering. Rejected or interrupted drawings show compact diagnostics
+  and retain exact source for `/copy source`. Native diagram schemas are available
+  on demand through `diagram_preview`; guidance splits large galleries across fences.
+- Startup drops the boot log's stray login cursor and hands over immediately
+  when ready. Extension loading and initialization append real milestones;
+  pending work stays visible when the terminal is short.
+- The exit hint names the session actually shown by the TUI and offers its
+  short player name to `--resume`. An idle new session no longer produces an
+  older session's name, and `/name` captions appear alongside the stable handle.
+- The startup info box appears inside the transcript and dismisses five
+  seconds after its newest notice. Expiry leaves the transcript pane's
+  geometry fixed and keeps scroll and selection anchored to the conversation.
+- ASCII components use `ascii` 0.4.1: a real startup boot log, a Habs
+  marquee customizable through `startup_animation`, a `/diff` file tree with
+  per-file patches, and progress bars for context occupancy and plans.
+- Closed A2UI v0.9.1 fences render bounded, read-only text, tables, charts,
+  progress and file trees. The TUI advertises its catalog to the agent; the
+  original JSON survives in the transcript for export, resume and fork.
+- A2UI preserves nested `Column` and `Row` layouts with bounded widths,
+  alignment, gaps, padding and minimum heights. Columns share a left edge
+  and remove ASCII gallery whitespace by default; rows stack on narrow
+  terminals. The agent receives the layout controls in its catalog instructions.
+- A2UI adds Mermaid, flowchart, sequence, C4, state and ER diagrams, with cached compact
+  layouts, theme colours and full relationship fallbacks for narrow panes.
+  The read-only `diagram_preview` tool lets agents check syntax and fit first.
+  Closed Mermaid fences render too; original source and diagnostics survive replay.
+- Replace the retired `ascii_art` dependency with `ascii` 0.4.1 in the library
+  and release host, including the renamed `Ascii` API and Unicode notices.
+- `ascii` 0.4.0 expands diagrams with nested flowchart groups, composite
+  states, ER attributes/cardinalities, multiline labels and improved routing.
+  Agents can emit Mermaid directly; preview is optional and its request schema
+  stays small, with full native schemas kept in the packaged A2UI catalog.
+- Diagram labels wrap at word boundaries in cached renderings, previews and
+  `/copy`, while preserving explicit line breaks.
+- `/copy` in the TUI copies rendered visualizations in monospace text fences,
+  preserving connectors, indentation and blank rows across the complete answer.
+  `/copy source` retains the exact original assistant text.
+- The terminal UI uses ExRatatui 0.17, which merges renders during message
+  bursts and keeps queued messages off-heap.
 - Ctrl-U in the input box deletes back to the start of the line, as it does
   at a shell prompt, instead of undoing the last edit. Most macOS terminals
   (iTerm2, Ghostty, Alacritty, VS Code) send Ctrl-U for Cmd-Backspace, so
@@ -30,6 +79,10 @@ API.
 
 ### Library
 
+- Update the provider stack to ReqLLM 1.27, Req 0.7.5 and LLMDB 2026.10.1.
+  Stream errors retain the observed HTTP status and selected response
+  headers through ReqLLM's earlier cleanup, and still close the connection
+  before returning.
 - `Lemieux.Providers.ReqLLM.new/1` defaults to the timeout pair `lmx`
   already used: `receive_timeout: :infinity`, so the connection may stay
   quiet while a model reasons, and `stream_idle_timeout` of five minutes,

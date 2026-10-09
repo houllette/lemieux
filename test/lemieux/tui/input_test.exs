@@ -9,7 +9,6 @@ defmodule Lemieux.TUI.InputTest do
   alias ExRatatui.Event.Mouse
   alias ExRatatui.Event.Paste
   alias ExRatatui.Frame
-  alias ExRatatui.Widgets.BigText
   alias ExRatatui.Widgets.Block.Title, as: BlockTitle
   alias ExRatatui.Widgets.List
   alias ExRatatui.Widgets.Paragraph
@@ -800,7 +799,8 @@ defmodule Lemieux.TUI.InputTest do
       state = press(state, "enter")
 
       assert %{frame: 0, tick: tick} = state.overlay
-      assert banner(state) =~ "GO"
+      assert state.overlay.text == "GO HABS GO"
+      assert banner(state) =~ "█"
       refute screen(state) =~ "an answer worth keeping"
 
       state = run_overlay(state, tick)
@@ -837,7 +837,7 @@ defmodule Lemieux.TUI.InputTest do
       state
       |> TUI.render(@frame)
       |> Enum.find_value("", fn
-        {%BigText{lines: lines}, _rect} ->
+        {%Paragraph{text: lines}, _rect} when is_list(lines) ->
           Enum.map_join(lines, &Enum.map_join(&1.spans, fn span -> span.content end))
 
         _other ->
@@ -2282,7 +2282,70 @@ defmodule Lemieux.TUI.InputTest do
         |> press("enter")
 
       assert_receive {:copied, "latest first\nlatest second"}
+      assert_receive {:copy_result, :ok} = result
+      {:noreply, copied} = TUI.handle_info(result, copied)
       assert screen(copied) =~ "copied the latest agent response"
+    end
+
+    test "copies rendered diagrams by default and original fences with source" do
+      original = "Request path\n\n```mermaid\nflowchart LR\nA[API] -->|request| B[Worker]\n```"
+      entry = Entry.new(:assistant, %{"content" => [%{"type" => "text", "text" => original}]})
+      session = fake_session(snapshot("01SESSION", [entry]))
+      owner = self()
+
+      state =
+        sized(
+          tui(
+            session: session,
+            clipboard: fn text ->
+              send(owner, {:copied, text})
+              :ok
+            end
+          )
+        )
+
+      copied = state |> type("/copy") |> press("enter")
+      assert_receive {:copied, rendered}
+      assert rendered =~ "```text"
+      assert rendered =~ "─"
+      assert rendered =~ "Worker"
+      refute rendered =~ "flowchart"
+      assert_receive {:copy_result, :ok} = result
+      {:noreply, copied} = TUI.handle_info(result, copied)
+      assert screen(copied) =~ "copied the latest agent response"
+      _state = copied |> type("/copy source") |> press("enter")
+      assert_receive {:copied, ^original}
+      assert_receive {:copy_result, :ok}
+    end
+
+    test "a held clipboard callback leaves the composer responsive" do
+      entry = Entry.new(:assistant, %{"content" => [%{"type" => "text", "text" => "answer"}]})
+      session = fake_session(snapshot("01SESSION", [entry]))
+      owner = self()
+
+      state =
+        tui(
+          session: session,
+          clipboard: fn _text ->
+            send(owner, {:copy_started, self()})
+
+            receive do
+              :release_copy -> :ok
+            after
+              :timer.minutes(1) -> flunk("clipboard was not released")
+            end
+          end
+        )
+        |> type("/copy")
+        |> press("enter")
+
+      assert_receive {:copy_started, worker}
+      ref = Process.monitor(worker)
+      state = type(state, "next prompt")
+      assert typed(state) == "next prompt"
+      send(worker, :release_copy)
+      assert_receive {:copy_result, :ok}
+      assert_receive {:DOWN, ^ref, :process, ^worker, :normal}
     end
 
     test "explains when there is no agent response to copy" do
@@ -2293,6 +2356,8 @@ defmodule Lemieux.TUI.InputTest do
         |> type("/copy")
         |> press("enter")
 
+      assert_receive {:copy_result, {:error, :not_found}} = result
+      {:noreply, state} = TUI.handle_info(result, state)
       assert screen(state) =~ "no agent response to copy"
     end
   end

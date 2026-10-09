@@ -95,9 +95,9 @@ numbers in it were measured, and each says where.
 ```
 
 Lemieux needs Elixir 1.19 or later and recent releases of its provider stack:
-`req_llm` 1.26 or later, `req` 0.7 or later, `finch` 0.22 or later, `splode`
-0.3, and `llm_db` 2026.9.x (2026.9.8 or later in that series, which is what
-`req_llm` 1.26.0 accepts). A newly generated Phoenix 1.8 or Ash 3
+`req_llm` 1.27 or later, `req` 0.7 or later, `finch` 0.22 or later, `splode`
+0.3, and `llm_db` 2026.10.x (which is what `req_llm` 1.27.0 accepts;
+the current lock resolves 2026.10.1). A newly generated Phoenix 1.8 or Ash 3
 application resolves them without edits. An older `mix.lock` stops
 `mix deps.get` with a message like this:
 
@@ -113,7 +113,7 @@ help, because the conflict is in your lock, not in Lemieux:
 ```sh
 mix deps.update req finch        # locks older than Req 0.7.0 (28 July 2026)
 mix deps.update splode           # Ash apps locked before splode 0.3.0 (16 January 2026)
-mix deps.update req_llm llm_db   # apps already on a ReqLLM older than 1.26
+mix deps.update req_llm llm_db   # apps already on a ReqLLM older than 1.27
 ```
 
 Req 0.7 changes Req itself. Its Finch and Plug adapters replace the
@@ -1046,7 +1046,7 @@ discovered models.
 The host must depend on the optional `ex_ratatui` itself:
 
 ```elixir
-{:ex_ratatui, "~> 0.16"}
+{:ex_ratatui, "~> 0.17"}
 ```
 
 Lemieux compiles its terminal UI only when `ex_ratatui` is present at compile

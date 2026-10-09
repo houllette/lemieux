@@ -153,6 +153,7 @@ defmodule Lemieux.CLI.Extensions do
   """
 
   alias Lemieux.CLI.Options
+  alias Lemieux.CLI.Startup
   alias Lemieux.Contract
 
   @manifest "extension.json"
@@ -224,24 +225,27 @@ defmodule Lemieux.CLI.Extensions do
   object of options — the person's configured `"extension_options"` —
   merged over the manifest's own `options`, key by key, configuration
   winning. The first failure stops the list with its sentence.
+
+  `:startup_step`, when supplied, is a host callback `(id, text, status)`
+  observing each unique directory before and after loading, including failures.
   """
   @spec load_all(
           selections :: [selection()],
-          opts :: [root: Path.t(), options: %{optional(String.t()) => map()}]
+          opts :: keyword()
         ) :: {:ok, [loaded()]} | {:error, String.t()}
   def load_all(selections, opts \\ []) when is_list(selections) and is_list(opts) do
     root = Keyword.get_lazy(opts, :root, &default_root/0)
 
     with {:ok, configured} <- configured_options(Keyword.get(opts, :options, %{})),
-         {:ok, loaded} <- load_selections(selections, root) do
+         {:ok, loaded} <- load_selections(selections, root, opts) do
       {:ok, Enum.map(loaded, &configure(&1, configured))}
     end
   end
 
-  defp load_selections(selections, root) do
+  defp load_selections(selections, root, opts) do
     selections
     |> Enum.reduce_while({:ok, []}, fn selection, {:ok, loaded} ->
-      case load_selection(selection, root, loaded) do
+      case load_selection(selection, root, loaded, opts) do
         {:ok, loaded} -> {:cont, {:ok, loaded}}
         {:error, message} -> {:halt, {:error, message}}
       end
@@ -252,8 +256,8 @@ defmodule Lemieux.CLI.Extensions do
     end
   end
 
-  defp load_selection(selection, root, loaded) do
-    with {:ok, directory} <- directory(selection, root), do: load_once(directory, loaded)
+  defp load_selection(selection, root, loaded, opts) do
+    with {:ok, directory} <- directory(selection, root), do: load_once(directory, loaded, opts)
   end
 
   # Every value is checked before anything loads: a malformed entry for an
@@ -293,12 +297,19 @@ defmodule Lemieux.CLI.Extensions do
   defp configured({module, [config: config]}, options),
     do: {module, [config: Map.merge(config, options)]}
 
-  defp load_once(directory, loaded) do
+  defp load_once(directory, loaded, opts) do
     if Enum.any?(loaded, &(&1.provenance["directory"] == directory)) do
       {:ok, loaded}
     else
-      with {:ok, one} <- load(directory), do: {:ok, [one | loaded]}
+      with {:ok, one} <- load_step(directory, opts),
+           do: {:ok, [one | loaded]}
     end
+  end
+
+  defp load_step(directory, opts) do
+    id = "load:" <> Base.encode16(:crypto.hash(:sha256, directory), case: :lower)
+
+    Startup.step(opts, id, "Load extension #{Path.basename(directory)}", fn -> load(directory) end)
   end
 
   defp directory({:dir, path}, _root) when is_binary(path), do: {:ok, Path.expand(path)}

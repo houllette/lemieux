@@ -119,6 +119,26 @@ defmodule Lemieux.CLI.ExtensionsTest do
     )
   end
 
+  test "loading reports each selected directory once and reports a failed load", %{tmp_dir: dir} do
+    bundle = Path.join(dir, "audit")
+    ebin_extension(bundle)
+    owner = self()
+    report = fn id, text, status -> send(owner, {:step, id, text, status}) end
+
+    assert {:ok, [_]} =
+             Extensions.load_all([{:dir, bundle}, {:dir, bundle}], startup_step: report)
+
+    assert_receive {:step, id, "Load extension audit", "busy"}
+    assert_receive {:step, ^id, "Load extension audit", "ok"}
+    refute_received {:step, ^id, _, _}
+
+    assert {:error, _} =
+             Extensions.load_all([{:dir, Path.join(dir, "missing")}], startup_step: report)
+
+    assert_receive {:step, failed, "Load extension missing", "busy"}
+    assert_receive {:step, ^failed, "Load extension missing", "fail"}
+  end
+
   describe "lmx run --extension-dir" do
     test "an ebin extension shapes the session and is recorded with its digests", %{
       tmp_dir: tmp_dir

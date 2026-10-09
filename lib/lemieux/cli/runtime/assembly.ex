@@ -1,6 +1,7 @@
 defmodule Lemieux.CLI.Runtime.Assembly do
   @moduledoc false
 
+  alias Lemieux.CLI.Startup
   alias Lemieux.Harness
   alias Lemieux.Tool
   alias Lemieux.Tools
@@ -59,16 +60,16 @@ defmodule Lemieux.CLI.Runtime.Assembly do
   defp module(name) when is_binary(name), do: String.to_existing_atom(name)
   defp module(module) when is_atom(module), do: module
 
-  @spec apply(harness :: Harness.t(), extensions :: [Lemieux.Extension.spec()]) ::
+  @spec apply(harness :: Harness.t(), extensions :: [Lemieux.Extension.spec()], opts :: keyword()) ::
           {:ok, Harness.t()} | {:error, term()}
-  def apply(harness, extensions) do
+  def apply(harness, extensions, opts \\ []) do
     base = harness.tools || Tools.default()
 
     extensions
     |> Enum.reduce_while({:ok, harness, []}, fn extension, {:ok, current, required} ->
       before = current.tools || Tools.default()
 
-      case Harness.assemble(current, [extension]) do
+      case Startup.assemble_extension(current, extension, opts) do
         {:ok, updated} ->
           required = require_transformation(required, extension, before, updated)
 

@@ -95,7 +95,7 @@ defmodule Lmx.Notices do
   @holderless ["Apache-2.0"]
   @first_party [:lmx, :lemieux, :lemieux_systemone_compaction]
   @elixir_apps [:eex, :elixir, :ex_unit, :iex, :logger, :mix]
-  @license_file ~r/^(licen[cs]e|notice|copying|copyright)/i
+  @license_file ~r/^(licen[cs]e|notice|copying|copyright|third[_ -]party[_ -]notices)/i
 
   @doc """
   Writes `LICENSE`, `NOTICE` and `THIRD_PARTY_NOTICES` to the release root

@@ -81,6 +81,7 @@ defmodule Lemieux.Conversation.Dispatch do
   alias Lemieux.Conversation
   alias Lemieux.Conversation.Command
   alias Lemieux.Conversation.Command.Builtin
+  alias Lemieux.Conversation.Command.Copy
   alias Lemieux.Conversation.Command.Provider
   alias Lemieux.Session
 
@@ -269,7 +270,8 @@ defmodule Lemieux.Conversation.Dispatch do
   Interprets the answer to work that `perform/3` handed to `:run`.
 
   Most answers are events `Lemieux.Conversation.event/2` already understands
-  and are folded as they are. Three carry more: an accepted retry is a turn
+  and are folded as they are. Clipboard receipts belong to the copy command.
+  Three carry more: an accepted retry is a turn
   starting, an MCP change that worked is followed by the fresh listing
   the task fetched so that the host's menu and the person both see it, and
   what `/provider NAME` found when it asked the host's `:discover` again is
@@ -277,6 +279,8 @@ defmodule Lemieux.Conversation.Dispatch do
   """
   @spec answer(acc :: acc(), host :: t(), message :: term()) :: acc()
   def answer(acc, host, message)
+
+  def answer(acc, host, {:copy_result, result}), do: Copy.completed(acc, host, result)
 
   def answer(acc, host, {:retry_result, :ok} = message),
     do: acc |> fold(host, message) |> react(host, :turn_started)

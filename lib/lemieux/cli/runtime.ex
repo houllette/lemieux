@@ -148,6 +148,7 @@ defmodule Lemieux.CLI.Runtime do
   alias Lemieux.CLI.Runtime.Assembly
   alias Lemieux.CLI.Runtime.SecretPaths
   alias Lemieux.CLI.Skills
+  alias Lemieux.CLI.Startup
   alias Lemieux.CLI.SystemOneCompaction
   alias Lemieux.Conversation.Command.Builtin
   alias Lemieux.Environment.Local
@@ -187,6 +188,7 @@ defmodule Lemieux.CLI.Runtime do
     :status_line,
     :followups,
     :processing,
+    :startup_animation,
     :notices,
     :renderers,
     :commands
@@ -280,13 +282,14 @@ defmodule Lemieux.CLI.Runtime do
              :search,
              :apply_patch,
              :planning,
+             :a2ui,
              :workspace,
              :loaded,
              :checkpoints,
              :host
            ]),
          base = Harness.new(tools: Keyword.get(opts, :tools)),
-         {:ok, harness} <- assemble(base, Keyword.values(catalog)) do
+         {:ok, harness} <- assemble(base, Keyword.values(catalog), opts) do
       {:ok, harness.tools || Tools.default()}
     end
   end
@@ -350,6 +353,9 @@ defmodule Lemieux.CLI.Runtime do
       root of their own;
     * `:extensions` — the host's own, applied after `lmx`'s and after
       anything the person loaded;
+    * `:startup_step` — an optional host callback `(id, text, status)` for
+      extension loading and initialization. IDs are bounded strings and
+      statuses are `"busy"`, `"ok"` or `"fail"`; it is never stored in the harness;
     * `:routes` — the model routes `with_routes/2` registered, so they are
       not registered a second time here; without it, and without
       `:provider`, they are registered now;
@@ -408,10 +414,11 @@ defmodule Lemieux.CLI.Runtime do
          {:ok, equipped} <-
            assemble(
              base(options, base_opts, recorded, resume, loaded),
-             Keyword.values(equipment)
+             Keyword.values(equipment),
+             opts
            ),
          {:ok, harness} <-
-           Assembly.apply(equipped, Keyword.values(composition)) do
+           Assembly.apply(equipped, Keyword.values(composition), opts) do
       harness = struct!(harness, host_constraints(opts))
       harness = %{harness | disabled_tools: harness.disabled_tools || recorded["disabled_tools"]}
       # Keep ceilings in the recorded assembly and `lmx explain`. A notice is
@@ -576,8 +583,16 @@ defmodule Lemieux.CLI.Runtime do
   # shipped ones give are already sentences naming the file, and the hosts
   # print a start error as it is, so those pass through bare; anything else
   # keeps the module for whoever reads it.
-  defp assemble(base, extensions) do
-    case Harness.assemble(base, extensions) do
+  defp assemble(base, extensions, opts) do
+    result =
+      Enum.reduce_while(extensions, {:ok, base}, fn extension, {:ok, current} ->
+        case Startup.assemble_extension(current, extension, opts) do
+          {:ok, updated} -> {:cont, {:ok, updated}}
+          error -> {:halt, error}
+        end
+      end)
+
+    case result do
       {:ok, harness} -> {:ok, harness}
       {:error, {_module, reason}} when is_binary(reason) -> {:error, reason}
       {:error, reason} -> {:error, reason}
@@ -723,7 +738,7 @@ defmodule Lemieux.CLI.Runtime do
     else
       with {:ok, loaded} <- loaded(options, opts),
            {:ok, routes} <- routes(options, opts, loaded) do
-        {:ok, Keyword.put(opts, :routes, routes)}
+        {:ok, opts |> Keyword.put(:routes, routes) |> Keyword.put(:loaded_extensions, loaded)}
       end
     end
   end
@@ -759,12 +774,18 @@ defmodule Lemieux.CLI.Runtime do
   defp loaded(%Options{extensions: []}, _opts), do: {:ok, []}
 
   defp loaded(%Options{extensions: selections} = options, opts) do
-    LoadedExtensions.load_all(selections,
-      root: Keyword.get_lazy(opts, :extensions_dir, &LoadedExtensions.default_root/0),
-      # Options kept in the config file rather than the bundle's manifest, so
-      # rebuilding an extension no longer resets them.
-      options: Config.get(options.config, "extension_options", %{})
-    )
+    case Keyword.fetch(opts, :loaded_extensions) do
+      {:ok, loaded} ->
+        {:ok, loaded}
+
+      :error ->
+        LoadedExtensions.load_all(selections,
+          root: Keyword.get_lazy(opts, :extensions_dir, &LoadedExtensions.default_root/0),
+          # Rebuilding a bundle must not reset the person's configured options.
+          options: Config.get(options.config, "extension_options", %{}),
+          startup_step: opts[:startup_step]
+        )
+    end
   end
 
   # The base is the parsed options and the host's own harness fields. On a
@@ -804,6 +825,7 @@ defmodule Lemieux.CLI.Runtime do
     |> Keyword.put_new(:themes, Config.get(options.config, "themes", %{}))
     |> Keyword.put_new(:keys, Config.get(options.config, "keys"))
     |> Keyword.put_new(:processing, Config.get(options.config, "processing"))
+    |> Keyword.put_new(:startup_animation, Config.get(options.config, "startup_animation"))
     |> Keyword.put_new(:system, system(options, recorded, resume))
     |> Keyword.put(:tools, tools(opts, recorded, resume))
     |> Harness.new()
@@ -921,6 +943,7 @@ defmodule Lemieux.CLI.Runtime do
       {:ok,
        recipe
        |> with_lmx_equipment(options, context, catalog?(context, elixir, profile?))
+       |> Enum.concat(a2ui: if(Keyword.get(opts, :a2ui, false), do: Lemieux.Extensions.A2UI))
        |> Enum.concat(Enum.map(loaded, &{:loaded, &1.spec}))
        |> Enum.concat(checkpoints: checkpoints(options, context))
        |> Enum.reject(fn {name, spec} ->

@@ -128,10 +128,10 @@ it. A model specification that does not parse, or names a provider `lmx` does
 not know, stops it before the screen opens, with `lmx run`'s sentence and
 status 2.
 
-**When it starts.** A notice box at the top shows the startup banner, which
-states the permission mode and the sandbox, by default `full auto: tools run
+**When it starts.** A temporary box inside the transcript shows the startup
+banner, which states the permission mode and the sandbox, by default `full auto: tools run
 without asking · commands are not sandboxed`, followed by any workspace or
-configuration notices and the MCP servers that connected. The box closes ten
+configuration notices and the MCP servers that connected. The box closes five
 seconds after its newest line, or at once on Esc. The startup never waits: MCP
 servers connect in the background (`connecting NAME…` on the status line,
 details in `/mcp`), and you can type while the session starts; Enter queues
@@ -183,8 +183,11 @@ the transcript says what the turn is doing right now: `thinking (40s)`,
 `running bash (2m)`, `waiting for your approval of bash`.
 
 **When it ends.** On a clean exit, `lmx` prints where the conversation went:
-``lmx: session NAME is saved · `lmx -c` resumes it`` (with `-C DIR` when the
-session worked in another directory).
+``lmx: session NAME is saved · `lmx --resume NAME` resumes it`` (with `-C DIR`
+when the session worked in another directory). This names the session you just
+left, including an idle new session or one selected with `/resume`. A local
+`/name` caption appears alongside its derived player name; the resume command
+uses that player name, such as `maxime-comtois`, so you can retype it easily.
 
 Besides the conversation, the terminal UI gives you:
 
@@ -367,7 +370,7 @@ links to the docs, issues and questions at the end.
 | `/redo [--force]` | Take back the last `/undo`; `--force` overwrites files changed since |
 | `/diff` | Show the working tree's `git diff` (or `git status`), bounded |
 | `!COMMAND` or `/shell COMMAND` | Run a command yourself; its output is shown and handed to the model with your next message |
-| `/copy` | Copy the latest agent response |
+| `/copy [source]` | Copy the latest agent response; the TUI includes rendered diagrams, `source` keeps the original fences |
 | `/export [PATH]` | Write the transcript as Markdown (default under `~/.lmx/exports`) |
 | `/init` | Ask the agent to draft an `AGENTS.md` for this repository |
 | `/memory [--project] TEXT` | Append a line to your memory file, or the repository's |

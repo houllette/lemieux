@@ -1,0 +1,209 @@
+[
+  {
+    "id": "mermaid",
+    "component": "MermaidDiagram",
+    "source": "flowchart LR\n  Request --> Worker\n  Worker --> Response"
+  },
+  {
+    "id": "flowchart",
+    "component": "Flowchart",
+    "direction": "LR",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Start"
+      },
+      {
+        "id": "work",
+        "label": "Do work"
+      },
+      {
+        "id": "done",
+        "label": "Done"
+      }
+    ],
+    "edges": [
+      {
+        "from": "start",
+        "to": "work"
+      },
+      {
+        "from": "work",
+        "to": "done"
+      }
+    ]
+  },
+  {
+    "id": "sequence",
+    "component": "SequenceDiagram",
+    "participants": [
+      {
+        "id": "Client",
+        "label": "Client"
+      },
+      {
+        "id": "Service",
+        "label": "Service"
+      },
+      {
+        "id": "Database",
+        "label": "Database"
+      }
+    ],
+    "events": [
+      {
+        "from": "Client",
+        "to": "Service",
+        "label": "Request"
+      },
+      {
+        "from": "Service",
+        "to": "Database",
+        "label": "Query"
+      },
+      {
+        "from": "Database",
+        "to": "Service",
+        "label": "Result"
+      },
+      {
+        "from": "Service",
+        "to": "Client",
+        "label": "Response"
+      }
+    ]
+  },
+  {
+    "id": "c4",
+    "component": "C4Diagram",
+    "level": "context",
+    "elements": [
+      {
+        "id": "user",
+        "label": "User",
+        "kind": "person"
+      },
+      {
+        "id": "app",
+        "label": "Example app",
+        "kind": "system"
+      },
+      {
+        "id": "api",
+        "label": "External API",
+        "kind": "system"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "user",
+        "to": "app",
+        "label": "Uses"
+      },
+      {
+        "from": "app",
+        "to": "api",
+        "label": "Calls"
+      }
+    ]
+  },
+  {
+    "id": "state",
+    "component": "StateDiagram",
+    "direction": "LR",
+    "states": [
+      {
+        "id": "idle",
+        "label": "Idle"
+      },
+      {
+        "id": "running",
+        "label": "Running"
+      },
+      {
+        "id": "done",
+        "label": "Done"
+      },
+      {
+        "id": "initial",
+        "kind": "initial"
+      },
+      {
+        "id": "final",
+        "kind": "final"
+      }
+    ],
+    "transitions": [
+      {
+        "from": "initial",
+        "to": "idle"
+      },
+      {
+        "from": "idle",
+        "to": "running",
+        "label": "start"
+      },
+      {
+        "from": "running",
+        "to": "done",
+        "label": "finish"
+      },
+      {
+        "from": "done",
+        "to": "final"
+      }
+    ]
+  },
+  {
+    "id": "er",
+    "component": "ERDiagram",
+    "direction": "LR",
+    "entities": [
+      {
+        "attributes": [
+          {
+            "name": "id",
+            "type": "ID",
+            "keys": [
+              "pk"
+            ]
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "keys": []
+          }
+        ],
+        "id": "User"
+      },
+      {
+        "attributes": [
+          {
+            "name": "id",
+            "type": "ID",
+            "keys": [
+              "pk"
+            ]
+          },
+          {
+            "name": "user_id",
+            "type": "ID",
+            "keys": [
+              "fk"
+            ]
+          }
+        ],
+        "id": "Order"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "User",
+        "to": "Order",
+        "label": "places",
+        "from_cardinality": "one",
+        "to_cardinality": "one_or_more"
+      }
+    ]
+  }
+]
