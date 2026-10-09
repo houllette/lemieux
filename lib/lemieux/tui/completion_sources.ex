@@ -119,8 +119,10 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
       # all.
       |> Enum.sort_by(&String.downcase(&1.name))
       |> Enum.map(fn command ->
+        # Bare /copy has an immediate action; its source option is optional.
         accepts_arguments? =
-          Map.fetch!(by_name, command.name).accepts_arguments? and command.name != "mcp"
+          Map.fetch!(by_name, command.name).accepts_arguments? and
+            command.name not in ~w(mcp copy)
 
         suffix = if accepts_arguments?, do: " ", else: ""
 

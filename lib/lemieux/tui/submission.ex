@@ -195,6 +195,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp echo_input(state, typed, effects) do
       cond do
+        :diff in effects and
+            Conversation.command_decision(Choices.command_policy(state), :diff) == :allow ->
+          state
+
         :compact in effects and
             Conversation.command_decision(Choices.command_policy(state), :compact) == :allow ->
           Events.start_compact_display(state)

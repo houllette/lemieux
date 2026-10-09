@@ -59,12 +59,12 @@ defmodule Lemieux.TUI.PolicyStartupTest do
       assert screen(state) =~ "/undo covers file-tool edits only here"
     end
 
-    # The notice box is for the start; a person who missed it still has it
-    # in `/doctor`'s checkpoints row.
-    test "it is a notice, not a transcript row", context do
+    # The box is a temporary UI row; /doctor still explains the scope later.
+    test "it is in the temporary notice box", context do
       state = started(checkpoints: context.checkpoints, cwd: context.outside)
 
-      assert state.lines == []
+      assert [{:notice_box, _id, items}] = state.lines
+      assert Enum.any?(items, &(&1.text == @undo_notice))
     end
 
     test "in a git repository there is nothing to add", context do

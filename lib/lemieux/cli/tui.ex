@@ -49,9 +49,7 @@ defmodule Lemieux.CLI.TUI do
          :ok <- no_stray_words(options.argv, argv, opts),
          :ok <- prompt(options),
          :ok <- one_of_continue_or_resume(options),
-         {:ok, opts} <- Runtime.with_routes(options, opts),
-         {:ok, options, opts} <- ExtensionExperience.prepare(options, opts),
-         :ok <- model_spec(options, opts),
+         :ok <- early_model_spec(options, opts),
          :ok <- available(),
          {:ok, permissions} <- Runtime.permissions(options, opts) do
       start(Runtime.project_mcp(options, opts), Keyword.put(opts, :permissions, permissions))
@@ -59,6 +57,13 @@ defmodule Lemieux.CLI.TUI do
       {:error, :usage, message} -> fail(message, 2)
       {:error, message} -> fail(message)
     end
+  end
+
+  # Selected code can add routes or choose a profile model. Load it in the
+  # startup task, after the first frame, then validate its resolved model.
+  defp early_model_spec(options, opts) do
+    if options.extensions != [] or options.extension_profile != nil or options.build_ext or
+         Keyword.has_key?(opts, :extension_profile), do: :ok, else: model_spec(options, opts)
   end
 
   # `lmx run`'s check (`Lemieux.CLI.Run`), before a screen opens: a model
@@ -205,6 +210,8 @@ defmodule Lemieux.CLI.TUI do
     {:ok, supervisor} = Runtime.mount(opts)
     tasks = Lemieux.Supervisor.task_supervisor(supervisor)
     opts = Keyword.put(opts, :updates, updates || UpdateCheck.host(tasks, opts))
+    owner = self()
+    exit_token = make_ref()
 
     app =
       opening_app(options, opts,
@@ -217,7 +224,8 @@ defmodule Lemieux.CLI.TUI do
         end,
         task_supervisor: tasks,
         size: size(),
-        title: title()
+        title: title(),
+        on_exit: fn receipt -> send(owner, {:tui_closed, exit_token, receipt}) end
       )
 
     # This module is optional in library hosts. Resolve it only after
@@ -228,20 +236,33 @@ defmodule Lemieux.CLI.TUI do
     screen =
       quiet_stderr(fn ->
         with {:ok, pid} <- start_screen(tui, app, CLI.program(opts)) do
-          announce_update(pid, options)
-          discover_models(pid, options, opts)
-          {:left, leaving_on_sigterm(pid, fn -> await(pid) end)}
+          left(pid, options, opts, exit_token)
         end
       end)
 
     case screen do
-      {:left, outcome} ->
+      {:left, outcome, receipt} ->
         Runtime.stop_sessions(supervisor)
-        farewell(outcome, options, opts)
+        farewell(outcome, options, Keyword.put(opts, :closed_session, receipt))
 
       {:error, message} ->
         fail(message)
     end
+  end
+
+  defp left(pid, options, opts, exit_token) do
+    announce_update(pid, options)
+    discover_models(pid, options, opts)
+    outcome = leaving_on_sigterm(pid, fn -> await(pid) end)
+    # terminate/2 sends this before DOWN. Failed mounts have no receipt.
+    receipt =
+      receive do
+        {:tui_closed, ^exit_token, receipt} -> receipt
+      after
+        0 -> nil
+      end
+
+    {:left, outcome, receipt}
   end
 
   # The handler `Lemieux.CLI.Logs` adds when `LMX_LOG_LEVEL` is set.
@@ -344,7 +365,12 @@ defmodule Lemieux.CLI.TUI do
   defp opening_harness(options, opts) do
     Harness.new(
       theme: Keyword.get_lazy(opts, :theme, fn -> Config.get(options.config, "theme") end),
-      themes: Keyword.get_lazy(opts, :themes, fn -> Config.get(options.config, "themes", %{}) end)
+      themes:
+        Keyword.get_lazy(opts, :themes, fn -> Config.get(options.config, "themes", %{}) end),
+      startup_animation:
+        Keyword.get_lazy(opts, :startup_animation, fn ->
+          Config.get(options.config, "startup_animation")
+        end)
     )
   end
 
@@ -378,11 +404,14 @@ defmodule Lemieux.CLI.TUI do
   defp farewell(outcome, _options, _opts), do: outcome
 
   @doc """
-  The line printed when the terminal UI closes: the session `-c` would
-  resume in `cwd` and the command that resumes it, or `nil` when there is
-  nothing to resume.
+  The line printed when the terminal UI closes. `:closed_session` supplies
+  the screen's final `%{id: id, name: caption, cwd: directory}` receipt;
+  its derived player name is offered to `--resume`, including an idle session
+  omitted from the recent-session picker. A local `/name` caption changes
+  only the label, never the resumable name. A failed start has no receipt or hint.
 
-  `-c` resumes `Lemieux.CLI.SessionIndex.latest/2`, so the hint names exactly
+  Without a receipt, this helper retains the directory-based `-c` hint.
+  `-c` resumes `Lemieux.CLI.SessionIndex.latest/2`, so that hint names exactly
   the session that flag would pick, spelled with the command this lmx was
   started as (`Lemieux.CLI.program/1`) — `mix lmx -c` from a source
   checkout — and with `-C DIR` when this one worked somewhere other than
@@ -401,11 +430,36 @@ defmodule Lemieux.CLI.TUI do
         {:error, _gone} -> nil
       end
 
-    case cwd || here do
-      nil -> nil
-      cwd -> resume_hint(store, cwd, here, opts)
+    case Keyword.fetch(opts, :closed_session) do
+      {:ok, receipt} -> closed_hint(store, receipt, cwd || here, here, opts)
+      :error -> resume_hint(store, cwd || here, here, opts)
     end
   end
+
+  defp closed_hint(store, %{id: id} = receipt, cwd, here, opts) when is_binary(id) do
+    case Lemieux.Store.read(store, id) do
+      {:ok, [_ | _]} ->
+        cwd = Map.get(receipt, :cwd) || cwd
+
+        hint(
+          session_label(receipt[:name], id),
+          "--resume #{CLI.shell_quoted(Shorthand.of(id))}",
+          cwd,
+          here,
+          opts
+        )
+
+      _missing ->
+        nil
+    end
+  end
+
+  defp closed_hint(_store, _receipt, _cwd, _here, _opts), do: nil
+
+  defp session_label(nil, id), do: Shorthand.of(id)
+  defp session_label(name, id), do: "#{name} (#{Shorthand.of(id)})"
+
+  defp resume_hint(_store, nil, _here, _opts), do: nil
 
   defp resume_hint(store, cwd, here, opts) do
     case SessionIndex.latest(store, cwd) do
@@ -413,13 +467,17 @@ defmodule Lemieux.CLI.TUI do
         nil
 
       id ->
-        directory =
-          if here && Path.expand(cwd) == Path.expand(here),
-            do: "",
-            else: " -C #{CLI.shell_quoted(cwd)}"
-
-        "session #{Shorthand.of(id)} is saved · `#{CLI.program(opts)}#{directory} -c` resumes it"
+        hint(Shorthand.of(id), "-c", cwd, here, opts)
     end
+  end
+
+  defp hint(label, resume, cwd, here, opts) do
+    directory =
+      if is_nil(cwd) or (here && Path.expand(cwd) == Path.expand(here)),
+        do: "",
+        else: " -C #{CLI.shell_quoted(cwd)}"
+
+    "session #{label} is saved · `#{CLI.program(opts)}#{directory} #{resume}` resumes it"
   end
 
   # Once per launch rather than per session start, so a start that failed
@@ -512,45 +570,89 @@ defmodule Lemieux.CLI.TUI do
   defp terminal_detail(detail) when is_binary(detail), do: detail
   defp terminal_detail(detail), do: inspect(detail)
 
-  defp prepare_start(options, opts, app, tasks) do
+  @doc false
+  @spec prepare_start(
+          options :: Options.t(),
+          opts :: keyword(),
+          app :: pid(),
+          tasks :: GenServer.server()
+        ) ::
+          {:ok, pid(), keyword()} | {:error, term()}
+  def prepare_start(options, opts, app, tasks) do
+    send(app, {:startup_step, :configuration, "Configuration loaded", "ok"})
+
+    opts =
+      Keyword.put(opts, :startup_step, fn id, text, status ->
+        send(app, {:startup_step, id, text, status})
+      end)
+
+    with {:ok, opts} <-
+           boot_step(app, :routes, "Register model routes", fn ->
+             Runtime.with_routes(options, opts)
+           end),
+         {:ok, options, opts} <-
+           boot_step(app, :profile, "Prepare extension profile", fn ->
+             ExtensionExperience.prepare(options, opts)
+           end),
+         :ok <- model_spec(options, opts) do
+      prepare_session(options, opts, app, tasks)
+    else
+      {:error, :usage, message} -> {:error, message}
+      error -> error
+    end
+  end
+
+  defp prepare_session(options, opts, app, tasks) do
+    opts = Keyword.put_new(opts, :a2ui, true)
     store = Runtime.store(options, opts)
     list_sessions = fn -> SessionIndex.recent(store) end
     cwd = Keyword.get_lazy(opts, :cwd, &File.cwd!/0)
     {options, continued} = continue(options, store, cwd)
     opts = Keyword.update(opts, :notices, continued, &(&1 ++ continued))
-    options = resolve_model(options, opts)
+
+    options =
+      boot_step(app, :model, "Resolve startup model", fn -> resolve_model(options, opts) end)
 
     # The recent-session picker reads up to fifty transcripts. It needs no
     # workspace or provider state, so overlap that disk work with harness
     # preparation instead of making "Starting session..." wait for both in
     # sequence. The result is still checked before the session becomes ready.
-    history = Task.Supervisor.async_nolink(tasks, list_sessions)
+    history =
+      Task.Supervisor.async_nolink(tasks, fn ->
+        boot_step(app, :history, "Read recent sessions", list_sessions)
+      end)
+
     # A route the start model is on — Ixway checking its instance and
     # catalogue, an extension's route doing its own discovery — asks over
     # HTTP. Start those requests before local workspace assembly so their
     # latency overlaps the work needed for every session.
     provider_task =
       Task.Supervisor.async_nolink(tasks, fn ->
-        provider =
-          Keyword.get_lazy(opts, :provider, fn ->
-            Runtime.tui_provider(options, Keyword.get(opts, :routes, []))
-          end)
-
-        if String.starts_with?(options.model, "ixway:") or Runtime.route?(opts, options.model) do
-          Runtime.discover_tui_provider(provider, options.model)
-        else
-          {:ok, provider}
-        end
+        boot_step(app, :provider, "Discover provider", fn ->
+          discover_startup_provider(options, opts)
+        end)
       end)
 
     try do
-      with {:ok, discovered} <- workspace(options, opts),
+      with {:ok, discovered} <-
+             boot_step(app, :workspace, "Discover workspace", fn -> workspace(options, opts) end),
            opts = Keyword.put(opts, :workspace, discovered),
-           {:ok, standard_tools} <- Runtime.standard_tools(options, opts),
-           {:ok, provider} <- Task.await(provider_task, :infinity),
-           {:ok, prepared} <- Runtime.prepare(options, Keyword.put(opts, :provider, provider)),
-           {:ok, sessions} <- Task.await(history, :infinity),
-           {:ok, session} <- started(Runtime.start(prepared, subscriber: subscribers(app, opts))) do
+           {:ok, standard_tools} <-
+             boot_step(app, :tools, "Assemble tools", fn ->
+               Runtime.standard_tools(options, opts)
+             end),
+           {:ok, provider} <-
+             Task.await(provider_task, :infinity),
+           {:ok, prepared} <-
+             boot_step(app, :harness, "Prepare harness", fn ->
+               Runtime.prepare(options, Keyword.put(opts, :provider, provider))
+             end),
+           {:ok, sessions} <-
+             Task.await(history, :infinity),
+           {:ok, session} <-
+             boot_step(app, :session, "Start session", fn ->
+               started(Runtime.start(prepared, subscriber: subscribers(app, opts)))
+             end) do
         Models.remember(options, prepared.model)
         options = %{options | model: prepared.model}
         first_run = first_run(options, opts)
@@ -582,6 +684,17 @@ defmodule Lemieux.CLI.TUI do
     end
   end
 
+  defp discover_startup_provider(options, opts) do
+    provider =
+      Keyword.get_lazy(opts, :provider, fn ->
+        Runtime.tui_provider(options, Keyword.get(opts, :routes, []))
+      end)
+
+    if String.starts_with?(options.model, "ixway:") or Runtime.route?(opts, options.model),
+      do: Runtime.discover_tui_provider(provider, options.model),
+      else: {:ok, provider}
+  end
+
   defp resume_session(options, opts, prepared) do
     fn id, subscriber ->
       resumed = Runtime.resume_options(options, id)
@@ -595,6 +708,14 @@ defmodule Lemieux.CLI.TUI do
 
       resumed |> Runtime.start_session(resume_opts) |> started()
     end
+  end
+
+  defp boot_step(app, id, text, work) do
+    send(app, {:startup_step, id, text, "busy"})
+    result = work.()
+    status = if match?({:error, _reason}, result), do: "fail", else: "ok"
+    send(app, {:startup_step, id, text, status})
+    result
   end
 
   defp new_session(options, opts, prepared) do
@@ -1096,7 +1217,7 @@ defmodule Lemieux.CLI.TUI do
     default because it is a Rust NIF and not something to impose on a project
     that only wanted the library. Add it:
 
-        {:ex_ratatui, "~> 0.16"}
+        {:ex_ratatui, "~> 0.17"}
 
     then `mix deps.get`. A path dependency on lemieux was compiled without
     it, so compile it again: `mix deps.compile lemieux --force`.

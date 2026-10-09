@@ -34,7 +34,8 @@ defmodule Lmx.MixProject do
       # Bundled with lmx and disclosed in its README: it sends conversation
       # excerpts to a System One provider only once one is configured.
       {:lemieux_systemone_compaction, path: "extensions/systemone_compaction"},
-      {:ex_ratatui, "~> 0.16"},
+      {:ex_ratatui, "~> 0.17"},
+      {:ascii, "~> 0.4.1"},
       {:castle, "~> 1.0"}
     ]
   end

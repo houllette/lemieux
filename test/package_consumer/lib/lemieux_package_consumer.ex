@@ -4,6 +4,8 @@ defmodule LemieuxPackageConsumer do
   @spec version() :: String.t()
   def version, do: Lemieux.version()
 
+  alias Lemieux.Extensions.A2UI
+  alias Lemieux.Extensions.A2UI.Diagram
   alias Lemieux.Harness
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
@@ -17,6 +19,16 @@ defmodule LemieuxPackageConsumer do
   @spec verify(phase :: String.t(), directory :: Path.t()) :: :ok
   def verify(phase, directory) when phase in ["seed", "resume", "tighten"] do
     false = Code.ensure_loaded?(ExRatatui)
+    false = Code.ensure_loaded?(Ascii)
+    false = Diagram.available?()
+
+    :error =
+      Diagram.prepare(%{
+        "component" => "MermaidDiagram",
+        "source" => "flowchart LR\nA --> B"
+      })
+
+    [] = A2UI.apply(Harness.new(tools: []), []).tools
     true = Application.spec(:lemieux, :mod) in [nil, []]
     {:ok, supervisor} = Lemieux.Supervisor.start_link(name: __MODULE__.Supervisor)
     store = JSONL.new(directory)

@@ -13,7 +13,7 @@ defmodule LemieuxSystemOneCompaction.MixProject do
         {:lemieux, path: System.get_env("LEMIEUX_EXTENSION_BASE", "../../../..")},
         {:system_one_sdk, "~> 0.6.0"},
         {:pristine, "~> 0.4.0"},
-        {:req_llm, "~> 1.26"},
+        {:req_llm, "~> 1.27"},
         {:dotenvy, "~> 1.2"}
       ],
       aliases: [

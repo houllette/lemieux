@@ -8,7 +8,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias ExRatatui.Style
     alias ExRatatui.Text.Line
     alias ExRatatui.Text.Span
-    alias ExRatatui.Widgets.BigText
     alias ExRatatui.Widgets.Block
     alias ExRatatui.Widgets.Clear
     alias ExRatatui.Widgets.Paragraph
@@ -18,13 +17,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.ModelSpec
     alias Lemieux.TUI
     alias Lemieux.TUI.Activity
+    alias Lemieux.TUI.Art
+    alias Lemieux.TUI.Boot
     alias Lemieux.TUI.Colour
     alias Lemieux.TUI.Followup
     alias Lemieux.TUI.Layout
     alias Lemieux.TUI.MCPPanel
     alias Lemieux.TUI.MCPStatus
     alias Lemieux.TUI.Modal
-    alias Lemieux.TUI.Notices
     alias Lemieux.TUI.PlanPanel
     alias Lemieux.TUI.Policy
     alias Lemieux.TUI.QuestionPanel
@@ -51,7 +51,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       base =
         [{transcript(state, panes.transcript, problem), panes.transcript}] ++
-          notice_widgets(state, panes) ++
           status(state, panes.status) ++
           input_widgets(state, panes.input) ++
           queued_widgets(state, panes) ++
@@ -64,7 +63,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         nil ->
           case {state.tools.question_flow, state.tools.mcp_flow} do
             {nil, nil} ->
-              base ++ completion_widgets.(panes)
+              base ++ completion_widgets.(panes) ++ boot_widgets(state, panes)
 
             {nil, %{mode: :add, questionnaire: questionnaire}} ->
               base ++ question_panel(questionnaire, panes, state)
@@ -77,9 +76,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
           end
 
         overlay ->
-          overlay(overlay, frame)
+          overlay(state, overlay, frame)
       end
     end
+
+    defp boot_widgets(%TUI{resume: %{startup_status: :loading}} = state, panes),
+      do: Boot.render(state, panes.transcript)
+
+    defp boot_widgets(_state, _panes), do: []
 
     # The theme as well as the accent: what a person answered is drawn from
     # the theme's slots, which a pale page re-picks (`Lemieux.TUI.QuestionPanel`).
@@ -172,52 +176,68 @@ if Code.ensure_loaded?(ExRatatui.App) do
       ]
     end
 
-    # `/habs` also covers the screen while the CLI's asynchronous startup runs.
-    # The screen it covers comes back untouched when the animation ends — an
-    # easter egg that threw a transcript away would be a bug wearing a joke's clothes.
-    # `:quadrant` rather than `:full`, because at one cell per pixel "GO HABS GO!"
-    # needs 88 columns and at four it needs 44, which fits the terminal most people
-    # run this in.
-    @habs_words ["GO", "HABS", "GO!"]
-    @habs_colours [:blue, :red, :white]
-    @habs_frames 10
-    @habs_height 4
-
-    defp overlay(%{frame: frame}, frame_size) do
+    defp overlay(state, overlay, frame_size) do
       area = %Rect{x: 0, y: 0, width: frame_size.width, height: frame_size.height}
 
-      [{%Clear{}, area} | habs_banner(frame, frame_size)]
+      if state.resume.startup_status != :loading and overlay.frame >= overlay.frames - 1 do
+        [{%Clear{}, area}]
+      else
+        banner = startup_banner(state, overlay, area)
+
+        banner_bottom =
+          case banner do
+            [{_widget, rect}] -> rect.y + rect.height + 1
+            _empty -> 0
+          end
+
+        boot =
+          if state.resume.startup_status in [:loading, :ready] and state.terminal.boot.steps != [],
+            do:
+              Boot.render(state, %Rect{
+                x: 0,
+                y: min(banner_bottom, area.height),
+                width: area.width,
+                height: max(area.height - banner_bottom - 1, 0)
+              }),
+            else: []
+
+        [{%Clear{}, area}] ++ banner ++ boot
+      end
     end
 
-    # The last frame is the blank one: the animation clears itself before
-    # handing the screen back, so the transcript reappears rather than being
-    # wiped in by a banner dissolving over it.
-    defp habs_banner(frame, _frame_size) when frame >= @habs_frames - 1, do: []
+    defp startup_banner(state, %{art: art} = overlay, area)
+         when not is_nil(art) and area.width >= art.cols and area.height >= 14 do
+      widget = Art.paragraph(art, theme(state).name == "mono")
 
-    defp habs_banner(frame, frame_size) do
-      spans =
-        @habs_words
-        |> Enum.take(min(frame + 1, length(@habs_words)))
-        |> Enum.with_index()
-        |> Enum.map(fn {word, index} ->
-          colour = Enum.at(@habs_colours, rem(index + frame, length(@habs_colours)))
-          Span.new(word <> " ", style: %Style{fg: colour, modifiers: [:bold]})
-        end)
+      background =
+        if overlay.background && theme(state).name != "mono", do: hex_colour(overlay.background)
 
-      banner = %BigText{
-        lines: [Line.new(spans)],
-        pixel_size: :quadrant,
-        alignment: :center
+      widget = %{widget | style: %Style{bg: background}}
+
+      [
+        {widget,
+         %Rect{
+           x: max(div(area.width - art.cols, 2), 0),
+           y: 0,
+           width: min(art.cols, area.width),
+           height: min(art.rows, 10)
+         }}
+      ]
+    end
+
+    defp startup_banner(state, overlay, area) do
+      widget = %Paragraph{
+        text: overlay.text,
+        alignment: :center,
+        style: %Style{fg: theme(state).voices.activity, modifiers: [:bold]}
       }
 
-      area = %Rect{
-        x: 0,
-        y: max(div(frame_size.height - @habs_height, 2), 0),
-        width: frame_size.width,
-        height: min(@habs_height, frame_size.height)
-      }
+      [{widget, %Rect{x: 0, y: 0, width: area.width, height: min(area.height, 1)}}]
+    end
 
-      [{banner, area}]
+    defp hex_colour("#" <> hex) do
+      <<r, g, b>> = Base.decode16!(hex, case: :mixed)
+      {:rgb, r, g, b}
     end
 
     # What the accents are drawn in: the transcript rails, the input cursor
@@ -294,32 +314,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp reserved(panes, state) do
       panes
-      |> reserve_notices(state)
       |> reserve_queued_panel(state)
       |> reserve_plan_panel(state)
       |> then(&reserve_question_panel(state, &1))
     end
-
-    # The notice box takes its rows from the top of the transcript pane, so
-    # everything that measures the transcript — paging, hit-testing, the
-    # panels that size themselves from its top — measures what is left. Kept
-    # in the panes as `:notices` for the draw and for a click on its link. A
-    # pane too short to spare the rows and keep a few for the conversation
-    # does without the box; its timer still runs.
-    defp reserve_notices(%{transcript: %Rect{} = transcript} = panes, state) do
-      rows = Notices.rows(state, transcript.width, transcript.height)
-
-      if rows >= 3 and transcript.height - rows >= 4 do
-        area = %Rect{transcript | height: rows}
-        rest = %{transcript | y: transcript.y + rows, height: transcript.height - rows}
-        %{panes | transcript: rest} |> Map.put(:notices, area)
-      else
-        Map.put(panes, :notices, nil)
-      end
-    end
-
-    defp notice_widgets(state, %{notices: %Rect{} = area}), do: Notices.render(state, area)
-    defp notice_widgets(_state, _panes), do: []
 
     # The plan sits above the queued inputs, if there are any, and above the
     # input box otherwise, taking its rows from the transcript as they do.

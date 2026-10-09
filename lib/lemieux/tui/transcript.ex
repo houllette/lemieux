@@ -41,7 +41,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def say(state, who, text) do
-      state = close_line(state)
+      state = finish_line(state)
       lines = for line <- String.split(text, "\n"), do: {who, line}
       lines = maybe_separate_turn(state.lines, lines, who)
       added = Enum.reduce(lines, 0, fn line, total -> total + rows(state, line) end)
@@ -50,8 +50,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp push_model(state, line) do
-      row = Blocks.open(List.first(state.lines), line)
-      %{state | lines: [row | state.lines]} |> held(rows(state, row))
+      {count, row} = Blocks.start_line(state.lines, line)
+      removed = count_rows(state, Enum.take(state.lines, count))
+      %{state | lines: [row | Enum.drop(state.lines, count)]} |> held(rows(state, row) - removed)
     end
 
     # Classifies the line being written, now that something else is about to follow
@@ -61,7 +62,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec close_line(map()) :: map()
     def close_line(%{lines: lines} = state) do
-      case Blocks.close(lines, Screen.theme(state)) do
+      replace_head(state, Blocks.close(lines, Screen.theme(state)))
+    end
+
+    @doc false
+    @spec finish_line(map()) :: map()
+    def finish_line(%{lines: lines} = state),
+      do: replace_head(state, Blocks.finish(lines, Screen.theme(state)))
+
+    defp replace_head(%{lines: lines} = state, replacement) do
+      case replacement do
         {0, []} ->
           state
 
@@ -79,10 +89,70 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def append_rows(state, []), do: state
 
     def append_rows(state, lines) do
-      state = close_line(state)
+      state = finish_line(state)
       added = Enum.reduce(lines, 0, fn line, total -> total + rows(state, line) end)
       %{state | lines: Enum.reverse(lines, state.lines)} |> held(added)
     end
+
+    @doc false
+    @spec splice(
+            state :: map(),
+            newer :: list(),
+            removed :: list(),
+            replacement :: list(),
+            older :: list()
+          ) :: map()
+    def splice(state, newer, removed, replacement, older) do
+      below = count_rows(state, newer)
+      removed_count = count_rows(state, removed)
+      delta = count_rows(state, replacement) - removed_count
+
+      scroll =
+        if state.scroll > 0 and state.scroll >= below,
+          do: max(below, state.scroll + delta),
+          else: state.scroll
+
+      %{
+        state
+        | lines: newer ++ replacement ++ older,
+          scroll: scroll,
+          selection: splice_selection(state.selection, below, removed_count, delta),
+          terminal: %{
+            state.terminal
+            | row_cache: nil,
+              link_press: splice_link(state.terminal.link_press, below, removed_count, delta)
+          }
+      }
+    end
+
+    defp count_rows(state, lines), do: Enum.sum(Enum.map(lines, &rows(state, &1)))
+    defp splice_selection(nil, _below, _removed, _delta), do: nil
+
+    defp splice_selection(selection, below, removed, delta) do
+      {first, _column} = selection.anchor
+      {last, _column} = selection.cursor
+
+      if removed > 0 and max(first, last) >= below and min(first, last) < below + removed,
+        do: nil,
+        else: %{
+          selection
+          | anchor: splice_point(selection.anchor, below + removed, delta),
+            cursor: splice_point(selection.cursor, below + removed, delta)
+        }
+    end
+
+    defp splice_point({depth, column}, boundary, delta) when depth >= boundary,
+      do: {max(depth + delta, 0), column}
+
+    defp splice_point(point, _boundary, _delta), do: point
+
+    defp splice_link(nil, _below, _removed, _delta), do: nil
+
+    defp splice_link({_target, {depth, _column}}, below, removed, _delta)
+         when removed > 0 and depth >= below and depth < below + removed, do: nil
+
+    defp splice_link({target, point}, below, removed, delta),
+      do: {target, splice_point(point, below + removed, delta)}
 
     defp maybe_separate_turn(lines, new_lines, :you) do
       case List.first(lines) do

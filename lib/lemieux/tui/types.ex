@@ -39,6 +39,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             | {:context_bar, [{RichText.context_key(), float()}]}
             | {:context_key, [{RichText.context_key(), String.t()}]}
             | ToolText.row()
+            | {:notice_box, reference(), [Lemieux.TUI.Notices.item()]}
 
     @type processing_usage :: %{
             input: non_neg_integer(),
@@ -267,6 +268,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             mcp_ready?: boolean(),
             mcp_announced?: boolean(),
             plan: [map()] | nil,
+            plan_progress: {:model_art, term(), String.t()} | nil,
             requests: non_neg_integer(),
             request_cap: pos_integer() | nil,
             sandbox: map() | nil,

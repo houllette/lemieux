@@ -86,7 +86,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @spec stop_processing(TUI.t()) :: TUI.t()
     def stop_processing(state),
       do: %{
-        Transcript.close_line(state)
+        Transcript.finish_line(state)
         | turn: %{state.turn | started_at: nil, tick: nil, frame: 0, phase: nil, delegation: nil}
       }
 

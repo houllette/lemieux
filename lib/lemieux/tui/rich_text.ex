@@ -39,7 +39,11 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     alias ExRatatui.Style
     alias ExRatatui.Text.{Line, Span}
+    alias Lemieux.TUI.A2UI.Layout, as: A2UILayout
+    alias Lemieux.TUI.Art
     alias Lemieux.TUI.Blocks
+    alias Lemieux.TUI.Diagrams
+    alias Lemieux.TUI.Notices
     alias Lemieux.TUI.Theme
     alias Lemieux.TUI.Width
 
@@ -80,6 +84,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
             | {:context_bar, [{context_key(), float()}]}
             | {:context_key, [{context_key(), String.t()}]}
             | Lemieux.TUI.ToolText.row()
+            | {:notice_box, reference(), [Notices.item()]}
 
     # Too narrow for a hanging indent to leave room for words: below this the
     # gutter is drawn inline and the text wraps under it like any other.
@@ -100,6 +105,9 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     def lines(rows, width, %Theme{} = theme)
         when is_list(rows) and is_integer(width) and width > 0 do
       Enum.flat_map(rows, fn
+        {:notice_box, _id, items} ->
+          Notices.lines(items, width, theme)
+
         {:summary, text} ->
           summary(text, width, theme)
 
@@ -126,6 +134,26 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
         {:context_bar, segments} ->
           context_bar(segments, width, theme)
+
+        {:model_art, animation, description} ->
+          Art.lines(animation, description, width, theme)
+
+        {:model_diagram, prepared} ->
+          Diagrams.lines(prepared, width, theme)
+
+        {:model_ui, tree} ->
+          A2UILayout.lines(tree, width, theme)
+
+        {:model_drawing, drawing} ->
+          styled({:tool_heading, nil, :explore, "Drawing", drawing.description}, theme)
+          |> wrap(width)
+
+        {:model_drawing_error, message} ->
+          styled(
+            {:tool_heading, nil, :explore, "Drawing unavailable", message <> " · /copy source"},
+            theme
+          )
+          |> wrap(width)
 
         {:context_key, entries} ->
           context_key(entries, width, theme)

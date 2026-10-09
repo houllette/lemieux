@@ -1,12 +1,12 @@
 Rust crates in the ex_ratatui terminal NIF
 ==========================================
 
-ex_ratatui: 0.16.0
-Cargo.lock sha256: c3bc4c992efcacd72297f21ecfcbd2215c0d9d05ed35dee53362518d002e8fe8
+ex_ratatui: 0.17.0
+Cargo.lock sha256: 154456b8420162383ef78c4b3ca67541249bb384f5c9c9f6ab2a7ec3b6910346
 Targets: aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc
 Licenses: Apache-2.0, ISC, MIT, Zlib
 
-The terminal library's native code (lib/ex_ratatui-0.16.0/priv/native)
+The terminal library's native code (lib/ex_ratatui-0.17.0/priv/native)
 is compiled from these crates. Each entry gives the crate, its version and
 its declared license; where the crate offers a choice, the license lmx
 uses it under follows "used under". The copyright lines its license files
@@ -21,8 +21,8 @@ ansi-to-tui 8.0.1: MIT
     Copyright (c) The Ratatui Developers
 arrayvec 0.7.6: MIT OR Apache-2.0; used under MIT
     Copyright (c) Ulrik Sverdrup "bluss" 2015-2023
-base64 0.22.1: MIT OR Apache-2.0; used under MIT
-    Copyright (c) 2015 Alice Maz
+base64 0.23.1: MIT OR Apache-2.0; used under MIT
+    Copyright (c) 2025 Alice Maz, Marshall Pierce
 base64-simd 0.8.0: MIT
 bincode 1.3.3: MIT
     Copyright (c) 2014 Ty Overby
@@ -48,7 +48,7 @@ critical-section 1.2.0: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2022 The critical-section authors
 crossbeam-deque 0.8.6: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2019 The Crossbeam Project Developers
-crossbeam-epoch 0.9.18: MIT OR Apache-2.0; used under MIT
+crossbeam-epoch 0.9.21: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2019 The Crossbeam Project Developers
 crossbeam-utils 0.8.21: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2019 The Crossbeam Project Developers
@@ -63,15 +63,13 @@ derive_builder 0.20.2: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2016 rust-derive-builder contributors
 derive_more 2.1.1: MIT
     Copyright (c) 2016 Jelte Fennema
-diff 0.1.13: MIT OR Apache-2.0; used under MIT
-    Copyright (c) 2015 Utkarsh Kukreti
 either 1.15.0: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2015
 equivalent 1.0.2: Apache-2.0 OR MIT; used under MIT
     Copyright (c) 2016--2023
 errno 0.3.14: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
     Copyright (c) 2014 Chris Wong
-ex_ratatui 0.16.0: MIT
+ex_ratatui 0.17.0: MIT
 fast-srgb8 1.0.0: MIT OR Apache-2.0 OR CC0-1.0; used under MIT
     Copyright 2016 The Miri Developers
     Copyright (c) 2021 Thom Chiovoloni
@@ -86,17 +84,6 @@ font8x8 0.3.1: MIT
     Copyright (c) 2017 Joaquin Rosales <globojorro@gmail.com>
 funty 2.0.0: MIT
     Copyright (c) 2020 myrrlyn (Alexander Payne)
-futures-core 0.3.32: MIT OR Apache-2.0; used under MIT
-    Copyright (c) 2016 Alex Crichton
-    Copyright (c) 2017 The Tokio Authors
-futures-task 0.3.32: MIT OR Apache-2.0; used under MIT
-    Copyright (c) 2016 Alex Crichton
-    Copyright (c) 2017 The Tokio Authors
-futures-timer 3.0.3: MIT OR Apache-2.0; used under MIT
-    Copyright (c) 2014 Alex Crichton
-futures-util 0.3.32: MIT OR Apache-2.0; used under MIT
-    Copyright (c) 2016 Alex Crichton
-    Copyright (c) 2017 The Tokio Authors
 getopts 0.2.24: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2014 The Rust Project Developers
 getrandom 0.2.17: MIT OR Apache-2.0; used under MIT
@@ -184,7 +171,7 @@ parking_lot 0.12.5: MIT OR Apache-2.0; used under MIT
 parking_lot_core 0.9.12: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2016 The Rust Project Developers
 pin-project-lite 0.2.17: Apache-2.0 OR MIT; used under MIT
-plist 1.9.0: MIT
+plist 1.10.1: MIT
     Copyright (c) 2015 Edward Barnard
 png 0.18.1: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2015 nwin
@@ -194,8 +181,6 @@ powerfmt 0.2.0: MIT OR Apache-2.0; used under MIT
 ppv-lite86 0.2.21: MIT OR Apache-2.0; used under MIT
     Copyright 2019 The CryptoCorrosion Contributors
     Copyright (c) 2019 The CryptoCorrosion Contributors
-pretty_assertions 1.4.1: MIT OR Apache-2.0; used under MIT
-    Copyright (c) 2016 rust-derive-builder contributors
 pulldown-cmark 0.13.3: MIT
     Copyright 2015 Google Inc. All rights reserved.
 pulldown-cmark-escape 0.11.0: MIT
@@ -205,7 +190,7 @@ pxfm 0.1.29: BSD-3-Clause OR Apache-2.0; used under Apache-2.0
 quantette 0.5.1: MIT OR Apache-2.0; used under MIT
 quick-error 2.0.1: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2015 The quick-error Developers
-quick-xml 0.39.4: MIT
+quick-xml 0.42.0: MIT
     Copyright (c) 2016 Johann Tuffe
 radium 0.7.0: MIT
     Copyright (c) 2019 kneecaw (Nika Layzell)
@@ -257,8 +242,6 @@ ref-cast 1.0.25: MIT OR Apache-2.0; used under MIT
 regex-syntax 0.8.10: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2014 The Rust Project Developers
 render3d 0.1.0: MIT
-rstest 0.26.1: MIT OR Apache-2.0; used under MIT
-    Copyright 2018-19 Michele d'Amico
 rustix 0.38.44: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
 rustix 1.1.4: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
 rustler 0.38.0: MIT OR Apache-2.0; used under MIT
@@ -283,8 +266,6 @@ signal-hook-registry 1.4.8: MIT OR Apache-2.0; used under MIT  (aarch64-apple-da
 simd-adler32 0.3.9: MIT
     Copyright (c) [2021] [Marvin Countryman]
 simdutf8 0.1.5: MIT OR Apache-2.0; used under MIT
-slab 0.4.12: MIT
-    Copyright (c) 2019 Carl Lerche
 smallvec 1.15.1: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2018 The Servo Project Developers
 static_assertions 1.1.0: MIT OR Apache-2.0; used under MIT
@@ -305,8 +286,8 @@ tracing 0.1.44: MIT
     Copyright (c) 2019 Tokio Contributors
 tracing-core 0.1.36: MIT
     Copyright (c) 2019 Tokio Contributors
-tui-big-text 0.8.9: MIT OR Apache-2.0; used under MIT
-tui-markdown 0.3.9: MIT OR Apache-2.0; used under MIT
+tui-big-text 0.8.10: MIT OR Apache-2.0; used under MIT
+tui-markdown 0.3.10: MIT OR Apache-2.0; used under MIT
 unicase 2.9.0: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2014-2026 Sean McArthur
 unicode-segmentation 1.13.2: MIT OR Apache-2.0; used under MIT
@@ -340,9 +321,6 @@ wyz 0.5.1: MIT
     Copyright (c) 2018 myrrlyn (Alexander Payne)
 yaml-rust 0.4.5: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2015 Chen Yuheng
-yansi 1.0.1: MIT OR Apache-2.0; used under MIT
-    Copyright 2017 Sergio Benitez
-    Copyright (c) 2017 Sergio Benitez
 zerocopy 0.8.48: BSD-2-Clause OR Apache-2.0 OR MIT; used under MIT
     Copyright 2023 The Fuchsia Authors
     Copyright 2019 The Fuchsia Authors.
@@ -353,7 +331,7 @@ zune-jpeg 0.5.15: MIT OR Apache-2.0 OR Zlib; used under MIT
 Files these crates carry
 ------------------------
 
---- ex_ratatui 0.16.0: syntaxes/LICENSE ---
+--- ex_ratatui 0.17.0: syntaxes/LICENSE ---
 
 MIT License
 

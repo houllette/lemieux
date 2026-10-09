@@ -77,7 +77,7 @@ defmodule Lemieux.Learning.Builder.Scaffold do
         def project do
           [app: :#{name}, version: "0.1.0", elixir: "~> 1.19",
            deps: [lemieux(),
-                  {:ex_ratatui, "~> 0.16", optional: true}]]
+                  {:ex_ratatui, "~> 0.17", optional: true}]]
         end
         def application, do: [extra_applications: [:logger]]
         defp lemieux do

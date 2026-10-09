@@ -1,223 +1,242 @@
 if Code.ensure_loaded?(ExRatatui.App) do
   defmodule Lemieux.TUI.Notices do
     @moduledoc """
-    What the screen has to say about its own setup, in a box at the top of
-    the screen that closes itself.
+    Temporary setup and update notices, boxed inside the scrolling transcript.
 
-    Startup used to write these as transcript rows: the permission banner,
-    the workspace and configuration notices, which MCP servers connected and
-    which could not, update and version notices. A row stays for the whole
-    sitting and scrolls with the conversation, so the same lines about `lmx`
-    itself sat between the person's own work every time the screen opened.
-    They are true of the start, not of the conversation.
+    Reserving a strip above the transcript made its top and height jump when
+    the startup box disappeared. This box is a display row instead: arrival,
+    wrapping, selection and expiry use the conversation's viewport arithmetic.
+    It is not a session entry and never becomes model context or saved history.
 
-    So they go here instead. The box is drawn above the transcript while it
-    has something to say, and closes ten seconds after its newest item
-    arrived — a server that connects late gets its own ten seconds — or at
-    once on Esc (`:dismiss`). Those ten seconds are only counted while
-    nothing else holds the keyboard: a box whose time runs out behind a
-    panel (`Lemieux.TUI.Modal`) stays, and gets ten seconds more once the
-    panel closes (`resume/1`). Startup says the most important things it has
-    — that tools run without asking, that commands are not sandboxed — at
-    the moment a newcomer is busy with the first-run provider panel, and the
-    box used to close while that panel was still open, before anybody could
-    have read it. An item is info, a warning or an error: a
-    warning is drawn as the transcript draws a notice (`⚠`, with what to do
-    about it on a `↳` line), an error the same way in the alert colour, and
-    info as plain text, so a Markdown link in it (`[changelog](https://…)`)
-    is drawn the way links in answers are and a click on its item opens it.
-    An item the box is already showing is not added twice.
+    The box closes five seconds after its newest item, or on Esc. A panel
+    holding the keyboard pauses expiry; closing it starts five seconds again.
+    Only the newest token can close it. Items are deduplicated and capped at
+    twelve. A later notification brings the current box to the recent end,
+    except during a streamed model block, which must stay contiguous.
 
-    What answers something the person did stays in the transcript: a
-    command's result, a start that failed, a session that stopped. Those are
-    part of the sitting and have to be findable afterwards.
+    Warnings and errors retain their finding/remedy shape and semantic colours.
+    HTTP(S) links remain clickable even when they wrap or the box is scrolled.
+    A command's result, a start that failed, or a session that stopped remains
+    ordinary transcript text; expiry removes only this temporary display row.
     """
-
-    alias ExRatatui.Layout.Rect
     alias ExRatatui.Style
-    alias ExRatatui.Text.Line
-    alias ExRatatui.Text.Span
-    alias ExRatatui.Widgets.Block
-    alias ExRatatui.Widgets.Paragraph
+    alias ExRatatui.Text.{Line, Span}
     alias Lemieux.TUI
+    alias Lemieux.TUI.Blocks
     alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Screen
+    alias Lemieux.TUI.Theme
+    alias Lemieux.TUI.Transcript
+    alias Lemieux.TUI.Width
     alias Lemieux.TUI.Window
 
-    @visible_ms 10_000
-    # Startup says a handful of things. A cap keeps a host that sends a notice
-    # in a loop from growing the box, and the state, without bound.
+    @visible_ms 5_000
     @max_items 12
     @kinds [:info, :warning, :error]
     @markdown_link ~r/\[[^\]\n]+\]\(<?(https?:\/\/[^\s)>]+)>?\)/
     @bare_url ~r/https?:\/\/[^\s<>()\[\]]+/
-
     @type kind :: :info | :warning | :error
     @type item :: %{kind: kind(), text: String.t()}
-    @type t :: %{items: [item()], token: reference() | nil}
+    @type t :: %{
+            items: [item()],
+            id: reference() | nil,
+            token: reference() | nil,
+            timer: reference() | nil
+          }
 
-    @doc "An empty box: nothing to show and no timer running."
+    @doc "An empty box, with no display row or running timer."
     @spec new() :: t()
-    def new, do: %{items: [], token: nil}
+    def new, do: %{items: [], id: nil, token: nil, timer: nil}
 
-    @doc """
-    Adds `text` to the box and starts its ten seconds again. A blank text, or
-    one the box is already showing, changes nothing.
-    """
-    @spec say(TUI.t(), kind(), String.t()) :: TUI.t()
+    @doc "Adds a nonblank, distinct item and restarts the box's five seconds."
+    @spec say(state :: TUI.t(), kind :: kind(), text :: String.t()) :: TUI.t()
     def say(%TUI{} = state, kind, text) when kind in @kinds and is_binary(text) do
       item = %{kind: kind, text: String.trim(text)}
-      %{items: items} = notices = state.terminal.notices
+      notices = state.terminal.notices
 
-      if item.text == "" or item in items,
-        do: state,
-        else: shown(state, %{notices | items: Enum.take(items ++ [item], -@max_items)})
+      if item.text == "" or item in notices.items do
+        state
+      else
+        notices = %{
+          notices
+          | items: Enum.take(notices.items ++ [item], -@max_items),
+            id: notices.id || make_ref()
+        }
+
+        state |> publish(notices) |> restart_clock(notices)
+      end
     end
 
-    @doc "Adds each of `texts` as `say/3` does."
-    @spec say_all(TUI.t(), kind(), [String.t()] | nil) :: TUI.t()
+    @doc "Adds each text as `say/3` does."
+    @spec say_all(state :: TUI.t(), kind :: kind(), texts :: [String.t()] | nil) :: TUI.t()
     def say_all(state, kind, texts) when is_list(texts),
       do: Enum.reduce(texts, state, &say(&2, kind, &1))
 
     def say_all(state, _kind, nil), do: state
 
-    # Only the newest item's timer closes the box: an older one expiring must
-    # not take down what arrived after it.
-    defp shown(state, notices) do
-      token = make_ref()
-      Process.send_after(self(), {:notices_expired, token}, @visible_ms)
-      put_in(state.terminal.notices, %{notices | token: token})
+    defp publish(state, notices) do
+      state = remove_box(state, state.terminal.notices.id)
+      # A notification must not split an open Markdown/A2UI fence or the text
+      # delta that will extend its head. Insert before that model segment.
+      {newer, older} =
+        if state.conversation.busy?,
+          do: Enum.split_while(state.lines, &Blocks.model_row?/1),
+          else: {[], state.lines}
+
+      Transcript.splice(state, newer, [], [{:notice_box, notices.id, notices.items}], older)
     end
 
-    # A panel holding the keyboard keeps the box open: its time is counted
-    # again from when the panel closes (`resume/1`).
+    defp restart_clock(state, notices) do
+      cancel_timer(state.terminal.notices.timer)
+      token = make_ref()
+      timer = Process.send_after(self(), {:notices_expired, token}, @visible_ms)
+      put_in(state.terminal.notices, %{notices | token: token, timer: timer})
+    end
+
+    defp cancel_timer(nil), do: :ok
+
+    defp cancel_timer(timer) do
+      Process.cancel_timer(timer)
+      :ok
+    end
+
     @doc false
-    @spec expire(TUI.t(), reference()) :: {:noreply, TUI.t()}
+    @spec expire(state :: TUI.t(), token :: reference()) :: {:noreply, TUI.t()}
     def expire(%TUI{modal: nil, terminal: %{notices: %{token: token}}} = state, token),
       do: {:noreply, dismiss(state)}
 
     def expire(state, _token), do: {:noreply, state}
 
-    @doc """
-    Starts the box's ten seconds again, if it has anything to say: what
-    closing a panel that held the keyboard does (`Lemieux.TUI.Modal.close/1`),
-    so whatever was said while the panel was open is still there to read
-    once it is gone.
-    """
+    @doc "Restarts five seconds when a panel that held the keyboard closes."
     @spec resume(state :: TUI.t()) :: TUI.t()
     def resume(%TUI{terminal: %{notices: %{items: [_ | _]} = notices}} = state),
-      do: shown(state, notices)
+      do: restart_clock(state, notices)
 
     def resume(state), do: state
 
-    @doc "Closes the box now. Its timer, still running, finds nothing to close."
-    @spec dismiss(TUI.t()) :: TUI.t()
-    def dismiss(state), do: put_in(state.terminal.notices, new())
+    @doc "Removes only the temporary display row, leaving the transcript pane fixed."
+    @spec dismiss(state :: TUI.t()) :: TUI.t()
+    def dismiss(state) do
+      cancel_timer(state.terminal.notices.timer)
 
-    @doc "The items the box is showing, oldest first."
-    @spec items(TUI.t()) :: [item()]
+      state
+      |> remove_box(state.terminal.notices.id)
+      |> put_in([Access.key!(:terminal), :notices], new())
+    end
+
+    defp remove_box(state, nil), do: state
+
+    defp remove_box(state, id) do
+      {newer, rest} = Enum.split_while(state.lines, &(not match?({:notice_box, ^id, _items}, &1)))
+
+      case rest do
+        [row | older] -> Transcript.splice(state, newer, [row], [], older)
+        [] -> state
+      end
+    end
+
+    @doc "Items in the current box, oldest first."
+    @spec items(state :: TUI.t()) :: [item()]
     def items(%TUI{terminal: %{notices: %{items: items}}}), do: items
 
-    @doc """
-    How many rows the box wants on a pane `width` wide with `available` rows:
-    `0` when it has nothing to show, and never more than half of `available`.
-    """
-    @spec rows(TUI.t(), pos_integer(), non_neg_integer()) :: non_neg_integer()
-    def rows(state, width, available) do
-      case items(state) do
-        [] -> 0
-        _items -> min(length(laid_out(state, width)) + 2, max(div(available, 2), 3))
-      end
+    @doc "Width-only projection, shared by drawing, scroll accounting and link hit-testing."
+    @spec lines(items :: [item()], width :: pos_integer(), theme :: Theme.t()) :: [Line.t()]
+    def lines(items, width, theme),
+      do: items |> tagged_lines(width, theme) |> Enum.map(&elem(&1, 0))
+
+    defp tagged_lines(items, width, theme) do
+      inner = if width >= 8, do: width - 4, else: width
+
+      body =
+        Enum.flat_map(items, fn item -> Enum.map(item_lines(item, inner, theme), &{&1, item}) end)
+
+      frame(body, width, theme)
     end
 
-    @doc false
-    @spec render(TUI.t(), Rect.t()) :: [{term(), Rect.t()}]
-    def render(state, %Rect{height: height} = area) when height >= 3 do
-      theme = Screen.theme(state)
+    defp frame(body, width, _theme) when width < 8, do: body
+
+    defp frame(body, width, theme) do
       muted = %Style{fg: theme.text.muted}
+      title = %Style{fg: theme.accent, modifiers: [:bold]}
 
-      box = %Paragraph{
-        text: state |> visible(area) |> Enum.map(&elem(&1, 0)),
-        wrap: false,
-        block: %Block{
-          title: " lmx ",
-          title_style: %Style{fg: Screen.accent(state), modifiers: [:bold]},
-          titles: [
-            %Block.Title{
-              content: " esc closes ",
-              position: :bottom,
-              alignment: :right,
-              style: muted
-            }
-          ],
-          borders: [:all],
-          border_type: :rounded,
-          border_style: muted,
-          padding: {1, 1, 0, 0}
-        }
-      }
+      top =
+        Line.new([
+          Span.new("╭─", style: muted),
+          Span.new(" lmx ", style: title),
+          Span.new(String.duplicate("─", width - 8) <> "╮", style: muted)
+        ])
 
-      [{box, area}]
+      bottom_label = if width >= 16, do: " esc closes ", else: ""
+
+      bottom =
+        Line.new([
+          Span.new(
+            "╰" <>
+              String.duplicate("─", width - 2 - String.length(bottom_label)) <>
+              bottom_label <> "╯",
+            style: muted
+          )
+        ])
+
+      [{top, nil}] ++ Enum.map(body, &framed_item(&1, width, muted)) ++ [{bottom, nil}]
     end
 
-    def render(_state, _area), do: []
+    defp framed_item({line, item}, width, style) do
+      used = Enum.sum(Enum.map(line.spans, &Width.of(&1.content)))
 
-    @doc """
-    The link of the item under `{x, y}`, when the point is inside the box
-    drawn at `area` and that item has one; `nil` otherwise. Only HTTP(S)
-    addresses: a notice's text can quote a server's error, and a scheme in
-    that must not become a local command.
-    """
-    @spec link_at(TUI.t(), Rect.t() | nil, {integer(), integer()}) :: String.t() | nil
-    def link_at(_state, nil, _point), do: nil
+      spans =
+        [Span.new("│ ", style: style)] ++
+          line.spans ++
+          [Span.new(String.duplicate(" ", max(width - used - 3, 1)) <> "│", style: style)]
 
-    def link_at(state, %Rect{} = area, {x, y}) do
-      if inside?(area, x, y) do
-        case Enum.at(visible(state, area), y - area.y - 1) do
-          {_line, item} -> link(item.text)
-          nil -> nil
-        end
+      {Line.new(spans), item}
+    end
+
+    @doc "A notice's HTTP(S) link at transcript depth, or :outside for ordinary transcript text."
+    @spec link_at(state :: TUI.t(), depth :: non_neg_integer(), width :: pos_integer()) ::
+            {:notice, String.t() | nil} | :outside
+    def link_at(state, depth, width) do
+      renderer = Screen.row_renderer(state, width)
+
+      found =
+        Enum.reduce_while(
+          state.lines,
+          depth,
+          &find_link(&1, &2, renderer, width, Screen.theme(state))
+        )
+
+      case found do
+        {:link, target} -> target
+        _past_history -> :outside
       end
     end
 
-    @doc "Whether `{x, y}` is inside the box drawn at `area`, border included."
-    @spec inside?(Rect.t() | nil, integer(), integer()) :: boolean()
-    def inside?(nil, _x, _y), do: false
+    defp find_link(row, depth, renderer, width, theme) do
+      height = length(renderer.(row, width))
 
-    def inside?(%Rect{} = area, x, y),
-      do: x >= area.x and x < area.x + area.width and y >= area.y and y < area.y + area.height
-
-    # The rows that fit, newest kept: what arrived last is what the person is
-    # most likely looking for when the box cannot hold everything.
-    defp visible(state, %Rect{} = area),
-      do: state |> laid_out(area.width) |> Enum.take(-max(area.height - 2, 0))
-
-    # Every row of every item, each with the item it belongs to, wrapped to
-    # the box's inner width: the border and the padding take two columns on
-    # each side.
-    defp laid_out(state, width) do
-      theme = Screen.theme(state)
-      inner = max(width - 4, 1)
-
-      Enum.flat_map(items(state), fn item ->
-        item |> lines(inner, theme) |> Enum.map(&{&1, item})
-      end)
+      if depth < height,
+        do: {:halt, {:link, row_link(row, height - 1 - depth, width, theme)}},
+        else: {:cont, depth - height}
     end
 
-    defp lines(%{kind: :info, text: text}, width, theme),
+    defp row_link({:notice_box, _id, items}, index, width, theme) do
+      case Enum.at(tagged_lines(items, width, theme), index) do
+        {_line, %{text: text}} -> {:notice, link(text)}
+        _border -> {:notice, nil}
+      end
+    end
+
+    defp row_link(_row, _index, _width, _theme), do: :outside
+
+    defp item_lines(%{kind: :info, text: text}, width, theme),
       do: RichText.lines([{:model, text}], width, theme)
 
-    defp lines(%{kind: :warning, text: text}, width, theme),
+    defp item_lines(%{kind: :warning, text: text}, width, theme),
       do: marked(text, "⚠ ", theme.voices.notice, width)
 
-    # In the alert colour, because an error drawn in the warning's amber
-    # reads as one more thing to skip.
-    defp lines(%{kind: :error, text: text}, width, theme),
+    defp item_lines(%{kind: :error, text: text}, width, theme),
       do: marked(text, "✗ ", theme.voices.alert, width)
 
-    # A notice's shape, as the transcript draws one: what was found, then
-    # what to do about it on a `↳` line of its own. Continuations hang under
-    # the text rather than the mark, so each item reads as one block.
     defp marked(text, mark, colour, width) do
       style = %Style{fg: colour}
 

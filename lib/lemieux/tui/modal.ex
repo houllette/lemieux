@@ -45,6 +45,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def close(state), do: Notices.resume(%{state | modal: nil})
 
     defp module(:pager), do: Pager
+    defp module(:diff), do: Lemieux.TUI.DiffPanel
     defp module(:history_search), do: HistorySearch
     defp module(:trust), do: Trust
     defp module(:first_run), do: FirstRun

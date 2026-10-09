@@ -17,6 +17,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     alias Lemieux.Session
     alias Lemieux.TUI
+    alias Lemieux.TUI.Boot
     alias Lemieux.TUI.Choices
     alias Lemieux.TUI.Notices
 
@@ -28,6 +29,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       |> put_in([Access.key!(:session_view), :mcp_ready?], ready?)
       |> put_in([Access.key!(:session_view), :mcp_announced?], false)
       |> Choices.put_mcp_names(statuses)
+      |> boot(ready?, statuses)
     end
 
     @doc "One server's new status, and the row it earns, if any."
@@ -61,6 +63,23 @@ if Code.ensure_loaded?(ExRatatui.App) do
       |> refresh()
       |> connected_line(statuses)
       |> announced()
+      |> boot(true, statuses)
+    end
+
+    defp boot(state, _ready?, []), do: state
+
+    defp boot(state, false, _statuses),
+      do: Boot.observe(state, :mcp, "Connecting MCP servers", "busy")
+
+    defp boot(state, true, statuses) do
+      failed? = Enum.any?(statuses, &(Map.get(&1, :status, :unknown) != :connected))
+
+      Boot.observe(
+        state,
+        :mcp,
+        "MCP servers settled · /mcp shows details",
+        if(failed?, do: "warn", else: "ok")
+      )
     end
 
     @doc """

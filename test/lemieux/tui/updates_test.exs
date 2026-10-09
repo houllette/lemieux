@@ -71,7 +71,7 @@ defmodule Lemieux.TUI.UpdatesTest do
     second = check_result(first)
     assert [%{kind: :info, text: "Lemieux v0.2.0 is available · /update"}] = Notices.items(first)
     assert Notices.items(second) == Notices.items(first)
-    assert second.lines == []
+    assert second.lines == first.lines
     assert second.status.update.phase == :available
 
     disabled =

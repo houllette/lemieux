@@ -66,13 +66,32 @@ defmodule Lemieux.TUI.TestSupport do
     end)
   end
 
-  @doc "The notice box among the widgets a frame is drawn with, or `nil`."
+  @doc "The visible inline notice box's body, projected from the transcript widget, or `nil`."
   @spec notice_box(state :: TUI.t()) :: {Paragraph.t(), term()} | nil
   def notice_box(state) do
     state
     |> TUI.render(@frame)
-    |> Enum.find(&match?({%Paragraph{block: %{title: " lmx "}}, _rect}, &1))
+    |> Enum.find_value(fn
+      {%Paragraph{text: lines} = paragraph, rect} when is_list(lines) ->
+        case Enum.drop_while(lines, &(not String.starts_with?(line_text(&1), "╭─ lmx"))) do
+          [_header | body] ->
+            body =
+              body
+              |> Enum.take_while(&(not String.starts_with?(line_text(&1), "╰")))
+              |> Enum.map(&%{&1 | spans: &1.spans |> Enum.drop(1) |> Enum.drop(-1)})
+
+            {%{paragraph | text: body}, rect}
+
+          [] ->
+            nil
+        end
+
+      _widget ->
+        nil
+    end)
   end
+
+  defp line_text(line), do: Enum.map_join(line.spans, & &1.content)
 
   # A block carries a main title and any number of extra ones placed around
   # the border. Reading only the first would make the scrollback marker

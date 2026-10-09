@@ -11,8 +11,7 @@ defmodule Lemieux.TUI.NoticesTest do
   @link "https://github.com/houllette/lemieux/blob/v0.2.0/CHANGELOG.md"
 
   describe "startup" do
-    # Every start used to leave these in the transcript for the whole sitting.
-    test "the banner and what connected go to the box, not the transcript" do
+    test "the banner and what connected share a temporary box in the transcript" do
       state =
         [
           id: "01NOTICES",
@@ -26,7 +25,8 @@ defmodule Lemieux.TUI.NoticesTest do
         |> Notices.say(:info, "MCP connected: github (3 tools)")
         |> sized()
 
-      assert state.lines == []
+      assert [{:notice_box, _id, items}] = state.lines
+      assert items == Notices.items(state)
 
       assert Enum.map(Notices.items(state), & &1.text) == [
                "full auto: tools run without asking · commands are not sandboxed",
@@ -39,7 +39,7 @@ defmodule Lemieux.TUI.NoticesTest do
   end
 
   describe "closing" do
-    test "ten seconds after the newest item, not the first" do
+    test "five seconds after the newest item, not the first" do
       first = Notices.say(sized(tui()), :info, "one")
       %{token: early} = first.terminal.notices
       second = Notices.say(first, :info, "two")
@@ -55,7 +55,7 @@ defmodule Lemieux.TUI.NoticesTest do
 
     # The launch audit watched the full-auto banner close behind the
     # first-run provider panel, before anybody could have read it.
-    test "not while a panel holds the keyboard: closing the panel starts its ten seconds again" do
+    test "not while a panel holds the keyboard: closing the panel starts its five seconds again" do
       provider = %{id: "zz", label: "ZZ", env: "ZZ_API_KEY", model: "zz:model"}
 
       panel =
@@ -106,24 +106,24 @@ defmodule Lemieux.TUI.NoticesTest do
   end
 
   describe "the box on the screen" do
-    test "takes its rows from the top of the transcript and gives them back" do
+    test "appears and disappears inside the transcript with unchanged pane geometry" do
       open = sized(tui()) |> Notices.say(:info, "something to say")
-      %{notices: area, transcript: transcript} = Screen.panes(open)
-
-      assert area.y == 0
-      assert transcript.y == area.height
+      panes = Screen.panes(open)
+      assert panes.transcript.y == 0
+      refute Map.has_key?(panes, :notices)
 
       closed = Notices.dismiss(open)
-      assert %{notices: nil, transcript: %{y: 0}} = Screen.panes(closed)
+      assert Screen.panes(closed) == panes
     end
 
-    test "a screen too short to spare the rows keeps the conversation instead" do
+    test "a short screen uses the normal transcript window rather than a separate strip" do
       short =
         tui(test_mode: {80, 8})
         |> put_in([Access.key!(:terminal), :height], 8)
         |> Notices.say(:info, "something to say")
 
-      assert Screen.panes(short).notices == nil
+      assert Screen.panes(short).transcript.y == 0
+      refute Map.has_key?(Screen.panes(short), :notices)
       assert Notices.items(short) != []
     end
 
@@ -140,7 +140,7 @@ defmodule Lemieux.TUI.NoticesTest do
   end
 
   describe "a link in the box" do
-    test "opens when its item is clicked, and a click elsewhere in the box selects nothing" do
+    test "a link opens on release and plain text can be selected as transcript content" do
       test = self()
 
       open_link = fn url ->
@@ -154,16 +154,18 @@ defmodule Lemieux.TUI.NoticesTest do
         |> Notices.say(:info, "plain news")
         |> Notices.say(:info, "Lemieux was updated · [full changelog](#{@link})")
 
-      %{notices: area} = Screen.panes(state)
-      # Inside the border: the first item's row, then the second's.
-      plain = %ExRatatui.Event.Mouse{kind: "down", button: "left", x: 4, y: area.y + 1}
-      linked = %{plain | y: area.y + 2}
+      area = Screen.panes(state).transcript
+      # The pane's top rail, the box border, then the first and second items.
+      plain = %ExRatatui.Event.Mouse{kind: "down", button: "left", x: 4, y: area.y + 2}
+      linked = %{plain | y: area.y + 3}
 
       assert {:noreply, after_plain} = TUI.handle_event(plain, state)
-      assert after_plain.selection == nil
+      assert after_plain.selection != nil
       refute_receive {:opened, _url}, 50
 
-      assert {:noreply, _state} = TUI.handle_event(linked, state)
+      assert {:noreply, pressed} = TUI.handle_event(linked, state)
+      refute_receive {:opened, _url}, 50
+      assert {:noreply, _state} = TUI.handle_event(%{linked | kind: "up"}, pressed)
       assert_receive {:opened, @link}
     end
 

@@ -9,6 +9,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Session
     alias Lemieux.Tools
     alias Lemieux.TUI
+    alias Lemieux.TUI.Boot
     alias Lemieux.TUI.Callbacks
     alias Lemieux.TUI.CatalogState
     alias Lemieux.TUI.History
@@ -17,6 +18,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Links
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.Renderer
+    alias Lemieux.TUI.StartupAnimation
     alias Lemieux.TUI.Theme
     alias Lemieux.TUI.Turn
     alias Lemieux.TUI.Updates
@@ -72,6 +74,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           feedback: nil,
           notices: Notices.new(),
           row_cache: nil,
+          boot: Boot.new(),
           scroll_coalesce?: Keyword.get(opts, :scroll_coalesce?, false),
           scroll_pending: nil,
           open_link: Keyword.get(opts, :open_link, &Links.open/1),
@@ -81,6 +84,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           # sequence is an effect on a stream this module does not own.
           # `Lemieux.CLI.TUI` is the host that wants it.
           title: Keyword.get(opts, :title, &Callbacks.title/1),
+          on_exit: Keyword.get(opts, :on_exit, fn _session -> :ok end),
           # The same rule for a notification: the terminal showing the screen
           # is the transport's, so the default speaks through it.
           notify: effect(opts, :notify, headless?, fn -> Callbacks.notify(transport) end),
@@ -121,6 +125,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           line: Keyword.get(opts, :status_line),
           compact_at: compact_at_option(opts),
           words: Keyword.get(opts, :processing),
+          startup_animation: StartupAnimation.resolve(Keyword.get(opts, :startup_animation)),
           followups: Keyword.get(opts, :followups),
           renderers: renderers,
           keys: keys_option(Keyword.get(opts, :keys)),
@@ -169,6 +174,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           mcp_ready?: true,
           mcp_announced?: false,
           plan: nil,
+          plan_progress: nil,
           requests: 0,
           request_cap: Keyword.get(opts, :request_cap),
           sandbox: Keyword.get(opts, :sandbox),
@@ -190,7 +196,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # `:notices` before it builds the state.
     # `environment` too, because `!cmd`, `/diff` and `/undo` run through the
     # session's environment, where its credential policy and any sandbox apply.
-    @harness_fields ~w(theme themes keys layout status_line followups processing skills notices
+    @harness_fields ~w(theme themes keys layout status_line followups processing startup_animation skills notices
                        auto_compaction compact_at
                        renderers commands environment)a
 
@@ -220,8 +226,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # Workspace and configuration notices, in the notice box. On standard
     # error a full-screen application covers them up, so the person saw them
     # on the way out — hours after the decision they were about. As
-    # transcript rows they were seen, and then carried through the whole
-    # sitting; see `Lemieux.TUI.Notices`.
+    # ordinary transcript rows they stayed for the whole sitting. The
+    # notice box now uses a temporary row; see `Lemieux.TUI.Notices`.
     @doc false
     @spec notices(state :: TUI.t(), notices :: [String.t()] | nil) :: TUI.t()
     def notices(state, notices),

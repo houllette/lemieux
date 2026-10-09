@@ -56,12 +56,12 @@ entries it missed.
 
 ## Interaction model
 
-The screen opens with a short full-screen animation (Go Habs Go) while
+The screen opens with a Habs-coloured marquee (GO HABS GO) and a real boot log while
 workspace discovery, Ixway discovery and the recent-session list run in
 supervised tasks. Once the session and its skills, commands and status
-settings are ready, the animation plays out its last frames (about a second)
-and gives way to the conversation; a start that took a single frame still
-shows the whole banner, and any key ends it at once. A selected Ixway model
+settings are ready, the startup screen gives way to the conversation at once.
+Extension loading and initialization add their own milestones to the log;
+session-state loading stays pending until the screen is ready. A selected Ixway model
 still needs its key-scoped catalogue first, and a start that fails shows the
 error instead. The hidden `/habs` plays it again. The screen never
 waits on MCP servers: they connect in the background, and the session's
@@ -70,14 +70,17 @@ and one line in the notice box when they settle (a failed server, or one that
 needs sign-in, gets its own). Keys and paste edit the input while it loads,
 and Enter queues the draft until the session is ready.
 
-What the screen says about its own setup goes to a notice box at the top
-rather than into the transcript: the permission banner, a line saying that
+What the screen says about its own setup goes to a temporary notice box
+inside the scrolling transcript: the permission banner, a line saying that
 `/undo` covers file-tool edits only where what commands change cannot be
 recorded, workspace and configuration notices, which MCP servers connected
 or could not, and update and version news, including a line after an update
-with a link to that release's changelog. The box closes ten seconds after
+with a link to that release's changelog. The box closes five seconds after
 its newest line, or at once on Esc, and stays open while a panel is open. A
-click on a line with a link opens it. What answers something you did stays
+click on a line with an HTTP(S) link opens it on release. The box follows
+transcript scrolling and dismissal leaves the pane's position and size fixed.
+It is display-only, rather than a saved session entry or model context.
+What answers something you did stays
 in the transcript, where it can be found later: a start that failed, a
 session that stopped, a command's result. `Lemieux.TUI.Notices` has the
 rules.
@@ -206,6 +209,231 @@ begins is visible without reading a timer. `"processing"` in
 `~/.lmx/config.json` replaces the list; a list of one keeps a single word.
 `Lemieux.TUI.Activity` owns the wording, so a host's status line and the
 transcript cannot describe the same wait differently.
+
+## Startup animation
+
+`ascii` supplies the startup marquee and data components. The installed
+`lmx` includes it; an embedding host can add `{:ascii, "~> 0.4.1"}`
+alongside `ex_ratatui`. A host without it gets textual fallbacks.
+
+Set `startup_animation` in `~/.lmx/config.json` to change the decoration:
+
+```json
+{
+  "startup_animation": {
+    "piece": "marquee",
+    "options": {"text": "READY TO BUILD", "speed": 10},
+    "parts": {"text": "#FFFFFF", "bulb.on": "#AF1E2D"},
+    "background": "#192168",
+    "duration_ms": 1500
+  }
+}
+```
+
+Omitted marquee options keep the GO HABS GO defaults. `false` disables the
+decoration and keeps the boot log. Other decorative pieces are `big-text`,
+`fireworks`, `starfield`, `matrix-rain` and `spinners`; `options` accepts
+their scalar data settings. Readiness takes precedence over `duration_ms`
+(100–5000 ms): startup animates while real preparation is pending and ends
+immediately when ready. Small terminals show the text instead of cropping the marquee.
+Mono and `NO_COLOR` remove colours; the dark blue background keeps the white
+Habs lettering readable on a light terminal too. A host supplies the same
+map as `startup_animation:` or through `Lemieux.Harness`.
+
+The boot log follows actual configuration, model, workspace, tool, provider,
+harness, history, session and MCP milestones. Waiting is marked busy;
+completion comes from the task's answer. It stays outside the durable
+conversation, and actionable notices and sign-in links keep their notice box.
+
+Hosts can append milestones with `{:startup_step, id, text, status}` sent to
+the TUI process. IDs are atoms or strings of at most 160 bytes; statuses are
+`"busy"`, `"ok"`, `"warn"` or `"fail"`. Reusing an ID updates its row; the log
+retains at most 128 milestones and keeps pending work visible in short terminals.
+
+## Changed files and progress
+
+`/diff` opens a changed-file tree, including staged, unstaged, renamed and
+untracked files. Up and Down move the cursor; Left and Right close and open
+folders. Enter on a file reads its patch, Up/Down and Page Up/Down scroll it,
+Tab returns to the tree, `r` refreshes, and `q` or Esc closes the panel.
+The composer draft survives. The tree shows at most 256 files and says how
+many were omitted; a patch keeps at most 300 lines. Reads run through the
+session's environment, including its sandbox or remote workspace. Plain
+command-line hosts keep their text `/diff` output.
+
+`/context` adds a measured occupancy progress bar alongside the existing
+composition bands, attribution legend and usage totals. Unmeasured context
+keeps its explicit unmeasured message. The plan panel has a completion bar
+when space permits; completion is the agent's report. The live working row
+keeps its one-cell spinner and elapsed time.
+
+## Agent visualizations
+
+The TUI host advertises a bounded, read-only subset of
+[A2UI v0.9.1](https://a2ui.org/specification/v0.9.1-a2ui/) through
+`Lemieux.Extensions.A2UI`. The catalog identifier is
+`https://lemieux.dev/a2ui/terminal/v1`; its schema ships in
+`priv/a2ui/catalog.json`. Identifiers do not cause network requests.
+
+An assistant can put a self-contained JSONL message stream in a closed
+`a2ui` fence. The renderer supports `Column`, `Row`, `Text`, `ProgressBar`,
+`Sparkline`, `BarChart`, `Table`, `FileTree`, `MermaidDiagram`, `Flowchart`,
+`SequenceDiagram`, `C4Diagram`, `StateDiagram` and `ERDiagram`, with data binding through
+`{"path":"/key"}` and `updateDataModel` at root or object-key JSON Pointers.
+Bindings can read array indices. `deleteSurface` removes a surface within
+that fence. Each fence starts fresh. While an `a2ui` or `mermaid` fence streams,
+one compact **Drawing** row replaces its source. An optional short caption in
+the info string (`a2ui Build status` or `mermaid Request flow`) describes the
+drawing; it requires no additional tool call. The closed, validated fence
+replaces that row with the visualization. Invalid or interrupted drawings
+show a compact diagnostic with a `/copy source` hint, rather than a wall of JSON.
+
+At an ordinary stop, the A2UI extension checks the drawings and sends failures
+back to the agent with the same validation and native preparation errors used
+by the display. It grants **one automatic repair continuation per user prompt**
+by default. The agent can return a complete corrected answer or use Markdown
+for a drawing it cannot display. A valid drawing, including one that falls
+back to relationship text in a narrow pane, adds no model request.
+
+The allowance is counted from marked feedback entries in the transcript, so
+resume and other extensions' continuations cannot reset it. Cancellation,
+asides, provider errors and session turn, request and cost budgets take
+precedence. When the repair allowance is spent, further failures keep their
+compact diagnostics and this extension requests no further repair. An embedding
+host can apply
+`{Lemieux.Extensions.A2UI, max_continuations: 0}` to disable repair, or select
+1–3 continuations. `disabled_extensions: ["a2ui"]` removes the extension.
+Local checking examines at most 32 visualization fences per assistant answer
+and reports at most four failures; exceeding the check budget adds no retry.
+Original and repaired answers both remain in the append-only transcript.
+
+`Sparkline.sampleRate` is numeric samples per second, between 0.001 and 100.
+For one sample per minute, use approximately `0.0167`; a duration string such
+as `"1m"` is unsupported.
+
+Layouts retain their nesting. `Column` stacks children at a shared left edge;
+`Row` places siblings beside each other and stacks them when their minimum
+widths do not fit. Defaults are compact: intrinsic component width, no gap
+or padding, and start alignment. ASCII gallery blank rows and outer insets
+are removed while file-tree indentation and chart styles are preserved.
+
+Every component accepts these optional layout properties:
+
+| Property | Values | Effect |
+| --- | --- | --- |
+| `width` | Integer 1–200 | Box width in terminal cells, capped to the pane |
+| `padding` | Integer 0–4 | Space on every edge; reduced horizontally in very narrow panes |
+| `align` | `start`, `center`, `end`, `stretch` | Horizontal alignment in a column or leaf; vertical alignment in a row |
+| `compact` | Boolean, default `true` | Remove ASCII gallery whitespace; inherited by children |
+
+Containers also accept `gap` (0–4 rows in a column or cells in a row),
+`justify` (`start`, `center`, `end`, `spaceBetween`, along the container's
+main axis), and `height` (1–40 rows, a minimum total height). Height adds
+space rather than clipping data. Leave it unset for a compact transcript.
+When a row stacks, its gap becomes vertical and its children start at the left edge.
+Row justification uses available box width; column justification needs
+explicit height to add vertical space. Absolute coordinates are unsupported.
+
+For equal-width charts, use a `Column` with `width` and `align: "stretch"`.
+A child can retain its own explicit width. Use a nested `Row` for side-by-side
+comparisons, with `gap: 2`; give it a width and `justify: "spaceBetween"`
+to place its first and last children at opposite edges. The same layout is
+rebuilt on resume and reflows on terminal resize.
+
+````markdown
+```a2ui
+{"version":"v0.9.1","createSurface":{"surfaceId":"checks","catalogId":"https://lemieux.dev/a2ui/terminal/v1"}}
+{"version":"v0.9.1","updateDataModel":{"surfaceId":"checks","value":{"passed":75}}}
+{"version":"v0.9.1","updateComponents":{"surfaceId":"checks","components":[{"id":"root","component":"Column","width":48,"align":"stretch","gap":1,"children":["heading","bar"]},{"id":"heading","component":"Text","text":"Validation"},{"id":"bar","component":"ProgressBar","label":"checks","value":{"path":"/passed"}}]}}
+```
+````
+
+Diagrams are useful for request paths, supervision trees, retry flows and
+architecture boundaries. A closed `mermaid` fence also renders directly:
+
+````markdown
+```mermaid
+flowchart LR
+CLI[lmx] -->|prompt| Session(Agent session)
+Session -->|request| Provider[ReqLLM]
+Provider -->|response| Session
+```
+````
+
+For placement beside other components, use `MermaidDiagram` with `source`
+inside an A2UI `Column` or `Row`. Native `Flowchart` takes `nodes`, `edges`
+and optional `direction` (`TB`, `BT`, `LR`, `RL`) and nested `groups`. A node
+can name a `group`; groups take `id`, `label`, `parent` and local `direction`,
+and relationships can end at a group. `SequenceDiagram` takes
+`participants` and ordered `events`, including messages, notes, activations
+and loop/alt/opt/par/critical/break groups. `C4Diagram` takes `level`
+(`context`, `container`, `component`), `elements`, `relationships` and optional
+nested `boundaries`. The packaged catalog specifies their records. Request
+`diagram_preview` with `{"componentSchema":"C4Diagram"}` (or another diagram
+component) to retrieve the exact JSON Schema on demand. Participants are
+`id`/`label` objects; C4 elements use `kind`, and levels are lowercase.
+Native string enums are converted through fixed tables.
+`StateDiagram` takes `states`, `transitions` and optional `direction`; state
+kinds are `state`, `initial`, `final`, `choice`, `composite`, with `parent`
+for composite membership. Native transitions reference explicit initial/final
+state IDs; `[*]` is available in Mermaid source. `ERDiagram` takes `entities`, `relationships` and
+optional `direction`; entities carry `attributes` (`name`, `type`, `keys`
+with `pk`/`fk`/`uk`, and `comment`); entities require `id`. Relationships carry `from_cardinality`
+and `to_cardinality` (`one`, `zero_or_one`, `one_or_more`, `zero_or_more`)
+and `identifying` (boolean). Multiline labels retain their line breaks.
+All diagram components accept optional `title` and `labelWidth` (4–24 cells).
+
+When the host includes `:ascii`, the extension adds the read-only
+`diagram_preview` tool. The agent supplies Mermaid `source` (or a native `diagram` component) and target
+content `width` (1–200, default 80); the tool reports syntax errors, complete variant
+dimensions, fit and relationship text without terminal or filesystem access.
+Preview is optional; a normal Mermaid fence is enough to display a diagram.
+The tool advertises a small schema; the full native record schemas remain in
+the packaged catalog. Valid rendering requires no extra tool or model turn.
+Mermaid supports the shipped flowchart, sequence, C4, state and ER subset; unsupported
+families and executable directives receive compact diagnostics. Diagrams
+illustrate relationships; they do not prove that an operation happened.
+
+Layouts and spans are cached when a fence closes. Resizing selects a complete
+compact variant, or wraps the full relationship summary when none fits.
+Connectors and interior spacing are preserved; only exterior canvas margins
+are removed. Diagram colours follow the terminal theme, including monochrome;
+model-selected style overrides are rejected. Without `:ascii`, drawings receive
+a diagnostic and the preview tool is absent. The source remains in the transcript.
+
+Each fence permits at most four diagram leaves, sharing a 64,000-cell cache
+budget. Split a larger gallery into separate fences; `MermaidDiagram` supports
+every Mermaid family, so native records are optional. A variant is at most
+200 columns by 100 rows. Mermaid source is at
+most 8192 bytes; diagrams have at most 16 nodes/elements, 32 edges, eight
+participants, 48 total sequence events, four nested event levels, four branches
+per group, six C4 boundaries or flowchart groups, scope depth four, 16 ER
+attributes per entity and 64 attributes in total. Native IDs are at most 64 bytes and labels
+256 bytes; diagram labels require single-cell characters. These bounds apply
+to parsed Mermaid as well as native JSON, including repeated references.
+
+Limits are 16 KiB, 32 messages/components/graph visits, four surfaces and
+eight levels per fence. Progress must be an explicit percentage; sparklines
+need real samples and a sample rate. Unsupported catalogs, actions,
+functions, controls, invalid references and oversized input produce diagnostics.
+Components are data: they execute nothing, fetch nothing, and
+claim no authority to call tools. Explain their data in prose too.
+
+In the TUI, `/copy` projects closed, valid visualization fences into fenced
+plain text at the current transcript width. It copies the full latest answer,
+including content above the viewport, with Unicode connectors, leading spaces
+and interior blank rows intact. Colours are omitted; the text fence keeps the
+geometry in a monospace font when pasted into Markdown. Prose and ordinary,
+incomplete or unsupported code fences retain their source. `/copy source`
+copies the exact original assistant text, including Mermaid/A2UI source.
+Drag selection copies the displayed cells with the same line geometry.
+
+The original JSON remains assistant text in the transcript, so exports,
+resume and fork preserve it, and resuming rebuilds the display. Other hosts
+read the source. `"disabled_extensions": ["a2ui"]` omits the TUI's catalog
+instructions and preview tool; an embedding host can apply `Lemieux.Extensions.A2UI`
+explicitly. This catalog is a terminal subset, rather than an implementation
+of the entire A2UI basic catalog or its interactive action protocol.
 
 ## Themes and colour
 

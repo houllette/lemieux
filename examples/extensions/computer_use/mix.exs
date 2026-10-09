@@ -10,7 +10,7 @@ defmodule LemieuxComputerUse.MixProject do
         {:lemieux, path: System.get_env("LEMIEUX_EXTENSION_BASE", "../../..")},
         {:wallaby, "~> 0.31.0", runtime: false},
         {:req, "~> 0.7"},
-        {:req_llm, "~> 1.26"},
+        {:req_llm, "~> 1.27"},
         {:pristine, "~> 0.4.0"},
         {:system_one_sdk, "~> 0.6.0"},
         {:dotenvy, "~> 1.2"}

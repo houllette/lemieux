@@ -11,6 +11,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Tools
     alias Lemieux.TUI
     alias Lemieux.TUI.Appearance
+    alias Lemieux.TUI.Art
+    alias Lemieux.TUI.Boot
     alias Lemieux.TUI.Choices
     alias Lemieux.TUI.Colour
     alias Lemieux.TUI.Composer
@@ -27,6 +29,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.SessionHydration
     alias Lemieux.TUI.Setup
     alias Lemieux.TUI.Signals
+    alias Lemieux.TUI.StartupAnimation
     alias Lemieux.TUI.Submission
     alias Lemieux.TUI.Transcript
     alias Lemieux.TUI.Trust
@@ -34,7 +37,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Updates
 
     @habs_frame_ms 110
-    @habs_frames 10
 
     @typep reply :: {:noreply, TUI.t()}
 
@@ -61,7 +63,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             |> Setup.new()
             |> Setup.sized(opts)
             |> equipped(opts)
-            |> start_habs()
+            |> start_startup()
 
           {:ok,
            put_in(state.resume, %{
@@ -92,6 +94,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp start_async_session(start, app) do
       with {:ok, session, ready_opts} <- start.(app) do
+        send(app, {:startup_step, :screen, "Read session state", "busy"})
         snapshot = Session.snapshot(session, :infinity)
         {:ok, session_details(session, snapshot), ready_opts}
       end
@@ -199,9 +202,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
             | input: state.input,
               terminal: state.terminal,
               modal: state.modal,
-              # The banner plays out over the ready screen rather than
-              # vanishing with this message: see `start_habs/1`.
-              overlay: state.overlay
+              # Decorative frames must never delay the ready screen.
+              overlay: nil
           }
         )
         |> put_in([Access.key!(:resume), :start_async], state.resume.start_async)
@@ -227,6 +229,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           | lines: previous_lines ++ ready.lines,
             resume: %{ready.resume | startup_status: :ready}
         }
+        |> Boot.observe(:screen, "Screen ready", "ok")
         |> opened()
         |> Composer.start_cursor_blink()
         |> Updates.start()
@@ -384,6 +387,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       |> put_in([Access.key!(:resume), :initial_task], nil)
       |> put_in([Access.key!(:resume), :startup_status], :failed)
       |> Map.put(:overlay, nil)
+      |> Boot.observe(:session, "Session could not start", "fail")
       |> Transcript.say(:notice, "could not start session: #{describe(reason)}")
     end
 
@@ -406,48 +410,56 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def describe({:error, reason}), do: describe(reason)
     def describe(reason), do: Conversation.describe(reason)
 
-    # Starts the Go Habs Go animation, for startup and `/habs`.
-    #
-    # At startup the visible frames cycle while preparation runs; once the
-    # session is ready they play out to the blank frame the way `/habs` does
-    # (`habs_tick/2`'s second clause), so the banner is seen whole however
-    # fast the start was. It used to be dropped with the message that made
-    # the session ready: a local start inside one 110 ms frame showed "GO"
-    # once, and a desktop launch on Omarchy reported no banner at all
-    # (issue #4). The tail is bounded — ten frames, 1.1 s at most — and a
-    # key ends it at once (`Lemieux.TUI.handle_event/2`), so nothing a
-    # person types lands unseen under it. A failed start drops it instead
-    # (`startup_failed/2`): the error is what to look at then.
+    # Decorations never own the keyboard; `/habs` remains a timed replay,
+    # while startup itself ends with screen readiness, including on failure.
+    # Frames are computed on ticks, outside Screen.render/3.
     @doc false
     @spec start_habs(TUI.t()) :: TUI.t()
-    def start_habs(state) do
+    def start_habs(state), do: start_animation(state, StartupAnimation.default())
+
+    defp start_startup(%TUI{status: %{startup_animation: false}} = state), do: state
+    defp start_startup(state), do: start_animation(state, state.status.startup_animation)
+
+    defp start_animation(state, settings) do
       token = make_ref()
       Process.send_after(self(), {:habs_tick, token}, @habs_frame_ms)
+      animation = Art.new(settings["piece"], settings["options"], settings["parts"])
+      {art, animation} = Art.frame(animation, 0.0)
 
-      %{state | overlay: %{frame: 0, tick: token}}
+      %{
+        state
+        | overlay: %{
+            frame: 0,
+            tick: token,
+            animation: animation,
+            art: art,
+            time: 0.0,
+            frames: max(ceil(settings["duration_ms"] / @habs_frame_ms), 2),
+            background: settings["background"],
+            text: get_in(settings, ["options", "text"]) || settings["piece"]
+          }
+      }
     end
 
     @doc false
     @spec habs_tick(TUI.t(), reference()) :: reply()
-    def habs_tick(
-          %TUI{resume: %{startup_status: :loading}, overlay: %{tick: token, frame: frame}} = state,
-          token
-        ) do
-      # Keep the visible frames cycling until preparation answers. The final
-      # blank frame belongs to the one-shot command's exit, not this loop.
-      Process.send_after(self(), {:habs_tick, token}, @habs_frame_ms)
-      {:noreply, put_in(state.overlay.frame, rem(frame + 1, @habs_frames - 1))}
+    def habs_tick(%TUI{overlay: %{tick: token} = overlay} = state, token) do
+      loading? = state.resume.startup_status == :loading
+
+      if loading? or overlay.frame < overlay.frames - 1 do
+        Process.send_after(self(), {:habs_tick, token}, @habs_frame_ms)
+        time = overlay.time + @habs_frame_ms / 1000
+        {art, animation} = Art.frame(overlay.animation, time)
+
+        frame =
+          if loading?, do: rem(overlay.frame + 1, overlay.frames - 1), else: overlay.frame + 1
+
+        {:noreply,
+         %{state | overlay: %{overlay | frame: frame, time: time, art: art, animation: animation}}}
+      else
+        {:noreply, %{state | overlay: nil}}
+      end
     end
-
-    def habs_tick(%TUI{overlay: %{tick: token, frame: frame}} = state, token)
-        when frame < @habs_frames - 1 do
-      Process.send_after(self(), {:habs_tick, token}, @habs_frame_ms)
-
-      {:noreply, put_in(state.overlay.frame, frame + 1)}
-    end
-
-    def habs_tick(%TUI{overlay: %{tick: token}} = state, token),
-      do: {:noreply, %{state | overlay: nil}}
 
     def habs_tick(state, _token), do: {:noreply, state}
 
@@ -803,15 +815,25 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec terminate(term(), TUI.t()) :: :ok
     def terminate(_reason, %TUI{resume: %{initial_task: %Task{} = task}} = state) do
+      closed(state)
       release_traps(state)
       Task.shutdown(task, :brutal_kill)
       :ok
     end
 
     def terminate(_reason, state) do
+      closed(state)
       release_traps(state)
       Updates.stop(state)
     end
+
+    defp closed(state),
+      do:
+        state.terminal.on_exit.(%{
+          id: state.id,
+          name: state.appearance.name,
+          cwd: state.references.cwd
+        })
 
     # Never waited for: see `Lemieux.TUI.Signals.release/1`.
     defp release_traps(%TUI{terminal: %{signal_traps: traps}}) when is_list(traps),

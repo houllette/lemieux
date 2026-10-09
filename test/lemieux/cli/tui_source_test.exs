@@ -138,6 +138,51 @@ defmodule Lemieux.CLI.TUISourceTest do
       assert TUI.resume_hint(context.store, context.project, []) == nil
     end
 
+    test "an idle screen offers its own player name rather than an older substantive session",
+         context do
+      old = session(context.store, context.project)
+      current = Lemieux.ID.generate()
+
+      :ok =
+        Store.append(context.store, current, [Entry.new(:session, %{"cwd" => context.project})])
+
+      hint =
+        TUI.resume_hint(context.store, context.project,
+          program: "mix lmx",
+          closed_session: %{id: current, name: "the actual screen", cwd: context.project}
+        )
+
+      assert hint =~ "session the actual screen (#{Shorthand.of(current)}) is saved"
+      assert hint =~ "--resume #{Shorthand.of(current)}` resumes it"
+      refute hint =~ current
+      refute hint =~ "session #{Shorthand.of(old)} is saved"
+    end
+
+    test "the exit command uses a short name that resolves to the saved session", context do
+      id = "01M4HAEB2WS7WMVP8ATN4D3NCA"
+      :ok = Store.append(context.store, id, [Entry.new(:session, %{"cwd" => File.cwd!()})])
+
+      hint =
+        TUI.resume_hint(context.store, nil,
+          program: "mix lmx",
+          closed_session: %{id: id, name: nil, cwd: File.cwd!()}
+        )
+
+      assert hint ==
+               "session maxime-comtois is saved · `mix lmx --resume maxime-comtois` resumes it"
+
+      assert Shorthand.resolve(context.store, "maxime-comtois") == {:ok, id}
+    end
+
+    test "quitting a failed startup never claims an unrelated session was just saved", context do
+      session(context.store, context.project)
+      assert TUI.resume_hint(context.store, context.project, closed_session: %{id: nil}) == nil
+
+      assert TUI.resume_hint(context.store, context.project,
+               closed_session: %{id: "missing", name: nil, cwd: context.project}
+             ) == nil
+    end
+
     test "quotes a directory the shell would split", context do
       project = Path.join(context.project, "it's here")
       File.mkdir_p!(project)

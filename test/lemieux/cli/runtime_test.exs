@@ -384,6 +384,14 @@ defmodule Lemieux.CLI.RuntimeTest do
              ~w(read grep glob write edit bash ask_user todo ping)
   end
 
+  test "the standard catalog retains diagram preview across the Elixir toggle" do
+    assert {:ok, options} = Options.parse([])
+    assert {:ok, tools} = Runtime.standard_tools(options, interactive?: true, a2ui: true)
+    assert Enum.any?(tools, &(Lemieux.Tool.name(&1) == "diagram_preview"))
+    assert {:ok, plain} = Runtime.standard_tools(options, interactive?: true, a2ui: false)
+    refute Enum.any?(plain, &(Lemieux.Tool.name(&1) == "diagram_preview"))
+  end
+
   # Provenance for free: the transcript says which code shaped the session.
   test "every request's snapshot records which extensions shaped the session", %{
     tmp_dir: tmp_dir

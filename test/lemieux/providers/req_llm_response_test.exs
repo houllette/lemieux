@@ -205,7 +205,10 @@ defmodule Lemieux.Providers.ReqLLMResponseTest do
       )
 
     assert {:error, _reason} = Provider.run(provider, request, &send(owner, {:event, &1}))
-    assert_receive {:event, {:response_metadata, %{status: 200}}}
+    assert_receive {:event, {:response_metadata, metadata}}
+    assert metadata.status == 200
+    assert metadata.resolved_model == "served-model"
+    assert metadata.headers == %{"x-ixway-request-id" => ["gateway-1"]}
     refute_receive {:event, {:done, _}}
   end
 

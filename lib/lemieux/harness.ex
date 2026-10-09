@@ -152,6 +152,7 @@ defmodule Lemieux.Harness do
           status_line: module() | nil,
           followups: module() | nil,
           processing: [String.t()] | nil,
+          startup_animation: map() | false | nil,
           skills: list(),
           notices: [String.t()],
           workspace: term(),
@@ -176,7 +177,7 @@ defmodule Lemieux.Harness do
                      params reasoning_effort output_schema
                      harness_context correlation_ids tool_token_counter provider_limit_key)a
 
-  @host_fields ~w(theme themes keys layout status_line followups processing skills notices
+  @host_fields ~w(theme themes keys layout status_line followups processing startup_animation skills notices
                   workspace commands renderers)a
 
   defstruct Enum.map(@session_fields -- [:system, :compact_at, :reasoning_effort], &{&1, nil}) ++
@@ -191,6 +192,7 @@ defmodule Lemieux.Harness do
                 status_line: nil,
                 followups: nil,
                 processing: nil,
+                startup_animation: nil,
                 skills: [],
                 notices: [],
                 workspace: nil,
