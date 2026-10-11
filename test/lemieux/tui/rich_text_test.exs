@@ -126,6 +126,7 @@ defmodule Lemieux.TUI.RichTextTest do
       base = %{
         id: "01K2QF8YV3RB4TJ6WQ0N7XZDP5",
         name: "holden-gretzky",
+        tokens: 0,
         kind: "explore",
         goal: "find the build commands",
         status: "running",
@@ -144,7 +145,7 @@ defmodule Lemieux.TUI.RichTextTest do
     # while the rest does not.
     test "is what it is, then what it is doing" do
       assert child(text: "read mix.exs") == [
-               "├─ holden-gretzky · running · find the build commands",
+               "├─ holden-gretzky (0 tokens) · running · find the build commands",
                "│ └ read mix.exs"
              ]
     end
@@ -154,7 +155,7 @@ defmodule Lemieux.TUI.RichTextTest do
     # while conveying no new state.
     test "counts a repeated call instead of repeating it" do
       assert child(text: "read mix.exs", count: 12) == [
-               "├─ holden-gretzky · running · find the build commands",
+               "├─ holden-gretzky (0 tokens) · running · find the build commands",
                "│ └ read mix.exs ×12"
              ]
     end
@@ -163,11 +164,13 @@ defmodule Lemieux.TUI.RichTextTest do
     # its own transcript rather than its parent's. One line, not two with an
     # empty one.
     test "is one line when there is nothing to report under it" do
-      assert child(status: "queued") == ["├─ holden-gretzky · queued · find the build commands"]
+      assert child(status: "queued") == [
+               "├─ holden-gretzky (0 tokens) · queued · find the build commands"
+             ]
     end
 
     test "carries no brief when the transcript recorded none" do
-      assert child(goal: nil) == ["├─ holden-gretzky · running"]
+      assert child(goal: nil) == ["├─ holden-gretzky (0 tokens) · running"]
     end
 
     # How a delegation ended is the thing somebody scans a block of these

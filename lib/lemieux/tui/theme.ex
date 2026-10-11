@@ -721,6 +721,31 @@ defmodule Lemieux.TUI.Theme do
   def pale?(%__MODULE__{blocks: %{code_bg: code_bg}}), do: Colour.light?(code_bg)
 
   @doc """
+  A subdued tint for a completion's absolute index.
+
+  Cycle blue, green and lavender from the palette's existing colours. On a
+  dark page these blend towards white; on a pale page towards black, where
+  pastel foregrounds would disappear. A custom palette therefore retains
+  its own hues, and mono introduces no colour. Absolute indices keep the
+  stripe on the same choice when the menu scrolls past a separator.
+  """
+  @spec completion_colour(theme :: t(), index :: non_neg_integer()) :: colour()
+  def completion_colour(theme, index) do
+    colour = elem({theme.tools.explore, theme.tools.edit, theme.tools.eval}, rem(index, 3))
+
+    case Colour.rgb(colour) do
+      nil ->
+        nil
+
+      {r, g, b} ->
+        {target, weight} = if pale?(theme), do: {0, 0.55}, else: {255, 0.32}
+        {:rgb, blend(r, target, weight), blend(g, target, weight), blend(b, target, weight)}
+    end
+  end
+
+  defp blend(channel, target, weight), do: round(channel * weight + target * (1 - weight))
+
+  @doc """
   No colour at all: every slot is the terminal's default.
 
   What survives is what the renderer says with weight — bold headings and

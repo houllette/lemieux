@@ -5,6 +5,24 @@ defmodule Lemieux.RequestSnapshotTest do
   alias Lemieux.Request
   alias Lemieux.RequestSnapshot
 
+  test "document inputs are auditable inline and omitted at digests level" do
+    user = Entry.new(:user, %{"text" => "bounded private excerpt"})
+    request = Request.new("test:model", entries: [user])
+    full = RequestSnapshot.build(request, auxiliary: true)
+    assert full["auxiliary"] == true
+
+    assert [%{"id" => id, "payload" => %{"text" => "bounded private excerpt"}}] =
+             full["auxiliary_entries"]
+
+    assert id == user.id
+    assert :ok = RequestSnapshot.verify(full)
+
+    minimal = RequestSnapshot.build(request, auxiliary: true, evidence: :digests)
+    refute Map.has_key?(minimal, "auxiliary_entries")
+    assert minimal["auxiliary"] == true
+    assert :ok = RequestSnapshot.verify(minimal)
+  end
+
   test "captures the resolved provider-neutral request and redacts transport secrets" do
     user = Entry.new(:user, %{"text" => "fix it"})
 

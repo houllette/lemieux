@@ -404,10 +404,14 @@ defmodule Lemieux.Evidence.Run do
     responses =
       Enum.filter(entries, fn
         %Entry{type: type} when type in [:assistant, :compaction, :guidance] -> true
+        %Entry{type: :extension_state, usage: %{"request_id" => _id}} -> true
         _entry -> false
       end)
 
-    response_ids = responses |> Enum.map(& &1.payload["request_id"]) |> MapSet.new()
+    response_ids =
+      responses
+      |> Enum.map(&(&1.payload["request_id"] || (&1.usage && &1.usage["request_id"])))
+      |> MapSet.new()
 
     # A failed request can end in an error without an assistant entry. It must
     # still make usage, cache, and cost incomplete: earlier measured replies
@@ -418,7 +422,10 @@ defmodule Lemieux.Evidence.Run do
         _entry -> false
       end)
 
-    Enum.map(responses, & &1.usage) ++ List.duplicate(nil, unanswered)
+    Enum.map(responses, fn
+      %Entry{usage: %{"usage_reported" => false}} -> nil
+      entry -> entry.usage
+    end) ++ List.duplicate(nil, unanswered)
   end
 
   defp usage_fact([]), do: %{"state" => "unknown", "value" => nil, "reason" => "not_reported"}

@@ -79,7 +79,8 @@ alternatives; a value with regular-expression characters is a regex. Both
 ignore case, and a tool is matched by its own name and by the Claude Code
 names it answers to: `Bash` matches `bash`, `Edit|Write` matches `edit`,
 `write` and `apply_patch`, `Read`, `Grep` and `Glob` match their Lemieux
-namesakes, `WebFetch` matches `web_fetch`, `Task` the scout's `delegate`,
+namesakes, `WebFetch` matches `web_fetch`, `Task` the scout's `subagents`
+(also the library's `delegate` name),
 `TodoWrite` the `todo` tool, and `mcp__github__.*` an MCP server's tools.
 
 `lmx` does not warn when a matcher names no tool, so a typo in a matcher

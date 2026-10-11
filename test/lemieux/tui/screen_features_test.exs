@@ -388,7 +388,7 @@ defmodule Lemieux.TUI.ScreenFeaturesTest do
         })
 
       state = info(sized(tui()), {:entry, entry})
-      assert screen(state) =~ "plan 0/1"
+      assert screen(state) =~ "Todo List · revision 1 · 0/1 complete"
       assert screen(state) =~ "write tests"
     end
 

@@ -185,6 +185,19 @@ defmodule Lemieux.Session.Accounting do
     do: {elem(provider, 0), ModelSpec.provider(model), model}
 
   def measured_spend(entries) do
+    accounted = MapSet.new(entries, fn entry -> entry.usage && entry.usage["request_id"] end)
+
+    if Enum.any?(entries, fn entry ->
+         entry.type == :request and entry.payload["auxiliary"] == true and
+           not MapSet.member?(accounted, entry.payload["id"])
+       end) do
+      nil
+    else
+      known_spend(entries)
+    end
+  end
+
+  defp known_spend(entries) do
     Enum.reduce_while(entries, 0.0, fn
       %Entry{type: :tool_result, payload: payload}, total ->
         case get_in(payload, ["cost", "usd"]) do

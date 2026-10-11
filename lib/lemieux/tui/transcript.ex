@@ -7,6 +7,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Selection
+    alias Lemieux.TUI.TranscriptSpacing
     alias Lemieux.TUI.Window
 
     @doc false
@@ -43,13 +44,19 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def say(state, who, text) do
       state = finish_line(state)
       lines = for line <- String.split(text, "\n"), do: {who, line}
-      lines = maybe_separate_turn(state.lines, lines, who)
+      lines = TranscriptSpacing.separate(lines, List.first(state.lines))
       added = Enum.reduce(lines, 0, fn line, total -> total + rows(state, line) end)
 
       %{state | lines: Enum.reverse(lines, state.lines)} |> held(added)
     end
 
     defp push_model(state, line) do
+      state =
+        case TranscriptSpacing.separate([{:model, line}], List.first(state.lines)) do
+          [{:space, ""}, _row] -> append_rows(state, [{:space, ""}])
+          _rows -> state
+        end
+
       {count, row} = Blocks.start_line(state.lines, line)
       removed = count_rows(state, Enum.take(state.lines, count))
       %{state | lines: [row | Enum.drop(state.lines, count)]} |> held(rows(state, row) - removed)
@@ -90,6 +97,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def append_rows(state, lines) do
       state = finish_line(state)
+      lines = TranscriptSpacing.separate(lines, List.first(state.lines))
       added = Enum.reduce(lines, 0, fn line, total -> total + rows(state, line) end)
       %{state | lines: Enum.reverse(lines, state.lines)} |> held(added)
     end
@@ -153,17 +161,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp splice_link({target, point}, below, removed, delta),
       do: {target, splice_point(point, below + removed, delta)}
-
-    defp maybe_separate_turn(lines, new_lines, :you) do
-      case List.first(lines) do
-        {:summary, _summary} -> [{:space, ""} | new_lines]
-        {:compact_result, _report} -> [{:space, ""} | new_lines]
-        {:lmx, _output} -> [{:space, ""} | new_lines]
-        row -> if Blocks.model_row?(row), do: [{:space, ""} | new_lines], else: new_lines
-      end
-    end
-
-    defp maybe_separate_turn(_lines, new_lines, _who), do: new_lines
 
     # Every path that changes what is below the reader goes through here, so "hold
     # your place while the model talks" is one rule rather than one per caller. It is

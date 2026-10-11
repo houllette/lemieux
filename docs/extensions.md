@@ -216,6 +216,7 @@ session would apply.
 | `Lemieux.Extensions.MCPDiscovery` | `mcp_discover`, which keeps a large MCP catalog out of the request until it is searched | `mcp_discovery` | with MCP | with MCP |
 | `Lemieux.Extension.Profile` | The tuning in `--extension-profile FILE` | | flag | flag |
 | `Lemieux.Extensions.Interactive` | `ask_user`, because somebody is attached | `interactive` | no | yes |
+| `Lemieux.CLI.SessionSummary` | Saves a short `/resume` gist after two exchanges, with the first prompt as the offline fallback | `session_summary` | no | yes |
 | `Lemieux.Extensions.Web` | `web_search`, guarded `web_fetch` and `research_check` with a configured Brave key; explicit web settings override | `web` | key or flag | key or flag |
 | `Lemieux.Extensions.Elixir` | The `--elixir` profile: `elixir` alone, plus `ask_user` if it was there | `elixir` | flag | flag |
 | `Lemieux.Extensions.Search` | `grep` and `glob` | `search` | new sessions | new sessions |
@@ -227,7 +228,7 @@ session would apply.
 | `Lemieux.Extensions.Verify` | The project's check after a turn that edited files ([Verify](workflows.md#verify-after-changes)) | `verify` | default | default |
 | `Lemieux.Extensions.Budget` | Tells the model what is left of `--max-requests`, and says nothing without it ([Budget](workflows.md#tell-the-model-what-is-left)) | `budget` | default | default |
 | `Lemieux.Extensions.A2A` | The peers in `"a2a_peers"` ([A2A](a2a.md)) | `a2a` | when configured | when configured |
-| `Lemieux.Extensions.Delegation` | The repository scout behind `delegate`, and its budgets ([Delegation](subagents.md)) | `delegation` | default | default |
+| `Lemieux.Extensions.Delegation` | The repository scout behind `subagents`, and its budgets ([Delegation](subagents.md)) | `delegation` | default | default |
 | Yours, from `--extension`, `--extension-dir` or `"extensions"` | Whatever you built; see [Installing an extension into `lmx`](#installing-an-extension-into-lmx), and [Adding a model route](#adding-a-model-route) for one that offers a route rather than shaping the harness | | flag | flag |
 | `Lemieux.Extensions.Checkpoints` | Records what tools change, for `/undo`, `/rewind` and `/redo` ([Checkpoints](tool-contracts.md#checkpoints)) | `checkpoints` | default | default |
 | `LemieuxSystemOneCompaction` | System One compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-system-one-projection-before-compaction)) | `systemone_compaction` | when a provider is complete | when a provider is complete |

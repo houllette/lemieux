@@ -11,6 +11,8 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     alias Lemieux.TUI.Activity
     alias Lemieux.TUI.Blocks
     alias Lemieux.TUI.ToolText
+    alias Lemieux.TUI.TranscriptSpacing
+    alias Lemieux.Usage
 
     # The tag a shipped stop hook puts first so the model can tell which rule
     # spoke; the row's glyph already says the harness did.
@@ -19,10 +21,13 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     @doc "Summarizes a finished delegation group."
     @spec group_summary(map()) :: String.t()
     def group_summary(%{"status" => status, "results" => results}) when is_list(results),
-      do: "delegation #{status} · #{investigations(length(results))}"
+      do: "Subagents #{group_status(status)} · #{investigations(length(results))}"
 
-    def group_summary(%{"status" => status}), do: "delegation #{status}"
-    def group_summary(_payload), do: "delegation finished"
+    def group_summary(%{"status" => status}), do: "Subagents #{group_status(status)}"
+    def group_summary(_payload), do: "Subagents finished"
+
+    defp group_status("ok"), do: "complete"
+    defp group_status(status), do: String.replace(status, "_", " ")
 
     defp investigations(count), do: Activity.investigations(count)
 
@@ -59,6 +64,36 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def child_name(child_id) when is_binary(child_id), do: Shorthand.of(child_id)
     def child_name(_missing), do: "child"
 
+    @doc """
+    Total reported tokens for one child, or nil when there is no measurement.
+
+    Includes input, output and both cache counters. `Usage.sum/1` makes input
+    disjoint from cached input first, so providers that include cache tokens
+    in their input count do not make this badge count the same tokens twice.
+    """
+    @spec child_tokens(usage :: map() | nil) :: non_neg_integer() | nil
+    def child_tokens(usage) when is_map(usage) do
+      fields = [
+        {"input_tokens", :input_tokens},
+        {"output_tokens", :output_tokens},
+        {"cache_read_tokens", :cache_read_tokens},
+        {"cache_write_tokens", :cache_write_tokens}
+      ]
+
+      reported? =
+        Enum.any?(fields, fn {key, atom} ->
+          value = Map.get(usage, key) || Map.get(usage, atom)
+          is_number(value) and value >= 0
+        end)
+
+      if reported? do
+        total = Usage.sum([usage])
+        Enum.sum(Enum.map(fields, fn {key, _atom} -> total[key] end))
+      end
+    end
+
+    def child_tokens(_missing), do: nil
+
     # The failure flag lives on the result payload and nowhere else. Rows are
     # what survive into the transcript window, so it has to be read here or it
     # is lost by the time anything draws.
@@ -73,7 +108,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       entries
       |> Enum.reduce({[], %{}}, &transcript_entry(&1, &2, view))
       |> elem(0)
-      |> space_turns()
+      |> TranscriptSpacing.separate(nil)
     end
 
     # An attempt the stream broke off: its words dimmed and marked, never the
@@ -186,17 +221,6 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       end)
     end
 
-    defp space_turns(lines) do
-      lines
-      |> Enum.reduce([], fn line, acc ->
-        if turn_boundary?(line, acc), do: [line, {:space, ""} | acc], else: [line | acc]
-      end)
-      |> Enum.reverse()
-    end
-
-    defp turn_boundary?({:you, _text}, [row | _rest]), do: Blocks.model_row?(row)
-    defp turn_boundary?(_line, _acc), do: false
-
     # A message a stop hook sent the model is the harness talking, not the
     # person; `harness_lines/1` says it in that voice.
     defp entry_lines(%{type: :user, payload: %{"text" => text}} = entry) do
@@ -217,7 +241,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     # line: a child's tool calls are in the *child's* transcript, which the parent
     # never saw.
     defp entry_lines(%{type: :subagent_group_result, payload: payload}),
-      do: [{:summary, group_summary(payload)}]
+      do: [{:subagent_summary, payload["status"] || "finished", group_summary(payload)}]
 
     defp entry_lines(_entry), do: []
 
@@ -228,6 +252,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         kind: payload["definition_id"],
         goal: payload |> get_in(["task", "objective"]) |> brief(),
         status: payload["status"] || "queued",
+        tokens: child_tokens(payload["usage"]),
         activity: nil,
         count: 1,
         text: nil

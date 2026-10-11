@@ -39,12 +39,14 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     alias ExRatatui.Style
     alias ExRatatui.Text.{Line, Span}
+    alias Lemieux.Context
     alias Lemieux.TUI.A2UI.Layout, as: A2UILayout
     alias Lemieux.TUI.Art
     alias Lemieux.TUI.Blocks
     alias Lemieux.TUI.Diagrams
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.Theme
+    alias Lemieux.TUI.TodoText
     alias Lemieux.TUI.Width
 
     @typedoc """
@@ -61,9 +63,12 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     `activity` is the last tool it announced and `count` how many times in a
     row, so a stuck scout is one line with a number rather than a screenful
-    of identical reads. `text` is that call rendered for a person.
+    of identical reads. `text` is that call rendered for a person. `tokens`
+    is cumulative reported usage, including caches, rather than context size;
+    nil means usage has not been reported.
     """
     @type child :: %{
+            optional(:tokens) => non_neg_integer() | nil,
             id: String.t(),
             name: String.t(),
             kind: String.t() | nil,
@@ -81,6 +86,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
             | {:activity, String.t(), String.t()}
             | Blocks.row()
             | {:subagent_child, child()}
+            | {:subagent_summary, String.t(), String.t()}
             | {:context_bar, [{context_key(), float()}]}
             | {:context_key, [{context_key(), String.t()}]}
             | Lemieux.TUI.ToolText.row()
@@ -131,6 +137,24 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
         {:subagent_child, child} ->
           child_lines(child, width, theme)
+
+        {:subagent_summary, status, text} ->
+          hanging(
+            [{text, status_style(status, theme)}],
+            {"└ ", gutter_style(theme)},
+            {"  ", gutter_style(theme)},
+            width
+          )
+
+        {:todo_item, _id, status, title} ->
+          {label, style} = TodoText.status(status, theme)
+
+          hanging(
+            [{label, style}, {" · " <> title, %Style{fg: theme.text.plain}}],
+            {"  ", gutter_style(theme)},
+            {"  ", gutter_style(theme)},
+            width
+          )
 
         {:context_bar, segments} ->
           context_bar(segments, width, theme)
@@ -231,6 +255,12 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     defp styled({:compact_result, text}, theme),
       do: [{text, %Style{fg: theme.voices.activity, modifiers: [:bold]}}]
+
+    defp styled({:tool_heading, _id, kind, verb, subject}, theme)
+         when kind in [:todo, :subagents] do
+      colour = if kind == :todo, do: theme.voices.activity, else: theme.children.name
+      [{verb, %Style{fg: colour, modifiers: [:bold]}}] ++ subject_span(subject, theme)
+    end
 
     defp styled({:tool_heading, _id, kind, verb, subject}, theme) do
       accent = accent(kind, theme)
@@ -634,10 +664,20 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
       [
         {"├─ ", gutter_style(theme)},
         {child.name, %Style{fg: theme.children.name, modifiers: [:bold]}},
+        {" (#{child_tokens(child)})", %Style{fg: theme.text.muted}},
         {" · ", gutter_style(theme)},
         {child.status, status_style(child.status, theme)}
       ] ++ goal(child, theme)
     end
+
+    defp child_tokens(%{tokens: tokens}) when is_integer(tokens),
+      do: "#{Context.abbreviate(tokens)} tokens"
+
+    defp child_tokens(%{status: status})
+         when status in ["ok", "failed", "timeout", "cancelled", "budget_exhausted", "finished"],
+         do: "tokens unavailable"
+
+    defp child_tokens(_child), do: "tokens pending"
 
     # The brief, which is the only thing on the row that says *why* this
     # child exists. Dimmed, because the name and the status are what a person
@@ -672,7 +712,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
       do: %Style{fg: theme.children.fail, modifiers: [:bold]}
 
     defp status_style(status, theme)
-         when status in ["cancelled", "cancelling", "budget_exhausted", "stalled"],
+         when status in ["cancelled", "cancelling", "budget_exhausted", "stalled", "partial"],
          do: %Style{fg: theme.children.warn}
 
     defp status_style("ok", theme), do: %Style{fg: theme.children.ok}

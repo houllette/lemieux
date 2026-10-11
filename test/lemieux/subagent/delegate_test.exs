@@ -15,7 +15,7 @@ defmodule Lemieux.Subagent.DelegateTest do
   # than reading anything, which is what a capability with no threshold in its
   # description invites.
   describe "what the model is told about delegating" do
-    defp delegate_tool do
+    defp delegate_tool(opts \\ []) do
       Delegate.new(
         [
           Definition.new(
@@ -27,9 +27,20 @@ defmodule Lemieux.Subagent.DelegateTest do
             max_cost_usd: 0.1
           )
         ],
-        snapshot: %{"git_commit" => "abc123"},
-        max_cost_usd: 0.5
+        Keyword.merge([snapshot: %{"git_commit" => "abc123"}, max_cost_usd: 0.5], opts)
       )
+    end
+
+    test "a host can name the tool without changing existing embedders or child options" do
+      assert Tool.name(delegate_tool()) == "delegate"
+      renamed = delegate_tool(name: "subagents")
+      assert Tool.name(renamed) == "subagents"
+      refute Keyword.has_key?(renamed.options, :name)
+      assert Tool.schema(renamed) == Tool.schema(delegate_tool())
+
+      assert_raise ArgumentError, ~r/name must be a non-empty string/, fn ->
+        delegate_tool(name: "")
+      end
     end
 
     test "the description says when the tool is not worth it, not only what it does" do

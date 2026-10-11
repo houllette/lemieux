@@ -24,6 +24,7 @@ defmodule Lemieux.Session.Core do
         wave: %{tool_tasks: tasks},
         compaction: %{compacting: nil},
         hook_task: nil,
+        document_request: nil,
         mcp_wait: nil,
         subagent_groups: groups
       })

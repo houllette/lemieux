@@ -114,6 +114,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
+             "Lemieux.CLI.SessionSummary",
              "Lemieux.CLI.RuntimeTest.Audit"
            ]
   end
@@ -422,7 +423,8 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Elixir",
              "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Budget",
-             "Lemieux.Extensions.Delegation"
+             "Lemieux.Extensions.Delegation",
+             "Lemieux.CLI.SessionSummary"
            ]
 
     Supervisor.stop(supervisor)
@@ -579,7 +581,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              )
 
     assert Enum.map(Session.tools(resumed), &Lemieux.Tool.name/1) ==
-             ["read", "grep", "glob", "edit", "todo", "delegate"]
+             ["read", "grep", "glob", "edit", "todo", "subagents"]
 
     {:ok, after_resume} = Lemieux.Store.read(store, id)
 
@@ -749,7 +751,7 @@ defmodule Lemieux.CLI.RuntimeTest do
 
     # Delegation survives the mode: it narrows what this session may run, not
     # who it may ask.
-    assert Session.snapshot(interactive).tools == ["elixir", "ask_user", "delegate"]
+    assert Session.snapshot(interactive).tools == ["elixir", "ask_user", "subagents"]
 
     headless_supervisor =
       :"lemieux_cli_headless_elixir_test_#{System.unique_integer([:positive])}"
@@ -761,7 +763,7 @@ defmodule Lemieux.CLI.RuntimeTest do
                supervisor: headless_supervisor
              )
 
-    assert Session.snapshot(headless).tools == ["elixir", "delegate"]
+    assert Session.snapshot(headless).tools == ["elixir", "subagents"]
 
     Supervisor.stop(interactive_supervisor)
     Supervisor.stop(headless_supervisor)
@@ -802,7 +804,7 @@ defmodule Lemieux.CLI.RuntimeTest do
             {:tool_call,
              %{
                id: "delegate-1",
-               name: "delegate",
+               name: "subagents",
                arguments: %{
                  "tasks" => [
                    %{
@@ -857,7 +859,7 @@ defmodule Lemieux.CLI.RuntimeTest do
           {:tool_call,
            %{
              id: "delegate-1",
-             name: "delegate",
+             name: "subagents",
              arguments: %{
                "tasks" => [
                  %{"definition_id" => "repository-scout", "objective" => "Find the owner"}

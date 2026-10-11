@@ -426,7 +426,7 @@ defmodule Lemieux.Context do
   defp request_bytes(entries) do
     entries
     |> Enum.reverse()
-    |> Enum.find(&(&1.type == :request))
+    |> Enum.find(&(&1.type == :request and &1.payload["auxiliary"] != true))
     |> case do
       %Entry{payload: %{} = payload} -> shares(payload, entries)
       _otherwise -> nil

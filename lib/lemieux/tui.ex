@@ -622,6 +622,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 mcp_ready?: true,
                 mcp_announced?: false,
                 plan: nil,
+                plan_revision: 0,
                 plan_progress: nil,
                 requests: 0,
                 request_cap: nil,

@@ -8,9 +8,9 @@ defmodule Lemieux.CLI.SessionIndex do
   cannot ask for a provider-specific query such as "the newest fifty with
   their titles". This module builds that view from the behaviour instead.
 
-  The first user message is the preview because it is normally the task that
-  named the session. The last message is often an incidental follow-up such as
-  "run the tests", which makes a poor title when returning a day later.
+  The preview prefers the short gist lmx saved after the first two exchanges,
+  and falls back to the first user prompt when no gist is available. Listing
+  sessions only reads durable metadata; it never contacts a model.
 
   ## Last activity, from an index rather than from every transcript
 
@@ -45,6 +45,7 @@ defmodule Lemieux.CLI.SessionIndex do
   works, and `lmx log` never filtered anything.
   """
 
+  alias Lemieux.CLI.SessionSummary
   alias Lemieux.Entry
   alias Lemieux.ID.Shorthand
   alias Lemieux.Store
@@ -53,7 +54,7 @@ defmodule Lemieux.CLI.SessionIndex do
 
   @default_limit 50
   @index_file "index.json"
-  @index_version 1
+  @index_version 2
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -212,11 +213,12 @@ defmodule Lemieux.CLI.SessionIndex do
   Led by the shorthand rather than the id, because the label's job is to hand
   somebody something to type next and nobody retypes a ULID. The id is still
   the identity and is still what the picker resolves to; it is just not what
-  the line is for.
+  the line is for. The gist follows the name, before date/model metadata,
+  so a narrow terminal still shows what the conversation was about.
   """
   @spec label(session :: t()) :: String.t()
   def label(%__MODULE__{} = session) do
-    [date(session.at), session.model, quoted(session.preview)]
+    [quoted(session.preview), date(session.at), session.model]
     |> Enum.reject(&is_nil/1)
     |> then(&Enum.join([shorthand(session) | &1], " · "))
   end
@@ -285,7 +287,7 @@ defmodule Lemieux.CLI.SessionIndex do
       "updated_at" => updated_at(entries, mtime),
       "model" => payload_string(session, "model"),
       "cwd" => payload_string(session, "cwd"),
-      "preview" => entries |> Enum.find(&(&1.type == :user)) |> preview(),
+      "preview" => SessionSummary.preview(entries),
       "offered" => not Transcript.delegated?(entries, id) and substantive?(entries)
     }
   end
@@ -375,12 +377,6 @@ defmodule Lemieux.CLI.SessionIndex do
   end
 
   defp payload_string(nil, _key), do: nil
-
-  defp preview(%Entry{payload: %{"text" => text}}) when is_binary(text) do
-    text |> String.replace(~r/\s+/, " ") |> String.trim() |> String.slice(0, 72)
-  end
-
-  defp preview(_entry), do: nil
 
   defp iso(%DateTime{} = at), do: DateTime.to_iso8601(at)
   defp iso(nil), do: nil

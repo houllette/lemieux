@@ -31,8 +31,8 @@ defmodule Lemieux.CLI.SessionIndexTest do
     # Led by the name rather than the id: the label's job is to hand somebody
     # something they can type back, and nobody retypes a ULID.
     assert SessionIndex.label(new) ==
-             "#{Shorthand.of("02NEW")} · 2026-08-15 23:58 · openai:new · " <>
-               "\u201cexplain this failure\u201d"
+             "#{Shorthand.of("02NEW")} · \u201cexplain this failure\u201d · " <>
+               "2026-08-15 23:58 · openai:new"
 
     assert new.shorthand == Shorthand.of("02NEW")
   end

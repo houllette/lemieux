@@ -182,7 +182,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp remember_delegation(state) do
       delegate =
-        state.session |> Session.tools() |> Enum.find(&(Lemieux.Tool.name(&1) == "delegate"))
+        state.session
+        |> Session.tools()
+        |> Enum.find(&(Lemieux.Tool.name(&1) in ["subagents", "delegate"]))
 
       put_in(state.tool_choices.delegation, delegate)
     end

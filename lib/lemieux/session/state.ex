@@ -205,6 +205,7 @@ defmodule Lemieux.Session.State do
     retry_failure: nil,
     evidence: %Evidence{},
     aside: nil,
+    document_request: nil,
     subscribers: nil,
     reversed_entries: [],
     next_seq: 0,

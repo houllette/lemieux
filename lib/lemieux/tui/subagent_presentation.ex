@@ -11,10 +11,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # One row per child, updated where it sits. One row per *event* put three
     # scouts' statuses and tool activity in arrival order, so reading any one meant
     # picking its name out of interleaved streams. `group_started` draws nothing: it
-    # arrives after the `child_queued` events it would introduce. The closing rule
+    # arrives after the `child_queued` events it would introduce. The closing footer
     # carries the count, which is when knowing it is useful.
     defp subagent_rows([_root_id], {:group_finished, payload}),
-      do: [{:summary, TranscriptPresentation.group_summary(payload)}]
+      do: [
+        {:subagent_summary, payload["status"] || "finished",
+         TranscriptPresentation.group_summary(payload)}
+      ]
 
     defp subagent_rows(_path, _event), do: []
 
@@ -28,6 +31,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           kind: payload["definition_id"],
           goal: TranscriptPresentation.brief(payload["objective"]),
           status: "queued",
+          tokens: nil,
           activity: nil,
           count: 1
         }
@@ -42,6 +46,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def present(state, [_root_id], {:child_finished, payload}),
       do: child_status(state, payload, payload["status"] || "finished")
+
+    def present(state, [_root_id, child_id], {:usage, usage}) when is_map(usage),
+      do: add_tokens(state, child_id, TranscriptPresentation.child_tokens(usage))
 
     # A check that let the child continue is worth a word on its row: without
     # one, a scout eight minutes into a long investigation looks exactly like
@@ -82,6 +89,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             kind: nil,
             goal: nil,
             status: "running",
+            tokens: nil,
             activity: signature,
             count: 1,
             text: text
@@ -92,6 +100,46 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def present(state, path, event),
       do: Transcript.append_rows(state, subagent_rows(path, event))
+
+    defp add_tokens(state, _child_id, nil), do: state
+
+    defp add_tokens(state, child_id, tokens) do
+      update_child(
+        state,
+        child_id,
+        fn child ->
+          if child.status in [
+               "ok",
+               "failed",
+               "timeout",
+               "cancelled",
+               "budget_exhausted",
+               "finished"
+             ],
+             do: child,
+             else: Map.put(child, :tokens, (Map.get(child, :tokens) || 0) + tokens)
+        end,
+        fn ->
+          child_row_fields(%{"child_id" => child_id}, "running") |> Map.put(:tokens, tokens)
+        end
+      )
+    end
+
+    @doc "Reconciles a child's final recorded usage instead of adding it to live reports."
+    @spec result(state :: map(), payload :: map()) :: map()
+    def result(state, payload) do
+      status = payload["status"] || "finished"
+      tokens = TranscriptPresentation.child_tokens(payload["usage"])
+
+      update_child(
+        state,
+        payload["child_id"],
+        fn child ->
+          child |> Map.put(:status, status) |> Map.put(:tokens, tokens || Map.get(child, :tokens))
+        end,
+        fn -> child_row_fields(payload, status) end
+      )
+    end
 
     defp child_status(state, payload, status),
       do:
@@ -109,6 +157,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         kind: payload["definition_id"],
         goal: TranscriptPresentation.brief(payload["objective"]),
         status: status,
+        tokens: TranscriptPresentation.child_tokens(payload["usage"]),
         activity: nil,
         count: 1
       }
@@ -124,12 +173,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
           Transcript.append_rows(state, [{:subagent_child, Map.put_new(build.(), :text, nil)}])
 
         index ->
-          lines =
-            List.update_at(state.lines, index, fn {:subagent_child, child} ->
-              {:subagent_child, change.(child)}
-            end)
-
-          %{state | lines: lines}
+          {newer, [{:subagent_child, child} = row | older]} = Enum.split(state.lines, index)
+          # A growing token badge can wrap the headline onto another row.
+          # Splice keeps the reader and any selection over older rows anchored.
+          case change.(child) do
+            ^child -> state
+            updated -> Transcript.splice(state, newer, [row], [{:subagent_child, updated}], older)
+          end
       end
     end
 

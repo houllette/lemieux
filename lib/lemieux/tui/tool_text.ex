@@ -79,6 +79,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
             | {:tool_question, String.t(), String.t()}
             | {:tool_option, String.t(), pos_integer(), String.t(), String.t() | nil}
             | {:tool_answer, String.t(), String.t()}
+            | {:todo_item, String.t(), String.t(), String.t()}
             | {:tool_code, String.t(), :add | :delete, [Span.t()]}
             | {:tool_code, String.t(), :add | :delete | :context, pos_integer() | nil, [Span.t()]}
 
@@ -346,6 +347,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def call_id({:tool_question, id, _text}), do: id
     def call_id({:tool_option, id, _index, _label, _description}), do: id
     def call_id({:tool_answer, id, _text}), do: id
+    def call_id({:todo_item, id, _status, _title}), do: id
     def call_id({:tool_code, id, _change, _spans}), do: id
     def call_id({:tool_code, id, _change, _number, _spans}), do: id
     def call_id(_row), do: nil
@@ -373,6 +375,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp announcement?({:tool_detail, id, _kind, _text}, id), do: true
     defp announcement?({:tool_question, id, _text}, id), do: true
     defp announcement?({:tool_option, id, _index, _label, _description}, id), do: true
+    defp announcement?({:todo_item, id, _status, _title}, id), do: true
     defp announcement?({:tool_code, id, _change, _spans}, id), do: true
     defp announcement?({:tool_code, id, _change, _number, _spans}, id), do: true
     defp announcement?(_row, _id), do: false
@@ -455,6 +458,11 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         do: true
 
     def row?({:tool_answer, id, text}) when is_binary(id) and is_binary(text), do: true
+
+    def row?({:todo_item, id, status, title})
+        when is_binary(id) and status in ["pending", "in_progress", "completed"] and
+               is_binary(title),
+        do: true
 
     def row?({:tool_code, id, change, spans})
         when is_binary(id) and change in [:add, :delete] and is_list(spans),

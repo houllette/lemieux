@@ -42,9 +42,12 @@ defmodule Lemieux.TUI.RendererTest do
                  "apply_patch",
                  "ask_user",
                  "bash",
+                 "delegate",
                  "edit",
                  "elixir",
                  "read",
+                 "subagents",
+                 "todo",
                  "web_search",
                  "write"
                ]

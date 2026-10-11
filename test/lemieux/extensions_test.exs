@@ -9,7 +9,7 @@ defmodule Lemieux.ExtensionsTest do
     recipe = Extensions.coding("test:model", Scripted.new([]))
     assert Keyword.keys(recipe) == [:delegation]
     assert {:ok, harness} = Harness.assemble(Harness.new(), Keyword.values(recipe))
-    assert Enum.map(harness.tools, &Tool.name/1) == ~w(read write edit bash delegate)
+    assert Enum.map(harness.tools, &Tool.name/1) == ~w(read write edit bash subagents)
     assert Extensions.coding("test:model", Scripted.new([]), delegate: false) == []
   end
 

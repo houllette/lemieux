@@ -12,6 +12,7 @@ defmodule Lemieux.RequestSnapshot do
   HTTP.
   """
 
+  alias Lemieux.Entry
   alias Lemieux.Request
   alias Lemieux.Tool
   alias Lemieux.Tool.Descriptor
@@ -55,6 +56,21 @@ defmodule Lemieux.RequestSnapshot do
         _none -> payload
       end
 
+    # Document requests are metered but do not measure the conversation's
+    # context. Include the marker before hashing, rather than annotating a
+    # completed snapshot and invalidating its audit digest. Their input entries
+    # may be ephemeral host excerpts, so keep them inline for a full audit.
+    payload =
+      if Keyword.get(opts, :auxiliary, false),
+        do:
+          payload
+          |> Map.put("auxiliary", true)
+          |> Map.put(
+            "auxiliary_entries",
+            Enum.map(request.entries, &JSON.decode!(Entry.encode!(&1)))
+          ),
+        else: payload
+
     payload = at_level(payload, Keyword.get(opts, :evidence, :full))
 
     Map.put(payload, "sha256", payload |> Map.delete("id") |> JSON.encode!() |> digest())
@@ -70,6 +86,7 @@ defmodule Lemieux.RequestSnapshot do
   defp at_level(payload, level) when level in [:digests, :off] do
     payload
     |> Map.put("evidence", "digests")
+    |> Map.delete("auxiliary_entries")
     |> Map.put("system", nil)
     |> Map.update!("tools", fn tools -> Enum.map(tools, &Map.take(&1, ["name"])) end)
     |> Map.update!("catalog", &identified_catalog/1)

@@ -42,6 +42,7 @@ defmodule Lemieux.Subagent.Delegate do
   @type t :: %__MODULE__{
           definitions: %{required(String.t()) => Definition.t()},
           context: map() | nil,
+          name: String.t(),
           snapshot: map(),
           max_cost_usd: number(),
           max_requests: pos_integer() | nil,
@@ -49,7 +50,15 @@ defmodule Lemieux.Subagent.Delegate do
         }
 
   @enforce_keys [:definitions, :snapshot, :max_cost_usd]
-  defstruct [:definitions, :snapshot, :max_cost_usd, :max_requests, :context, options: []]
+  defstruct [
+    :definitions,
+    :snapshot,
+    :max_cost_usd,
+    :max_requests,
+    :context,
+    name: "delegate",
+    options: []
+  ]
 
   # The call's own deadline, as the descriptor declares it. It matches the
   # group's default so that a fan-out which runs for tens of minutes is not
@@ -76,7 +85,10 @@ defmodule Lemieux.Subagent.Delegate do
   `definitions` are validated `Lemieux.Subagent.Definition` values; the model
   may choose among them and nothing else. Required in `opts`: `:snapshot`, a
   non-empty versioned map every child inherits, and `:max_cost_usd`, the
-  cumulative tree ceiling in dollars. `:max_requests` is the ceiling in
+  cumulative tree ceiling in dollars. `:name` defaults to `"delegate"` for
+  existing embedders; the shipped lmx extension names it `"subagents"` so
+  the catalog and the transcript use the same user-facing vocabulary.
+  `:max_requests` is the ceiling in
   requests, for a route that cannot price a child — the only bound that
   constrains one, since dollars are not a currency an unpriced route can be
   held to. Anything else — `:providers`, `:child_options`, `:policy`, a
@@ -101,14 +113,17 @@ defmodule Lemieux.Subagent.Delegate do
     validate!(definitions, ids, snapshot, max_cost_usd, max_requests)
 
     context = Context.validate!(Keyword.get(opts, :context))
+    name = Keyword.get(opts, :name, "delegate")
+    require!(is_binary(name) and name != "", "delegate name must be a non-empty string")
 
     %__MODULE__{
       definitions: Map.new(definitions, &{&1.id, &1}),
       snapshot: snapshot,
       context: context,
+      name: name,
       max_cost_usd: max_cost_usd,
       max_requests: max_requests,
-      options: Keyword.drop(opts, [:snapshot, :max_cost_usd, :max_requests, :context])
+      options: Keyword.drop(opts, [:snapshot, :max_cost_usd, :max_requests, :context, :name])
     }
   end
 
@@ -158,7 +173,7 @@ defmodule Lemieux.Subagent.Delegate do
   @behaviour Lemieux.Tool.Configured
 
   @impl Lemieux.Tool.Configured
-  def name(_tool), do: "delegate"
+  def name(tool), do: tool.name
 
   # This text is the only place a model is ever told anything about delegating: the
   # default system prompt is explicit about staying short, and a workspace's own

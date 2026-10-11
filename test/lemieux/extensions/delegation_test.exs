@@ -32,7 +32,7 @@ defmodule Lemieux.Extensions.DelegationTest do
                {Delegation, model: "test:model", provider: provider, cwd: tmp_dir}
              ])
 
-    assert Enum.map(harness.tools, &Tool.name/1) == ~w(read write edit bash delegate)
+    assert Enum.map(harness.tools, &Tool.name/1) == ~w(read write edit bash subagents)
     assert %Delegate{} = delegate = List.last(harness.tools)
 
     assert [%Definition{id: "repository-scout", model: "test:model", tools: tools}] =

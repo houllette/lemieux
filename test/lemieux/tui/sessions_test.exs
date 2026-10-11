@@ -49,7 +49,7 @@ defmodule Lemieux.TUI.SessionsTest do
       assert screen(state) =~ "Read lib/x.ex"
     end
 
-    test "model text and tool activity stay compact without synthetic blank rows" do
+    test "tool output stays with its command while narration has room around it" do
       call = %{id: "bash-1", name: "bash", arguments: %{"command" => "mix test"}}
 
       state =
@@ -68,9 +68,9 @@ defmodule Lemieux.TUI.SessionsTest do
         )
         |> info({:text_delta, "done"})
 
-      refute {:space, ""} in state.lines
-      assert screen(state) =~ "checking\n• Ran mix test"
-      assert screen(state) =~ "└ ok\ndone"
+      assert Enum.count(state.lines, &(&1 == {:space, ""})) == 2
+      assert screen(state) =~ "checking\n\n• Ran mix test"
+      assert screen(state) =~ "• Ran mix test\n  └ ok\n\ndone"
     end
 
     test "live and restored command headings use the selected theme and announce only once" do
@@ -415,9 +415,9 @@ defmodule Lemieux.TUI.SessionsTest do
       name = Shorthand.of("child")
 
       refute rendered =~ "├─ child ·"
-      assert rendered =~ "├─ #{name} · ok"
+      assert rendered =~ "├─ #{name} (tokens unavailable) · ok"
       assert rendered =~ "│ └ read mix.exs ×2"
-      assert rendered =~ "delegation ok · 1 read-only investigation"
+      assert rendered =~ "Subagents complete · 1 read-only investigation"
 
       # One row, and one activity line under it: the statuses it passed
       # through replaced each other rather than stacking up.
@@ -1143,15 +1143,17 @@ defmodule Lemieux.TUI.SessionsTest do
       rendered = screen(state)
 
       # Named, not labelled with what they had in common.
-      assert rendered =~ "├─ #{Shorthand.of("01CHILDA")} · ok · find the build and test commands"
-      assert rendered =~ "├─ #{Shorthand.of("01CHILDB")} · failed · map the module layout"
+      assert rendered =~
+               "├─ #{Shorthand.of("01CHILDA")} (tokens unavailable) · ok · find the build"
+
+      assert rendered =~ "├─ #{Shorthand.of("01CHILDB")} (tokens unavailable) · failed · map the"
       refute rendered =~ "repository-scout"
 
       # One row per child: the result updated the row the spawn made.
       assert length(Regex.scan(~r/├─ /, rendered)) == 2
       refute rendered =~ "queued"
 
-      assert rendered =~ "delegation ok · 2 read-only investigations"
+      assert rendered =~ "Subagents complete · 2 read-only investigations"
     end
 
     test "mount keeps configured MCP servers for the takeover" do
@@ -1189,12 +1191,12 @@ defmodule Lemieux.TUI.SessionsTest do
       assert state.id == "02HYDRATED"
       assert state.conversation.context == %Context{}
       assert screen(state) =~ "please inspect it"
-      assert screen(state) =~ "looking now\n• Explored"
+      assert screen(state) =~ "looking now\n\n• Explored"
       assert screen(state) =~ "Read lib/x.ex"
       refute screen(state) =~ "defmodule X do"
     end
 
-    test "mount restores tool activity and model responses without synthetic spacing" do
+    test "mount restores the space between tool groups and model responses" do
       entries = [
         Entry.new(:assistant, %{
           "content" => [],
@@ -1218,8 +1220,8 @@ defmodule Lemieux.TUI.SessionsTest do
       session = fake_session(snapshot("02TOOLSPACING", entries))
 
       assert {:ok, state} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
-      refute {:space, ""} in state.lines
-      assert screen(state) =~ "Read lib/x.ex\nall done"
+      assert {:space, ""} in state.lines
+      assert screen(state) =~ "Read lib/x.ex\n\nall done"
     end
 
     test "mount restores turn spacing between an answer and the next prompt" do

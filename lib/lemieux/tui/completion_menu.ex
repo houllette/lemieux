@@ -69,6 +69,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
             content_height,
             gap_after,
             Keyword.get_lazy(opts, :theme, &Theme.default/0),
+            Keyword.fetch!(opts, :accent),
             noun
           )
 
@@ -119,16 +120,26 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         else: pane.y + max(pane.height - height, 0)
     end
 
-    defp completion_items(matches, gap_after, first, theme) do
+    defp completion_items(matches, gap_after, first, theme, selected, accent) do
       matches
       |> Enum.with_index(first)
-      |> Enum.map(fn {match, index} -> completion_item(match, index == gap_after, theme) end)
+      |> Enum.map(fn {match, index} ->
+        # A deprecated badge retains its alert colour under selection, so
+        # that row cannot use a foreground highlight. Accent its prefix here.
+        colour =
+          if index == selected and Map.get(match, :deprecated?, false),
+            do: accent,
+            else: Theme.completion_colour(theme, index)
+
+        style = %Style{fg: colour}
+        completion_item(match, index == gap_after, theme, style)
+      end)
     end
 
-    defp completion_window([], _selected, _rows, _gap_after, _theme, noun),
+    defp completion_window([], _selected, _rows, _gap_after, _theme, _accent, noun),
       do: {["No matching #{noun}"], nil, 0, 0}
 
-    defp completion_window(matches, selected, rows, gap_after, theme, _noun) do
+    defp completion_window(matches, selected, rows, gap_after, theme, accent, _noun) do
       total = length(matches)
 
       heights =
@@ -140,7 +151,11 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       first = completion_first(heights, selected, rows - padding, selected + 1)
       count = completion_count(heights, first, rows, total)
 
-      items = matches |> Enum.slice(first, count) |> completion_items(gap_after, first, theme)
+      items =
+        matches
+        |> Enum.slice(first, count)
+        |> completion_items(gap_after, first, theme, selected, accent)
+
       {items, selected - first, first, total - first - count}
     end
 
@@ -219,15 +234,10 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     defp completion_title(selected, _shown, total, _tabs, noun, hint),
       do: " #{noun} #{selected + 1}/#{total} · #{hint} "
 
-    defp completion_item(match, false, theme), do: completion_label(match, theme)
+    defp completion_item(match, false, theme, style), do: completion_label(match, theme, style)
 
-    defp completion_item(match, true, theme) do
-      line =
-        case completion_label(match, theme) do
-          %Line{} = line -> line
-          label -> Line.new([Span.new(label)])
-        end
-
+    defp completion_item(match, true, theme, style) do
+      line = completion_label(match, theme, style)
       Text.new([line, Line.new([])])
     end
 
@@ -235,16 +245,18 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     # was, and in the light one a red that reads on white (5.4:1), where the
     # named `:red` it used to be is whatever red the terminal's palette holds,
     # which no theme could re-pick and `mono` could not take away.
-    defp completion_label(%{label: label, deprecated?: true}, theme) do
+    defp completion_label(%{label: label, deprecated?: true}, theme, style) do
       prefix = String.replace_suffix(label, "deprecated", "")
 
       Line.new([
-        Span.new(prefix),
+        Span.new(prefix, style: style),
         Span.new("deprecated", style: %Style{fg: theme.voices.alert})
       ])
     end
 
-    defp completion_label(%{label: label}, _theme), do: label
+    defp completion_label(%{label: label}, _theme, style),
+      do: Line.new([Span.new(label, style: style)])
+
     defp completion_highlight(_accent, %{deprecated?: true}), do: %Style{modifiers: [:bold]}
     defp completion_highlight(accent, _match), do: %Style{fg: accent, modifiers: [:bold]}
 

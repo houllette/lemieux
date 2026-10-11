@@ -30,6 +30,7 @@ defmodule Lemieux.Hooks.Claude do
     "web_fetch" => ["WebFetch"],
     "web_search" => ["WebSearch"],
     "delegate" => ["Task"],
+    "subagents" => ["Task"],
     "todo" => ["TodoWrite"]
   }
 
@@ -47,6 +48,7 @@ defmodule Lemieux.Hooks.Claude do
     "web_fetch" => "WebFetch",
     "web_search" => "WebSearch",
     "delegate" => "Task",
+    "subagents" => "Task",
     "todo" => "TodoWrite"
   }
 
@@ -62,7 +64,7 @@ defmodule Lemieux.Hooks.Claude do
     "glob" => ["glob"],
     "webfetch" => ["web_fetch"],
     "websearch" => ["web_search"],
-    "task" => ["delegate"],
+    "task" => ["delegate", "subagents"],
     "todowrite" => ["todo"]
   }
 

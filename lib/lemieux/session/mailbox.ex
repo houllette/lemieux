@@ -8,6 +8,7 @@ defmodule Lemieux.Session.Mailbox do
   alias Lemieux.Session.Catalog
   alias Lemieux.Session.Compacting
   alias Lemieux.Session.Core
+  alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.MCPServers
   alias Lemieux.Session.Prompts
   alias Lemieux.Session.Recovery
@@ -16,6 +17,23 @@ defmodule Lemieux.Session.Mailbox do
   alias Lemieux.Session.ToolWave
   alias Lemieux.Session.Window
   alias Lemieux.Usage
+
+  def message({:document_event, ref, event}, %{document_request: %{ref: ref}} = state),
+    do: {:noreply, DocumentRequest.event(state, event)}
+
+  def message({ref, result}, %{document_request: %{task: %Task{ref: ref}}} = state) do
+    Process.demonitor(ref, [:flush])
+    {:noreply, DocumentRequest.finish(state, result)}
+  end
+
+  def message(
+        {:DOWN, ref, :process, _pid, reason},
+        %{document_request: %{task: %Task{ref: ref}}} = state
+      ),
+      do: {:noreply, DocumentRequest.finish(state, {:error, {:crashed, reason}})}
+
+  def message({:document_timeout, ref}, %{document_request: %{ref: ref}} = state),
+    do: {:noreply, DocumentRequest.cancel(state, :timeout)}
 
   def message({:park_timeout, call_id}, state) do
     case Map.pop(state.parked, call_id) do

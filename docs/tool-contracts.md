@@ -5,7 +5,7 @@ search the web. Lemieux ships four in `Lemieux.Tools.default/0` — `read`,
 `write`, `edit` and `bash` — and a host (`lmx`, or an application that
 embeds Lemieux) replaces or extends them through `:tools`. `lmx` adds more
 through its extensions, such as `grep`, `glob`, `apply_patch`, the `todo`
-plan and the `delegate` scout
+plan and the `subagents` scout
 ([Extensions](extensions.md#what-lmx-ships-and-which-mode-applies-which)).
 
 Tools come from two places: Elixir modules running in the host's VM, which

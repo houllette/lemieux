@@ -224,6 +224,7 @@ defmodule Lemieux.Session do
   alias Lemieux.Session.Boot
   alias Lemieux.Session.Calls
   alias Lemieux.Session.Document
+  alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Mailbox
   alias Lemieux.Session.Prompts
   alias Lemieux.Supervisor, as: Sup
@@ -1151,6 +1152,55 @@ defmodule Lemieux.Session do
   end
 
   @doc """
+  Makes one tool-free request and checkpoints its result as an extension document.
+
+  The host supplies the request, namespace and a pure builder receiving
+  `{:ok, text}` or `{:error, reason}`. The session serializes this operation,
+  checks request/cost budgets and document revision before dispatch, uses its
+  provider and admission limiter, and records the request and metered usage.
+  Output is document data, never a conversation message or a streaming reply.
+  No retries run. `:timeout_ms` defaults to 30 seconds; `:kind` labels the
+  request snapshot (default `:document`).
+
+  Available while idle or inside a stop hook, so a host can annotate a finished
+  exchange without inserting a synthetic user/assistant exchange. Other busy
+  operations are refused. A conflicting writer or invalid builder still leaves
+  paid usage recorded; cancellation and absent usage keep cost unknown.
+  """
+  @spec generate_document(
+          session :: session(),
+          namespace :: String.t(),
+          revision :: non_neg_integer(),
+          request :: Lemieux.Request.t(),
+          build :: (term() -> map()),
+          opts :: keyword()
+        ) ::
+          {:ok, map()} | {:error, term()}
+  def generate_document(
+        session,
+        namespace,
+        revision,
+        %Lemieux.Request{} = request,
+        build,
+        opts \\ []
+      )
+      when is_integer(revision) and revision >= 0 and is_function(build, 1) do
+    timeout = Keyword.get(opts, :timeout_ms, 30_000)
+
+    if is_integer(timeout) and timeout > 0 and is_atom(Keyword.get(opts, :kind, :document)) do
+      with :ok <- Document.validate(namespace, %{}) do
+        GenServer.call(
+          session,
+          {:generate_document, namespace, revision, request, build, opts},
+          :infinity
+        )
+      end
+    else
+      {:error, :invalid_options}
+    end
+  end
+
+  @doc """
   What the session has used of the bounds its host set, and what they are.
 
   `spent_usd` against `max_cost_usd`, for a bounded external operation;
@@ -1421,6 +1471,7 @@ defmodule Lemieux.Session do
 
   @impl GenServer
   def terminate(reason, state) do
+    DocumentRequest.cancel(state, :cancelled)
     Hooks.session_end(state.hooks, reason, Prompts.hook_context(state))
     :ok
   after

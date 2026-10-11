@@ -205,7 +205,7 @@ defmodule Lemieux.ConfigurationTest do
       end)
 
       assert [request] = Scripted.requests(provider)
-      assert Enum.map(request.tools, &Lemieux.Tool.name/1) == ["delegate"]
+      assert Enum.map(request.tools, &Lemieux.Tool.name/1) == ["subagents"]
     end
 
     test "interactive resume does not leak the first session's tool-profile flags" do
@@ -269,24 +269,24 @@ defmodule Lemieux.ConfigurationTest do
 
     test "and gets the Elixir tool instead of the file tools when it was", context do
       assert Enum.map(offered(context, ["--elixir"]), &Lemieux.Tool.name/1) ==
-               ~w(elixir delegate)
+               ~w(elixir subagents)
     end
 
     test "--elixir replaces an interactive host's default tools too", context do
       offered = offered(context, ["--elixir"], default_tools: Tools.default() ++ [Tools.AskUser])
 
-      assert Enum.map(offered, &Lemieux.Tool.name/1) == ~w(elixir delegate)
+      assert Enum.map(offered, &Lemieux.Tool.name/1) == ~w(elixir subagents)
     end
 
     # `lmx` supplies delegation unless told not to, which the library does not:
     # `Tools.default/0` is still the four. See `Lemieux.CLI.Options`.
     test "delegation is offered without being asked for", context do
-      assert Enum.map(offered(context, []), &Lemieux.Tool.name/1) == @lmx_tools ++ ["delegate"]
+      assert Enum.map(offered(context, []), &Lemieux.Tool.name/1) == @lmx_tools ++ ["subagents"]
     end
 
     test "--no-delegate leaves lmx's catalog without the scout", context do
       assert offered(context, ["--no-delegate"]) == @lmx_catalog
-      refute "delegate" in Enum.map(offered(context, ["--no-delegate"]), &Lemieux.Tool.name/1)
+      refute "subagents" in Enum.map(offered(context, ["--no-delegate"]), &Lemieux.Tool.name/1)
     end
 
     # The mode narrows what the parent may run, not who it may ask. A scout
@@ -294,7 +294,7 @@ defmodule Lemieux.ConfigurationTest do
     # session cannot cheaply do for itself.
     test "--elixir keeps delegation, and --no-delegate still takes it away", context do
       assert Enum.map(offered(context, ["--elixir"]), &Lemieux.Tool.name/1) ==
-               ~w(elixir delegate)
+               ~w(elixir subagents)
 
       assert offered(context, ["--elixir", "--no-delegate"]) == [Lemieux.Tools.Eval]
     end
@@ -307,7 +307,7 @@ defmodule Lemieux.ConfigurationTest do
     test "a child is bounded in requests when the route cannot price one", context do
       delegate = List.last(offered(context, []))
 
-      assert Lemieux.Tool.name(delegate) == "delegate"
+      assert Lemieux.Tool.name(delegate) == "subagents"
       scout = delegate.definitions["repository-scout"]
 
       assert scout.max_cost_usd == nil
@@ -348,7 +348,7 @@ defmodule Lemieux.ConfigurationTest do
     test "--delegate exposes one bounded repository scout to the model", context do
       offered = offered(context, ["--delegate"])
 
-      assert Enum.map(offered, &Lemieux.Tool.name/1) == @lmx_tools ++ ["delegate"]
+      assert Enum.map(offered, &Lemieux.Tool.name/1) == @lmx_tools ++ ["subagents"]
 
       delegate = List.last(offered)
       assert Map.keys(delegate.definitions) == ["repository-scout"]

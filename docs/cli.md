@@ -199,7 +199,9 @@ Besides the conversation, the terminal UI gives you:
   tab. Lists of names are alphabetical; `/model` puts
   preferred and recent models first, then the rest by release date, with
   deprecated models marked near the end;
-- the model's plan (its `todo` tool) above the input while a task is open;
+- a Todo List above the input while a task is open, with its revision and
+  completion count; `todo` receipts use colored Completed, In progress and
+  Pending labels, and separate tool groups have a blank row between them;
 - edits, writes and patches drawn as numbered diffs, and the full output of
   any recent tool call a Ctrl-O away;
 - a fuzzy `@` file picker that skips ignored files, and images pasted from
@@ -378,7 +380,7 @@ links to the docs, issues and questions at the end.
 | `/approve [CALL_ID \| all]` | Run a tool call waiting for approval; bare, the oldest one |
 | `/deny [CALL_ID \| all] [REASON]` | Refuse a waiting tool call; the reason is what the model reads |
 | `/verify [on \| off]` | Show or switch the check that runs after a turn that edited files |
-| `/delegate [on \| off]` | Offer or withhold the [repository scout](#delegated-repository-investigation) for this session |
+| `/subagents [on \| off]` | Offer or withhold the [repository scout](#delegated-repository-investigation) for this session |
 | `/tools [list]` | List local and MCP tools with their enabled or disabled status |
 | `/tools enable NAME...` / `/tools disable NAME...` | Enable or disable one or more tools at once, while idle |
 | `/mcp` | Open the MCP server panel; `/mcp list`, `add PATH`, `remove NAME` and `reconnect [NAME]` are the text forms |
@@ -436,6 +438,16 @@ question opens a panel with suggestions, an Other answer and a review step.
 **`/resume`** skips sessions that were opened and left without a prompt. A
 session already open in another `lmx` cannot be resumed; the message names
 that process and the lock file to delete if it is gone.
+
+Completion menus cycle soft row colours, with the selected choice in the bold
+accent colour. Light themes use darker tints and mono remains uncoloured.
+After two completed exchanges, an interactive session makes one short,
+tool-free request on its current connection/model to save a session gist for
+`/resume`. This request counts against the session's request and cost limits;
+its output stays out of the conversation. The first prompt remains the
+fallback when offline, interrupted or out of budget. Listing sessions never
+makes model requests. Disable automatic gists with
+`"disabled_extensions": ["session_summary"]` in your config.
 
 **`!COMMAND`** runs through the session's environment, so the credential
 scrub, path confinement and any sandbox apply as they do to the agent's own
@@ -1114,9 +1126,15 @@ lmx                      # the scout is there by default
 lmx --no-delegate        # and this is how you decline it
 ```
 
-A new session gets a `delegate` tool with one definition, the repository
+A new session gets a `subagents` tool with one definition, the repository
 scout: a read-only helper session the model can send to investigate the
 repository while it keeps working. The model may run one to three at once.
+The terminal UI groups their activity under `Subagents:`. Each player's
+name has a cumulative reported token count in parentheses, including input,
+output and cache tokens. Counts update as usage arrives and restore from the
+child's recorded result; missing usage is labeled pending or unavailable.
+The group ends with a compact completion summary. Ctrl-O opens the full
+tool response.
 Each scout uses the session's model (or `"scout_model"`), gets only `read`,
 `grep` and `glob`, and stops when it runs out of turns (400), when a progress
 check every two minutes finds it stalled, or after an hour. Spending is
@@ -1128,8 +1146,9 @@ The scout is on so that a request to "use a subagent" gets one rather than
 "no subagent tools are available". It costs tokens: on read-heavy questions,
 sessions that delegated spent about five times the tokens for answers no
 better. `--no-delegate`, `LMX_DELEGATE=0` or `"delegate": false` declines
-it, in that precedence; `/delegate off` and `/delegate on` switch it for the
-current session. A resumed session gets it only with `--delegate`, because
+it, in that precedence; `/subagents off` and `/subagents on` switch it for the
+current session. `/delegate` remains an alias for `/subagents`. A resumed
+session gets it only with `--delegate`, because
 definitions are not restored from a transcript. `--elixir` keeps it.
 
 Claude Code agent definitions (`.claude/agents/*.md` in the repository or

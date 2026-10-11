@@ -19,9 +19,11 @@ defmodule Lemieux.Conversation.DispatchTest do
   alias Lemieux.Conversation.Dispatch
   alias Lemieux.Environment.Local
   alias Lemieux.Eval.Attach
+  alias Lemieux.Extensions.Delegation
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store.JSONL
+  alias Lemieux.Subagent.Delegate, as: SubagentTool
 
   @moduletag :tmp_dir
 
@@ -902,23 +904,42 @@ defmodule Lemieux.Conversation.DispatchTest do
       {session, _provider} = start(context, [], tools: [Echo, Delegate])
 
       off = Dispatch.perform(acc(), host(session), {:set_delegate, false})
-      assert "delegation off" in said(off)
+      assert "subagents off" in said(off)
       assert {:react, :tools_changed} in calls(off)
       refute delegate_enabled?(session)
 
       on = Dispatch.perform(acc(), host(session), {:set_delegate, true})
-      assert "delegation on" in said(on)
+      assert "subagents on" in said(on)
       assert delegate_enabled?(session)
     end
 
     defp delegate_enabled?(session),
       do: Enum.find(Session.tool_status(session), &(&1.name == "delegate")).enabled?
 
+    test "the subagents command switches the tool under its lmx name", context do
+      tool =
+        SubagentTool.new([Delegation.repository_scout("test:model", false)],
+          name: "subagents",
+          max_cost_usd: 1.0,
+          snapshot: %{"version" => 1}
+        )
+
+      {session, _provider} = start(context, [], tools: [Echo, tool])
+
+      for enabled? <- [false, true] do
+        result = Dispatch.perform(acc(), host(session), {:set_delegate, enabled?})
+        assert if(enabled?, do: "subagents on", else: "subagents off") in said(result)
+
+        assert Enum.find(Session.tool_status(session), &(&1.name == "subagents")).enabled? ==
+                 enabled?
+      end
+    end
+
     test "a session with no delegate tool says so rather than enabling nothing", context do
       {session, _provider} = start(context, [], tools: [Echo])
 
       [line] = said(Dispatch.perform(acc(), host(session), {:set_delegate, true}))
-      assert line =~ "no delegate tool"
+      assert line =~ "no subagents tool"
     end
   end
 

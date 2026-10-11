@@ -1957,6 +1957,9 @@ defmodule Lemieux.ConversationTest do
       assert [{:set_verify, true}] = effects(conversation(), "/verify on")
       assert [{:set_verify, false}] = effects(conversation(), "/verify OFF")
       assert [{:set_delegate, false}] = effects(conversation(), "/delegate off")
+      assert [{:set_delegate, false}] = effects(conversation(), "/subagents off")
+      assert [{:set_delegate, true}] = effects(conversation(), "/subagents on")
+      assert [:delegate_status] = effects(conversation(), "/subagents")
       assert [:delegate_status] = effects(conversation(busy?: true), "/delegate")
       refute {:set_delegate, true} in effects(conversation(busy?: true), "/delegate on")
     end

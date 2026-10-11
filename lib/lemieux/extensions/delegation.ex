@@ -1,6 +1,6 @@
 defmodule Lemieux.Extensions.Delegation do
   @moduledoc """
-  The repository scout: one `delegate` tool, its definition and its budgets.
+  The repository scout: one `subagents` tool, its definition and its budgets.
 
   Delegation is wider and more expensive than the four ordinary tools, and
   `lmx` supplies it by default — `Lemieux.CLI.Options` says why. The
@@ -9,7 +9,7 @@ defmodule Lemieux.Extensions.Delegation do
   `read`, `grep` and `glob`, fixed limits, and no way to broaden itself. `Lemieux.Subagent.Delegate` says why the tool is something a host
   passes rather than something the session assembles, and why it is never
   restored from a transcript — which is also why this extension leaves a
-  catalog that already carries a `delegate` alone: on a resume the host may
+  catalog that already carries `subagents` or `delegate` alone: on a resume the host may
   have restored one, and two would be two trees of children.
 
   ## Budgets
@@ -42,7 +42,7 @@ defmodule Lemieux.Extensions.Delegation do
   When `Lemieux.Extensions.Workspace` ran first, its discovery sits in the
   harness's `workspace` field with the Claude-compatible subagent
   definitions it found (`.claude/agents/*.md`, a selected plugin's
-  `agents/`). Each becomes one more definition on the same `delegate` tool,
+  `agents/`). Each becomes one more definition on the same `subagents` tool,
   under the same budgets, with its own prompt and description. Every one
   stays certified read-only: the tools it asked for that read (`Read`,
   `Grep`, `Glob`) are granted, and the rest are named in a notice rather
@@ -132,7 +132,7 @@ defmodule Lemieux.Extensions.Delegation do
 
     harness
     |> Harness.update_tools(fn tools ->
-      if Enum.any?(tools, &(Tool.name(&1) == "delegate")),
+      if Enum.any?(tools, &(Tool.name(&1) in ["subagents", "delegate"])),
         do: tools,
         else: tools ++ [tool(state, agents)]
     end)
@@ -151,6 +151,7 @@ defmodule Lemieux.Extensions.Delegation do
       |> Keyword.merge(options)
       |> Keyword.merge(
         snapshot: snapshot,
+        name: "subagents",
         max_cost_usd: @delegate_tree_max_cost_usd,
         max_requests: @delegate_tree_max_requests
       )

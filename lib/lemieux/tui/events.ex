@@ -414,6 +414,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {SubagentPresentation.present(state, path, event), effects}
     end
 
+    defp present_event(state, {:entry, %{type: :subagent_result, payload: payload}}, effects),
+      do: {SubagentPresentation.result(state, payload), effects}
+
     defp present_event(state, {:mcp_server, status}, effects),
       do: {MCPStatus.update(state, status), effects}
 

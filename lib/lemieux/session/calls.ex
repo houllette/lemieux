@@ -14,6 +14,7 @@ defmodule Lemieux.Session.Calls do
   alias Lemieux.Session.Compacting
   alias Lemieux.Session.Core
   alias Lemieux.Session.Document
+  alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.MCPServers
   alias Lemieux.Session.Prompts
@@ -512,6 +513,18 @@ defmodule Lemieux.Session.Calls do
       Prompts.start_prompt_hook(%{state | aside: aside}, from, aside.text)
     end
   end
+
+  def call({:generate_document, namespace, revision, request, build, opts}, from, state),
+    do:
+      DocumentRequest.start(
+        state,
+        from,
+        namespace,
+        revision,
+        request,
+        build,
+        opts
+      )
 
   def call(:compact, from, state) do
     # No reply on the second branch: it is answered when the summarising

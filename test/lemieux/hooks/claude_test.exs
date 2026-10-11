@@ -38,6 +38,16 @@ defmodule Lemieux.Hooks.ClaudeTest do
   defp sh_quote(path), do: "'" <> String.replace(path, "'", "'\\''") <> "'"
 
   describe "matchers" do
+    test "the renamed subagents tool retains Claude Task hook and permission matching" do
+      assert Claude.tool_aliases("subagents") == ["Task"]
+
+      assert Command.matches_any?(command("true", matcher: "Task"), [
+               "subagents" | Claude.tool_aliases("subagents")
+             ])
+
+      assert "subagents" in Claude.lemieux_tools("Task")
+    end
+
     test "a Claude tool name matches the Lemieux tool it names, whatever the case" do
       assert Command.matches_any?(command("true", matcher: "Bash"), ["bash"])
       assert Command.matches_any?(command("true", matcher: "BASH"), ["bash"])

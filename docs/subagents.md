@@ -13,7 +13,7 @@ or a clean-context review. It is intentionally not a general agent team:
 children cannot delegate, edit a checkout, run a shell, message each other,
 stay in the background, or widen the authority the host chose.
 
-In `lmx`, the model gets this as the `delegate` tool, with one definition by
+In `lmx`, the model gets this as the `subagents` tool, with one definition by
 default: the **repository scout**, which reads with `read`, `grep` and
 `glob`. Each scout may spend up to $3, and all of a session's scouts together
 up to $9; on a route `lmx` cannot price, the bounds are 480 requests a scout
@@ -182,7 +182,7 @@ child transcript are preserved in the result's uncertainties.
 
 ### The scout and workspace agents
 
-`Lemieux.Extensions.Delegation` — what `lmx` applies — builds the `delegate`
+`Lemieux.Extensions.Delegation` — what `lmx` applies — builds the `subagents`
 tool around one definition, the repository scout. The scout reads with `read`,
 `grep` and `glob` (every one certified read-only), so it can search a tree
 rather than walk it a directory at a time. It runs on the parent's model unless
@@ -210,6 +210,9 @@ mean the scout's model and budget.
 The host builds one `delegate` tool from its definitions and passes it to the
 parent in `:tools`, like any other tool. The snapshot and tree budget are
 construction arguments, never model arguments:
+
+`Delegate.new/2` keeps the `delegate` name for existing library hosts. Pass
+`name: "subagents"` to use the same tool name as `lmx`.
 
 ```elixir
 delegate =

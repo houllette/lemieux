@@ -263,7 +263,8 @@ sandbox](#the-sandbox), and hooks.
 `"disabled_extensions"` leaves shipped extensions out by name: `planning`,
 `continuation`, `verify`, `search`, `apply_patch`, `checkpoints`,
 `environment_context`, `mcp_discovery`, `mcp`, `interactive`, `web`, `elixir`,
-`workspace`, `delegation`, `a2a`, `a2ui` (terminal visualization instructions)
+`workspace`, `delegation`, `session_summary` (one session-gist request after
+two completed interactive exchanges), `a2a`, `a2ui` (terminal visualization instructions)
 and `systemone_compaction`. Your own
 extensions and an embedding host's policy are not affected.
 
@@ -1462,7 +1463,7 @@ search backend.
 
 ## Delegated investigations
 
-`lmx` gives a new session a `delegate` tool with one definition, the read-only
+`lmx` gives a new session a `subagents` tool with one definition, the read-only
 repository scout; [CLI](cli.md#delegated-repository-investigation) has its
 limits and how to decline it. `"scout_model"` runs scouts on another model, and
 `"delegate": false` withholds the tool. Claude Code agent definitions

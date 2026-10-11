@@ -248,7 +248,7 @@ defmodule Lemieux.CLI.Runtime do
   workspace's overlay applied, and without the Elixir profile or the scout.
 
   What `/elixir` toggles back to. The two exclusions are the point: the
-  Elixir profile is the mode being toggled, and the `delegate` tool is a
+  Elixir profile is the mode being toggled, and the `subagents` tool is a
   struct the session keeps that the host re-reads from it at toggle time.
   """
   @spec standard_tools(options :: Options.t(), opts :: keyword()) ::
@@ -946,6 +946,10 @@ defmodule Lemieux.CLI.Runtime do
        |> Enum.concat(a2ui: if(Keyword.get(opts, :a2ui, false), do: Lemieux.Extensions.A2UI))
        |> Enum.concat(Enum.map(loaded, &{:loaded, &1.spec}))
        |> Enum.concat(checkpoints: checkpoints(options, context))
+       |> Enum.concat(
+         session_summary:
+           if(context.interactive? and not profile?, do: Lemieux.CLI.SessionSummary)
+       )
        |> Enum.reject(fn {name, spec} ->
          is_nil(spec) or MapSet.member?(disabled, Atom.to_string(name))
        end)

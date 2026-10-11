@@ -182,9 +182,12 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         "apply_patch" => __MODULE__.ApplyPatch,
         "ask_user" => __MODULE__.AskUser,
         "bash" => __MODULE__.Bash,
+        "delegate" => __MODULE__.Subagents,
         "edit" => __MODULE__.Edit,
         "elixir" => __MODULE__.Elixir,
         "read" => __MODULE__.Read,
+        "subagents" => __MODULE__.Subagents,
+        "todo" => __MODULE__.Todo,
         "web_search" => __MODULE__.WebSearch,
         "write" => __MODULE__.Write
       }

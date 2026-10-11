@@ -295,8 +295,19 @@ defmodule Lemieux.TUI.TestSupport do
     state
     |> TUI.render(@frame)
     |> Enum.find_value(fn
-      {%List{} = list, _rect} -> list
-      _other -> nil
+      {%List{} = list, _rect} ->
+        # Most callers inspect labels and selection. Keep those assertions
+        # independent of row tinting; rendering tests inspect the real widget.
+        items =
+          Enum.map(list.items, fn
+            %ExRatatui.Text.Line{spans: [%ExRatatui.Text.Span{content: label}]} -> label
+            item -> item
+          end)
+
+        %{list | items: items}
+
+      _other ->
+        nil
     end)
   end
 

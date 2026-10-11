@@ -103,7 +103,7 @@ defmodule Lemieux.ExtensionProfileExtensionTest do
                {Delegation, model: "test:model", priced?: false}
              ])
 
-    assert Enum.map(harness.tools, &Tool.name/1) == ~w(read bash ask_user delegate)
+    assert Enum.map(harness.tools, &Tool.name/1) == ~w(read bash ask_user subagents)
     assert harness.system == "Summarize local reports."
   end
 end
