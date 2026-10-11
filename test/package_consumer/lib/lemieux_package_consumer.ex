@@ -18,6 +18,8 @@ defmodule LemieuxPackageConsumer do
   @doc "Runs one phase in a fresh VM using only the packaged public library."
   @spec verify(phase :: String.t(), directory :: Path.t()) :: :ok
   def verify(phase, directory) when phase in ["seed", "resume", "tighten"] do
+    # Recording is the contributor's toolchain, never an embedder's dependency.
+    false = Code.ensure_loaded?(Temper.Formatter)
     false = Code.ensure_loaded?(ExRatatui)
     false = Code.ensure_loaded?(Ascii)
     false = Diagram.available?()

@@ -274,6 +274,7 @@ max_cases =
     else: System.schedulers_online()
 
 ExUnit.start(
+  formatters: [ExUnit.CLIFormatter, Temper.Formatter],
   exclude: [:live, :eval_live, :distributed],
   assert_receive_timeout: 5_000,
   max_cases: max_cases,

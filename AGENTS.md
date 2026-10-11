@@ -108,6 +108,8 @@ language server, Docker, another build), pass `--max-cases 4`.
 | Run one test | `mix test test/path/to/file_test.exs:LINE` |
 | Run the suite on a heavily loaded machine | `mix test --max-cases 4` |
 | Run the ordinary suite with warnings as errors | `mix test.fast` |
+| Observe multiple offline test orders, preserving failures | `scripts/check_flakes.sh --runs 3 --seed 101 --max-cases 4 [test/PATH_test.exs]` |
+| Review recorded flake evidence / verify recording | `mix temper.report` / `mix temper.doctor` |
 | Run the multi-node suite (needs `epmd`; the alias starts it) | `mix test.distributed` |
 | Run both suites | `mix test.full` |
 | Run the Python release-helper tests | `python3 -m unittest discover -s test -p 'test_*.py'` |
@@ -231,6 +233,16 @@ Release signing keys:
   minute, far beyond 5 s, so the test cannot pass on the fixture's timer. A
   legitimately long test says so with `@tag timeout: :timer.minutes(3)`
   rather than leaning on the suite's 60 s.
+- **Review flake evidence for timing and shared-state changes.** Root tests
+  record through Temper into ignored `.temper/` history. Use
+  `mix temper.report` and, for process/timer/cleanup changes,
+  `scripts/check_flakes.sh --runs 3 --seed 101 --max-cases 4 test/PATH_test.exs`
+  (under `mise exec --` when needed). Widen to the ordinary suite if cases
+  may interfere. The runner exits nonzero if any attempt fails and never
+  enables spending. A blank report is only no observed divergence; dirty-tree
+  findings are suspects, not proof of flakiness. Compare evidence SHAs and
+  environments before attributing a finding to a change. See
+  `CONTRIBUTING.md` for CI retention, artifacts, and reproduction.
 - **Keep a passing run quiet and self-contained.** A passing run prints only
   dots: a test that runs `lmx run`, or anything else that writes to standard
   error, captures it (`capture_io(:stderr, ...)` or `with_io(:stderr, ...)`),

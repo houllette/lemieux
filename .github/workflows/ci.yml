@@ -57,6 +57,10 @@ jobs:
           cache-key: test
           python: "true"
 
+      - uses: ./.github/actions/temper
+        with:
+          phase: restore
+
       - name: Check for unused dependencies
         run: mix deps.unlock --check-unused
 
@@ -84,6 +88,7 @@ jobs:
         run: mix docs --warnings-as-errors
 
       - name: Run tests
+        id: tests
         run: mix test --warnings-as-errors
 
       # Multi-node tests are tagged :distributed and excluded from `mix test`
@@ -114,6 +119,11 @@ jobs:
           test/lemieux/environment/sandbox_test.exs
           test/lemieux/environment/sandbox_*_test.exs
 
+      - uses: ./.github/actions/temper
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        with:
+          phase: report
+
   # The oldest Elixir minor mix.exs admits, with the full suite: hosts embed on
   # their own toolchain, and Livebook ships Elixir 1.19 on OTP 28. Pinned to
   # the newest 1.19 patch because --warnings-as-errors also judges the
@@ -135,11 +145,21 @@ jobs:
           elixir-version: "1.19.6"
           python: "true"
 
+      - uses: ./.github/actions/temper
+        with:
+          phase: restore
+
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
 
       - name: Run tests
+        id: tests
         run: mix test --warnings-as-errors
+
+      - uses: ./.github/actions/temper
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        with:
+          phase: report
 
   # Dependency and application security live in their own job so a red build
   # here reads as "audit this", not "your code is broken".

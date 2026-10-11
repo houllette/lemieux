@@ -34,14 +34,24 @@ jobs:
           cache-key: macos
           python: "true"
 
+      - uses: ./.github/actions/temper
+        with:
+          phase: restore
+
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
 
       - name: Run tests
+        id: tests
         run: mix test --warnings-as-errors
 
       - name: Run distributed tests
         run: mix test.distributed
+
+      - uses: ./.github/actions/temper
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        with:
+          phase: report
 
   # `mix test --cover` fails below the threshold configured under
   # :test_coverage in mix.exs (80%; 85.8% measured on 2026-09-28), so the
@@ -59,8 +69,18 @@ jobs:
           cache-key: coverage
           python: "true"
 
+      - uses: ./.github/actions/temper
+        with:
+          phase: restore
+
       - name: Run tests with coverage
+        id: tests
         run: mix test --cover
+
+      - uses: ./.github/actions/temper
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        with:
+          phase: report
 
       - name: Upload the coverage report
         if: always()
@@ -69,3 +89,28 @@ jobs:
           name: coverage
           path: cover/
           if-no-files-found: ignore
+
+  # A single observation cannot diverge. Repeat on the same checkout under
+  # different orders once nightly, with a fixed budget and no hosted models.
+  flakes:
+    name: Flake observations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: flakes
+          python: "true"
+      - uses: ./.github/actions/temper
+        with:
+          phase: restore
+      - name: Observe three test orders
+        id: tests
+        run: scripts/check_flakes.sh --runs 3 --seed "$((GITHUB_RUN_NUMBER % 999997))" --max-cases 4
+      - uses: ./.github/actions/temper
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        with:
+          phase: report

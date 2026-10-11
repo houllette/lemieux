@@ -170,6 +170,74 @@ it excludes the multi-node tests, which `mix test.distributed` runs. On a
 busy machine (a language server, Docker, another build), run it with
 `--max-cases 4`.
 
+### Collecting flake evidence
+
+Every root `mix test` run records its outcomes, seed, commit, dirty-tree flag,
+and toolchain through [Temper](https://github.com/volcov/temper). History stays
+in the ignored `.temper/` directory. Temper is a development dependency;
+embedding applications and the production `lmx` release do not load it.
+The separate release-host and example suites are outside this initial pilot.
+
+```sh
+mise exec -- mix temper.report          # findings and failing seeds
+mise exec -- mix temper.report --json   # machine-readable evidence
+mise exec -- mix temper.doctor          # check that recording is working
+```
+
+`mix precommit` and `mix ci` check recording and show the report after their
+ordinary suite passes. After a failed ordinary run, use `mix temper.report`
+directly; the failed outcomes have already been recorded.
+
+For a change involving processes, timers, teardown, or shared state, gather
+several observations before review:
+
+```sh
+mise exec -- scripts/check_flakes.sh --runs 3 --seed 101 --max-cases 4 test/lemieux/mcp/duplex_test.exs
+# Widen to the ordinary suite when interference between cases is plausible:
+mise exec -- scripts/check_flakes.sh --runs 3 --seed 101 --max-cases 4
+```
+
+The runner defaults to three orders (seeds 101, 102, 103), limits requests to
+2–20 runs, accepts test files or line selectors, and removes any spending
+opt-in. Every failed attempt keeps the command red even if a later attempt
+passes. It reports after all attempts; it never retries a failure into a
+successful result. Change `--seed` to explore other orders and `--max-cases`
+to reproduce the concurrency of the original failure. It covers the ordinary
+suite; distributed tests still use `mix test.distributed`.
+
+Temper needs both a pass and a failure of a test on the **same clean commit**
+to classify it as flaky. Divergence involving uncommitted changes is only a
+suspect: an edit may explain it. A blank report after one observation proves
+nothing, and repeated passing runs cannot establish that no race exists.
+Temper records evidence after execution; it does not predict fragile code.
+Its analysis also does not distinguish environments within one commit, so
+compare like environments and use the recorded toolchain and CI metadata
+when investigating. Review timer assumptions and shared state alongside the
+report. Findings can describe an older commit; check the evidence SHA before
+attributing them to the change under review. Reproduce a failing seed with
+the original test selection and concurrency, then replace timer sleeps with
+event synchronization or fix ownership and cleanup as appropriate.
+
+CI's pinned and floor root suites, nightly macOS and coverage suites, and
+nightly three-order Linux run restore and save history per job, toolchain,
+and Git ref. The nightly run varies its starting seed by workflow run number.
+Rerun attempts use distinct cache keys, and failed runs save
+their evidence too. Each job publishes a summary and a `temper-*` artifact
+with history, a doctor check, and human/JSON reports. Recording setup is
+checked; findings are advisory and do not bypass failing tests. Retention
+keeps the last 10 observed commits from 14 days, and artifacts last 14 days.
+Cache eviction, canceled jobs, or concurrent saves can leave gaps; artifacts
+retain each completed job's evidence independently. To inspect a downloaded
+artifact, point the report at its history:
+
+```sh
+mise exec -- mix temper.report --history '/path/to/artifact/history-*.jsonl'
+```
+
+Keep histories from different CI jobs separate when investigating a flake.
+For local history retention, `mix temper.clean --older-than 14 --keep-shas 10`
+prunes old observations; bare `mix temper.clean` deletes all local history.
+
 ### What the suite keeps out
 
 The suite does not depend on your machine's settings. Every run sets

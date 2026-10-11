@@ -1,6 +1,7 @@
 # Build artifacts
 /_build/
 /cover/
+/.temper/
 /deps/
 /doc/
 /.fetch

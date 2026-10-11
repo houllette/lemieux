@@ -1,0 +1,65 @@
+name: Temper history
+description: Restore flake evidence before testing, then report and preserve it even after a failure
+inputs:
+  phase:
+    description: restore before tests, report after tests
+    required: true
+runs:
+  using: composite
+  steps:
+    # Each job/toolchain/ref owns its lineage. A rerun needs a new immutable
+    # key too: run_id alone would lose the observation from run_attempt=2.
+    - name: Restore test history
+      if: inputs.phase == 'restore'
+      uses: actions/cache/restore@v6
+      with:
+        path: .temper/history-*.jsonl
+        key: temper-v1-${{ github.workflow }}-${{ github.job }}-${{ runner.os }}-${{ hashFiles('.tool-versions', 'mix.lock', '.github/workflows/*.yml') }}-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          temper-v1-${{ github.workflow }}-${{ github.job }}-${{ runner.os }}-${{ hashFiles('.tool-versions', 'mix.lock', '.github/workflows/*.yml') }}-${{ github.ref }}-
+
+    - name: Bound history retention
+      if: ${{ always() && inputs.phase == 'report' }}
+      shell: bash
+      run: mix temper.clean --older-than 14 --keep-shas 10
+
+    - name: Check recording setup
+      if: ${{ always() && inputs.phase == 'report' }}
+      shell: bash
+      run: |
+        mkdir -p .temper
+        mix temper.doctor | tee .temper/doctor.txt
+
+    - name: Report flake evidence
+      if: ${{ always() && inputs.phase == 'report' }}
+      shell: bash
+      run: |
+        mkdir -p .temper
+        mix temper.report | tee .temper/report.txt
+        mix temper.report --json > .temper/report.json
+        {
+          echo '### Temper flake evidence'
+          echo 'An empty report means no divergence was observed; it does not prove the tests are stable.'
+          echo '```text'
+          cat .temper/report.txt
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    # The combined cache action saves only on success. Explicit save keeps the
+    # failed observation that a later successful run needs for detection.
+    - name: Save test history
+      if: ${{ always() && inputs.phase == 'report' }}
+      uses: actions/cache/save@v6
+      with:
+        path: .temper/history-*.jsonl
+        key: temper-v1-${{ github.workflow }}-${{ github.job }}-${{ runner.os }}-${{ hashFiles('.tool-versions', 'mix.lock', '.github/workflows/*.yml') }}-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+    - name: Upload history and reports
+      if: ${{ always() && inputs.phase == 'report' }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: temper-${{ github.workflow }}-${{ github.job }}-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: .temper/
+        include-hidden-files: true
+        retention-days: 14
+        if-no-files-found: warn

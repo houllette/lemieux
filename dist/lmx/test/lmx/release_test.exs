@@ -51,6 +51,11 @@ defmodule Lmx.ReleaseTest do
     refute File.exists?(Application.app_dir(:lemieux, "priv/plts"))
   end
 
+  test "the executable host does not load the development flake recorder" do
+    refute Code.ensure_loaded?(Temper.Formatter)
+    refute :temper in Application.spec(:lemieux, :applications)
+  end
+
   @tag :tmp_dir
   test "same dependency version with changed code or static config requires restart", %{
     tmp_dir: tmp

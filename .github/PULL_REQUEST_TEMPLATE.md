@@ -9,6 +9,9 @@
 ## How was it tested?
 
 <!-- New or updated tests, and anything you checked by hand. -->
+<!-- For process/timing/shared-state changes: include Temper findings (or the
+number of observations with no divergence), seeds, concurrency, and whether
+the tree was clean. scripts/check_flakes.sh collects bounded observations. -->
 
 ## Checklist
 

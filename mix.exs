@@ -165,6 +165,9 @@ defmodule Lemieux.MixProject do
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.40", only: [:dev, :test], runtime: false},
       {:reach, "~> 2.8", only: [:dev, :test], runtime: false},
+      # A passive ExUnit formatter, never part of an embedding host or lmx.
+      # Reports need the same dependency in :dev that tests load in :test.
+      {:temper, "~> 0.4.0", only: [:dev, :test], runtime: false},
       # Evaluation assertions belong to the development and test toolchain,
       # not the embedded runtime. The release-grade comparison policy remains
       # Lemieux code because Tribunal's single-suite threshold cannot express
@@ -496,6 +499,8 @@ defmodule Lemieux.MixProject do
         # exit, and the alias ran on to end on the release host's green
         # "35 passed" line.
         "test --warnings-as-errors --raise",
+        "temper.doctor",
+        "temper.report",
         # The first run builds a PLT cache under _build/plts and is slow; with
         # the cache in place the check is fast enough for the edit loop, and
         # keeping it here keeps "green precommit means green CI" true.
@@ -527,6 +532,8 @@ defmodule Lemieux.MixProject do
         "xref graph --label compile-connected --fail-above 0",
         "docs --warnings-as-errors",
         "test --warnings-as-errors --raise",
+        "temper.doctor",
+        "temper.report",
         "dialyzer",
         "cmd --cd dist/lmx mix deps.get",
         "cmd --cd dist/lmx mix deps.unlock --check-unused",

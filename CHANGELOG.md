@@ -7,6 +7,14 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Development
+
+- Root test runs record Temper flake evidence locally and in CI. A bounded
+  multi-seed runner, review guidance, and nightly observations help expose
+  timing and shared-state failures while preserving every failing result.
+
 ## 0.10.0 — 2026-10-09
 
 This release requires restarting `lmx` on every platform. Save an unsent draft,
