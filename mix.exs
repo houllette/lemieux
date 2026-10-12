@@ -328,6 +328,7 @@ defmodule Lemieux.MixProject do
         "docs/desktop.md",
         "docs/cli.md",
         "docs/acp.md",
+        "docs/jobs.md",
         "docs/configuration.md",
         "docs/troubleshooting.md",
         "docs/embedding.md",
@@ -404,6 +405,7 @@ defmodule Lemieux.MixProject do
           "docs/first-extension.md"
         ],
         "Using lmx": [
+          "docs/jobs.md",
           "docs/releases.md",
           "docs/desktop.md",
           "docs/cli.md",

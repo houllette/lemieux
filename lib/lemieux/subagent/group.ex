@@ -686,6 +686,7 @@ defmodule Lemieux.Subagent.Group do
       provider_limit_key: state.context.provider_limit_key,
       root_session_id: state.root_id,
       job_budget: state.context.job_budget,
+      execution: Map.get(state.context, :execution),
       job_limits: nil,
       store: state.context.store,
       model: definition.model,

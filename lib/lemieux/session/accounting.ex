@@ -154,13 +154,19 @@ defmodule Lemieux.Session.Accounting do
       |> Map.put(:route_task_supervisor, request.context[:route_task_supervisor])
       |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
+    context =
+      Map.merge(context, %{
+        execution: request.context[:execution],
+        execution_kind: metadata[:kind] || :turn
+      })
+
     request = %{request | context: context}
     started_at = Telemetry.start([:provider, :request], metadata)
     terminal_ref = make_ref()
 
     try do
       result =
-        Provider.run(provider, request, fn event ->
+        Lemieux.Execution.run_provider(provider, request, fn event ->
           if match?({:error, _reason}, event), do: send(self(), {terminal_ref, event})
           emit.(event)
         end)

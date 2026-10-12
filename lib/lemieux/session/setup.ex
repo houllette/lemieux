@@ -97,6 +97,7 @@ defmodule Lemieux.Session.Setup do
     state
     |> Core.entries()
     |> Transcript.unanswered_calls()
+    |> Enum.reject(&(&1 in state.recovery_calls))
     |> Enum.reduce(state, fn call, state ->
       result =
         Receipt.lost(

@@ -21,6 +21,7 @@ defmodule Lemieux.Session.Calls do
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Setup
   alias Lemieux.Session.Subscribers
+  alias Lemieux.Session.ToolWave
   alias Lemieux.Tool
   alias Lemieux.Tool.Profile
 
@@ -34,6 +35,31 @@ defmodule Lemieux.Session.Calls do
              (request in [:mcp_status, :tool_status, :tool_catalog] or
                 (is_tuple(request) and elem(request, 0) == :set_tool_access)),
       do: {:noreply, %{state | mcp_waiters: [{request, from} | state.mcp_waiters]}}
+
+  def call(:continue, _from, %{recovery_enabled?: false} = state),
+    do: {:reply, {:error, :recovery_not_enabled}, state}
+
+  def call(:continue, _from, state) do
+    cond do
+      Core.busy?(state) ->
+        {:reply, {:error, :busy}, state}
+
+      not Enum.any?(state.reversed_entries, &(&1.type == :user)) ->
+        {:reply, {:error, :nothing_to_continue}, state}
+
+      true ->
+        calls = state.recovery_calls
+
+        state =
+          %{state | recovery_enabled?: false, recovery_calls: [], turns_taken: 0}
+          |> Prompts.begin_run()
+          |> Instrumentation.start_prompt_telemetry()
+
+        state = continue_restored(state, calls)
+
+        {:reply, :ok, state}
+    end
+  end
 
   def call(:id, _from, state), do: {:reply, state.id, state}
 
@@ -362,6 +388,7 @@ defmodule Lemieux.Session.Calls do
       provider_limiter: state.provider_limiter,
       provider_limit_key: state.provider_limit_key,
       job_budget: state.job_budget,
+      execution: state.execution,
       store: state.store,
       cwd: state.cwd,
       environment: state.environment,
@@ -675,4 +702,10 @@ defmodule Lemieux.Session.Calls do
   # What is left of the host's deadline, never less than nothing.
   defp time_left(%{deadline_at: nil}), do: nil
   defp time_left(state), do: max(state.deadline_at - Clock.now_ms(state.clock), 0)
+
+  defp continue_restored(%{recovery_stop: reason} = state, _calls) when not is_nil(reason),
+    do: Prompts.start_stop_hook(state, reason)
+
+  defp continue_restored(state, []), do: Compacting.continue(state)
+  defp continue_restored(state, calls), do: ToolWave.apply_effect(state, {:run_tools, calls})
 end

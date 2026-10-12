@@ -144,6 +144,11 @@ defmodule Lemieux.Tool do
   overrides and parked approvals apply to each inner operation. Do not retain
   executable hooks in transcript evidence or capture them during assembly.
 
+  `execution` is the current host's optional synchronous dispatch journal.
+  Composed tools inherit it when forwarding the invocation context. The
+  `tool_wave_id` ties a receipt to its original assistant entry when a provider
+  reuses call IDs in later waves. Neither field restores authority from history.
+
   `input_modalities` is what the session's model can be shown besides text,
   as the model catalog names it (`:image`, `:pdf`), or `:unknown`. A tool that
   can return an attachment (`Lemieux.Tool.Attachment`) asks it first, and
@@ -156,6 +161,8 @@ defmodule Lemieux.Tool do
           optional(:tool_output_bytes) => pos_integer(),
           optional(:deadline_ms) => pos_integer(),
           optional(:hooks) => Lemieux.Hooks.t(),
+          optional(:execution) => Lemieux.Execution.t(),
+          optional(:tool_wave_id) => String.t() | nil,
           optional(:input_modalities) => [atom()] | :unknown,
           cwd: Path.t(),
           environment: Lemieux.Environment.t(),

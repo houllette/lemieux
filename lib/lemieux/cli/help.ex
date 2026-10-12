@@ -30,7 +30,7 @@ defmodule Lemieux.CLI.Help do
   alias Lemieux.CLI.Options
   alias Lemieux.Environment.Sandbox
 
-  @topics ~w(acp config models permissions sandbox mcp plugins skills extensions sessions environment
+  @topics ~w(acp jobs config models permissions sandbox mcp plugins skills extensions sessions environment
              options learning desktop update)
 
   @links [
@@ -65,6 +65,7 @@ defmodule Lemieux.CLI.Help do
   def command("skills"), do: topic("skills")
   def command("desktop"), do: topic("desktop")
   def command("acp"), do: topic("acp")
+  def command("jobs"), do: topic("jobs")
   def command("update"), do: topic("update")
   def command(command) when command in ~w(log fork request), do: topic("sessions")
   def command(command) when command in ~w(feedback corpus harness), do: topic("learning")
@@ -100,12 +101,12 @@ defmodule Lemieux.CLI.Help do
     Usage:
       lmx [options]                 Open the full-screen agent (also: lmx tui)
       lmx run PROMPT [options]      Answer one prompt and exit (stdin: lmx run -)
+      lmx jobs COMMAND             Submit, watch and recover bounded background work
       lmx log SESSION               Print a stored conversation
       lmx fork SESSION [CUT]        Copy a conversation to branch from it
       lmx explain [options]         Show what a session would start with (JSON)
       lmx mcp list|trust|import     Manage MCP servers (lmx help mcp)
-      lmx plugin install|list|remove
-                                    Manage Claude Code-compatible plugins
+      lmx plugin install|list|remove Manage Claude Code-compatible plugins
       lmx extension new|list        Write or list your own Elixir extensions
       lmx skills [--json]           List the skills a session finds, and from where
       lmx desktop install|uninstall Linux app launcher entry (lmx help desktop)
@@ -203,6 +204,39 @@ defmodule Lemieux.CLI.Help do
     |> Enum.join(", ")
     |> wrap(70)
     |> Enum.map_join("\n", &("  " <> &1))
+  end
+
+  defp text("jobs") do
+    """
+    Durable background jobs
+
+      lmx jobs serve [--max-active N] [--max-pending N] [run options]
+      lmx jobs submit --max-total-requests N [--max-total-cost-usd USD] PROMPT
+      lmx jobs list [--cursor JOB_ID]
+      lmx jobs get JOB_ID
+      lmx jobs attach JOB_ID
+      lmx jobs effects JOB_ID [--cursor KEY]
+      lmx jobs approve|deny JOB_ID SESSION_ID CALL_ID
+      lmx jobs answer JOB_ID SESSION_ID CALL_ID TEXT
+      lmx jobs cancel JOB_ID
+      lmx jobs recover JOB_ID
+      lmx jobs reconcile JOB_ID EFFECT_KEY|budget DECISION.json
+      lmx jobs stop
+
+    Run serve under nohup or your service manager. Closing an attach client
+    leaves the job running. All clients accept --jobs-dir DIR; use the same
+    directory as the worker. Submit can add --model MODEL, --at UTC_ISO_TIME
+    and --timeout-ms N (default one hour from the first start).
+
+    The worker owns current policy, approvals, credentials and sandbox settings.
+    Interrupted jobs require explicit recovery. Completed receipts are reused;
+    ambiguous effects require reconciliation evidence. Recovery retains consumed
+    requests, outstanding reservations, original caps and the elapsed deadline.
+
+    Commands emit JSON. get links the result, checks, failures and inclusive
+    cost to its transcripts. A model stopping does not mean verification passed.
+    Read: https://hexdocs.pm/lemieux/jobs.html
+    """
   end
 
   defp text("config") do

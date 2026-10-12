@@ -11,6 +11,16 @@ API.
 
 ### Features
 
+- Durable background jobs add a separately mounted `Lemieux.Jobs` host and
+  `lmx jobs` worker/clients, with bounded queueing, one-shot schedules,
+  detach/attach, current-host approvals, cancellation and reviewable results.
+  Synchronous dispatch receipts and budget persistence fence interrupted
+  work; recovery repairs completed results, retries safe calls under current
+  policy and blocks ambiguous effects until evidence-backed reconciliation.
+  **Migration:** job hosting is opt-in. Ordinary session resume is unchanged;
+  explicit `Session.continue/1` requires a reconciled `recover_tools: true`
+  resume. See [Durable background jobs](docs/jobs.md).
+
 - Workspace discovery loads bounded `.claude/rules` files, including scoped
   rules activated before native file operations. `lmx explain` reports
   effective migration inputs, exclusions, precedence and limitations, plus

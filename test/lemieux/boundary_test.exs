@@ -61,7 +61,8 @@ defmodule Lemieux.BoundaryTest do
     ~r/^Lemieux\.A2A(\.|$)/,
     ~r/^Lemieux\.Eval(\.|$)/,
     ~r/^Lemieux\.Tools\.Eval$/,
-    ~r/^Lemieux\.Agent(\.|$)/
+    ~r/^Lemieux\.Agent(\.|$)/,
+    ~r/^Lemieux\.Jobs(\.|$)/
   ]
 
   # Edges that exist today and are still to be cut: the loop calling opinions
