@@ -9,6 +9,7 @@ defmodule Lemieux.CLI.ACP.Server do
   alias Lemieux.MCP.Config
   alias Lemieux.Session
   alias Lemieux.Store
+  alias Lemieux.Transcript
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts)
   def receive_line(server, line), do: GenServer.cast(server, {:line, line})
@@ -173,8 +174,63 @@ defmodule Lemieux.CLI.ACP.Server do
     end
   end
 
+  defp request("_lemieux/fork", params, id, state) do
+    with {:ok, session} <- session(state, params),
+         %{status: :idle, cwd: cwd} <- Session.info(session.pid),
+         {:ok, selector} <- fork_selector(params),
+         {:ok, forked} <-
+           Transcript.fork(
+             Runtime.store(state.options, state.host),
+             params["sessionId"],
+             selector
+           ),
+         {:ok, state, forked} <-
+           open_session("session/resume", %{"sessionId" => forked, "cwd" => cwd}, [], state) do
+      reply(state, id, %{"sessionId" => forked})
+    else
+      _error ->
+        failure(
+          state,
+          id,
+          -32_602,
+          "Fork requires an idle session and a safe transcript boundary"
+        )
+    end
+  end
+
+  defp request("_lemieux/configure", params, id, state) do
+    with {:ok, session} <- session(state, params),
+         :ok <- configure(session.pid, Map.delete(params, "sessionId")) do
+      info = Session.info(session.pid)
+      reply(state, id, %{"model" => info.model, "reasoningEffort" => info.reasoning_effort})
+    else
+      _error ->
+        failure(
+          state,
+          id,
+          -32_602,
+          "Configure accepts one supported model or reasoningEffort setting on an idle session"
+        )
+    end
+  end
+
   defp request(_method, _params, id, state),
     do: failure(state, id, -32_601, "Method not supported")
+
+  defp configure(pid, %{"model" => model} = values)
+       when map_size(values) == 1 and is_binary(model),
+       do: configured(Session.set_model(pid, model))
+
+  defp configure(pid, %{"reasoningEffort" => effort} = values)
+       when map_size(values) == 1 and is_binary(effort),
+       do: configured(Session.set_reasoning_effort(pid, effort))
+
+  defp configure(_pid, _values), do: {:error, :invalid_configuration}
+  defp configured({:ok, _value}), do: :ok
+  defp configured(error), do: error
+  defp fork_selector(%{"atSeq" => seq}) when is_integer(seq) and seq >= 0, do: {:ok, {:seq, seq}}
+  defp fork_selector(%{"atSeq" => _invalid}), do: {:error, :invalid_selector}
+  defp fork_selector(_params), do: {:ok, nil}
 
   defp workspace(%{"cwd" => cwd} = params) when is_binary(cwd) do
     if Path.type(cwd) == :absolute and File.dir?(cwd) and
@@ -386,20 +442,36 @@ defmodule Lemieux.CLI.ACP.Server do
   defp finish(state, id, reason) do
     session = state.sessions[id]
 
-    if session.prompt != nil,
-      do: reply(state, session.prompt, %{"stopReason" => Wire.stop_reason(reason)})
+    terminal_reply(state, session.prompt, reason)
 
     if state.version == 2,
       do:
         update(state, id, %{
           "sessionUpdate" => "state_update",
           "state" => "idle",
-          "stopReason" => Wire.stop_reason(reason)
+          "stopReason" => if(reason == :error, do: "error", else: Wire.stop_reason(reason))
         })
 
     pending = Map.reject(state.pending, fn {_key, pending} -> pending.session_id == id end)
     put_session(%{state | pending: pending}, id, %{session | prompt: nil, streamed: MapSet.new()})
   end
+
+  defp terminal_reply(_state, nil, _reason), do: :ok
+
+  defp terminal_reply(state, request_id, :error),
+    do:
+      failure(
+        state,
+        request_id,
+        -32_000,
+        "Agent request failed; inspect the local transcript or log"
+      )
+
+  defp terminal_reply(%{version: 2} = state, request_id, _reason),
+    do: failure(state, request_id, -32_000, "Prompt ended before its user message was committed")
+
+  defp terminal_reply(state, request_id, reason),
+    do: reply(state, request_id, %{"stopReason" => Wire.stop_reason(reason)})
 
   defp ask_client(state, id, call_id, kind, method, params) do
     request_id = "lmx-#{state.serial + 1}"

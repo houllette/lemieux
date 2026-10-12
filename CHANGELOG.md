@@ -11,6 +11,11 @@ API.
 
 ### Features
 
+- `lmx run --output-schema FILE` validates the final JSON answer after tool
+  use and records its schema digest and outcome. Invalid or incomplete
+  results fail without a paid repair request. ACP adds namespaced fork and
+  model/reasoning controls backed by the public session API.
+
 - `/plan` drafts, edits, approves and exports durable plans. Planning stays
   read-only until a person approves concrete obligations; progress updates
   retain approval. `/review` selects working, staged, commit or range changes

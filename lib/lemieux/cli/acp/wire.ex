@@ -5,7 +5,10 @@ defmodule Lemieux.CLI.ACP.Wire do
 
   def initialize(version) do
     info = %{"name" => "lmx", "version" => Lemieux.version()}
-    meta = %{"lemieux" => %{"question" => true, "steer" => true}}
+
+    meta = %{
+      "lemieux" => %{"question" => true, "steer" => true, "fork" => true, "configure" => true}
+    }
 
     if version == 2 do
       %{
@@ -86,6 +89,9 @@ defmodule Lemieux.CLI.ACP.Wire do
   end
 
   def stop_reason(:cancelled), do: "cancelled"
+  def stop_reason(:length), do: "max_tokens"
+  def stop_reason({:budget, _details}), do: "max_turn_requests"
+  def stop_reason(:no_progress), do: "max_turn_requests"
   def stop_reason(:max_turns), do: "max_turn_requests"
   def stop_reason(:stop), do: "end_turn"
   def stop_reason(_reason), do: "refusal"

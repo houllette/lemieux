@@ -338,6 +338,44 @@ defmodule Lemieux.CLI.ACPTest do
     refute_receive {:wire, _unexpected}, 20
   end
 
+  test "fork and configuration controls use native boundaries", %{tmp_dir: dir} do
+    {server, provider, store} = connect(dir, [Scripted.complete("original")])
+    id = open(server, dir)
+    prompt(server, id)
+    assert_receive {:wire, %{"id" => 3, "result" => %{"stopReason" => "end_turn"}}}
+    request(server, 8, "_lemieux/fork", %{"sessionId" => id})
+    assert_receive {:wire, %{"id" => 8, "result" => %{"sessionId" => forked}}}
+    assert forked != id
+    assert {:ok, entries} = Store.read(store, forked)
+    assert Enum.any?(entries, &(&1.type == :fork))
+
+    request(server, 9, "_lemieux/configure", %{
+      "sessionId" => forked,
+      "model" => "test:replacement"
+    })
+
+    assert_receive {:wire, %{"id" => 9, "result" => %{"model" => "test:replacement"}}}
+
+    request(server, 10, "_lemieux/configure", %{
+      "sessionId" => forked,
+      "permissionMode" => "full_auto"
+    })
+
+    assert_receive {:wire, %{"id" => 10, "error" => %{"code" => -32_602}}}
+    assert length(Scripted.requests(provider)) == 1
+  end
+
+  test "provider failure is a protocol failure and never a successful turn", %{tmp_dir: dir} do
+    {server, provider, store} = connect(dir, [[{:error, :fixture_failure}]])
+    id = open(server, dir)
+    prompt(server, id)
+    assert_receive {:wire, %{"id" => 3, "error" => %{"code" => -32_000}}}
+    assert {:ok, entries} = Store.read(store, id)
+    assert Enum.any?(entries, &(&1.type == :error))
+    assert length(Scripted.requests(provider)) == 1
+    refute_receive {:wire, %{"id" => 3, "result" => _success}}, 20
+  end
+
   test "malformed and unsupported requests do not start a provider", %{tmp_dir: dir} do
     {server, provider, _store} = connect(dir, [])
     Server.receive_line(server, "broken")

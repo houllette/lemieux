@@ -379,3 +379,11 @@ agent can inspect referenced files through read tools. Review restricts
 writes and shell commands until explicitly ended, including after resume.
 Findings are requested with severity, file, line, explanation and validation
 evidence; a model's report is not independent verification.
+
+Review final answers use a JSON findings schema: `summary` and `findings`,
+with severity (P0–P3), file, positive line number, explanation and evidence
+for each finding. `/review report` reads the validated or invalid report,
+including the selected diff digest and prompt identity. An empty findings
+array is valid. Schema validity says the report has the required structure;
+`verification: model_reported` keeps its conclusions distinct from an
+independently executed check. Invalid reports receive no automatic paid repair.

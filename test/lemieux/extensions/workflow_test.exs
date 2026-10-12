@@ -182,6 +182,75 @@ defmodule Lemieux.Extensions.WorkflowTest do
     refute File.exists?(Path.join(dir, "marker"))
   end
 
+  test "review findings are schema checked and tied to the selected diff", %{tmp_dir: dir} do
+    answer = %{
+      "summary" => "One issue",
+      "findings" => [
+        %{
+          "severity" => "P1",
+          "file" => "lib/app.ex",
+          "line" => 12,
+          "explanation" => "Missing validation",
+          "evidence" => ["Changed branch accepts unchecked input"]
+        }
+      ]
+    }
+
+    {session, _provider, _opts} = start(dir, [Scripted.complete(JSON.encode!(answer))])
+
+    assert {:ok, _document} =
+             Workflow.enter(session, "review", %{
+               "target" => "staged",
+               "diff_sha256" => "fixture-digest"
+             })
+
+    assert {:ok, %{stop_reason: :stop}} = Lemieux.Testing.prompt(session, "review")
+    assert {:ok, %{value: report}} = Session.document(session, "lemieux.review_result")
+    assert report["status"] == "validated"
+    assert report["value"] == answer
+    assert report["diff_sha256"] == "fixture-digest"
+    assert report["verification"] == "model_reported"
+    assert is_binary(report["prompt_id"])
+  end
+
+  test "free-form review text is retained as an invalid structured report", %{tmp_dir: dir} do
+    {session, provider, _opts} = start(dir, [Scripted.complete("looks good")])
+    assert {:ok, _document} = Workflow.enter(session, "review")
+    assert {:ok, %{stop_reason: :stop}} = Lemieux.Testing.prompt(session, "review")
+
+    assert {:ok, %{value: %{"status" => "invalid", "reason" => "invalid_json"}}} =
+             Session.document(session, "lemieux.review_result")
+
+    assert length(Scripted.requests(provider)) == 1
+  end
+
+  test "a model cannot rewrite approved obligations and then execute them in one wave", %{
+    tmp_dir: dir
+  } do
+    {session, provider, _opts} =
+      start(dir, [
+        Scripted.tool_call("rewrite", "todo", %{
+          "action" => "set",
+          "tasks" => [%{"id" => "t1", "title" => "Changed obligations", "status" => "pending"}]
+        }),
+        Scripted.complete("kept original")
+      ])
+
+    assert {:ok, _document} = Workflow.enter(session, "planning")
+    assert {:ok, _plan} = Planning.set(session, [%{"title" => "Original", "status" => "pending"}])
+    assert {:ok, _approval} = Workflow.approve(session)
+    assert {:ok, result} = Lemieux.Testing.prompt(session, "execute")
+
+    assert Enum.any?(
+             result.entries,
+             &(&1.type == :tool_result and &1.payload["outcome"] == "denied")
+           )
+
+    assert {:ok, %{value: plan}} = Planning.read(session)
+    assert [%{"title" => "Original"}] = Planning.tasks(plan)
+    assert length(Scripted.requests(provider)) == 2
+  end
+
   defp git(dir, args) do
     assert {_output, 0} = System.cmd("git", args, cd: dir, stderr_to_stdout: true)
   end

@@ -56,3 +56,11 @@ answer was provided, rather than waiting forever or inventing consent.
 `_lemieux/steer` takes `{sessionId, text}` and uses the public steering seam.
 These are namespaced extensions, not standard ACP methods. Use
 `session/cancel` to interrupt a turn.
+
+`_lemieux/fork` takes `{sessionId, atSeq?}` on an idle session and returns the
+new `sessionId`, using the transcript's safe-boundary checks. The fork retains
+history and restrictions but mounts current host authority. No tool is replayed.
+`_lemieux/configure` takes `{sessionId, model}` or `{sessionId,
+reasoningEffort}` (one setting per request). Public session validation rejects
+busy or unsupported changes; permissions and budgets cannot be widened through
+this endpoint. Initialization advertises both extensions under `_meta.lemieux`.

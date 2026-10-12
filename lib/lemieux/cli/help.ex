@@ -532,6 +532,9 @@ defmodule Lemieux.CLI.Help do
     Usage: lmx [COMMAND] [options] — every option
 
     Run options:
+          --output-schema FILE
+                           Validate final JSON against a local object schema;
+                           invalid or incomplete results fail without repair
           --output-format F
                            text (default: only the final answer on stdout),
                            json (one result object) or stream-json (one event

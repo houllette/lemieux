@@ -1336,3 +1336,26 @@ answered with a number, a word or a blank line for the default. It writes to
 the same ledger as `lmx feedback`, in the same shape, and never touches the
 transcript. While it is open, every typed line is an answer; `/cancel`
 discards it. It is refused mid-turn, when a typed line is a steer.
+
+## Validated final JSON
+
+`lmx run --output-schema schema.json --output-format json PROMPT` lets the
+agent use tools and then validates its exact final answer against a local
+JSON object schema. `structured_result` in the terminal result contains
+`status: validated`, the parsed `value` and `schema_sha256`, or `status:
+invalid` with a reason. The same report is checkpointed in the transcript.
+Provider completion, schema validity and workspace verification are separate
+fields; a cancelled, limited or failed turn cannot become validated success.
+
+Invalid final JSON or a schema mismatch changes an otherwise successful run
+to exit status 1. Malformed schemas fail with status 2 before inference.
+Schemas and final JSON are limited to 48 KiB. Nested local references and
+constraints use ReqLLM's schema validator; external references and unknown
+dialects are refused. Markdown fences are not silently stripped. There is no
+automatic paid repair. Pass the contract again when resuming; current host
+configuration decides the result contract for each invocation.
+
+This is portable final-answer validation after tools, without depending on a
+vendor's object-only response mode. Intermediate streaming text is provisional:
+consumers of `stream-json` must wait for the terminal `result` and its schema
+status. Existing runs without a schema retain their output and exit semantics.

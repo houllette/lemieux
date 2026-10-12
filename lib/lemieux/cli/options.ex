@@ -283,7 +283,10 @@ defmodule Lemieux.CLI.Options do
     # `--output-format` and `--bare` are read from `given` by `Lemieux.CLI.Run`
     # alone: they describe how one headless answer is delivered, not a
     # setting any other command could share.
-    run: @common ++ @agent ++ [continue: :boolean, output_format: :string, bare: :boolean],
+    run:
+      @common ++
+        @agent ++
+        [continue: :boolean, output_format: :string, output_schema: :string, bare: :boolean],
     acp: @common ++ @agent,
     explain: @common ++ @agent ++ [explain_against: :string],
     log: @common ++ [jsonl: :boolean],

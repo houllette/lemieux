@@ -78,11 +78,13 @@ defmodule Lemieux.CLI.Run do
   alias Lemieux.Conversation
   alias Lemieux.Conversation.Doctor
   alias Lemieux.Entry
+  alias Lemieux.Extensions.FinalResult
   alias Lemieux.Extensions.Verify
   alias Lemieux.ID.Shorthand
   alias Lemieux.ModelSpec
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Session
+  alias Lemieux.StructuredResult
   alias Lemieux.Usage
 
   @formats %{"text" => :text, "json" => :json, "stream-json" => :stream_json}
@@ -135,11 +137,18 @@ defmodule Lemieux.CLI.Run do
 
   defp checked(options, out, opts) do
     with {:ok, opts} <- usage(Runtime.with_routes(options, opts)),
+         {:ok, contract, opts} <- usage(result_contract(options, opts)),
          {:ok, options, opts} <- usage(ExtensionExperience.prepare(options, opts)),
          :ok <- usage(one_of_continue_or_resume(options)),
          {:ok, prompt} <- usage(prompt(options.argv, opts)) do
       opts = Keyword.drop(opts, [:stdin, :stdin_terminal?])
-      start(Runtime.project_mcp(options, opts), prompt, %{out | opts: opts}, opts)
+
+      start(
+        Runtime.project_mcp(options, opts),
+        prompt,
+        out |> Map.put(:opts, opts) |> Map.put(:contract, contract),
+        opts
+      )
     else
       {:error, category, message} -> fail(out, category, message)
     end
@@ -149,6 +158,28 @@ defmodule Lemieux.CLI.Run do
   # — a flag, an argument, the configuration — which scripts see as status 2.
   defp usage({:error, message}) when is_binary(message), do: {:error, :usage, message}
   defp usage(result), do: result
+
+  defp result_contract(options, opts) do
+    case options.given[:output_schema] do
+      nil ->
+        {:ok, nil, opts}
+
+      path ->
+        with {:ok, file} <- File.open(path, [:read, :binary]),
+             contents = IO.binread(file, 48_001),
+             :ok <- File.close(file),
+             true <- is_binary(contents) and byte_size(contents) <= 48_000,
+             {:ok, schema} <- JSON.decode(contents),
+             {:ok, contract} <- StructuredResult.new(schema) do
+          extensions = Keyword.get(opts, :extensions, []) ++ [{FinalResult, schema: schema}]
+          {:ok, contract, Keyword.put(opts, :extensions, extensions)}
+        else
+          _error ->
+            {:error,
+             "--output-schema requires a valid local JSON object schema (at most 48 KiB); external references are unsupported"}
+        end
+    end
+  end
 
   defp one_of_continue_or_resume(%Options{host: %{continue: true}, resume: resume})
        when is_binary(resume),
@@ -398,6 +429,7 @@ defmodule Lemieux.CLI.Run do
 
     result = Session.await(session, prompt, on_event: &progress(out, &1))
     outcome = Map.put(outcome(id, result), :verification, verification(session))
+    outcome = validate_result(outcome, session, Map.get(out, :contract))
     deliver(out, outcome)
 
     # After the answer, so a `session_end` hook that prints lands on its own
@@ -406,6 +438,17 @@ defmodule Lemieux.CLI.Run do
     Runtime.stop_session(session)
 
     status(outcome.category)
+  end
+
+  defp validate_result(outcome, _session, nil), do: outcome
+
+  defp validate_result(outcome, session, contract) do
+    report = StructuredResult.finish(session, contract, outcome.text, outcome.category == :ok)
+    outcome = Map.put(outcome, :structured_result, report)
+
+    if report["status"] == "validated" or outcome.category != :ok,
+      do: outcome,
+      else: %{outcome | category: :other, error: {:structured_result, report["reason"]}}
   end
 
   # Both names, because this line has two readers. A script captures the id
@@ -759,6 +802,7 @@ defmodule Lemieux.CLI.Run do
       "stop_reason" => stop_reason_text(outcome.stop_reason),
       "usage" => outcome.usage,
       "verification" => Map.get(outcome, :verification),
+      "structured_result" => Map.get(outcome, :structured_result),
       "error" => error_object(out, outcome),
       "exit_status" => Errors.exit_status(outcome.category)
     }

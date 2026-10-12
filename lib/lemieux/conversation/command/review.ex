@@ -13,6 +13,7 @@ defmodule Lemieux.Conversation.Command.Review do
   alias Lemieux.Conversation.Command
   alias Lemieux.Conversation.Dispatch
   alias Lemieux.Extensions.Workflow
+  alias Lemieux.Session
 
   @impl true
   def spec,
@@ -44,6 +45,13 @@ defmodule Lemieux.Conversation.Command.Review do
     case Workflow.enter(session, "idle") do
       {:ok, _document} -> {:said, "review ended"}
       error -> {:said, "could not end review: #{inspect(error)}"}
+    end
+  end
+
+  defp begin_review(session, _cwd, "report") do
+    case Session.document(session, "lemieux.review_result") do
+      {:ok, %{value: value}} -> {:said, JSON.encode!(value)}
+      error -> {:said, "could not read review result: #{inspect(error)}"}
     end
   end
 

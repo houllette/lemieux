@@ -14,6 +14,8 @@ defmodule Lemieux.Extensions.Workflow do
   import Kernel, except: [apply: 2]
 
   alias Lemieux.Extensions.Planning
+  alias Lemieux.Extensions.Planning.Reducer
+  alias Lemieux.Extensions.Workflow.ReviewResult
   alias Lemieux.Harness
   alias Lemieux.Session
   alias Lemieux.Tool
@@ -24,7 +26,8 @@ defmodule Lemieux.Extensions.Workflow do
   def apply(harness, _opts) do
     Harness.append_hooks(harness,
       prepare_next_turn: &prepare/2,
-      before_tool_call: &__MODULE__.check/2
+      before_tool_call: &__MODULE__.check/2,
+      stop: &stop/2
     )
   end
 
@@ -32,7 +35,8 @@ defmodule Lemieux.Extensions.Workflow do
   @spec read(session :: Session.session()) :: {:ok, map()} | {:error, term()}
   def read(session) do
     with {:ok, document} <- Session.document(session, @namespace) do
-      {:ok, %{document | value: document.value || %{"phase" => "idle"}}}
+      value = document.value || %{"phase" => "idle"}
+      if valid?(value), do: {:ok, %{document | value: value}}, else: {:error, :invalid_workflow}
     end
   end
 
@@ -85,7 +89,8 @@ defmodule Lemieux.Extensions.Workflow do
         do:
           "Plan only. Investigate with read-only tools, record concrete tasks with todo, and wait for the person to approve the plan before executing it.",
         else:
-          "Review only. Read the selected changes and report actionable findings with severity, file, line, explanation and validation evidence. Do not edit files or run commands. Distinguish observed facts from untested concerns."
+          "Review only. Read the selected changes. Do not edit files or run commands. Distinguish observed facts from untested concerns. Your final answer must be JSON conforming to this findings schema, without Markdown fences:\n" <>
+            JSON.encode!(ReviewResult.schema())
 
     {:ok,
      %{
@@ -124,6 +129,9 @@ defmodule Lemieux.Extensions.Workflow do
             {:deny,
              "#{phase} permits only certified reads and session planning; no write or shell authority"}
 
+      {:ok, %{value: %{"phase" => "approved", "plan_digest" => digest}}} ->
+        approved_call(call, context.session, digest)
+
       {:ok, _document} ->
         :allow
 
@@ -132,7 +140,53 @@ defmodule Lemieux.Extensions.Workflow do
     end
   end
 
+  defp approved_call(%{name: "todo", arguments: %{"action" => "list"}}, _session, _digest),
+    do: :allow
+
+  defp approved_call(%{name: "todo", arguments: command}, session, digest) do
+    with {:ok, %{value: plan}} <- Planning.read(session),
+         {:ok, next} <- Reducer.apply(plan, command),
+         true <- plan_digest(next) == digest do
+      :allow
+    else
+      _changed ->
+        {:deny,
+         "Approval covers the recorded obligations; use /plan edit and approve before changing them. Progress updates remain allowed."}
+    end
+  end
+
+  defp approved_call(_call, session, digest) do
+    case Planning.read(session) do
+      {:ok, %{value: plan}} ->
+        if plan_digest(plan) == digest,
+          do: :allow,
+          else: {:deny, "The approved obligations changed; a new human decision is required."}
+
+      _invalid ->
+        {:deny, "Cannot reconstruct approved obligations"}
+    end
+  end
+
+  defp valid?(%{"phase" => "approved", "plan_revision" => revision, "plan_digest" => digest}),
+    do: is_integer(revision) and revision > 0 and is_binary(digest) and byte_size(digest) == 64
+
+  defp valid?(%{"phase" => phase}), do: phase in ~w(idle planning review)
+  defp valid?(_value), do: false
+
   defp permitted?(tool), do: Tool.read_only?(tool) or Tool.name(tool) in ~w(todo ask_user)
+
+  @doc false
+  @spec stop(reason :: atom(), context :: map()) :: :allow
+  def stop(:stop, %{session: session, aside: nil}) do
+    case read(session) do
+      {:ok, %{value: %{"phase" => "review"} = workflow}} -> ReviewResult.record(session, workflow)
+      _other -> :ok
+    end
+
+    :allow
+  end
+
+  def stop(_reason, _context), do: :allow
 
   defp plan_digest(plan) do
     plan["tasks"]
