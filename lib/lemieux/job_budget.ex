@@ -19,6 +19,7 @@ defmodule Lemieux.JobBudget do
 
   use GenServer, restart: :temporary
 
+  alias Lemieux.Execution
   alias Lemieux.Provider
   alias Lemieux.Request
   alias Lemieux.Session.Accounting
@@ -29,7 +30,15 @@ defmodule Lemieux.JobBudget do
   @namespace "lemieux.job_budget"
   @micros 1_000_000
 
-  @doc "Starts a ledger with current host limits and optional recorded spend."
+  @doc """
+  Starts a ledger with current host limits and optional recorded spend.
+
+  `:recorded` restores an accounting snapshot without refunding consumed
+  requests or outstanding reservations. `:persist` is an optional synchronous
+  `snapshot -> :ok` callback: it must durably write before returning and must
+  not call an invoking session. Write failure stops admission. `:execution`
+  supplies the current host journal to auxiliary calls made through `run/4`.
+  """
   @spec start_link(opts :: keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts)
 
@@ -111,6 +120,11 @@ defmodule Lemieux.JobBudget do
     end
   end
 
+  @doc "The current host dispatch journal for auxiliary calls sharing this ledger."
+  @spec execution(server :: GenServer.server() | nil) :: Execution.t()
+  def execution(nil), do: nil
+  def execution(server), do: GenServer.call(server, :execution)
+
   @doc "Runs an auxiliary provider request within this job's admission and accounting."
   @spec run(
           server :: GenServer.server() | nil,
@@ -119,6 +133,12 @@ defmodule Lemieux.JobBudget do
           emit :: Provider.emit()
         ) :: :ok | {:error, term()}
   def run(server, provider, request, emit) do
+    request = %{
+      request
+      | context:
+          Map.merge(request.context, %{execution: execution(server), execution_kind: :auxiliary})
+    }
+
     estimate = Provider.estimate_cost(provider, request)
 
     case reserve(server, estimate, 1) do
@@ -129,7 +149,7 @@ defmodule Lemieux.JobBudget do
         try do
           :ok = checkpoint(server)
 
-          Provider.run(provider, request, fn event ->
+          Execution.run_provider(provider, request, fn event ->
             if match?({:usage, _}, event), do: send(owner, {ref, event})
             emit.(event)
           end)
@@ -157,30 +177,35 @@ defmodule Lemieux.JobBudget do
     max_cost = Keyword.get(opts, :max_cost_usd)
     max_requests = Keyword.get(opts, :max_requests)
 
-    unless is_nil(max_cost) or (is_number(max_cost) and max_cost >= 0),
-      do: raise(ArgumentError, "job max_cost_usd must be non-negative")
-
-    unless is_nil(max_requests) or (is_integer(max_requests) and max_requests > 0),
-      do: raise(ArgumentError, "job max_requests must be positive")
+    validate_limits!(max_cost, max_requests)
 
     owner = Keyword.get(opts, :owner)
+
+    {recorded, held, interrupted?} = recorded_budget(opts)
 
     {:ok,
      %{
        cap: micros(max_cost),
        max_requests: max_requests,
-       spent: micros(Keyword.get(opts, :spent_usd, 0)),
-       requests: Keyword.get(opts, :requests, 0),
-       reserved: 0,
+       spent: recorded_spend(recorded, opts, interrupted?),
+       requests: Map.get(recorded, "requests", Keyword.get(opts, :requests, 0)),
+       reserved: micros(held),
+       recovered_active: if(interrupted?, do: recorded["active"] || 0, else: 0),
+       persist: Keyword.get(opts, :persist),
+       persisted: nil,
+       execution: Keyword.get(opts, :execution),
        leases: %{},
-       unmeasured: 0,
+       unmeasured: recorded["unmeasured"] || 0,
        owner_pid: owner,
        owner: if(is_pid(owner), do: Process.monitor(owner))
      }}
   end
 
   @impl GenServer
-  def handle_call(:owner, _from, state), do: {:reply, state.owner_pid, state}
+  def handle_call(:owner, _from, state),
+    do: {:reply, if(state.persist, do: nil, else: state.owner_pid), state}
+
+  def handle_call(:execution, _from, state), do: {:reply, state.execution, state}
 
   def handle_call({:check, estimate, requests}, _from, state),
     do: {:reply, capacity(state, estimate, requests), state}
@@ -190,15 +215,21 @@ defmodule Lemieux.JobBudget do
       :ok ->
         lease = make_ref()
         amount = micros(estimate) || 0
-        reservation = %{amount: amount, owner: owner, monitor: Process.monitor(owner)}
+
+        reservation = %{
+          amount: amount,
+          free?: estimate == 0 and requests == 0,
+          owner: owner,
+          monitor: Process.monitor(owner)
+        }
 
         {:reply, {:ok, lease},
-         %{
+         persist(%{
            state
            | reserved: state.reserved + amount,
              requests: add(state.requests, requests),
              leases: Map.put(state.leases, lease, reservation)
-         }}
+         })}
 
       error ->
         {:reply, error, state}
@@ -206,24 +237,39 @@ defmodule Lemieux.JobBudget do
   end
 
   def handle_call({:settle, lease, actual}, _from, state),
-    do: {:reply, :ok, reconcile(state, lease, actual)}
+    do: {:reply, :ok, persist(reconcile(state, lease, actual))}
 
   def handle_call(:snapshot, _from, state) do
     state =
-      Enum.reduce(state.leases, state, fn {lease, reservation}, current ->
-        if Process.alive?(reservation.owner), do: current, else: reconcile(current, lease, nil)
-      end)
+      Enum.reduce(state.leases, state, &reconcile_dead_owner/2)
 
-    {:reply,
-     %{
-       spent_usd: dollars(state.spent),
-       reserved_usd: dollars(state.reserved),
-       requests: state.requests,
-       max_requests: state.max_requests,
-       max_cost_usd: dollars(state.cap),
-       unmeasured: state.unmeasured,
-       active: map_size(state.leases)
-     }, state}
+    state = persist(state)
+    {:reply, view(state), state}
+  end
+
+  defp reconcile_dead_owner({lease, reservation}, state) do
+    actual = if reservation.free?, do: 0
+    if Process.alive?(reservation.owner), do: state, else: reconcile(state, lease, actual)
+  end
+
+  defp view(state) do
+    %{
+      spent_usd: dollars(state.spent),
+      reserved_usd: dollars(state.reserved),
+      requests: state.requests,
+      max_requests: state.max_requests,
+      max_cost_usd: dollars(state.cap),
+      unmeasured: state.unmeasured,
+      active: map_size(state.leases) + state.recovered_active
+    }
+  end
+
+  defp persist(%{persist: nil} = state), do: state
+
+  defp persist(state) do
+    value = view(state)
+    if value != state.persisted, do: :ok = state.persist.(value)
+    %{state | persisted: value}
   end
 
   @impl GenServer
@@ -236,7 +282,30 @@ defmodule Lemieux.JobBudget do
         if reservation.monitor == ref, do: lease
       end)
 
-    {:noreply, reconcile(state, lease, nil)}
+    reservation = state.leases[lease]
+    actual = if reservation && reservation.free?, do: 0
+    {:noreply, persist(reconcile(state, lease, actual))}
+  end
+
+  defp validate_limits!(max_cost, max_requests) do
+    unless is_nil(max_cost) or (is_number(max_cost) and max_cost >= 0),
+      do: raise(ArgumentError, "job max_cost_usd must be non-negative")
+
+    unless is_nil(max_requests) or (is_integer(max_requests) and max_requests > 0),
+      do: raise(ArgumentError, "job max_requests must be positive")
+  end
+
+  defp recorded_spend(_recorded, _opts, true), do: nil
+
+  defp recorded_spend(recorded, opts, false),
+    do: micros(Map.get(recorded, "spent_usd", Keyword.get(opts, :spent_usd, 0)))
+
+  defp recorded_budget(opts) do
+    recorded =
+      Keyword.get(opts, :recorded, %{}) |> Map.new(fn {key, value} -> {to_string(key), value} end)
+
+    held = recorded["reserved_usd"] || 0
+    {recorded, held, (recorded["active"] || 0) > 0 or held > 0}
   end
 
   defp capacity(state, estimate, requests) do

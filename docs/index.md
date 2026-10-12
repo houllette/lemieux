@@ -70,6 +70,8 @@ are runnable agents and extensions, each with a check that runs offline.
   resuming.
 - [CLI commands and keys](cli.md): interactive and headless commands, output
   formats and exit statuses.
+- [Durable background jobs](jobs.md): bounded work, detached clients,
+  scheduling, approvals and explicit recovery.
 - [Configuration](configuration.md): saved settings, the defaults `lmx` turns
   on, workspace discovery, instructions, skills, plugins and system prompts.
 - [Desktop launchers and Omarchy](desktop.md): the application launcher

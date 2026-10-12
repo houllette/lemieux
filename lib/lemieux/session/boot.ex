@@ -94,6 +94,14 @@ defmodule Lemieux.Session.Boot do
            provider_limiter: Recovery.admission_option(opts, supervisor),
            provider_limit_key: Keyword.get(opts, :provider_limit_key, :default),
            root_session_id: Keyword.get(opts, :root_session_id, Keyword.fetch!(opts, :id)),
+           execution: Keyword.get(opts, :execution),
+           recovery_enabled?: Keyword.get(opts, :recover_tools, false),
+           recovery_stop: Keyword.get(opts, :recovery_stop),
+           recovery_calls:
+             if(Keyword.get(opts, :recover_tools, false),
+               do: Lemieux.Transcript.unanswered_calls(entries),
+               else: []
+             ),
            job_budget: job_budget(opts, supervisor, entries),
            job_budget_owned?: not is_nil(opts[:job_limits]) and is_nil(opts[:job_budget]),
            store: Keyword.fetch!(opts, :store),

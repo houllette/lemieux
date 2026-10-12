@@ -753,6 +753,19 @@ defmodule Lemieux.Session do
   end
 
   @doc """
+  Explicitly continues a restored prompt, with current tools and hooks.
+
+  The host must resume with `recover_tools: true` after reconciling uncertain
+  effects. Unanswered calls then wait for this invocation instead of receiving
+  lost-result markers at boot. Every selected call passes current policy again;
+  no stored approval grants execution. The option and operation are never
+  restored or invoked by supervision. Enable only after proving replay safety.
+  `:execution` can synchronously journal dispatch and completion for the host.
+  """
+  @spec continue(session :: session()) :: :ok | {:error, atom()}
+  def continue(session), do: GenServer.call(session, :continue, :infinity)
+
+  @doc """
   Runs one tool-free model request on a host's behalf, between turns.
 
   An aside is what a review, a judgement or a summary-for-a-screen has in

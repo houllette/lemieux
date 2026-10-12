@@ -67,6 +67,7 @@ defmodule Lemieux.Session.Requests do
     # the whole entries-as-messages design exists to keep.
     request = %Request{
       model: state.model,
+      context: %{execution: state.execution},
       system: Compacting.with_summary(state, entries),
       entries: Compacting.sendable(state, entries, request_opts(state)),
       tools: state.tools,
@@ -219,6 +220,7 @@ defmodule Lemieux.Session.Requests do
       request
       | context:
           Map.merge(request.context, %{
+            execution: state.execution,
             route_result_sink: session,
             route_task_supervisor: Sup.task_supervisor(state.supervisor)
           })
@@ -256,6 +258,8 @@ defmodule Lemieux.Session.Requests do
   end
 
   def run_compaction_provider(route, provider, request, metadata, request_id) do
+    request = %{request | context: Map.put(request.context, :execution, route.execution)}
+
     OpenTelemetry.with_context(route.id, :compaction, request_id, fn ->
       Compacting.summarise(
         provider,
@@ -275,6 +279,7 @@ defmodule Lemieux.Session.Requests do
   def provider_route(state) do
     %{
       id: state.id,
+      execution: state.execution,
       limiter: state.provider_limiter,
       limit_key: Accounting.provider_limit_key(state),
       root_session_id: state.root_session_id

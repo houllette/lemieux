@@ -18,6 +18,7 @@ defmodule Lemieux.Session.DocumentRequest do
       | tools: [],
         context:
           Map.merge(request.context, %{
+            execution: state.execution,
             route_result_sink: self(),
             route_task_supervisor: Sup.task_supervisor(state.supervisor)
           })

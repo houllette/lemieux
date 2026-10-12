@@ -21,9 +21,11 @@ defmodule Lemieux.Tools do
   the exit into the same shape.
   """
 
+  alias Lemieux.Execution
   alias Lemieux.Hooks
   alias Lemieux.Provider
   alias Lemieux.Provider.Error, as: ProviderError
+  alias Lemieux.Session.ToolWave
   alias Lemieux.Tool
   alias Lemieux.Tool.Descriptor
   alias Lemieux.Tool.Result
@@ -167,7 +169,17 @@ defmodule Lemieux.Tools do
     with {:ok, tool} <- fetch(tools, call.name),
          descriptor = Tool.descriptor(tool),
          context = Map.put(context, :tool_descriptor, Descriptor.to_map(descriptor)),
-         {:ok, args} <- Hooks.before_tool_call(hooks, call, context) do
+         {:ok, args} <- Hooks.before_tool_call(hooks, call, context),
+         {:ok, token} <-
+           Execution.start(context[:execution], %{
+             "kind" => "tool",
+             "session_id" => context[:session_id],
+             "call_id" => call.id,
+             "wave_id" => context[:tool_wave_id],
+             "name" => call.name,
+             "arguments" => args,
+             "descriptor" => Descriptor.to_map(descriptor)
+           }) do
       limit = Descriptor.output_limit(descriptor, Map.fetch!(context, :tool_output_bytes))
       result = descriptor |> Tool.invoke(args, context) |> Tool.collect_result(emit, limit)
       # A post-tool hook cannot undo the call, but it can tell the model about
@@ -181,10 +193,20 @@ defmodule Lemieux.Tools do
           context
         )
 
-      finish(call, args, descriptor, Hooks.append_feedback(result, feedback))
+      result = finish(call, args, descriptor, Hooks.append_feedback(result, feedback))
+
+      if context[:execution] do
+        payload = result |> Map.put_new(:duration_ms, 0) |> ToolWave.payload()
+        :ok = Execution.finish(context[:execution], token, payload)
+      end
+
+      result
     else
-      {:error, message} -> error(call, message, :unavailable)
-      {:deny, reason} -> error(call, "denied: #{reason}", :denied)
+      {:error, message} ->
+        error(call, if(is_binary(message), do: message, else: inspect(message)), :unavailable)
+
+      {:deny, reason} ->
+        error(call, "denied: #{reason}", :denied)
     end
   end
 
