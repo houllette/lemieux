@@ -115,6 +115,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
+             "Lemieux.Extensions.Workflow",
              "Lemieux.CLI.SessionSummary",
              "Lemieux.CLI.RuntimeTest.Audit"
            ]
@@ -426,6 +427,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
+             "Lemieux.Extensions.Workflow",
              "Lemieux.CLI.SessionSummary"
            ]
 

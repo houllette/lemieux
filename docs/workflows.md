@@ -342,3 +342,40 @@ large to commit remain uncertain and require reconciliation.
 retried model work. Supply every executed key. Uncertain or unmeasured attempts
 keep aggregate cost unknown; deterministic stages may explicitly report zero
 usage. This is accounting evidence, not automatic budget admission.
+
+## Planning with an approval boundary
+
+`/plan TOPIC` investigates with certified read tools and records tasks with
+`todo`. File writes, commands and external mutation tools are unavailable
+throughout planning, including after resume. This restriction also checks
+actual tool calls, independently of remembered permission rules.
+
+`/plan` shows the stored tasks and workflow phase. `/plan edit TOPIC` returns
+to drafting. `/plan approve` records the concrete revision and obligations
+digest, then hands that plan to the agent under the current host permissions
+and budgets. Updating progress or evidence retains approval; changing titles,
+dependencies or owners requires a new human decision. `/plan export PATH`
+writes a Markdown snapshot through the confined workspace environment.
+`/plan end` leaves planning without granting approval. Commands that change
+phase require an idle session; cancelling an active turn retains its state.
+
+The CLI applies `Lemieux.Extensions.Workflow`. Embedders can apply it alongside
+`Lemieux.Extensions.Planning`; starting this workflow without its policy hook
+is refused. The workflow document carries restrictions and approval evidence,
+never credentials or broader host authority.
+
+## Reviewing a selected change
+
+`/review` reviews tracked working changes against HEAD. `/review staged`
+selects the index; `/review commit REF` selects that commit (including an
+initial commit); `/review range BASE..HEAD` selects changes between two
+resolved commits. `/review end` leaves review mode. The selected target,
+resolved identities and diff digest remain in the session document.
+
+Diff collection uses a private Git directory that cannot execute repository
+hooks, filters or diff drivers. Diffs larger than 48 KiB are refused with a
+request to narrow the target. Untracked contents are outside the diff; the
+agent can inspect referenced files through read tools. Review restricts
+writes and shell commands until explicitly ended, including after resume.
+Findings are requested with severity, file, line, explanation and validation
+evidence; a model's report is not independent verification.

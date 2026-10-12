@@ -947,6 +947,7 @@ defmodule Lemieux.CLI.Runtime do
        |> Enum.concat(a2ui: if(Keyword.get(opts, :a2ui, false), do: Lemieux.Extensions.A2UI))
        |> Enum.concat(Enum.map(loaded, &{:loaded, &1.spec}))
        |> Enum.concat(checkpoints: checkpoints(options, context))
+       |> Enum.concat(workflow: Lemieux.Extensions.Workflow)
        |> Enum.concat(
          session_summary:
            if(context.interactive? and not profile?, do: Lemieux.CLI.SessionSummary)

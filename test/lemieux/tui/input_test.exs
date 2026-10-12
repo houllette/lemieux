@@ -1851,19 +1851,19 @@ defmodule Lemieux.TUI.InputTest do
       provider: provider,
       tmp: tmp
     } do
-      path = Path.join(tmp, "skills/review/SKILL.md")
+      path = Path.join(tmp, "skills/inspect-file/SKILL.md")
       File.mkdir_p!(Path.dirname(path))
 
       File.write!(
         path,
-        "---\nname: review\ndescription: Review one file.\n---\nReview $ARGUMENTS carefully."
+        "---\nname: inspect-file\ndescription: Review one file.\n---\nReview $ARGUMENTS carefully."
       )
 
       assert {:ok, skill} = Skill.read(path)
-      state = tui(session: session, skills: [skill]) |> type("/review lib/example.ex")
+      state = tui(session: session, skills: [skill]) |> type("/inspect-file lib/example.ex")
 
       assert {:noreply, sent} = TUI.handle_event(key("enter"), state)
-      assert screen(sent) =~ "/review lib/example.ex"
+      assert screen(sent) =~ "/inspect-file lib/example.ex"
       refute screen(sent) =~ "Review lib/example.ex carefully"
 
       id = Lemieux.Session.id(session)

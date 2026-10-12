@@ -11,6 +11,11 @@ API.
 
 ### Features
 
+- `/plan` drafts, edits, approves and exports durable plans. Planning stays
+  read-only until a person approves concrete obligations; progress updates
+  retain approval. `/review` selects working, staged, commit or range changes
+  with pinned identities and a diff digest, and restricts write/shell tools.
+
 - `lmx acp` connects editors to the native session runtime over stdio ACP
   versions 1 and 2, with streaming, approvals, cancellation and durable
   session loading. Connection closure cancels work and releases locks.
