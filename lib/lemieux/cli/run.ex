@@ -78,6 +78,7 @@ defmodule Lemieux.CLI.Run do
   alias Lemieux.Conversation
   alias Lemieux.Conversation.Doctor
   alias Lemieux.Entry
+  alias Lemieux.Extensions.Verify
   alias Lemieux.ID.Shorthand
   alias Lemieux.ModelSpec
   alias Lemieux.Provider.Error, as: ProviderError
@@ -396,7 +397,7 @@ defmodule Lemieux.CLI.Run do
     out = Map.put(out, :undo, undo_watch(out.checkpoints, info))
 
     result = Session.await(session, prompt, on_event: &progress(out, &1))
-    outcome = outcome(id, result)
+    outcome = Map.put(outcome(id, result), :verification, verification(session))
     deliver(out, outcome)
 
     # After the answer, so a `session_end` hook that prints lands on its own
@@ -757,9 +758,23 @@ defmodule Lemieux.CLI.Run do
       "text" => outcome.text,
       "stop_reason" => stop_reason_text(outcome.stop_reason),
       "usage" => outcome.usage,
+      "verification" => Map.get(outcome, :verification),
       "error" => error_object(out, outcome),
       "exit_status" => Errors.exit_status(outcome.category)
     }
+  end
+
+  defp verification(session) do
+    case Verify.status(session) do
+      {:ok, %{enabled: false}} ->
+        %{"status" => "skipped", "reason" => "verification disabled"}
+
+      {:ok, %{last: last}} ->
+        last
+
+      {:error, _reason} ->
+        %{"status" => "unavailable", "reason" => "verification status unavailable"}
+    end
   end
 
   defp error_object(_out, %{category: :ok}), do: nil

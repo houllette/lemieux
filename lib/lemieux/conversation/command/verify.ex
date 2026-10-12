@@ -86,7 +86,10 @@ defmodule Lemieux.Conversation.Command.Verify do
 
   defp last_check(%{} = last) do
     command = last["command"] || "the check"
-    " · last: #{command} #{last["status"] || "ran"}" <> duration(last["duration_ms"])
+
+    " · last: #{command} #{last["status"] || "ran"}" <>
+      duration(last["duration_ms"]) <>
+      if(is_binary(last["reason"]), do: " · " <> last["reason"], else: "")
   end
 
   defp duration(ms) when is_integer(ms), do: " (#{Float.round(ms / 1000, 1)}s)"

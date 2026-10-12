@@ -228,7 +228,7 @@ defmodule Lemieux.Extensions.VerifyTest do
 
       assert run(session, "explain the code") == :stop
       assert messages(session) == []
-      assert {:ok, %{last: nil}} = Verify.status(session)
+      assert {:ok, %{last: %{"status" => "skipped"}}} = Verify.status(session)
     end
 
     test "a check the model already ran and saw pass after its last edit is not repeated",
@@ -245,7 +245,7 @@ defmodule Lemieux.Extensions.VerifyTest do
         )
 
       assert run(session, "write and test") == :stop
-      assert {:ok, %{last: nil}} = Verify.status(session)
+      assert {:ok, %{last: %{"status" => "passed", "source" => "model"}}} = Verify.status(session)
     end
 
     test "turned off at runtime, it does nothing", ctx do

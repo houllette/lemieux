@@ -20,20 +20,23 @@ defmodule Lemieux.Extensions.Verify do
 
     * it is enabled — the `:enabled` option, overridden at runtime by
       `set_enabled/2`, which is what a host's `/verify` toggles;
-    * a tool in `:editing_tools` (default `write`, `edit`, `apply_patch`)
-      succeeded since the person's prompt or since the last check;
+    * per-call checkpoints or host tool-result `metadata.workspace_changes`
+      report changes since the prompt or last check; without observations,
+      a successful `:editing_tools` call remains the compatibility fallback;
     * the model did not itself run exactly the verification command, and see
       it pass, after its last edit — the check would only repeat that run;
     * fewer than `:max_continuations` (default 2) checks have already sent
       the model back during this prompt;
-    * a command was named or discovered. No convention means no check,
-      silently: guessing at one would fail every turn of a project it does
-      not fit.
+    * a command was named or discovered. Missing commands are recorded as
+      `unavailable`, so a host can distinguish completion from verification.
 
-  Edits made through `bash` do not count on their own. Counting every
-  command would run a test suite after a turn that only listed a directory,
-  and nothing about a shell command says which ones wrote. A host that wants
-  them counted adds `"bash"` to `:editing_tools`.
+  With `:checkpoints`, shell edits count even after a nonzero exit; an
+  unchanged write or a read-only command does not. Pre-existing dirty files
+  are outside each call's window. Without observations, shell effects remain
+  unknown and the status says so. Remote/custom tools may report changed
+  paths in `Tool.Result.metadata["workspace_changes"]`; this is host-supplied
+  evidence and grants no authority. Background or external effects still
+  require host observation.
 
   ## What the model is told, and why it can say no
 
@@ -256,7 +259,9 @@ defmodule Lemieux.Extensions.Verify do
   What a host shows: `enabled` is the runtime toggle, or `nil` when nobody
   has toggled it (the extension's `:enabled` option applies); `last` is the
   most recent check's `status`, `command`, `discovered_from`, `exit_status`
-  and `duration_ms` — or, for a check the permission policy refused, status
+  and `duration_ms`, plus changed paths and checkpoint trees, `prompt_id`
+  and `through_seq` identifying the checked transcript prefix. `skipped`
+  and `unavailable` carry a reason. For a check the permission policy refused, status
   `"denied"` with its `reason` — or `nil`.
   """
   @spec status(session :: Session.session()) ::
@@ -275,31 +280,164 @@ defmodule Lemieux.Extensions.Verify do
 
     with {:ok, document} <- Session.document(session, @namespace),
          true <- enabled?(config, document.value),
-         %{entries: entries} <- Session.snapshot(session, :timer.seconds(30)),
-         run = current_run(entries),
-         used = continuations(run),
-         true <- used < config.max_continuations,
-         since = since_last_check(run),
-         true <- edited?(since, config.editing_tools),
-         {:ok, discovery} <- discover(config, cwd),
-         false <- model_checked?(since, discovery.command, config.editing_tools) do
-      case permitted(discovery.command, cwd, context) do
-        {:ok, command} ->
-          result = check(config, command, cwd, context)
-          record(session, document, result, discovery)
-          decide(config, result, discovery, used + 1)
-
-        {:deny, reason} ->
-          denied = %{"status" => "denied", "command" => discovery.command, "reason" => reason}
-          record(session, document, denied, discovery)
-          :allow
-      end
+         %{entries: entries} <- Session.snapshot(session, :timer.seconds(30)) do
+      run = current_run(entries)
+      through = get_in(document.value || %{}, ["last", "through_seq"]) || -1
+      since = run |> since_last_check() |> Enum.filter(&(&1.seq > through))
+      effects = effects(config, session, since)
+      evidence = evidence(entries, since, effects, config.editing_tools)
+      verify(config, document, context, cwd, run, since, effects, evidence)
     else
       _skip -> :allow
     end
   end
 
   def stop(_config, _reason, _context), do: :allow
+
+  defp verify(config, document, context, cwd, run, since, effects, evidence) do
+    used = continuations(run)
+    session = context.session
+
+    cond do
+      not edited?(since, config.editing_tools, effects) ->
+        # A repair continuation that makes no further change keeps the failed
+        # result that caused it. A new prompt gets its own explicit outcome.
+        if used == 0 do
+          unknown? = Enum.any?(since, &unobserved?(&1, effects))
+
+          skip = %{
+            "status" => if(unknown?, do: "unavailable", else: "skipped"),
+            "reason" =>
+              if(unknown?,
+                do: "workspace changes could not be observed",
+                else: "no observed workspace changes"
+              )
+          }
+
+          record(session, document, Map.merge(skip, evidence), no_discovery())
+        end
+
+        :allow
+
+      used >= config.max_continuations ->
+        record(
+          session,
+          document,
+          Map.merge(
+            %{"status" => "skipped", "reason" => "verification continuation allowance exhausted"},
+            evidence
+          ),
+          no_discovery()
+        )
+
+        :allow
+
+      true ->
+        discover_and_check(config, document, context, cwd, since, effects, evidence, used)
+    end
+  end
+
+  defp discover_and_check(config, document, context, cwd, since, effects, evidence, used) do
+    session = context.session
+
+    case discover(config, cwd) do
+      {:ok, discovery} ->
+        if model_checked?(since, discovery.command, config.editing_tools, effects) do
+          record(
+            session,
+            document,
+            Map.merge(
+              %{
+                "status" => "passed",
+                "source" => "model",
+                "command" => discovery.command,
+                "exit_status" => 0
+              },
+              evidence
+            ),
+            discovery
+          )
+
+          :allow
+        else
+          execute_check(config, document, context, cwd, discovery, evidence, used)
+        end
+
+      :none ->
+        record(
+          session,
+          document,
+          Map.merge(
+            %{
+              "status" => "unavailable",
+              "reason" => "no verification command configured or discovered"
+            },
+            evidence
+          ),
+          no_discovery()
+        )
+
+        :allow
+    end
+  end
+
+  defp execute_check(config, document, context, cwd, discovery, evidence, used) do
+    case permitted(discovery.command, cwd, context) do
+      {:ok, command} ->
+        result = check(config, command, cwd, context)
+        record(context.session, document, Map.merge(result, evidence), discovery)
+        decide(config, result, discovery, used + 1)
+
+      {:deny, reason} ->
+        denied = %{"status" => "denied", "command" => discovery.command, "reason" => reason}
+        record(context.session, document, Map.merge(denied, evidence), discovery)
+        :allow
+    end
+  end
+
+  defp no_discovery, do: %{command: nil, discovered_from: nil}
+
+  defp effects(%{checkpoints: nil}, _session, _entries), do: %{}
+
+  defp effects(config, session, entries) do
+    ids = for %Entry{type: :tool_result, payload: %{"call_id" => id}} <- entries, do: id
+
+    case Checkpoint.effects(config.checkpoints, Session.id(session), ids) do
+      {:ok, observed} -> observed
+      {:error, _reason} -> %{}
+    end
+  end
+
+  defp evidence(entries, since, effects, tools) do
+    changes =
+      for %Entry{type: :tool_result} = entry <- since,
+          edit?(entry, tools, effects),
+          do: receipt(entry, effects)
+
+    prompt = entries |> Enum.reverse() |> Enum.find(&prompt?/1)
+
+    %{
+      "changes" => changes,
+      "prompt_id" => prompt && prompt.id,
+      "through_seq" => List.last(entries).seq
+    }
+  end
+
+  defp receipt(%Entry{payload: payload}, effects) do
+    Map.get(effects, payload["call_id"], %{
+      "call_id" => payload["call_id"],
+      "status" => "declared",
+      "paths" => get_in(payload, ["metadata", "workspace_changes"]) || []
+    })
+  end
+
+  defp unobserved?(%Entry{type: :tool_result, payload: payload}, effects),
+    do:
+      payload["name"] in ~w(bash elixir) and
+        (not Map.has_key?(effects, payload["call_id"]) or
+           effects[payload["call_id"]]["status"] == "unknown")
+
+  defp unobserved?(_entry, _effects), do: false
 
   defp check(%__MODULE__{checkpoints: nil} = config, command, cwd, context),
     do: run_check(config, command, cwd, context)
@@ -393,20 +531,31 @@ defmodule Lemieux.Extensions.Verify do
     |> Enum.reverse()
   end
 
-  defp edited?(entries, tools), do: Enum.any?(entries, &edit?(&1, tools))
+  defp edited?(entries, tools, effects), do: Enum.any?(entries, &edit?(&1, tools, effects))
 
-  defp edit?(%Entry{type: :tool_result, payload: %{"name" => name, "error" => false}}, tools),
-    do: name in tools
+  defp edit?(%Entry{type: :tool_result, payload: payload}, tools, effects) do
+    case effects[payload["call_id"]] do
+      %{"status" => "changed"} ->
+        true
 
-  defp edit?(_entry, _tools), do: false
+      %{"status" => "unchanged"} ->
+        false
 
-  # A run of exactly this command, alone or as one `&&`/`;` step, that exited
-  # zero after the last edit. A focused run (`mix test some_test.exs`) or a
-  # pipeline (`mix test | tail`, whose status is `tail`'s) is not the check.
-  defp model_checked?(entries, command, tools) do
+      _unknown ->
+        (payload["name"] in tools and payload["error"] == false) or
+          match?([_ | _], get_in(payload, ["metadata", "workspace_changes"]))
+    end
+  end
+
+  defp edit?(_entry, _tools, _effects), do: false
+
+  # An exact command, optionally preceded by `cd . &&`, that exited zero
+  # after the last edit. A successful list can hide a failed check or edit
+  # after it, so finding the command somewhere in a list is not evidence.
+  defp model_checked?(entries, command, tools, effects) do
     entries
     |> Enum.reverse()
-    |> Enum.take_while(&(not edit?(&1, tools)))
+    |> Enum.take_while(&(passing_run_of?(&1, command) or not edit?(&1, tools, effects)))
     |> Enum.any?(&passing_run_of?(&1, command))
   end
 
@@ -423,19 +572,17 @@ defmodule Lemieux.Extensions.Verify do
          command
        )
        when is_binary(ran) do
-    ran
-    |> String.split(["&&", ";"])
-    |> Enum.any?(&(normalize(&1) == normalize(command)))
+    String.trim(ran) in [String.trim(command), "cd . && " <> String.trim(command)]
   end
 
   defp passing_run_of?(_entry, _command), do: false
 
-  defp normalize(command), do: command |> String.split() |> Enum.join(" ")
-
   defp record(session, document, result, discovery) do
     last =
       result
-      |> Map.take(~w(status exit_status duration_ms command reason))
+      |> Map.take(
+        ~w(status exit_status duration_ms command reason changes prompt_id through_seq source)
+      )
       |> Map.put("discovered_from", discovery.discovered_from)
 
     value = Map.put(document.value || %{"version" => 1}, "last", last)

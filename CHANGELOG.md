@@ -9,6 +9,14 @@ API.
 
 ## Unreleased
 
+### Features
+
+- Verification observes per-call checkpoint changes, including shell edits and
+  nonzero commands, while skipping unchanged writes and pre-existing dirty
+  files. Results retain changed paths and checkpoint trees and explicitly name
+  skipped, unavailable and model-run checks. `lmx run` JSON results add a
+  `verification` field; a normal stop still does not imply verified completion.
+
 ### Development
 
 - Root test runs record Temper flake evidence locally and in CI. A bounded
