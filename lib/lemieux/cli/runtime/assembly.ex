@@ -111,7 +111,7 @@ defmodule Lemieux.CLI.Runtime.Assembly do
   defp record(harness, original, base, extensions, required) do
     if base == (harness.tools || Tools.default()) and original.system == harness.system and
          is_nil(harness.max_turns) and is_nil(harness.max_requests) and
-         is_nil(harness.max_cost_usd) do
+         is_nil(harness.max_cost_usd) and is_nil(harness.job_limits) do
       harness
     else
       recipe = %{

@@ -394,6 +394,11 @@ defmodule Lemieux.Session do
     * `:params` — generation parameters passed through to the provider.
     * `:output_schema` — an optional req_llm structured-output schema for
       validated final results. This executable host choice is not restored.
+    * `:job_limits` — optional `max_requests:` and `max_cost_usd:` ceilings
+      shared by this root, its children, auxiliary requests and paid tools.
+      Accounting is checkpointed; current host limits must be supplied on resume.
+    * `:job_budget` — a host-owned `Lemieux.JobBudget` ledger shared with this
+      session. Children inherit it; executable ledger references are never restored.
     * `:reasoning_effort` — an explicit reasoning effort, as a string, or nil
       to use the model's default. Recorded and restored independently from the
       rest of `:params` because it can be changed interactively.

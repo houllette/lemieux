@@ -11,6 +11,13 @@ API.
 
 ### Features
 
+- `--max-total-requests` and `--max-total-cost-usd` bound a whole job through
+  one atomic ledger shared by parent/child inference, summaries, progress
+  checks, the bundled compaction scorer and paid tools. `:job_limits` and
+  `:job_budget` expose this to hosts. Resume retains accounting under current
+  host limits; interrupted or unpriced work remains unknown. Existing direct
+  session limits keep their meaning; `Session.budget/1` adds `job` accounting.
+
 - Verification observes per-call checkpoint changes, including shell edits and
   nonzero commands, while skipping unchanged writes and pre-existing dirty
   files. Results retain changed paths and checkpoint trees and explicitly name

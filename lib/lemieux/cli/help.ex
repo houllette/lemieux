@@ -121,6 +121,8 @@ defmodule Lemieux.CLI.Help do
                                     (lmx help permissions)
           --sandbox                 Run commands in a sandbox (lmx help sandbox)
           --max-cost-usd N          Stop before spending more than N dollars
+          --max-total-requests N    Maximum requests for the whole job, including children
+          --max-total-cost-usd N    Whole-job dollar ceiling, including paid tools
           --max-turns N             Model turns per prompt (default 400)
           --output-format F         lmx run only: text | json | stream-json
           --config PATH|none        Settings file (default ~/.lmx/config.json)
@@ -539,6 +541,8 @@ defmodule Lemieux.CLI.Help do
           --max-turns N    Maximum model turns per prompt (default 400)
           --max-requests N Maximum direct provider requests across the session
           --max-cost-usd N Dollar ceiling; unknown cost stops before execution
+          --max-total-requests N Whole-job request ceiling, children and auxiliary calls included
+          --max-total-cost-usd N Whole-job dollar ceiling, including paid tools
                            Limits also accept LMX_MAX_TURNS, LMX_MAX_REQUESTS,
                            LMX_MAX_COST_USD and personal config settings.
       -m, --model SPEC     Model to use (or $LMX_MODEL; without one, the model

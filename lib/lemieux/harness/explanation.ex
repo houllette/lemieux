@@ -6,7 +6,7 @@ defmodule Lemieux.Harness.Explanation do
   alias Lemieux.Tool.Profile
   alias Lemieux.Tools
 
-  @limits ~w(max_turns max_requests max_cost_usd tool_timeout_ms tool_output_bytes approval_timeout compact_at reasoning_effort)a
+  @limits ~w(max_turns max_requests max_cost_usd job_limits tool_timeout_ms tool_output_bytes approval_timeout compact_at reasoning_effort)a
 
   @spec build(harness :: Harness.t(), overrides :: keyword()) :: map()
   def build(harness, overrides) do

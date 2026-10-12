@@ -362,8 +362,8 @@ defmodule Lemieux.Session.Compacting do
 
     state = state |> Core.put_compaction(:advice, nil) |> Audit.prepare_harness_snapshot(request)
 
-    case Accounting.request_budget(state, request) do
-      :ok ->
+    case Accounting.reserve_request(state, request) do
+      {:ok, state} ->
         provider = state.provider
 
         state =

@@ -41,6 +41,7 @@ defmodule Lemieux.Session.BudgetTest do
              max_cost_usd: nil,
              requests: 0,
              max_requests: nil,
+             job: nil,
              deadline_ms: nil,
              time_left_ms: nil
            }

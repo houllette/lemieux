@@ -239,6 +239,8 @@ defmodule Lemieux.CLI.Options do
     max_turns: :string,
     max_requests: :string,
     max_cost_usd: :string,
+    max_total_requests: :string,
+    max_total_cost_usd: :string,
     build_ext: :boolean,
     quota: :boolean,
     extension_profile: :string,

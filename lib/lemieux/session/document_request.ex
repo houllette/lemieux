@@ -25,7 +25,7 @@ defmodule Lemieux.Session.DocumentRequest do
 
     with true <- available?(state),
          {:ok, %{revision: ^revision}} <- Document.read(state.reversed_entries, namespace),
-         :ok <- Accounting.request_budget(state, request) do
+         {:ok, state} <- Accounting.reserve_request(state, request) do
       dispatch(state, from, namespace, revision, request, build, opts)
     else
       false -> {:reply, {:error, :busy}, state}

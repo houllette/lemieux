@@ -121,6 +121,7 @@ defmodule Lemieux.Harness do
           max_turns: pos_integer() | nil,
           max_cost_usd: number() | nil,
           max_requests: pos_integer() | nil,
+          job_limits: keyword() | nil,
           tool_timeout_ms: pos_integer() | nil,
           tool_output_bytes: pos_integer() | nil,
           approval_timeout: pos_integer() | nil,
@@ -167,7 +168,7 @@ defmodule Lemieux.Harness do
   # that ignores it; keep the two in step.
   @session_fields ~w(system tools host_tools disabled_tools tool_profile hooks compaction messages
                      guard environment mcp_servers mcp_transports mcp_auth mcp_stdio_launcher
-                     provider_retry max_turns max_cost_usd max_requests tool_timeout_ms
+                     provider_retry max_turns max_cost_usd max_requests job_limits tool_timeout_ms
                      tool_output_bytes approval_timeout context_window auto_compaction compact_at
                      input_token_counter keep
                      keep_recent_tokens

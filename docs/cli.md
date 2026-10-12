@@ -804,6 +804,30 @@ skill and plugin flags; `--extension-profile` also refuses `--model`.
 
 ## Session limits
 
+Use `--max-total-requests N` and `--max-total-cost-usd DOLLARS` for one
+allowance covering the root session, children, retries, summaries, progress
+judges, the bundled compaction scorer and paid tools. The matching config
+keys and environment variables are `max_total_requests` /
+`LMX_MAX_TOTAL_REQUESTS` and `max_total_cost_usd` / `LMX_MAX_TOTAL_COST_USD`.
+Flags take precedence over environment and personal configuration.
+
+Reservations are atomic across participants. Paid tools reserve their declared
+maximum before execution; actual usage releases unused money. Missing prices
+or usage never count as zero. Estimates are admission bounds, not limits the
+provider enforces on an invoice. Direct and delegated usage remain separate
+in reporting; `Session.budget/1` adds inclusive `job` accounting.
+
+Resume retains recorded job accounting under current host limits. An interrupted
+reservation, or legacy delegated history without complete accounting, remains
+unknown and refuses further work under the relevant ceiling. A host can explicitly
+supply its own `:job_budget`; a library session can mount one with
+`job_limits: [max_requests: 50, max_cost_usd: 2.50]`. Auxiliary provider work must
+use `Lemieux.JobBudget.run/4`; arbitrary trusted extension code cannot be bounded
+by a ledger it does not consult. The bundled compaction scorer requires a
+`reservation_per_call_usd` to run within a dollar-limited job.
+
+The existing direct-session limits below keep their meaning:
+
 ```sh
 lmx --max-turns 20 --max-requests 50 --max-cost-usd 2.50
 ```

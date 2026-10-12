@@ -4,6 +4,7 @@ defmodule Lemieux.Session.Boot do
   alias Lemieux.Contract
   alias Lemieux.Environment
   alias Lemieux.Hooks
+  alias Lemieux.JobBudget
   alias Lemieux.MCP
   alias Lemieux.Prompt
   alias Lemieux.Provider
@@ -93,6 +94,8 @@ defmodule Lemieux.Session.Boot do
            provider_limiter: Recovery.admission_option(opts, supervisor),
            provider_limit_key: Keyword.get(opts, :provider_limit_key, :default),
            root_session_id: Keyword.get(opts, :root_session_id, Keyword.fetch!(opts, :id)),
+           job_budget: job_budget(opts, supervisor, entries),
+           job_budget_owned?: not is_nil(opts[:job_limits]) and is_nil(opts[:job_budget]),
            store: Keyword.fetch!(opts, :store),
            request_count: Enum.count(entries, &(&1.type == :request)),
            context_window_fallback:
@@ -269,6 +272,14 @@ defmodule Lemieux.Session.Boot do
       {:ok, %{state | store_lock: store_lock}, {:continue, :connect_mcp}}
     else
       {:error, reason} -> {:stop, reason}
+    end
+  end
+
+  defp job_budget(opts, supervisor, entries) do
+    case {opts[:job_budget], opts[:job_limits]} do
+      {budget, _limits} when not is_nil(budget) -> budget
+      {nil, nil} -> nil
+      {nil, limits} when is_list(limits) -> JobBudget.mount(supervisor, entries, limits)
     end
   end
 

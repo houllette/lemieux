@@ -133,7 +133,7 @@ defmodule Lemieux.CLI.Config do
   @fields ~w(version model providers base_url ixway system sessions_dir context_window web_search
              web_search_providers web_fetch mouse project_mcp delegate a2a_peers theme themes keys processing startup_animation extensions disabled_extensions
              auto_compaction compaction_price_tiers keep_recent_tokens summary_model systemone_compaction
-             systemone_providers max_turns max_requests max_cost_usd scrub_credentials credential_allowlist hooks
+             systemone_providers max_turns max_requests max_cost_usd max_total_requests max_total_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
              extension_options scout_model verify continuation input_modalities notifications
              skills)
@@ -1015,10 +1015,11 @@ defmodule Lemieux.CLI.Config do
 
   defp valid_field?("version", value), do: value == 1
 
-  defp valid_field?(key, value) when key in ~w(max_turns max_requests),
+  defp valid_field?(key, value) when key in ~w(max_turns max_requests max_total_requests),
     do: is_integer(value) and value > 0
 
   defp valid_field?("max_cost_usd", value), do: is_number(value) and value >= 0
+  defp valid_field?("max_total_cost_usd", value), do: is_number(value) and value >= 0
   defp valid_field?("model", value), do: valid_model?(value)
   defp valid_field?("context_window", value), do: is_integer(value) and value > 0
   defp valid_field?("auto_compaction", value), do: is_boolean(value)

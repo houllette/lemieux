@@ -178,17 +178,23 @@ defmodule Lemieux.Session.ToolWave do
   defp start_tools(%{wave: %{tool_batches: []}} = state), do: tools_done(state)
 
   defp start_tools(%{wave: %{tool_batches: [calls | rest]}} = state) do
-    {planned, _reserved} =
-      Enum.map_reduce(calls, 0.0, fn call, reserved ->
-        case tool_budget(state, call, reserved) do
-          {:ok, estimate} -> {{call, :ok}, reserved + estimate}
-          {:error, payload} -> {{call, {:error, payload}}, reserved}
-        end
-      end)
+    {planned, {_reserved, leases}} =
+      Enum.map_reduce(calls, {0.0, state.job_tool_leases}, &plan_tool(state, &1, &2))
 
+    state = Accounting.checkpoint_job(%{state | job_tool_leases: leases})
     tasks = Enum.reduce(planned, %{}, &Map.merge(&2, start_tool(state, &1)))
 
     %{state | wave: %{state.wave | tool_batches: rest, tool_tasks: tasks}}
+  end
+
+  defp plan_tool(state, call, {reserved, leases}) do
+    with {:ok, estimate} <- tool_budget(state, call, reserved),
+         {:ok, lease} <- Lemieux.JobBudget.reserve(state.job_budget, estimate, 0) do
+      amount = if is_number(estimate), do: estimate, else: 0
+      {{call, :ok}, {reserved + amount, Map.put(leases, call.id, {lease, estimate})}}
+    else
+      {:error, payload} -> {{call, {:error, payload}}, {reserved, leases}}
+    end
   end
 
   defp start_tool(state, {call, budget}) do
@@ -234,7 +240,10 @@ defmodule Lemieux.Session.ToolWave do
     tool_budget_result(runner, call, descriptor, payload)
   end
 
-  defp tool_budget(%{max_cost_usd: nil}, _call, _reserved), do: {:ok, 0.0}
+  defp tool_budget(%{max_cost_usd: nil} = state, call, _reserved) do
+    descriptor = call_descriptor(state, call)
+    {:ok, if(descriptor, do: Descriptor.external_cost_max_usd(descriptor), else: 0.0)}
+  end
 
   defp tool_budget(state, call, reserved) do
     descriptor = call_descriptor(state, call)

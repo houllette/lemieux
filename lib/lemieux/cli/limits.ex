@@ -5,6 +5,7 @@ defmodule Lemieux.CLI.Limits do
   alias Lemieux.CLI.Options
 
   @fields [:max_turns, :max_requests, :max_cost_usd]
+  @job_fields [:max_total_requests, :max_total_cost_usd]
 
   # The flag, then `LMX_MAX_TURNS`/`LMX_MAX_REQUESTS`/`LMX_MAX_COST_USD`, then
   # the config file. A blank variable counts as unset and falls through to the
@@ -15,17 +16,40 @@ defmodule Lemieux.CLI.Limits do
   @spec parse(parsed :: keyword(), config :: Config.t()) ::
           {:ok, keyword()} | {:error, String.t()}
   def parse(parsed, config) do
-    Enum.reduce_while(@fields, {:ok, []}, fn field, {:ok, limits} ->
+    with {:ok, limits} <- parse_fields(@fields, parsed, config),
+         {:ok, job} <- parse_fields(@job_fields, parsed, config) do
+      case job do
+        [] ->
+          {:ok, limits}
+
+        _ ->
+          {:ok,
+           Keyword.put(
+             limits,
+             :job_limits,
+             Enum.map(job, fn {field, value} -> {job_field(field), value} end)
+           )}
+      end
+    end
+  end
+
+  defp job_field(:max_total_requests), do: :max_requests
+  defp job_field(:max_total_cost_usd), do: :max_cost_usd
+
+  defp parse_fields(fields, parsed, config) do
+    Enum.reduce_while(fields, {:ok, []}, fn field, {:ok, limits} ->
       env = "LMX_" <> String.upcase(Atom.to_string(field))
       flag = "--" <> String.replace(Atom.to_string(field), "_", "-")
 
       value =
         Keyword.get(parsed, field) || Options.env(env) || Config.get(config, to_string(field))
 
-      case decode(field, value) do
+      decoded = if field in @job_fields, do: job_field(field), else: field
+
+      case decode(decoded, value) do
         {:ok, nil} -> {:cont, {:ok, limits}}
         {:ok, number} -> {:cont, {:ok, limits ++ [{field, number}]}}
-        :error -> {:halt, {:error, "#{flag} / #{env} requires #{requirement(field)}"}}
+        :error -> {:halt, {:error, "#{flag} / #{env} requires #{requirement(decoded)}"}}
       end
     end)
   end
@@ -40,6 +64,13 @@ defmodule Lemieux.CLI.Limits do
           not is_nil(value),
           do: {field, value}
 
+    job =
+      for field <- [:max_requests, :max_cost_usd],
+          value = get_in(recorded, ["job_limits", to_string(field)]),
+          not is_nil(value),
+          do: {field, value}
+
+    defaults = if job == [], do: defaults, else: Keyword.put(defaults, :job_limits, job)
     Keyword.merge(defaults, current)
   end
 
@@ -49,6 +80,10 @@ defmodule Lemieux.CLI.Limits do
       case context do
         %{"assembly" => recipe} ->
           limits = Map.new(@fields, &{to_string(&1), Map.fetch!(harness, &1)})
+
+          limits =
+            Map.put(limits, "job_limits", job_map(harness.job_limits))
+
           Map.put(context, "assembly", Map.put(recipe, "limits", limits))
 
         _other ->
@@ -56,6 +91,9 @@ defmodule Lemieux.CLI.Limits do
       end
     end)
   end
+
+  defp job_map(limits),
+    do: Map.new(limits || [], fn {key, value} -> {Atom.to_string(key), value} end)
 
   defp decode(_field, nil), do: {:ok, nil}
 

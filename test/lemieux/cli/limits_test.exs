@@ -17,7 +17,9 @@ defmodule Lemieux.CLI.LimitsTest do
   end
 
   setup do
-    names = ~w(LMX_MAX_TURNS LMX_MAX_REQUESTS LMX_MAX_COST_USD)
+    names =
+      ~w(LMX_MAX_TURNS LMX_MAX_REQUESTS LMX_MAX_COST_USD LMX_MAX_TOTAL_REQUESTS LMX_MAX_TOTAL_COST_USD)
+
     saved = Map.new(names, &{&1, System.get_env(&1)})
     Enum.each(names, &System.delete_env/1)
 
@@ -37,6 +39,14 @@ defmodule Lemieux.CLI.LimitsTest do
     assert Options.limits(options) == [max_turns: 3, max_requests: 8, max_cost_usd: 2]
     assert {:ok, options} = Options.parse(["--config", "none", "--max-cost-usd", "0"])
     assert Options.limits(options)[:max_cost_usd] == 0.0
+  end
+
+  test "whole-job flags and environment select an inclusive ledger" do
+    System.put_env("LMX_MAX_TOTAL_REQUESTS", "8")
+    assert {:ok, options} = Options.parse(["--config", "none", "--max-total-cost-usd", "2.50"])
+    assert Options.limits(options)[:job_limits] == [max_requests: 8, max_cost_usd: 2.5]
+    assert {:error, message} = Options.parse(["--config", "none", "--max-total-requests", "0"])
+    assert message =~ "--max-total-requests"
   end
 
   test "invalid limits fail without echoing values" do
