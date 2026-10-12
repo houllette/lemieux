@@ -387,3 +387,8 @@ including the selected diff digest and prompt identity. An empty findings
 array is valid. Schema validity says the report has the required structure;
 `verification: model_reported` keeps its conclusions distinct from an
 independently executed check. Invalid reports receive no automatic paid repair.
+
+Built-in commands retain precedence over skill commands. Existing skills named
+`plan` or `review` should use another name, such as `project-review`; the
+compatibility report identifies these collisions without reading their bodies
+into its output.

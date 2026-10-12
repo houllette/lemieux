@@ -52,6 +52,7 @@ defmodule Lemieux.Extensions.Workspace do
   import Kernel, except: [apply: 2]
 
   alias Lemieux.Extensions.Workspace.Discovery
+  alias Lemieux.Extensions.Workspace.Rules
   alias Lemieux.Harness
   alias Lemieux.Learning.Overlay
 
@@ -91,6 +92,7 @@ defmodule Lemieux.Extensions.Workspace do
     |> Harness.append_host_tools(Discovery.host_tools(workspace))
     |> overlay(workspace)
     |> plugin_components(workspace)
+    |> Rules.attach(workspace.rule_files)
     |> Map.update!(:skills, &(&1 ++ Discovery.user_skills(workspace)))
     |> Map.update!(:notices, &(&1 ++ workspace.diagnostics))
     |> Map.put(:workspace, workspace)

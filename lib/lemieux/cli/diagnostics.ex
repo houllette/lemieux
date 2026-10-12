@@ -1,9 +1,11 @@
 defmodule Lemieux.CLI.Diagnostics do
   @moduledoc false
+  alias Lemieux.CLI.Compatibility
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.Extensions
   alias Lemieux.CLI.Logs
   alias Lemieux.CLI.Options
+  alias Lemieux.CLI.ProviderAccess
   alias Lemieux.CLI.ProviderMux
   alias Lemieux.CLI.SystemOneCompaction
   alias Lemieux.Extensions.Permissions
@@ -19,6 +21,14 @@ defmodule Lemieux.CLI.Diagnostics do
       "model_source" => Atom.to_string(options.host.model_source),
       "route" => route(options, prepared),
       "credentials" => credentials(options, prepared),
+      "provider_access" =>
+        ProviderAccess.report(
+          prepared.model,
+          credentials(options, prepared),
+          route(options, prepared),
+          effective_limits(prepared.harness)
+        ),
+      "compatibility" => Compatibility.report(prepared.harness.workspace),
       "systemone_compaction" => systemone_compaction(options),
       "configuration" => configuration(options),
       "tui_module_available" => Code.ensure_loaded?(ExRatatui),
@@ -34,6 +44,15 @@ defmodule Lemieux.CLI.Diagnostics do
       "subprocess_credentials" => subprocess_credentials(prepared.harness.environment),
       "notices" => prepared.harness.notices,
       "terminal" => terminal()
+    }
+  end
+
+  defp effective_limits(harness) do
+    %{
+      "max_requests" => harness.max_requests,
+      "max_cost_usd" => harness.max_cost_usd,
+      "job_limits" =>
+        Map.new(harness.job_limits || [], fn {key, value} -> {Atom.to_string(key), value} end)
     }
   end
 
@@ -114,7 +133,8 @@ defmodule Lemieux.CLI.Diagnostics do
   # set although no limit came from it, and a blank `LMX_CONFIG` was
   # reported as the file `""`.
   @environment ~w(LMX_MODEL LMX_ROUTER LMX_BASE_URL LMX_IXWAY_URL
-                  LMX_MAX_TURNS LMX_MAX_REQUESTS LMX_MAX_COST_USD)
+                  LMX_MAX_TURNS LMX_MAX_REQUESTS LMX_MAX_COST_USD
+                  LMX_MAX_TOTAL_REQUESTS LMX_MAX_TOTAL_COST_USD)
 
   # Where the compaction scorer's requests go, by provider name: the one
   # assurance a person who pointed the step at their own machine wants from

@@ -1702,3 +1702,45 @@ never taken over, so delete it yourself if that host is gone.
 
 The JSONL store suits a single user on one machine. An embedder supplies its
 own access control, encryption, retention, backups and tenant isolation.
+
+## Inspecting a migration
+
+`lmx explain` adds `diagnostics.compatibility`: effective persona, instruction
+and memory paths in load order, scoped rules, active/shadowed/disabled skills,
+read-only agent definitions, discovery diagnostics and detected unsupported
+configuration. Bodies and credential values are omitted. The report lists
+its precedence and exclusions; a discovered vendor config is not an applied
+policy. `--explain-against previous.json` compares complete explanation reports.
+
+`diagnostics.provider_access` separates credential presence from verified
+access, catalog capabilities and prices from endpoint qualification, and
+configured budgets from actual billing. No vendor login file or subscription
+entitlement is imported or assumed. Prices are from the installed catalog,
+with USD per million token units; gateway tariffs, negotiated rates, cache
+availability and actual bills remain unverified. Unknown prices or windows
+remain null. The report performs no hosted inference.
+
+## Claude rule files
+
+Lemieux reads `.claude/rules/**/*.md` from applicable repository scopes, and
+personal `~/.claude/rules` when personal discovery is enabled. Personal rules
+come first, then ancestors, then nearer directories. Unscoped rules load into
+the workspace layer. A YAML `paths` list or comma-separated string scopes a
+rule relative to its owning directory. Patterns are anchored: `*.md` matches
+that root, `**/*.md` matches any depth. Globstars, character classes and braces
+are supported. See the upstream [rule format](https://code.claude.com/docs/en/memory).
+
+A matching native path/patch operation first activates the rule and receives
+one denial; the next model request sees its body before the operation can
+retry. Activation survives compaction; resume resolves digests against current
+rule files. Shell and arbitrary external tools do not discover file scopes,
+so use native file tools before editing a scoped file. Rule text guides the
+model; it does not confer permissions or replace a sandbox.
+
+Rule files are limited to 32 KiB each, 64 files and 128 KiB in total, with at
+most 64 patterns per rule and 1,024 bytes per pattern. Invalid frontmatter,
+scopes, out-of-repository links and size overruns are skipped with diagnostics.
+Other frontmatter fields are reported as ignored; rule `@imports` are not
+expanded. Repository rules cannot read external or credential files. Explicit
+portable instructions and trusted host configuration remain available for
+features another client's runtime implements differently.

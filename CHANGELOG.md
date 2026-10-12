@@ -11,6 +11,11 @@ API.
 
 ### Features
 
+- Workspace discovery loads bounded `.claude/rules` files, including scoped
+  rules activated before native file operations. `lmx explain` reports
+  effective migration inputs, exclusions, precedence and limitations, plus
+  offline provider access, catalog capabilities, pricing and budget context.
+
 - `lmx run --output-schema FILE` validates the final JSON answer after tool
   use and records its schema digest and outcome. Invalid or incomplete
   results fail without a paid repair request. ACP adds namespaced fork and
