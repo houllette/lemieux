@@ -67,11 +67,13 @@ same conventions, written so that coding agents follow them too.
 ## Commands
 
 **Run `mix precommit` when you think you're done.** One alias runs what CI's
-Lint & test, Security, Dialyzer and Standalone release host jobs check, except
-the multi-node suite: the dependency audits (for the library and the
-`dist/lmx` release host), warnings-as-errors compilation, Credo, xref, the
-docs build, the ordinary suite, Dialyzer and the release host's own gate. It
-formats rather than checks formatting, and it regenerates the usage-rules
+Lint & test, Coverage threshold, Security, Dialyzer and Standalone release host
+jobs check, except the multi-node suite: the dependency audits (for the library
+and the `dist/lmx` release host), warnings-as-errors compilation, Credo, xref, the
+docs build, the ordinary suite, a separate coverage run with the 85% floor,
+Dialyzer and the release host's own gate. Coverage runs in a fresh VM so the
+ordinary suite retains its timing and flake evidence. It formats rather than
+checks formatting, and it regenerates the usage-rules
 block below, so commit what it rewrote. It stops at the first failing step,
 and its exit status is the result. It needs network access for the audits
 and `python3` for the suite.
@@ -108,6 +110,7 @@ language server, Docker, another build), pass `--max-cases 4`.
 | Run one test | `mix test test/path/to/file_test.exs:LINE` |
 | Run the suite on a heavily loaded machine | `mix test --max-cases 4` |
 | Run the ordinary suite with warnings as errors | `mix test.fast` |
+| Run the coverage suite and enforce the 85% floor | `mix test.cover` |
 | Observe multiple offline test orders, preserving failures | `scripts/check_flakes.sh --runs 3 --seed 101 --max-cases 4 [test/PATH_test.exs]` |
 | Review recorded flake evidence / verify recording | `mix temper.report` / `mix temper.doctor` |
 | Run the multi-node suite (needs `epmd`; the alias starts it) | `mix test.distributed` |

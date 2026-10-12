@@ -232,7 +232,10 @@ defmodule Lemieux.Providers.ReqLLMResponseTest do
         end)
       end)
 
-    for task <- tasks, do: assert(Task.await(task) == :ok)
+    # This asserts request identity, not a five-second latency promise. CI's
+    # instrumented suite exceeded Task.await's default while the same ordinary
+    # suite passed. ExUnit's test timeout bounds both linked tasks instead.
+    for task <- tasks, do: assert(Task.await(task, :infinity) == :ok)
 
     for id <- ["first", "second"] do
       assert_receive {^id, {:response_metadata, metadata}}

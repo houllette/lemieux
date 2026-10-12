@@ -103,8 +103,11 @@ defmodule Lemieux.SecurityExtensionTest do
     # until the next run; see `Lemieux.ExtensionFrozenBuildTest`.
     on_exit(fn -> File.rm_rf(Path.join(build.root, "runtime")) end)
 
+    # Nightly macOS exhausted fifteen seconds booting/compiling this frozen
+    # runtime. Match the other frozen-consumer fixture's budget; this assertion
+    # checks preserved tools/dependencies, not latency.
     assert {:ok, observation} =
-             Build.run(build, %{prompt: "assess", cwd: root, timeout_ms: 15_000},
+             Build.run(build, %{prompt: "assess", cwd: root, timeout_ms: 60_000},
                allow_live: true
              )
 

@@ -117,6 +117,7 @@ defmodule Lemieux.MixProject do
         "precommit.full": :test,
         ci: :test,
         "test.distributed": :test,
+        "test.cover": :test,
         "test.fast": :test,
         "test.full": :test,
         "lemieux.eval": :test,
@@ -517,6 +518,11 @@ defmodule Lemieux.MixProject do
         "test --warnings-as-errors --raise",
         "temper.doctor",
         "temper.report",
+        # Coverage changes execution timing and can fail with a green ordinary
+        # suite (CI observed a provider fixture's five-second Task.await expire).
+        # Keep both observations: a fresh VM avoids instrumenting this run, and
+        # a child process propagates coverage's exit-time failure to the gate.
+        "cmd mix test.cover",
         # The first run builds a PLT cache under _build/plts and is slow; with
         # the cache in place the check is fast enough for the edit loop, and
         # keeping it here keeps "green precommit means green CI" true.
@@ -550,6 +556,7 @@ defmodule Lemieux.MixProject do
         "test --warnings-as-errors --raise",
         "temper.doctor",
         "temper.report",
+        "cmd mix test.cover",
         "dialyzer",
         "cmd --cd dist/lmx mix deps.get",
         "cmd --cd dist/lmx mix deps.unlock --check-unused",
@@ -585,6 +592,10 @@ defmodule Lemieux.MixProject do
         "cmd epmd -daemon",
         "test --only distributed --warnings-as-errors"
       ],
+      # Shared by local gates and CI/nightly so instrumentation, warnings and
+      # failure handling cannot quietly diverge. Do not combine it with the
+      # ordinary suite in one VM: Mix runs `test` only once per invocation.
+      "test.cover": "test --cover --preload-modules --warnings-as-errors --raise",
       "test.fast": "test --warnings-as-errors --raise",
       # The distributed suite runs as a second `mix` process. Mix runs a task
       # once per invocation, so a second `test` in the same alias was silently

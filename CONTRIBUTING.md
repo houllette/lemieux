@@ -103,10 +103,12 @@ mise exec -- mix precommit    # includes the ordinary suite; it must exit 0
 
 `mix precommit` runs CI's main checks locally: the dependency audits,
 warnings-as-errors compilation, formatting, Credo, xref, the docs build, the
-suite, Dialyzer, and the checks of the `dist/lmx` release host. The first run
-takes about 3 to 5 minutes, because it compiles the test dependencies and
-builds Dialyzer's cache; later runs take about 2. It needs network access for
-the audits. `mix ci` runs the same gate without rewriting anything, as the
+ordinary suite, a separate coverage run enforcing the 85% floor, Dialyzer,
+and the checks of the `dist/lmx` release host. Coverage starts a fresh VM;
+the ordinary suite keeps its own timing and flake evidence. The first run
+takes longer because it compiles the test dependencies and builds Dialyzer's
+cache; subsequent runs still execute both suites. It needs network access
+for the audits. `mix ci` runs the same gate without rewriting anything, as the
 release workflow does. Two things to know:
 
 - It **rewrites files**: it formats the code and regenerates the usage-rules
@@ -228,9 +230,10 @@ real timers in tests whose assertion is specifically about a deadline.
 
 ### Coverage measures product code in the current VM
 
-`mise exec -- mix test --cover --preload-modules --warnings-as-errors` must
+`mise exec -- mix test.cover` must
 reach **85% executable-line coverage**. CI runs a separate coverage job on
 every pull request and push to main, and nightly repeats that check. The
+local `precommit` and `ci` gates run that same alias in a separate VM. The
 ordinary suite stays uninstrumented for comparable timing and flake evidence.
 On macOS, raise the file-descriptor limit as described above before covering
 the suite. Coverage does not establish that an assertion detects a bug or
