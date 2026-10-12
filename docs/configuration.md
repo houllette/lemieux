@@ -56,8 +56,8 @@ preflight](compaction.md) for the options and an Ixway timing-signal example.
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `permissions` | off | Ask before tools change things ([Permissions](#permissions)) |
-| `sandbox` | off | Run commands in an operating-system sandbox ([The sandbox](#the-sandbox)) |
+| `permissions` | `{"mode": "auto"}` | Ask before tools change things ([Permissions](#permissions)) |
+| `sandbox` | automatic when available | Run commands in an operating-system sandbox ([The sandbox](#the-sandbox)) |
 | `scrub_credentials` | `true` | Withhold credential-shaped variables from commands, hooks and MCP servers ([Credential scrubbing](#credential-scrubbing)) |
 | `credential_allowlist` | none | Variable names, or `NAME_*` patterns, passed through anyway |
 | `hooks` | none | Command hooks, in `lmx`'s format or Claude Code's ([Hooks](#hooks-and-approval-policy)) |
@@ -256,9 +256,9 @@ library's four tools (`read`, `write`, `edit`, `bash`):
   machine, so `--config none` keeps it.
 - [System One compaction](#system-one-compaction), when its provider is set up.
 
-Off by default: [permissions](#permissions) (every tool call runs without
-asking, which the startup banner calls "full auto"), [the
-sandbox](#the-sandbox), and hooks.
+The default [permission policy](#permissions) is `auto`, with an OS
+[sandbox](#the-sandbox) when available. Without one, commands require approval.
+Hooks remain off unless selected explicitly.
 
 `"disabled_extensions"` leaves shipped extensions out by name: `planning`,
 `continuation`, `verify`, `search`, `apply_patch`, `checkpoints`,
@@ -420,7 +420,7 @@ The check is a command the repository chose, so it runs under the same rules
 as a command the model runs: it goes to the session's hooks and permission
 policy as `Bash(<command>)` first.
 
-- With permissions off (the default), it runs without asking.
+- With permissions explicitly off, it runs without asking.
 - In `ask` or `accept_edits` mode it asks, and the approval card shows the
   command. `"allow": ["Bash(make test)"]` lets it run unasked, and a `Bash`
   deny rule refuses it.
@@ -464,7 +464,9 @@ has the details.
 
 ### Permissions
 
-Off by default: every tool call runs without asking. To be asked first:
+Default: `auto`. Workspace file edits run automatically; commands run
+automatically only in an OS sandbox. MCP, web and eval capabilities still ask.
+Without a sandbox, commands ask too. To ask before file edits as well:
 
 ```sh
 lmx --permission-mode ask
@@ -501,7 +503,10 @@ on. [Permission modes](hooks.md#permission-modes) has the details.
 
 ### The sandbox
 
-Off by default. `--sandbox`, or `"sandbox": true`, runs every command the
+The default policy uses an available OS sandbox. If the implicit sandbox
+cannot start, `lmx` states that commands require approval and keeps that
+approval policy. `--no-sandbox` or `"sandbox": false` disables it.
+An explicit `--sandbox`, or `"sandbox": true`, runs every command the
 agent starts inside the operating system's sandbox: Seatbelt (`sandbox-exec`)
 on macOS, bubblewrap (`bwrap`) on Linux. A sandbox that was asked for and
 cannot start stops `lmx` rather than running without it.
@@ -1416,8 +1421,8 @@ Confinement is by path, so a hard link inside the tree to a file elsewhere is
 written through. `bash` runs locally as you, non-interactively, in its own
 process group, without credential-shaped variables. `lmx` bounds and cleans
 its output, enforces its timeout, and kills its whole process group when it
-times out, is cancelled or `lmx` stops, but `bash` is not sandboxed unless you
-ask for [the sandbox](#the-sandbox). On Windows (experimental), commands run
+times out, is cancelled or `lmx` stops. The default policy uses an available
+[OS sandbox](#the-sandbox); outside one, commands require approval. On Windows (experimental), commands run
 in Git for Windows' bash, never WSL's `bash.exe`.
 
 An embedding host can replace the environment tools run in
@@ -1697,3 +1702,45 @@ never taken over, so delete it yourself if that host is gone.
 
 The JSONL store suits a single user on one machine. An embedder supplies its
 own access control, encryption, retention, backups and tenant isolation.
+
+## Inspecting a migration
+
+`lmx explain` adds `diagnostics.compatibility`: effective persona, instruction
+and memory paths in load order, scoped rules, active/shadowed/disabled skills,
+read-only agent definitions, discovery diagnostics and detected unsupported
+configuration. Bodies and credential values are omitted. The report lists
+its precedence and exclusions; a discovered vendor config is not an applied
+policy. `--explain-against previous.json` compares complete explanation reports.
+
+`diagnostics.provider_access` separates credential presence from verified
+access, catalog capabilities and prices from endpoint qualification, and
+configured budgets from actual billing. No vendor login file or subscription
+entitlement is imported or assumed. Prices are from the installed catalog,
+with USD per million token units; gateway tariffs, negotiated rates, cache
+availability and actual bills remain unverified. Unknown prices or windows
+remain null. The report performs no hosted inference.
+
+## Claude rule files
+
+Lemieux reads `.claude/rules/**/*.md` from applicable repository scopes, and
+personal `~/.claude/rules` when personal discovery is enabled. Personal rules
+come first, then ancestors, then nearer directories. Unscoped rules load into
+the workspace layer. A YAML `paths` list or comma-separated string scopes a
+rule relative to its owning directory. Patterns are anchored: `*.md` matches
+that root, `**/*.md` matches any depth. Globstars, character classes and braces
+are supported. See the upstream [rule format](https://code.claude.com/docs/en/memory).
+
+A matching native path/patch operation first activates the rule and receives
+one denial; the next model request sees its body before the operation can
+retry. Activation survives compaction; resume resolves digests against current
+rule files. Shell and arbitrary external tools do not discover file scopes,
+so use native file tools before editing a scoped file. Rule text guides the
+model; it does not confer permissions or replace a sandbox.
+
+Rule files are limited to 32 KiB each, 64 files and 128 KiB in total, with at
+most 64 patterns per rule and 1,024 bytes per pattern. Invalid frontmatter,
+scopes, out-of-repository links and size overruns are skipped with diagnostics.
+Other frontmatter fields are reported as ignored; rule `@imports` are not
+expanded. Repository rules cannot read external or credential files. Explicit
+portable instructions and trusted host configuration remain available for
+features another client's runtime implements differently.

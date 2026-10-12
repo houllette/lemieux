@@ -171,7 +171,9 @@ defmodule LemieuxSystemOneCompaction do
           request,
           projected,
           context,
-          Keyword.put(opts, :session, session),
+          opts
+          |> Keyword.put(:session, session)
+          |> Keyword.put(:job_budget, context[:job_budget]),
           revision,
           document
         )
@@ -242,21 +244,63 @@ defmodule LemieuxSystemOneCompaction do
     if byte_size(JSON.encode!(body)) > limit do
       {:ok, projected}
     else
-      started = System.monotonic_time(:millisecond)
-      result = sdk_request(client, state, questions, model, opts, limit)
-      latency_ms = max(System.monotonic_time(:millisecond) - started, 0)
-
-      finish(
-        result,
+      ask_reserved(
         request,
         projected,
         candidates,
-        Keyword.put(opts, :requested_model, model),
+        client,
+        opts,
         revision,
         document,
         digest,
-        latency_ms
+        state,
+        questions,
+        model,
+        limit
       )
+    end
+  end
+
+  defp ask_reserved(
+         request,
+         projected,
+         candidates,
+         client,
+         opts,
+         revision,
+         document,
+         digest,
+         state,
+         questions,
+         model,
+         limit
+       ) do
+    budget = opts[:job_budget]
+
+    case Lemieux.JobBudget.reserve(budget, opts[:reservation_per_call_usd], 1) do
+      {:ok, lease} ->
+        :ok = Lemieux.JobBudget.checkpoint(budget)
+        started = System.monotonic_time(:millisecond)
+        result = sdk_request(client, state, questions, model, opts, limit)
+        latency_ms = max(System.monotonic_time(:millisecond) - started, 0)
+        priced = Keyword.put(opts, :requested_model, model)
+        charge = external_usage(result, priced)
+        Lemieux.JobBudget.settle(budget, lease, charge["cost_usd"])
+
+        finish(
+          result,
+          request,
+          projected,
+          candidates,
+          priced,
+          revision,
+          document,
+          digest,
+          latency_ms
+        )
+
+      {:error, _reason} ->
+        {:ok, projected}
     end
   end
 

@@ -421,10 +421,22 @@ defmodule Lemieux.CLITest do
       call = %{id: "t1", name: "bash", arguments: %{"command" => "echo hi"}}
 
       result =
-        lmx(["run", "--output-format", "stream-json", "look around"], context, [
-          [{:text_delta, "Let me look."}, {:tool_call, call}, {:done, :tool_calls}],
-          [{:text_delta, "It says hi."}, {:done, :stop}]
-        ])
+        lmx(
+          [
+            "run",
+            "--output-format",
+            "stream-json",
+            "--no-sandbox",
+            "--permission-mode",
+            "full_auto",
+            "look around"
+          ],
+          context,
+          [
+            [{:text_delta, "Let me look."}, {:tool_call, call}, {:done, :tool_calls}],
+            [{:text_delta, "It says hi."}, {:done, :stop}]
+          ]
+        )
 
       assert result.status == :ok
       events = result.stdout |> String.split("\n", trim: true) |> Enum.map(&JSON.decode!/1)

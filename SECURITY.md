@@ -56,7 +56,7 @@ it embeds the library.
 | Model API | Credentials stay in provider configuration; a transcript has no field for them. `lmx` withholds credential-shaped environment variables from the commands, hooks, Elixir node and MCP servers it starts ([below](#guarded-by-default)) | Secret storage, egress policy, account and budget controls |
 | Read, write and edit | Paths are confined to the working directory after `..`, absolute paths and symbolic links are resolved. Confinement is by path: a hard link inside the tree to a file elsewhere is written through. `write` refuses to replace a file the session has not read, or that changed since | An operating-system or container boundary when the working tree is not enough |
 | Bash | A supervised, non-interactive subprocess in its own process group, with bounded output and a host-chosen environment. A timeout, a cancel or a stopped VM kills the whole group; a watchdog does it when the VM dies first. An opt-in Seatbelt or bubblewrap sandbox (`Lemieux.Environment.Sandbox`) | Command approval, and a sandbox or container when your user's full authority is too broad |
-| Tool policy | Before and after hooks that deny with a reason, rewrite a call or park it for asynchronous approval, and the bundled `Lemieux.Extensions.Permissions` (off by default in `lmx`) | Tenant-aware policy, durable audit storage and an approval interface |
+| Tool policy | Before and after hooks that deny with a reason, rewrite a call or park it for asynchronous approval, and the bundled `Lemieux.Extensions.Permissions` (`auto` by default in `lmx`) | Tenant-aware policy, durable audit storage and an approval interface |
 | Elixir evaluation | A separate BEAM node, reached over a pipe rather than Erlang distribution, with time, heap and output limits | Filesystem and network confinement; explicit trust before attaching to a live application |
 | Repository content | `lmx` reads instructions, skills and commands as model context, confined to the repository. It never runs a repository's hooks or extensions, its own git runs nothing the repository's git configuration names, and the installed binary never reads its `.env` | Review what you ask an agent to do in a checkout you do not trust; prompt injection is not prevented. An embedding host that may start in an untrusted directory turns off `.env` loading ([below](#for-library-hosts)) |
 | MCP | Protocol validation and host-supplied OAuth token storage. `lmx` starts a repository's `.mcp.json` servers only after you trust that file, refuses to expand secret-looking variables into it, and gives stdio servers the scrubbed environment | Trust decisions for server configuration and for the tools a server exposes |
@@ -121,9 +121,12 @@ Your settings are in `~/.lmx/config.json` (see
 
 ### Runs without asking
 
-The permissions extension is off by default, so `lmx` runs every tool call the
-model makes without asking ("full auto"). The startup notice says so: "full
-auto: tools run without asking · commands are not sandboxed".
+The default `lmx` permission policy is `auto`: workspace file edits run
+automatically and commands run automatically only within an available OS
+sandbox. Without one, commands require approval. MCP, web and eval capabilities
+ask either way; unattended calls that would ask are denied. The startup banner
+reports the actual mode and sandbox. `full_auto` or `off` is an explicit choice
+to bypass approvals; an explicit sandbox request still must succeed.
 
 A session starts with these tools: `read`, `write`, `edit` (`apply_patch` in
 its place for GPT-5-family models), `bash`, `grep`, `glob`, `todo`, `skill`
@@ -132,8 +135,11 @@ scout), plus `ask_user` in the terminal UI. Web search and page fetch join
 them when a Brave key is set, `elixir` with `--elixir`, and MCP tools from the
 servers you configured or trusted.
 
-**`bash` runs as your operating-system user and is not sandboxed** unless you
-turn the [sandbox](#opt-ins) on. It can do whatever you can.
+**`bash` runs as your operating-system user.** An available OS sandbox is
+used by the default CLI policy; `--no-sandbox` disables it and commands then
+require approval. Unrestricted operation can do whatever you can. The
+[sandbox](#opt-ins) covers commands and file tools, while hooks, MCP, web tools
+and the eval node run outside it.
 
 After a turn that edited files, `lmx` also runs the project's own check: the
 first command the repository's conventions name, such as `tests/run.sh`, a

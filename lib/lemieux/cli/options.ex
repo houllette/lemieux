@@ -239,6 +239,8 @@ defmodule Lemieux.CLI.Options do
     max_turns: :string,
     max_requests: :string,
     max_cost_usd: :string,
+    max_total_requests: :string,
+    max_total_cost_usd: :string,
     build_ext: :boolean,
     quota: :boolean,
     extension_profile: :string,
@@ -281,7 +283,11 @@ defmodule Lemieux.CLI.Options do
     # `--output-format` and `--bare` are read from `given` by `Lemieux.CLI.Run`
     # alone: they describe how one headless answer is delivered, not a
     # setting any other command could share.
-    run: @common ++ @agent ++ [continue: :boolean, output_format: :string, bare: :boolean],
+    run:
+      @common ++
+        @agent ++
+        [continue: :boolean, output_format: :string, output_schema: :string, bare: :boolean],
+    acp: @common ++ @agent,
     explain: @common ++ @agent ++ [explain_against: :string],
     log: @common ++ [jsonl: :boolean],
     request: @common,
@@ -429,7 +435,8 @@ defmodule Lemieux.CLI.Options do
       local_model: nil,
       continue: Keyword.get(parsed, :continue, false),
       project_mcp_trusted: project_mcp_trusted?(parsed),
-      permission_mode: parsed[:permission_mode] || get_in_config(config, ["permissions", "mode"]),
+      permission_mode:
+        parsed[:permission_mode] || get_in_config(config, ["permissions", "mode"]) || "auto",
       sandbox: parsed[:sandbox],
       mouse: mouse(parsed, config)
     }

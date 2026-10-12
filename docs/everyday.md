@@ -27,9 +27,10 @@ the models `lmx` picks.
 The header shows the version, the working directory, the session's name, the
 provider, the model and the reasoning effort; the terminal's title shows
 `lmx | NAME | DIR`. The startup banner states the permission mode and the
-sandbox. By default that is "full auto": tools run without asking, and
-commands run unsandboxed as your user, in the environment you started `lmx`
-in, without your credential-shaped variables. Where `/undo` cannot record
+sandbox. The default is `auto`: workspace edits run automatically and
+commands do so only inside an available sandbox. Otherwise commands require
+approval. External capabilities ask either way. Credential-shaped variables
+are withheld from commands. Where `/undo` cannot record
 what commands change, outside a git repository for example, a second notice
 says that it covers file-tool edits only there. What `/undo` can put back,
 and what it cannot, is under [Taking changes back](#taking-changes-back).

@@ -78,10 +78,13 @@ defmodule Lemieux.CLI.Run do
   alias Lemieux.Conversation
   alias Lemieux.Conversation.Doctor
   alias Lemieux.Entry
+  alias Lemieux.Extensions.FinalResult
+  alias Lemieux.Extensions.Verify
   alias Lemieux.ID.Shorthand
   alias Lemieux.ModelSpec
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Session
+  alias Lemieux.StructuredResult
   alias Lemieux.Usage
 
   @formats %{"text" => :text, "json" => :json, "stream-json" => :stream_json}
@@ -134,11 +137,18 @@ defmodule Lemieux.CLI.Run do
 
   defp checked(options, out, opts) do
     with {:ok, opts} <- usage(Runtime.with_routes(options, opts)),
+         {:ok, contract, opts} <- usage(result_contract(options, opts)),
          {:ok, options, opts} <- usage(ExtensionExperience.prepare(options, opts)),
          :ok <- usage(one_of_continue_or_resume(options)),
          {:ok, prompt} <- usage(prompt(options.argv, opts)) do
       opts = Keyword.drop(opts, [:stdin, :stdin_terminal?])
-      start(Runtime.project_mcp(options, opts), prompt, %{out | opts: opts}, opts)
+
+      start(
+        Runtime.project_mcp(options, opts),
+        prompt,
+        out |> Map.put(:opts, opts) |> Map.put(:contract, contract),
+        opts
+      )
     else
       {:error, category, message} -> fail(out, category, message)
     end
@@ -148,6 +158,28 @@ defmodule Lemieux.CLI.Run do
   # — a flag, an argument, the configuration — which scripts see as status 2.
   defp usage({:error, message}) when is_binary(message), do: {:error, :usage, message}
   defp usage(result), do: result
+
+  defp result_contract(options, opts) do
+    case options.given[:output_schema] do
+      nil ->
+        {:ok, nil, opts}
+
+      path ->
+        with {:ok, file} <- File.open(path, [:read, :binary]),
+             contents = IO.binread(file, 48_001),
+             :ok <- File.close(file),
+             true <- is_binary(contents) and byte_size(contents) <= 48_000,
+             {:ok, schema} <- JSON.decode(contents),
+             {:ok, contract} <- StructuredResult.new(schema) do
+          extensions = Keyword.get(opts, :extensions, []) ++ [{FinalResult, schema: schema}]
+          {:ok, contract, Keyword.put(opts, :extensions, extensions)}
+        else
+          _error ->
+            {:error,
+             "--output-schema requires a valid local JSON object schema (at most 48 KiB); external references are unsupported"}
+        end
+    end
+  end
 
   defp one_of_continue_or_resume(%Options{host: %{continue: true}, resume: resume})
        when is_binary(resume),
@@ -244,8 +276,7 @@ defmodule Lemieux.CLI.Run do
           checkpoints: prepared.checkpoints
         })
 
-      notices(out, prepared.harness.notices ++ continued)
-      converse(session, prompt, out)
+      converse(session, prompt, out, prepared.harness.notices ++ continued)
     else
       {:error, category, message} ->
         refused(out, options, category, message)
@@ -389,14 +420,15 @@ defmodule Lemieux.CLI.Run do
 
   defp notices(out, notices), do: Enum.each(notices, &say(out, &1))
 
-  defp converse(session, prompt, out) do
+  defp converse(session, prompt, out, startup_notices) do
     id = Session.id(session)
     info = info(session)
-    announce(out, info, id)
+    announce(out, info, id, startup_notices)
     out = Map.put(out, :undo, undo_watch(out.checkpoints, info))
 
     result = Session.await(session, prompt, on_event: &progress(out, &1))
-    outcome = outcome(id, result)
+    outcome = Map.put(outcome(id, result), :verification, verification(session))
+    outcome = validate_result(outcome, session, Map.get(out, :contract))
     deliver(out, outcome)
 
     # After the answer, so a `session_end` hook that prints lands on its own
@@ -407,6 +439,17 @@ defmodule Lemieux.CLI.Run do
     status(outcome.category)
   end
 
+  defp validate_result(outcome, _session, nil), do: outcome
+
+  defp validate_result(outcome, session, contract) do
+    report = StructuredResult.finish(session, contract, outcome.text, outcome.category == :ok)
+    outcome = Map.put(outcome, :structured_result, report)
+
+    if report["status"] == "validated" or outcome.category != :ok,
+      do: outcome,
+      else: %{outcome | category: :other, error: {:structured_result, report["reason"]}}
+  end
+
   # Both names, because this line has two readers. A script captures the id
   # and feeds it back to `--resume`; a person reading their terminal wants
   # the one they could still type tomorrow. The model, because nobody may
@@ -415,7 +458,9 @@ defmodule Lemieux.CLI.Run do
   # the model's first request, with the size compaction assumes, and this
   # command hears it (`activity/1`). Said here as well, it came out twice,
   # the first line guessing at what the second one knew.
-  defp announce(%{format: :stream_json} = out, info, id) do
+  defp announce(%{format: :stream_json} = out, info, id, startup_notices) do
+    # A stream consumer needs the session identity before any of its notices.
+    # The automatic-policy fallback exposed the reverse ordering on Linux.
     emit(out, %{
       "type" => "session",
       "session_id" => id,
@@ -423,9 +468,13 @@ defmodule Lemieux.CLI.Run do
       "model" => out.model,
       "context_window" => window(info)
     })
+
+    notices(out, startup_notices)
   end
 
-  defp announce(out, info, id) do
+  defp announce(out, info, id, startup_notices) do
+    notices(out, startup_notices)
+
     case window(info) do
       nil ->
         say(out, "session #{id} · #{Shorthand.of(id)} · #{out.model}")
@@ -757,9 +806,24 @@ defmodule Lemieux.CLI.Run do
       "text" => outcome.text,
       "stop_reason" => stop_reason_text(outcome.stop_reason),
       "usage" => outcome.usage,
+      "verification" => Map.get(outcome, :verification),
+      "structured_result" => Map.get(outcome, :structured_result),
       "error" => error_object(out, outcome),
       "exit_status" => Errors.exit_status(outcome.category)
     }
+  end
+
+  defp verification(session) do
+    case Verify.status(session) do
+      {:ok, %{enabled: false}} ->
+        %{"status" => "skipped", "reason" => "verification disabled"}
+
+      {:ok, %{last: last}} ->
+        last
+
+      {:error, _reason} ->
+        %{"status" => "unavailable", "reason" => "verification status unavailable"}
+    end
   end
 
   defp error_object(_out, %{category: :ok}), do: nil

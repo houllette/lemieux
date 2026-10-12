@@ -685,6 +685,8 @@ defmodule Lemieux.Subagent.Group do
       provider_limiter: state.context.provider_limiter,
       provider_limit_key: state.context.provider_limit_key,
       root_session_id: state.root_id,
+      job_budget: state.context.job_budget,
+      job_limits: nil,
       store: state.context.store,
       model: definition.model,
       system: system_prompt(state, request, child.id),
@@ -950,7 +952,8 @@ defmodule Lemieux.Subagent.Group do
       provider: progress.provider || provider(state, child.request),
       model: progress.model || definition.model,
       timeout_ms: progress.timeout_ms,
-      clock: state.clock
+      clock: state.clock,
+      job_budget: state.context.job_budget
     ]
 
     evidence_opts = [

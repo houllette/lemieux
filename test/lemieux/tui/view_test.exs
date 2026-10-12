@@ -824,10 +824,8 @@ defmodule Lemieux.TUI.ViewTest do
       assert Enum.any?(resumed.lines, &match?({:model_table, _table}, &1))
     end
 
-    test "a prompt after a block still gets its blank line, live and resumed" do
-      tmp = System.tmp_dir!() |> Path.join("lmx-tui-blocks-#{System.unique_integer([:positive])}")
-      File.mkdir_p!(tmp)
-      on_exit(fn -> File.rm_rf(tmp) end)
+    @tag :tmp_dir
+    test "a prompt after a block still gets its blank line, live and resumed", %{tmp_dir: tmp} do
       runtime = :"lemieux_tui_blocks_#{System.unique_integer([:positive])}"
       start_supervised!({Lemieux.Supervisor, name: runtime})
 
@@ -849,6 +847,10 @@ defmodule Lemieux.TUI.ViewTest do
 
       assert [{:you, "next"}, {:space, ""}, {:summary, _}, {:model_fence, :close, nil, "```"} | _] =
                live.lines
+
+      # Submitting starts a real turn. Keep its scripted provider alive until
+      # the turn ends, including when coverage slows down request startup.
+      assert_receive {:lemieux, _id, {:finished, :stop}}
 
       entries = [
         Entry.new(:assistant, %{"content" => [%{"type" => "text", "text" => "```\nx\n```"}]}),

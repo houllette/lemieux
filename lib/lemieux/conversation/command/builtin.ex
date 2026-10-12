@@ -54,6 +54,8 @@ defmodule Lemieux.Conversation.Command.Builtin do
       Command.Approve,
       Command.Deny,
       Command.Verify,
+      Command.Plan,
+      Command.Review,
       Command.Delegate,
       Command.Tools,
       Command.MCP,

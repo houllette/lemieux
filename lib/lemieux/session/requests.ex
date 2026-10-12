@@ -166,8 +166,8 @@ defmodule Lemieux.Session.Requests do
     state =
       state |> Audit.note_request_hook_outcome(request) |> Audit.prepare_harness_snapshot(request)
 
-    case Accounting.request_budget(state, request) do
-      :ok -> start_provider(state, request)
+    case Accounting.reserve_request(state, request) do
+      {:ok, state} -> start_provider(state, request)
       {:error, payload} -> Accounting.budget_stop(state, payload)
     end
   end

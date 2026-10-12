@@ -178,6 +178,7 @@ defmodule Lemieux.Checkpoint do
   prunes them.
   """
 
+  alias Lemieux.Checkpoint.Effects
   alias Lemieux.Checkpoint.Files
   alias Lemieux.Checkpoint.Store
   alias Lemieux.Checkpoint.Undo
@@ -544,6 +545,23 @@ defmodule Lemieux.Checkpoint do
   end
 
   ## Reading
+
+  @doc """
+  Observed workspace effects for the named tool calls, keyed by call id.
+
+  Each receipt says `changed`, `unchanged` or `unknown`, with bounded paths
+  and, for commands, the before/after git trees. It compares per-call
+  checkpoints, never the user's dirty tree against HEAD. A missing receipt
+  means the call was not observed. Snapshot exclusions and concurrent edits
+  during a command retain the limits documented above; this is evidence of
+  workspace changes, not a claim to observe external effects.
+  """
+  @spec effects(store :: store(), session_id :: String.t(), call_ids :: [String.t()]) ::
+          {:ok, map()} | {:error, term()}
+  def effects(store, session_id, call_ids) when is_list(call_ids) do
+    with {:ok, session} <- Store.session_dir(store, session_id),
+         do: {:ok, Effects.read(session, call_ids)}
+  end
 
   @doc "The turns that recorded something, newest first."
   @spec list(store :: store(), session_id :: String.t()) :: {:ok, [summary()]} | {:error, term()}

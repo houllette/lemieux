@@ -151,14 +151,14 @@ and `/verify off` pauses it for a session). A library host opts in with
 `verify: true` (or its options) in `Lemieux.Extensions.coding/3`, or applies
 `{Lemieux.Extensions.Verify, opts}`.
 
-The check runs at an ordinary stop when a `write`, `edit` or `apply_patch` call
-succeeded since the person's prompt or the last check — another stop hook's
+The check runs at an ordinary stop when per-call checkpoints observe workspace
+changes since the person's prompt or the last check — another stop hook's
 message is not a prompt, so edits before it still count — unless the model itself
 ran exactly that command and saw it pass after its last edit. The command is
 `:command`, or found from the repository's conventions: `tests/run.sh`, a
 `Makefile` `test` or `check` target, then `mix test`, the `package.json` test
 script (run with the lockfile's package manager), `cargo test`, `go test ./...`,
-pytest configuration, Gradle and Maven. No convention means no check. A failure
+pytest configuration, Gradle and Maven. No convention records `unavailable` with a reason. A failure
 comes back to the model as a message starting `[lmx verify]` with the command,
 how it ended and the end of its output, and says the model may stop without
 further changes when a failure predates it. Nothing further is checked until
@@ -171,14 +171,28 @@ five minutes), `:max_output_bytes`, `:excerpt_bytes`, `:editing_tools`,
 (what `/verify` does), and `Verify.status/1` reports the toggle and the last
 result. Both live in the `"lemieux.verify"` session document, so they
 survive resume. A command that cannot run at all — not installed, exit
-status 126 or 127 — is not reported to the model. Edits made only through
-`bash` do not trigger a check unless `"bash"` is added to `:editing_tools`.
+status 126 or 127 — is not reported to the model. With `:checkpoints`, shell
+edits trigger a check even when the command exits nonzero; unchanged writes
+and read-only commands do not. Each call is compared with its own before-state,
+so existing dirty files do not count as agent changes. Snapshot exclusions and
+concurrent edits during a command retain the checkpoint limits.
+
+Remote or custom tools can declare changed paths in
+`Tool.Result.metadata["workspace_changes"]`. Without observations, successful
+`:editing_tools` calls remain the compatibility fallback and shell effects are
+reported as unavailable. Results include bounded `changes`, the checked
+`prompt_id` and `through_seq`, and checkpoint trees when available. A passing
+exact command run by the model is recorded with `source: "model"`. Skipped or
+unavailable checks are visible in `/verify` and the `verification` field of
+`lmx run` JSON output. This field is additive; consumers should distinguish it
+from `stop_reason`.
 
 The check is a command the repository chose — `make test` is whatever the
 checkout says it is — so it goes through the session's permission policy as
 the `bash` call that would run it, with the `bash` tool's descriptor:
 
-- with no policy, which is `lmx`'s default, it runs without asking;
+- with no host policy, it runs without asking; the CLI defaults to `auto`,
+  which permits commands automatically only inside a sandbox;
 - in `ask` or `accept_edits` mode the approval card shows the command, an
   allow rule such as `Bash(make test)` lets it run unasked, and a `Bash` deny
   rule refuses it;
@@ -328,3 +342,53 @@ large to commit remain uncertain and require reconciliation.
 retried model work. Supply every executed key. Uncertain or unmeasured attempts
 keep aggregate cost unknown; deterministic stages may explicitly report zero
 usage. This is accounting evidence, not automatic budget admission.
+
+## Planning with an approval boundary
+
+`/plan TOPIC` investigates with certified read tools and records tasks with
+`todo`. File writes, commands and external mutation tools are unavailable
+throughout planning, including after resume. This restriction also checks
+actual tool calls, independently of remembered permission rules.
+
+`/plan` shows the stored tasks and workflow phase. `/plan edit TOPIC` returns
+to drafting. `/plan approve` records the concrete revision and obligations
+digest, then hands that plan to the agent under the current host permissions
+and budgets. Updating progress or evidence retains approval; changing titles,
+dependencies or owners requires a new human decision. `/plan export PATH`
+writes a Markdown snapshot through the confined workspace environment.
+`/plan end` leaves planning without granting approval. Commands that change
+phase require an idle session; cancelling an active turn retains its state.
+
+The CLI applies `Lemieux.Extensions.Workflow`. Embedders can apply it alongside
+`Lemieux.Extensions.Planning`; starting this workflow without its policy hook
+is refused. The workflow document carries restrictions and approval evidence,
+never credentials or broader host authority.
+
+## Reviewing a selected change
+
+`/review` reviews tracked working changes against HEAD. `/review staged`
+selects the index; `/review commit REF` selects that commit (including an
+initial commit); `/review range BASE..HEAD` selects changes between two
+resolved commits. `/review end` leaves review mode. The selected target,
+resolved identities and diff digest remain in the session document.
+
+Diff collection uses a private Git directory that cannot execute repository
+hooks, filters or diff drivers. Diffs larger than 48 KiB are refused with a
+request to narrow the target. Untracked contents are outside the diff; the
+agent can inspect referenced files through read tools. Review restricts
+writes and shell commands until explicitly ended, including after resume.
+Findings are requested with severity, file, line, explanation and validation
+evidence; a model's report is not independent verification.
+
+Review final answers use a JSON findings schema: `summary` and `findings`,
+with severity (P0–P3), file, positive line number, explanation and evidence
+for each finding. `/review report` reads the validated or invalid report,
+including the selected diff digest and prompt identity. An empty findings
+array is valid. Schema validity says the report has the required structure;
+`verification: model_reported` keeps its conclusions distinct from an
+independently executed check. Invalid reports receive no automatic paid repair.
+
+Built-in commands retain precedence over skill commands. Existing skills named
+`plan` or `review` should use another name, such as `project-review`; the
+compatibility report identifies these collisions without reading their bodies
+into its output.

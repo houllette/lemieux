@@ -131,6 +131,7 @@ defmodule Lemieux.Extensions.Continuation do
 
   alias Lemieux.Entry
   alias Lemieux.Extensions.Planning
+  alias Lemieux.Extensions.Workflow
   alias Lemieux.Harness
   alias Lemieux.Session
   alias Lemieux.Transcript
@@ -228,10 +229,7 @@ defmodule Lemieux.Extensions.Continuation do
   # The plan is read first: most stops have nothing open, and those never
   # copy the transcript out of the session unless the completion check is on.
   def stop(%__MODULE__{} = config, :stop, %{session: session}) do
-    case open_plan(session) do
-      [] -> completion_check(config, session)
-      open -> plan_continuation(config, current_run(session), open)
-    end
+    if waiting_for_handoff?(session), do: :allow, else: continue_plan(config, session)
   end
 
   def stop(%__MODULE__{} = config, :length, %{session: session}) do
@@ -244,6 +242,20 @@ defmodule Lemieux.Extensions.Continuation do
   end
 
   def stop(_config, _reason, _context), do: :allow
+
+  defp waiting_for_handoff?(session) do
+    case Workflow.read(session) do
+      {:ok, %{value: %{"phase" => phase}}} -> phase in ~w(planning review)
+      _unavailable -> false
+    end
+  end
+
+  defp continue_plan(config, session) do
+    case open_plan(session) do
+      [] -> completion_check(config, session)
+      open -> plan_continuation(config, current_run(session), open)
+    end
+  end
 
   defp open_plan(session) do
     case Planning.read(session) do

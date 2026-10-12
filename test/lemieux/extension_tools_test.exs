@@ -15,6 +15,7 @@ defmodule Lemieux.ExtensionToolsTest do
     @behaviour Lemieux.Tool
     def name, do: "audit_ports"
     def description, do: "Check a recorded list of open ports using deterministic policy."
+    def read_only?, do: true
 
     def schema,
       do: %{

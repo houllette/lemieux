@@ -61,7 +61,6 @@ defmodule Lemieux.Progress do
 
   alias Lemieux.Clock
   alias Lemieux.Entry
-  alias Lemieux.Provider
   alias Lemieux.Request
 
   defmodule Evidence do
@@ -263,7 +262,7 @@ defmodule Lemieux.Progress do
       # take the check down with it — and a check that dies is a child left
       # without a clock. This is a boundary: the failure is returned as the
       # answer, not swallowed.
-      task = Task.async(fn -> run_judge(provider, request, me, reference) end)
+      task = Task.async(fn -> run_judge(provider, request, me, reference, opts[:job_budget]) end)
 
       # The timeout is a clock timer rather than `Task.yield/2`'s own wait, so
       # a test can end the question by moving a manual clock instead of by
@@ -316,8 +315,8 @@ defmodule Lemieux.Progress do
   # raised would take the check down with it, and a check that dies is a
   # child left without a clock. This is a boundary, and the failure comes
   # back as the answer rather than being swallowed.
-  defp run_judge(provider, request, me, reference) do
-    Provider.run(provider, request, &send(me, {reference, &1}))
+  defp run_judge(provider, request, me, reference, budget) do
+    Lemieux.JobBudget.run(budget, provider, request, &send(me, {reference, &1}))
   rescue
     error -> {:error, {:judge_raised, Exception.message(error)}}
   catch

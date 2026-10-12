@@ -450,7 +450,8 @@ defmodule Lemieux.Session.Prompts do
       stop_hook_active: state.stop_hook_active,
       aside: aside_kind(state.aside),
       spent_usd: state.spent_usd,
-      max_cost_usd: state.max_cost_usd
+      max_cost_usd: state.max_cost_usd,
+      job_budget: state.job_budget
     }
   end
 

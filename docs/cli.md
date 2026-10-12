@@ -129,9 +129,9 @@ not know, stops it before the screen opens, with `lmx run`'s sentence and
 status 2.
 
 **When it starts.** A temporary box inside the transcript shows the startup
-banner, which states the permission mode and the sandbox, by default `full auto: tools run
-without asking · commands are not sandboxed`, followed by any workspace or
-configuration notices and the MCP servers that connected. The box closes five
+banner, which states the actual permission mode and sandbox. The default policy
+is `auto`; the banner names the active sandbox or its absence, followed by
+workspace/configuration notices and the MCP servers that connected. The box closes five
 seconds after its newest line, or at once on Esc. The startup never waits: MCP
 servers connect in the background (`connecting NAME…` on the status line,
 details in `/mcp`), and you can type while the session starts; Enter queues
@@ -656,6 +656,9 @@ sentence goes to standard error only.
 `--output-format stream-json` writes one JSON object per line as the work
 happens, and ends with the same `result` object:
 
+Once a session starts, its `session` record comes first; startup `notice`
+events follow it. A refusal before a session exists has no `session` record.
+
 | `type` | Fields |
 | --- | --- |
 | `session` | `session_id`, `name`, `model`, `context_window` (tokens, or null when unknown) |
@@ -750,7 +753,7 @@ flags are in `lmx help mcp` and the builder flags in `lmx help learning`.
 | `-c, --continue` | Resume the newest session that ran in this directory |
 | `--resume SESSION` | Continue a stored session, by id or name |
 | `--prompt TEXT` | Terminal UI only: send `TEXT` as the first message once the session is up ([with a first prompt](#terminal-ui)) |
-| `--permission-mode MODE` | Ask before tools change things: `ask`, `accept_edits`, `auto`, `full_auto` or `read_only`. Off by default, so tools run without asking (`lmx help permissions`) |
+| `--permission-mode MODE` | Ask before tools change things: `ask`, `accept_edits`, `auto`, `full_auto` or `read_only`. Default `auto`: workspace edits run automatically; commands do so only in an available sandbox (`lmx help permissions`) |
 | `--sandbox` | Run commands in macOS Seatbelt or Linux bubblewrap (`lmx help sandbox`) |
 | `--config PATH` | The personal JSON configuration; default `~/.lmx/config.json`. `none` reads no config file and, unless `LMX_HOME` is set, keeps no state (no history, checkpoints, log or remembered model); transcripts, MCP tokens and crash dumps still go under `~/.lmx` unless their own options move them ([Running with no configuration](configuration.md#running-with-no-configuration)) |
 | `--max-turns N`, `--max-requests N`, `--max-cost-usd N` | [Session limits](#session-limits) |
@@ -803,6 +806,30 @@ session profile, so they refuse flags that would rewrite it: `--system`,
 skill and plugin flags; `--extension-profile` also refuses `--model`.
 
 ## Session limits
+
+Use `--max-total-requests N` and `--max-total-cost-usd DOLLARS` for one
+allowance covering the root session, children, retries, summaries, progress
+judges, the bundled compaction scorer and paid tools. The matching config
+keys and environment variables are `max_total_requests` /
+`LMX_MAX_TOTAL_REQUESTS` and `max_total_cost_usd` / `LMX_MAX_TOTAL_COST_USD`.
+Flags take precedence over environment and personal configuration.
+
+Reservations are atomic across participants. Paid tools reserve their declared
+maximum before execution; actual usage releases unused money. Missing prices
+or usage never count as zero. Estimates are admission bounds, not limits the
+provider enforces on an invoice. Direct and delegated usage remain separate
+in reporting; `Session.budget/1` adds inclusive `job` accounting.
+
+Resume retains recorded job accounting under current host limits. An interrupted
+reservation, or legacy delegated history without complete accounting, remains
+unknown and refuses further work under the relevant ceiling. A host can explicitly
+supply its own `:job_budget`; a library session can mount one with
+`job_limits: [max_requests: 50, max_cost_usd: 2.50]`. Auxiliary provider work must
+use `Lemieux.JobBudget.run/4`; arbitrary trusted extension code cannot be bounded
+by a ledger it does not consult. The bundled compaction scorer requires a
+`reservation_per_call_usd` to run within a dollar-limited job.
+
+The existing direct-session limits below keep their meaning:
 
 ```sh
 lmx --max-turns 20 --max-requests 50 --max-cost-usd 2.50
@@ -1312,3 +1339,26 @@ answered with a number, a word or a blank line for the default. It writes to
 the same ledger as `lmx feedback`, in the same shape, and never touches the
 transcript. While it is open, every typed line is an answer; `/cancel`
 discards it. It is refused mid-turn, when a typed line is a steer.
+
+## Validated final JSON
+
+`lmx run --output-schema schema.json --output-format json PROMPT` lets the
+agent use tools and then validates its exact final answer against a local
+JSON object schema. `structured_result` in the terminal result contains
+`status: validated`, the parsed `value` and `schema_sha256`, or `status:
+invalid` with a reason. The same report is checkpointed in the transcript.
+Provider completion, schema validity and workspace verification are separate
+fields; a cancelled, limited or failed turn cannot become validated success.
+
+Invalid final JSON or a schema mismatch changes an otherwise successful run
+to exit status 1. Malformed schemas fail with status 2 before inference.
+Schemas and final JSON are limited to 48 KiB. Nested local references and
+constraints use ReqLLM's schema validator; external references and unknown
+dialects are refused. Markdown fences are not silently stripped. There is no
+automatic paid repair. Pass the contract again when resuming; current host
+configuration decides the result contract for each invocation.
+
+This is portable final-answer validation after tools, without depending on a
+vendor's object-only response mode. Intermediate streaming text is provisional:
+consumers of `stream-json` must wait for the terminal `result` and its schema
+status. Existing runs without a schema retain their output and exit semantics.

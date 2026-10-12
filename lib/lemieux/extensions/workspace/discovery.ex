@@ -159,6 +159,7 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
   alias Lemieux.Extensions.Workspace.Containment
   alias Lemieux.Extensions.Workspace.Plugin
   alias Lemieux.Extensions.Workspace.Plugin.Marketplace
+  alias Lemieux.Extensions.Workspace.Rules
   alias Lemieux.Extensions.Workspace.Skill
   alias Lemieux.Extensions.Workspace.SkillTool
   alias Lemieux.Learning.Overlay
@@ -178,6 +179,7 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
           root: Path.t(),
           persona_files: [{Path.t(), String.t()}],
           instruction_files: [{Path.t(), String.t()}],
+          rule_files: [map()],
           memory_files: [{Path.t(), String.t()}],
           skills: [Skill.t()],
           shadowed_skills: [Skill.t()],
@@ -197,6 +199,7 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
     :home,
     persona_files: [],
     instruction_files: [],
+    rule_files: [],
     memory_files: [],
     skills: [],
     shadowed_skills: [],
@@ -338,11 +341,18 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
         |> Map.values()
         |> Enum.sort_by(& &1.id)
 
+      rule_roots =
+        if(personal?, do: [{Path.join(claude_personal_dir, "rules"), root, :personal}], else: []) ++
+          Enum.map(directories, &{Path.join([&1, ".claude", "rules"]), &1, :repository})
+
+      {rules, rule_notes} = Rules.discover(rule_roots, scope)
+
       {:ok,
        %__MODULE__{
          root: root,
          persona_files: persona,
          instruction_files: instructions,
+         rule_files: rules,
          memory_files: memory,
          skills: skills,
          shadowed_skills: shadowed,
@@ -356,6 +366,7 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
            experience_diagnostics(root, Keyword.get(opts, :supplied, [])) ++
              persona_notes ++
              instruction_notes ++
+             rule_notes ++
              memory_notes ++
              skill_notes ++
              agent_diagnostics ++ plugin_diagnostics ++ overlay_diagnostics,
@@ -424,6 +435,7 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
       [
         file_prompt("Agent persona", workspace.persona_files, workspace),
         instruction_prompt(workspace),
+        Rules.prompt(workspace.rule_files),
         file_prompt("Durable memory", workspace.memory_files, workspace),
         skill_prompt(workspace),
         overlay_prompt(workspace)
@@ -953,9 +965,7 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
       {:hooks, Path.join(".claude", "settings.json"), &declares_hooks?/1,
        "repository Claude hooks are not executed; pass --hooks explicitly for trusted hooks"},
       {:hooks, Path.join(".claude", "settings.local.json"), &declares_hooks?/1,
-       "repository-local Claude hooks are not executed; pass --hooks explicitly for trusted hooks"},
-      {nil, Path.join(".claude", "rules"), &File.exists?/1,
-       "path-scoped Claude rules are not imported; use nested AGENTS.md or CLAUDE.md instructions"}
+       "repository-local Claude hooks are not executed; pass --hooks explicitly for trusted hooks"}
     ]
     |> Enum.reject(fn {remedy, _relative, _applies?, _message} -> remedy in supplied end)
     |> Enum.map(&explicit_config_diagnostic(root, &1))

@@ -274,7 +274,7 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
 
     assert {:ok, workspace} = Discovery.discover(tmp_dir, personal?: false)
     diagnostics = Enum.join(workspace.diagnostics, "\n")
-    assert diagnostics =~ "path-scoped Claude rules are not imported"
+    assert Discovery.system_prompt(workspace, "base") =~ "use patterns"
     assert diagnostics =~ "Claude hooks are not executed"
 
     # `lmx` starts a repository's `.mcp.json`, and there is a flag for saying
@@ -284,7 +284,7 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
     # Named relative to the repository. The absolute path is the part the
     # reader already knows, and it is long enough to push the remedy off the
     # line in a terminal.
-    assert diagnostics =~ ".claude/rules: path-scoped Claude rules"
+    assert length(workspace.rule_files) == 1
     refute diagnostics =~ tmp_dir
   end
 
@@ -327,7 +327,7 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
     refute diagnostics =~ "Claude hooks are not executed"
 
     # The ones with no flag to pass are still reported.
-    assert diagnostics =~ "path-scoped Claude rules are not imported"
+    assert Discovery.system_prompt(workspace, "base") =~ "use patterns"
   end
 
   test "supplying hooks silences only the hooks warnings", %{tmp_dir: tmp_dir} do
@@ -338,7 +338,7 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
     assert {:ok, workspace} = Discovery.discover(tmp_dir, personal?: false, supplied: [:hooks])
     diagnostics = Enum.join(workspace.diagnostics, "\n")
 
-    assert diagnostics =~ "path-scoped Claude rules are not imported"
+    assert Discovery.system_prompt(workspace, "base") =~ "use patterns"
     refute diagnostics =~ "Claude hooks are not executed"
   end
 
@@ -352,7 +352,7 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
 
       assert {:ok, workspace} = Discovery.discover(tmp_dir, personal?: false)
       assert Discovery.notices(tmp_dir) == workspace.diagnostics
-      assert Discovery.notices(tmp_dir, supplied: [:hooks]) == [List.last(workspace.diagnostics)]
+      assert Discovery.notices(tmp_dir, supplied: [:hooks]) == []
     end
 
     test "a repository's own MCP configuration is found from a subdirectory", %{tmp_dir: tmp_dir} do

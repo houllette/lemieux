@@ -273,6 +273,7 @@ defmodule Lemieux.Session.Calls do
       request_id: state.current_request_id,
       requests: state.request_count,
       max_requests: state.max_requests,
+      job: Lemieux.JobBudget.snapshot(state.job_budget),
       spent_usd: state.spent_usd,
       max_cost_usd: state.max_cost_usd,
       usage: Accounting.usage_summary(state, context),
@@ -294,11 +295,18 @@ defmodule Lemieux.Session.Calls do
       requests: state.request_count,
       max_requests: state.max_requests,
       deadline_ms: state.deadline_ms,
+      job: Lemieux.JobBudget.snapshot(state.job_budget),
       time_left_ms: time_left(state)
     }
 
     {:reply, budget, state}
   end
+
+  def call(:checkpoint_job_budget, _from, %{job_budget_owned?: false} = state),
+    do: {:reply, :ok, state}
+
+  def call(:checkpoint_job_budget, _from, state),
+    do: {:reply, :ok, Accounting.checkpoint_job(state)}
 
   def call({:document, namespace}, _from, state),
     do: {:reply, Document.read(state.reversed_entries, namespace), state}
@@ -353,6 +361,7 @@ defmodule Lemieux.Session.Calls do
       provider: state.provider,
       provider_limiter: state.provider_limiter,
       provider_limit_key: state.provider_limit_key,
+      job_budget: state.job_budget,
       store: state.store,
       cwd: state.cwd,
       environment: state.environment,
@@ -364,6 +373,7 @@ defmodule Lemieux.Session.Calls do
 
   def call({:append_subagent_entry, type, payload}, _from, state) do
     state = Core.append(state, {type, payload, nil})
+    state = Accounting.checkpoint_job(state)
 
     {:reply, {:ok, List.first(state.reversed_entries)}, Catalog.delegated_settled(state, type)}
   end

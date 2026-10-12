@@ -3,6 +3,7 @@ defmodule Lemieux.Session.Accounting do
 
   alias Lemieux.Context
   alias Lemieux.Entry
+  alias Lemieux.JobBudget
   alias Lemieux.Messages
   alias Lemieux.ModelSpec
   alias Lemieux.Provider
@@ -11,6 +12,7 @@ defmodule Lemieux.Session.Accounting do
   alias Lemieux.Request
   alias Lemieux.Session.Compacting
   alias Lemieux.Session.Core
+  alias Lemieux.Session.Document
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.ToolWave
@@ -30,8 +32,55 @@ defmodule Lemieux.Session.Accounting do
          model: request.model
        }}
     else
-      cost_budget(state, request)
+      with :ok <- cost_budget(state, request),
+           do: JobBudget.check(state.job_budget, job_estimate(state, request), 1)
     end
+  end
+
+  def reserve_request(state, request) do
+    with :ok <- request_budget(state, request),
+         {:ok, lease} <- JobBudget.reserve(state.job_budget, job_estimate(state, request), 1) do
+      {:ok, checkpoint_job(%{state | job_lease: lease})}
+    end
+  end
+
+  defp job_estimate(%{job_budget: nil}, _request), do: 0
+  defp job_estimate(state, request), do: Provider.estimate_cost(state.provider, request)
+
+  def checkpoint_job(%{job_budget_owned?: false} = state) do
+    JobBudget.checkpoint(state.job_budget)
+    state
+  end
+
+  def checkpoint_job(state) do
+    value =
+      state.job_budget
+      |> JobBudget.snapshot()
+      |> Map.new(fn {key, value} ->
+        {Atom.to_string(key), value}
+      end)
+
+    {:ok, document} = Document.read(state.reversed_entries, JobBudget.namespace())
+
+    if value == document.value do
+      state
+    else
+      Core.append(
+        state,
+        {:extension_state,
+         %{
+           "version" => 1,
+           "namespace" => JobBudget.namespace(),
+           "revision" => document.revision + 1,
+           "value" => value
+         }, nil}
+      )
+    end
+  end
+
+  defp settle_request(state, usage) do
+    JobBudget.settle(state.job_budget, state.job_lease, Usage.cost_usd(usage))
+    checkpoint_job(%{state | job_lease: nil})
   end
 
   defp cost_budget(%{max_cost_usd: nil}, _request), do: :ok
@@ -224,6 +273,8 @@ defmodule Lemieux.Session.Accounting do
   end
 
   def account_external_usage(state, usage) do
+    state = settle_request(state, usage)
+
     spent =
       case {state.spent_usd, Usage.cost_usd(usage)} do
         {current, cost} when is_number(current) and is_number(cost) -> current + cost
@@ -253,6 +304,8 @@ defmodule Lemieux.Session.Accounting do
   end
 
   def account_usage(state, usage) do
+    state = settle_request(state, usage)
+
     spent =
       case {state.spent_usd, Usage.cost_usd(usage)} do
         {spent, cost} when is_number(spent) and is_number(cost) -> spent + cost
@@ -262,14 +315,33 @@ defmodule Lemieux.Session.Accounting do
     %{state | spent_usd: spent, request_cost_pending?: false}
   end
 
-  def account_tool_cost(state, %{cost: %{"usd" => cost}})
-      when is_number(cost) and cost >= 0 do
+  def account_tool_cost(state, result) do
+    {reservation, leases} = Map.pop(state.job_tool_leases, result.call_id)
+
+    if reservation do
+      {lease, estimate} = reservation
+      actual = get_in(result, [:cost, "usd"])
+
+      free? =
+        estimate == 0 or result.outcome in [:denied, :invalid_arguments, :unavailable, :budget]
+
+      JobBudget.settle(state.job_budget, lease, actual || if(free?, do: 0))
+    end
+
+    state
+    |> Map.put(:job_tool_leases, leases)
+    |> checkpoint_job()
+    |> account_direct_tool_cost(result)
+  end
+
+  defp account_direct_tool_cost(state, %{cost: %{"usd" => cost}})
+       when is_number(cost) and cost >= 0 do
     spent = if is_number(state.spent_usd), do: state.spent_usd + cost
     %{state | spent_usd: spent}
   end
 
-  def account_tool_cost(state, %{cost: _unknown}), do: %{state | spent_usd: nil}
-  def account_tool_cost(state, _result), do: state
+  defp account_direct_tool_cost(state, %{cost: _unknown}), do: %{state | spent_usd: nil}
+  defp account_direct_tool_cost(state, _result), do: state
 
   def account_compaction(state, {:crashed, _reason}), do: account_missing_usage(state)
 
@@ -286,8 +358,10 @@ defmodule Lemieux.Session.Accounting do
     end
   end
 
-  def account_missing_usage(%{request_cost_pending?: true} = state),
-    do: %{state | spent_usd: nil, request_cost_pending?: false}
+  def account_missing_usage(%{request_cost_pending?: true} = state) do
+    JobBudget.settle(state.job_budget, state.job_lease, nil)
+    checkpoint_job(%{state | spent_usd: nil, request_cost_pending?: false, job_lease: nil})
+  end
 
   def account_missing_usage(state), do: state
 

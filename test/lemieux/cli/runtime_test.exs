@@ -107,6 +107,7 @@ defmodule Lemieux.CLI.RuntimeTest do
     assert harness.max_turns == 3
 
     assert Enum.map(harness.applied, & &1["module"]) == [
+             "Lemieux.Extensions.Permissions",
              "Lemieux.Extensions.Interactive",
              "Lemieux.Extensions.Search",
              "Lemieux.Extensions.ApplyPatch",
@@ -114,6 +115,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
+             "Lemieux.Extensions.Workflow",
              "Lemieux.CLI.SessionSummary",
              "Lemieux.CLI.RuntimeTest.Audit"
            ]
@@ -419,11 +421,13 @@ defmodule Lemieux.CLI.RuntimeTest do
       end)
 
     assert Enum.map(snapshot["extensions"]["applied"], & &1["module"]) == [
+             "Lemieux.Extensions.Permissions",
              "Lemieux.Extensions.Interactive",
              "Lemieux.Extensions.Elixir",
              "Lemieux.Extensions.Continuation",
              "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
+             "Lemieux.Extensions.Workflow",
              "Lemieux.CLI.SessionSummary"
            ]
 

@@ -51,12 +51,24 @@ defmodule Lemieux.CLI.VerifyCheckpointsTest do
 
     File.write!(
       path,
-      JSON.encode!(Map.merge(%{"version" => 1, "verify" => %{"command" => @check}}, config))
+      JSON.encode!(
+        Map.merge(
+          %{
+            "version" => 1,
+            "verify" => %{"command" => @check},
+            "permissions" => %{"allow" => ["Bash(#{@check})"]}
+          },
+          config
+        )
+      )
     )
 
     File.chmod!(path, 0o600)
 
-    {:ok, options} = Options.parse(["--config", path, "--no-delegate", "--model", "test:model"])
+    # This fixture tests checkpoint custody. Authorize its exact check so its
+    # outcome is independent of whether the platform can start a sandbox.
+    {:ok, options} =
+      Options.parse(["--config", path, "--no-delegate", "--no-sandbox", "--model", "test:model"])
 
     provider =
       Scripted.new([

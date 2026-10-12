@@ -211,7 +211,7 @@ session would apply.
 | Extension | What it does | Name | `lmx run` | TUI |
 | --- | --- | --- | --- | --- |
 | `Lemieux.Extensions.Hooks` | Command hooks from `--hooks FILE` and the config file's `"hooks"` | | when given | when given |
-| `Lemieux.Extensions.Permissions` | The approval policy, when `--permission-mode` or `"permissions"` sets a mode; off by default | | when set | when set |
+| `Lemieux.Extensions.Permissions` | The approval policy; `auto` by default, configured by `--permission-mode` or `"permissions"` | | when set | when set |
 | `Lemieux.Extensions.MCP` | Servers from `--mcp-config FILE`, your `"mcp_servers"` and the repository's trusted `.mcp.json` | `mcp` | default | default |
 | `Lemieux.Extensions.MCPDiscovery` | `mcp_discover`, which keeps a large MCP catalog out of the request until it is searched | `mcp_discovery` | with MCP | with MCP |
 | `Lemieux.Extension.Profile` | The tuning in `--extension-profile FILE` | | flag | flag |

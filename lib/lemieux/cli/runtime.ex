@@ -403,7 +403,8 @@ defmodule Lemieux.CLI.Runtime do
            interactive?: interactive?(opts),
            cwd: Keyword.get_lazy(opts, :cwd, &File.cwd!/0),
            permissions: permissions,
-           credentials: credential_policy(options, opts)
+           credentials: credential_policy(options, opts),
+           environment: Keyword.get(opts, :environment, environment)
          },
          {:ok, extensions} <- extensions(options, opts, context, loaded),
          {:ok, tools} <- assembly_tools(opts, recorded, resume, Keyword.values(extensions)),
@@ -946,6 +947,7 @@ defmodule Lemieux.CLI.Runtime do
        |> Enum.concat(a2ui: if(Keyword.get(opts, :a2ui, false), do: Lemieux.Extensions.A2UI))
        |> Enum.concat(Enum.map(loaded, &{:loaded, &1.spec}))
        |> Enum.concat(checkpoints: checkpoints(options, context))
+       |> Enum.concat(workflow: Lemieux.Extensions.Workflow)
        |> Enum.concat(
          session_summary:
            if(context.interactive? and not profile?, do: Lemieux.CLI.SessionSummary)
@@ -1414,39 +1416,64 @@ defmodule Lemieux.CLI.Runtime do
   # and the person's `"hidden"`, wherever this run keeps secrets — see
   # `Lemieux.CLI.Runtime.SecretPaths` for why that is not just `~/.lmx`.
   defp environment(options, opts, store) do
+    case Keyword.fetch(opts, :environment) do
+      {:ok, environment} -> {:ok, environment}
+      :error -> local_environment(options, opts, store)
+    end
+  end
+
+  defp local_environment(options, opts, store) do
     local = Local.new(credentials: credential_policy(options, opts))
 
     case sandbox_settings(options) do
       nil ->
         {:ok, local}
 
-      settings ->
-        cwd = Keyword.get_lazy(opts, :cwd, &File.cwd!/0)
-        secrets = SecretPaths.paths(options, store, cwd)
-
-        settings
-        |> Keyword.put(:inner, local)
-        |> Keyword.update(:hidden, secrets, &(&1 ++ secrets))
-        |> Sandbox.new()
-        |> case do
+      :auto ->
+        case sandbox_environment(options, opts, store, local, []) do
           {:ok, sandbox} -> {:ok, sandbox}
-          {:error, reason} -> {:error, "the sandbox could not start: #{reason}"}
+          {:error, _unavailable} -> {:ok, local}
         end
+
+      settings ->
+        sandbox_environment(options, opts, store, local, settings)
+    end
+  end
+
+  # Only the implicit default may fall back. `auto` then asks before commands;
+  # an explicit sandbox request still fails closed when construction fails.
+  defp sandbox_environment(options, opts, store, local, settings) do
+    cwd = Keyword.get_lazy(opts, :cwd, &File.cwd!/0)
+    secrets = SecretPaths.paths(options, store, cwd)
+
+    settings
+    |> Keyword.put(:inner, local)
+    |> Keyword.update(:hidden, secrets, &(&1 ++ secrets))
+    |> Sandbox.new()
+    |> case do
+      {:ok, sandbox} -> {:ok, sandbox}
+      {:error, reason} -> {:error, "the sandbox could not start: #{reason}"}
     end
   end
 
   defp sandbox_settings(%Options{host: %{sandbox: false}}), do: nil
 
-  defp sandbox_settings(%Options{host: %{sandbox: flag}, config: config}) do
+  defp sandbox_settings(%Options{host: %{sandbox: flag}, config: config} = options) do
     case {flag, Config.get(config, "sandbox")} do
       {true, %{} = settings} -> sandbox_options(settings)
       {true, _other} -> []
       {nil, true} -> []
+      {nil, false} -> nil
       {nil, %{"enabled" => false}} -> nil
       {nil, %{} = settings} -> sandbox_options(settings)
-      {nil, _off} -> nil
+      {nil, _unset} -> default_sandbox(options)
     end
   end
+
+  defp default_sandbox(%Options{host: %{permission_mode: mode}})
+       when mode in [nil, "off", "full_auto", "bypassPermissions"], do: nil
+
+  defp default_sandbox(_options), do: :auto
 
   defp sandbox_options(settings) do
     [
@@ -1462,8 +1489,19 @@ defmodule Lemieux.CLI.Runtime do
   # What only the host knows is worth a line at startup: fields the config
   # file had that this build ignored, and repository servers that could not
   # even be offered because there is nowhere to remember approving them.
-  defp notices(options, _opts, context) do
-    Config.warnings(options.config) ++ hermetic_mcp_notice(options, context)
+  defp notices(options, opts, context) do
+    Config.warnings(options.config) ++
+      hermetic_mcp_notice(options, context) ++
+      sandbox_notice(options, opts, context)
+  end
+
+  defp sandbox_notice(options, opts, context) do
+    if not Keyword.has_key?(opts, :environment) and sandbox_settings(options) == :auto and
+         not Sandbox.sandboxed?(context.environment),
+       do: [
+         "No OS sandbox is active. Workspace file edits are automatic; commands and external capabilities require approval."
+       ],
+       else: []
   end
 
   defp hermetic_mcp_notice(

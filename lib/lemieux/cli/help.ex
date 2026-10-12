@@ -30,7 +30,7 @@ defmodule Lemieux.CLI.Help do
   alias Lemieux.CLI.Options
   alias Lemieux.Environment.Sandbox
 
-  @topics ~w(config models permissions sandbox mcp plugins skills extensions sessions environment
+  @topics ~w(acp config models permissions sandbox mcp plugins skills extensions sessions environment
              options learning desktop update)
 
   @links [
@@ -64,6 +64,7 @@ defmodule Lemieux.CLI.Help do
   def command("mcp"), do: topic("mcp")
   def command("skills"), do: topic("skills")
   def command("desktop"), do: topic("desktop")
+  def command("acp"), do: topic("acp")
   def command("update"), do: topic("update")
   def command(command) when command in ~w(log fork request), do: topic("sessions")
   def command(command) when command in ~w(feedback corpus harness), do: topic("learning")
@@ -117,10 +118,11 @@ defmodule Lemieux.CLI.Help do
           --resume SESSION          Resume a session by id or name (wayne-gretzky)
       -C, --cwd DIR                 Work in DIR instead of the current directory
           --permission-mode MODE    ask, accept_edits, auto, full_auto, read_only
-                                    Default: off, so tools run without asking
-                                    (lmx help permissions)
+                                    Default: auto (lmx help permissions)
           --sandbox                 Run commands in a sandbox (lmx help sandbox)
           --max-cost-usd N          Stop before spending more than N dollars
+          --max-total-requests N    Whole-job request ceiling (children included)
+          --max-total-cost-usd N    Whole-job dollar ceiling, including paid tools
           --max-turns N             Model turns per prompt (default 400)
           --output-format F         lmx run only: text | json | stream-json
           --config PATH|none        Settings file (default ~/.lmx/config.json)
@@ -134,7 +136,6 @@ defmodule Lemieux.CLI.Help do
       -v, --version                 Show the version
 
     #{claude_code()}
-
     Exit status (lmx run): 0 answered, 1 other, 2 usage, 3 credentials,
     4 limit reached, 5 cancelled, 6 provider error.
 
@@ -217,7 +218,7 @@ defmodule Lemieux.CLI.Help do
       model                 the model new sessions start with
       providers.NAME        api_key, model, effort for one provider
       scout_model           the model the repository scout runs on
-      permissions           see lmx help permissions (off by default)
+      permissions           see lmx help permissions (auto by default)
       sandbox               see lmx help sandbox (off by default)
       hooks                 command hooks, lmx's format or Claude Code's
       scrub_credentials     false passes variables named *KEY*, *TOKEN*,
@@ -283,7 +284,8 @@ defmodule Lemieux.CLI.Help do
     """
     Usage: lmx --permission-mode MODE, or "permissions": {"mode": MODE}
 
-    Off unless a mode is set. When on, tools that change things ask first:
+    Default: auto. Use the OS sandbox when available; otherwise commands ask.
+    full_auto or off explicitly bypasses approval prompts:
 
       ask            ask before edits, commands and anything else that writes
       accept_edits   file edits in the working directory run unasked
@@ -305,6 +307,9 @@ defmodule Lemieux.CLI.Help do
   defp text("sandbox") do
     """
     Usage: lmx --sandbox, or "sandbox": true | {"enabled": true, ...}
+
+    Automatic with the default policy when available. --no-sandbox disables
+    it; auto then asks before commands. An explicit --sandbox must succeed.
 
     Runs commands inside macOS Seatbelt or Linux bubblewrap: writes only to
     the working directory, temporary directories and tool caches, and no
@@ -476,6 +481,23 @@ defmodule Lemieux.CLI.Help do
     """
   end
 
+  defp text("acp") do
+    """
+    Usage: lmx acp [agent options]
+
+    Serves ACP versions 1 and 2 over newline-delimited JSON-RPC on stdio.
+    Configure your editor to launch lmx with args ["acp"]. Credentials,
+    permissions, sandboxing and budgets use the ordinary CLI configuration.
+    Standard output is reserved for protocol packets. Disconnecting cancels
+    active work and releases session locks.
+
+    Supports text/resource links, streaming, tool approval, session list,
+    load/resume/close and cancellation. Images, audio, additional workspace
+    roots and client file/terminal delegation are unsupported. See docs/acp.md
+    for the versioned contract and optional question/steering extensions.
+    """
+  end
+
   defp text("update") do
     """
     Usage: lmx update [--check]
@@ -510,6 +532,9 @@ defmodule Lemieux.CLI.Help do
     Usage: lmx [COMMAND] [options] — every option
 
     Run options:
+          --output-schema FILE
+                           Validate final JSON against a local object schema;
+                           invalid or incomplete results fail without repair
           --output-format F
                            text (default: only the final answer on stdout),
                            json (one result object) or stream-json (one event
@@ -533,12 +558,14 @@ defmodule Lemieux.CLI.Help do
       -c, --continue       Resume the newest session that ran here (TUI or run)
           --permission-mode MODE
                            Ask before tools change things: ask, accept_edits,
-                           auto, full_auto or read_only (default: off; see
+                           auto, full_auto or read_only (default: auto; see
                            lmx help permissions)
           --sandbox        Run commands in Seatbelt/bubblewrap (lmx help sandbox)
           --max-turns N    Maximum model turns per prompt (default 400)
           --max-requests N Maximum direct provider requests across the session
           --max-cost-usd N Dollar ceiling; unknown cost stops before execution
+          --max-total-requests N Whole-job request ceiling, children and auxiliary calls included
+          --max-total-cost-usd N Whole-job dollar ceiling, including paid tools
                            Limits also accept LMX_MAX_TURNS, LMX_MAX_REQUESTS,
                            LMX_MAX_COST_USD and personal config settings.
       -m, --model SPEC     Model to use (or $LMX_MODEL; without one, the model

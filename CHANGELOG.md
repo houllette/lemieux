@@ -9,6 +9,52 @@ API.
 
 ## Unreleased
 
+### Features
+
+- Workspace discovery loads bounded `.claude/rules` files, including scoped
+  rules activated before native file operations. `lmx explain` reports
+  effective migration inputs, exclusions, precedence and limitations, plus
+  offline provider access, catalog capabilities, pricing and budget context.
+
+- `lmx run --output-schema FILE` validates the final JSON answer after tool
+  use and records its schema digest and outcome. Invalid or incomplete
+  results fail without a paid repair request. ACP adds namespaced fork and
+  model/reasoning controls backed by the public session API.
+
+- `/plan` drafts, edits, approves and exports durable plans. Planning stays
+  read-only until a person approves concrete obligations; progress updates
+  retain approval. `/review` selects working, staged, commit or range changes
+  with pinned identities and a diff digest, and restricts write/shell tools.
+
+- `lmx acp` connects editors to the native session runtime over stdio ACP
+  versions 1 and 2, with streaming, approvals, cancellation and durable
+  session loading. Connection closure cancels work and releases locks.
+
+- `lmx` defaults to the `auto` permission policy and uses an OS sandbox when
+  available. Without one, workspace edits remain automatic and commands or
+  external capabilities require approval. Unattended requests that would ask
+  are denied. Explicit sandbox requests still fail closed; `full_auto` or
+  `off` selects unrestricted operation. Library hosts keep their own policy.
+
+- `--max-total-requests` and `--max-total-cost-usd` bound a whole job through
+  one atomic ledger shared by parent/child inference, summaries, progress
+  checks, the bundled compaction scorer and paid tools. `:job_limits` and
+  `:job_budget` expose this to hosts. Resume retains accounting under current
+  host limits; interrupted or unpriced work remains unknown. Existing direct
+  session limits keep their meaning; `Session.budget/1` adds `job` accounting.
+
+- Verification observes per-call checkpoint changes, including shell edits and
+  nonzero commands, while skipping unchanged writes and pre-existing dirty
+  files. Results retain changed paths and checkpoint trees and explicitly name
+  skipped, unavailable and model-run checks. `lmx run` JSON results add a
+  `verification` field; a normal stop still does not imply verified completion.
+
+### Fixes
+
+- Stream-JSON announces its session before startup notices, including the
+  automatic-policy sandbox fallback, so consumers receive the session identity
+  before processing activity or diagnostics.
+
 ### Development
 
 - Root test runs record Temper flake evidence locally and in CI. A bounded

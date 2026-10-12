@@ -510,6 +510,56 @@ defmodule LemieuxSystemOneCompactionTest do
     Test.close(client)
   end
 
+  test "a whole-job ceiling admits the scorer and records it once", %{
+    runtime: runtime,
+    store: store
+  } do
+    {:ok, session} =
+      Lemieux.start_session(
+        supervisor: runtime,
+        provider: Lemieux.Providers.Scripted.new([]),
+        store: store,
+        model: "test:model",
+        job_limits: [max_requests: 1, max_cost_usd: 0.01],
+        tools: [Lemieux.Tools.Read]
+      )
+
+    %{job_budget: budget} = Session.delegation_context(session)
+    client = Test.client()
+    Test.stub(client, %{"keep_1" => {:noul, 0.01}}, usage: %{input_tokens: 30, output_tokens: 1})
+    {request, _result} = request("read", String.duplicate("source line\n", 500))
+
+    opts =
+      Keyword.merge(options(client),
+        reservation_per_call_usd: 0.005,
+        input_per_million: 0.04,
+        output_per_million: 0.0
+      )
+
+    assert {:ok, projected} =
+             SystemOneCompaction.prepare(request, %{session: session, job_budget: budget}, opts)
+
+    assert projected != request
+    assert %{job: %{requests: 1, spent_usd: cost}} = Session.budget(session)
+    assert cost == 0.000002
+
+    assert {:ok, %{value: %{"requests" => 1, "active" => 0}}} =
+             Session.document(session, Lemieux.JobBudget.namespace())
+
+    later = %{request | entries: request.entries ++ [Entry.new(:user, %{"text" => "Later"})]}
+
+    assert {:ok, _projected} =
+             SystemOneCompaction.prepare(
+               later,
+               %{session: session, job_budget: budget},
+               Keyword.put(opts, :max_evaluations, 2)
+             )
+
+    assert length(Test.requests(client)) == 1
+    Test.verify!(client)
+    Test.close(client)
+  end
+
   test "an SDK exception cannot deny the pending model request", %{session: session} do
     client = Test.client()
     Test.stub_callback(client, fn _request -> raise "sensitive SDK failure" end)

@@ -289,8 +289,10 @@ it work better:
 
 ## Understand what can run
 
-Out of the box `lmx` does not ask before running tools, and the startup
-banner says so: "full auto".
+Out of the box `lmx` uses the `auto` permission policy and an available OS
+sandbox. Workspace edits run automatically; commands need approval without
+a sandbox. External capabilities such as MCP, web and eval still ask. The
+startup banner reports the actual policy and sandbox.
 
 - `read`, `write` and `edit` refuse paths outside the session's working
   directory (through `..`, absolute paths or symbolic links). Confinement is
@@ -298,7 +300,8 @@ banner says so: "full auto".
   through.
 - `write` will not replace a file the session has not read, or one that has
   changed since.
-- **`bash` runs as your operating-system user and is not sandboxed.** It
+- **`bash` runs as your operating-system user, inside the default sandbox
+  when one is available.** It
   gets the environment you started `lmx` in, less variables whose names
   contain `KEY`, `TOKEN`, `SECRET`, `PASSWORD` or `PASSWD`. The check reads
   names only, so a password inside `DATABASE_URL` still passes.
@@ -324,7 +327,7 @@ banner says so: "full auto".
 
 To be asked first, start with `--permission-mode ask`, or with
 `--permission-mode accept_edits`, which lets file edits through and asks
-before commands. `--sandbox` runs the agent's commands inside macOS Seatbelt
+before commands. `--sandbox` requires the agent's commands to run inside macOS Seatbelt
 or Linux bubblewrap (install `bubblewrap` first): they write only to the
 working directory, temporary directories and tool caches, reach no network
 beyond loopback, and cannot see credential locations such as `~/.ssh`,

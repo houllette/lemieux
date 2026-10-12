@@ -327,6 +327,7 @@ defmodule Lemieux.MixProject do
         "docs/releases.md",
         "docs/desktop.md",
         "docs/cli.md",
+        "docs/acp.md",
         "docs/configuration.md",
         "docs/troubleshooting.md",
         "docs/embedding.md",
