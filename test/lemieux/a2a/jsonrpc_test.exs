@@ -194,11 +194,57 @@ defmodule Lemieux.A2A.JSONRPCTest do
       assert_raise ArgumentError, fn -> String.to_existing_atom(transport) end
     end
 
-    test "and JSON encoding actually works on both, which structs do not do for free" do
-      card = %Card{id: "a", name: "n", skills: []}
+    test "encoded cards preserve the fields a peer needs to reach the agent" do
+      card = %Card{
+        name: "backend",
+        description: "answers repository questions",
+        interfaces: [{:jsonrpc, "https://example.com/a2a"}]
+      }
 
-      assert is_binary(card |> Card.to_json() |> JSON.encode!())
-      assert is_binary(%A2ATask{id: "t"} |> A2ATask.to_json() |> JSON.encode!())
+      wire = card |> Card.to_json() |> JSON.encode!() |> JSON.decode!()
+
+      assert wire["name"] == "backend"
+      assert wire["capabilities"] == %{"streaming" => true, "pushNotifications" => false}
+      assert wire["defaultInputModes"] == ["text/plain", "application/json"]
+      assert wire["defaultOutputModes"] == ["text/plain"]
+
+      assert wire["supportedInterfaces"] == [
+               %{
+                 "protocolBinding" => "JSONRPC",
+                 "protocolVersion" => "1.0",
+                 "url" => "https://example.com/a2a"
+               }
+             ]
+
+      assert {:ok, ^card} = Card.from_json(wire)
+    end
+
+    test "encoded tasks preserve interrupted state and task/context identity" do
+      task = %A2ATask{
+        id: "t",
+        context_id: "c",
+        state: :input_required,
+        message: "which environment?"
+      }
+
+      wire = task |> A2ATask.to_json() |> JSON.encode!() |> JSON.decode!()
+
+      assert wire["id"] == "t"
+      assert wire["contextId"] == "c"
+      assert wire["status"]["state"] == "TASK_STATE_INPUT_REQUIRED"
+
+      assert %{
+               "taskId" => "t",
+               "contextId" => "c",
+               "role" => "ROLE_AGENT",
+               "parts" => [%{"text" => "which environment?"}]
+             } = wire["status"]["message"]
+
+      assert {:ok, back} = A2ATask.from_json(wire)
+      assert back.id == "t"
+      assert back.context_id == "c"
+      assert back.state == :input_required
+      assert back.message == "which environment?"
     end
   end
 end

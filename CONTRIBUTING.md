@@ -95,11 +95,10 @@ Review looks for:
 full list. It is written so that coding agents follow it, and it is the style
 guide for people too.
 
-### 5. Run the whole suite, then the gate
+### 5. Run the gate once the focused tests pass
 
 ```sh
-mise exec -- mix test         # about 4,700 tests in about a minute
-mise exec -- mix precommit    # the gate: it must exit 0
+mise exec -- mix precommit    # includes the ordinary suite; it must exit 0
 ```
 
 `mix precommit` runs CI's main checks locally: the dependency audits,
@@ -113,6 +112,13 @@ release workflow does. Two things to know:
 - It **rewrites files**: it formats the code and regenerates the usage-rules
   block at the end of `AGENTS.md`. Commit what it changed.
 - It **stops at the first failing step**, and its exit status is the result.
+
+There is no need to run a separate whole ordinary suite immediately before
+this gate. Use `mix test --stale` during iteration when you want Mix to expand
+the selection beyond the files you chose; it is a feedback tool, and the
+gate still runs everything. Changes to examples, the package boundary or
+release scripts, and release preparation, need `mix precommit.full` instead.
+That alias includes `precommit`, so run just the full alias in those cases.
 
 If a step cannot run on your machine, open the pull request anyway and say
 which steps you skipped; CI runs all of them. The audits come first, so
@@ -170,6 +176,82 @@ it excludes the multi-node tests, which `mix test.distributed` runs. On a
 busy machine (a language server, Docker, another build), run it with
 `--max-cases 4`.
 
+### Choose tests by the regression they prevent
+
+Start with the public behavior that could break, then choose the cheapest
+test that can demonstrate it. A scripted provider exercises the real agent
+loop without a paid model; a controlled OS process exercises teardown without
+waiting for a timer. Keep an integration test where the boundary itself is
+the contract, even when a unit test of the same module is faster.
+
+| Area | What the test must establish | Existing starting points |
+| --- | --- | --- |
+| Agent loop and host policy | Correct events and outcomes on success, refusal, budget exhaustion, provider failure and cancellation; terminal outcomes happen once. | [Session evidence](test/lemieux/session_evidence_test.exs), [budgets](test/lemieux/session/budget_test.exs), [subagent lifecycle](test/lemieux/subagent/lifecycle_test.exs) |
+| Resume and persistence | A saved transcript survives partial writes and resumes with the current host's authority; repository operations cannot execute hostile hooks. | [JSONL recovery](test/lemieux/store/jsonl_test.exs), [session configuration](test/lemieux/session_config_test.exs), [hostile repositories](test/lemieux/checkpoint/hostile_repository_test.exs) |
+| Process and eval isolation | Cancellation ends actual OS work; separate sessions cannot see each other's modules or credentials. | [Command gate](test/support/command_gate.ex), [eval isolation](test/lemieux/tools/eval_test.exs) |
+| MCP and A2A interoperability | Exact wire fields, overlapping requests, cancellation and connection loss work across the real transport. | [MCP duplex](test/lemieux/mcp/duplex_test.exs), [A2A JSON-RPC](test/lemieux/a2a/jsonrpc_test.exs) |
+| Terminal interaction | Keys and paste preserve complete user input, selected entries remain visible, and acceptance does not submit prematurely. | [History search](test/lemieux/tui/history_search_test.exs), [screen behavior](test/lemieux/tui/screen_features_test.exs) |
+| Embedding and installed lmx | The library starts no processes of its own, the core reaches no host, and the packaged dependency and standalone release host work independently. | [Core boundary](test/lemieux/boundary_test.exs), [package consumer](test/package_consumer/mix.exs), [release host](https://github.com/houllette/lemieux/tree/main/dist/lmx/test) |
+
+Assert the expected result, including a failure or refusal where relevant.
+A round trip alone can miss a serializer and reader dropping the same field;
+assert the wire field too. When replacing a test, keep the behavior it could
+catch, and demonstrate that a deliberately broken behavior makes the new
+test fail. Coverage identifies code to inspect; it does not establish that
+an assertion would catch a regression. Paid-provider quality and Linux-only
+process/sandbox behavior still need their respective validation environments.
+
+### Measure speed without changing what the run measures
+
+Temper's ignored `history-*.jsonl` records include each test's `time_us` and
+the suite's `times_us.run` and `times_us.async`. Use completed suite records
+to compare wall time at the same seed, concurrency, toolchain and build
+state, and group test times by module to find expensive fixtures. Record
+outside load too. Concurrent test durations overlap, so adding individual
+savings does not predict a suite's wall-time improvement.
+
+Avoid `--slowest` for this comparison: Mix enables tracing for it, which
+runs cases serially and disables test timeouts. It helps inspect an individual
+test, but it changes the conditions of the ordinary suite. Keep coverage
+runs separate as well. On macOS, coverage HTML generation can need a larger
+file-descriptor limit; `ulimit -n 4096` followed by
+`mise exec -- mix test --cover --preload-modules --max-cases 4` covers the
+ordinary suite while avoiding demand-loaded instrumentation during startup.
+
+The root test helper gives future child BEAM processes two schedulers each;
+the parent keeps the scheduler count it booted with. This bounds contention
+from concurrent eval, CLI and frozen-runtime fixtures without sharing their
+VM state. Tests that change VM-global application, Logger, telemetry,
+environment or working-directory state must stay serial unless they first
+isolate that state. Prefer readiness and release signals to sleeps; keep
+real timers in tests whose assertion is specifically about a deadline.
+
+### Coverage measures product code in the current VM
+
+`mise exec -- mix test --cover --preload-modules --warnings-as-errors` must
+reach **85% executable-line coverage**. CI runs a separate coverage job on
+every pull request and push to main, and nightly repeats that check. The
+ordinary suite stays uninstrumented for comparable timing and flake evidence.
+On macOS, raise the file-descriptor limit as described above before covering
+the suite. Coverage does not establish that an assertion detects a bug or
+that a scripted provider behaves like a hosted model.
+
+The exclusion ledger is the exact list in `mix.exs`, guarded by
+[coverage-policy tests](test/lemieux/coverage_policy_test.exs):
+
+| Excluded | Why and where behavior is checked |
+| --- | --- |
+| Distributed transport, eval attach/runner, frozen extension consumer and existing out-of-process/optional-host task entry points | The root VM cannot observe lines executed in peers and child BEAMs, or terminal host dispatch. Distributed, eval, CLI, frozen-build and confirmation integration tests retain their boundary assertions. |
+| `LemieuxTest.*`, `Lemieux.TUI.TestSupport`, and the [harness-learning fixture helper](test/support/harness_learning_fixtures.ex) | These create and inspect test fixtures. Counting them can inflate the product percentage even though they are not shipped behavior. |
+| The explicitly listed compiler-derived `Inspect` implementations | The bodies are generated by Elixir. Credential-redaction assertions still test the owning structs; there is no blanket `Inspect.*` exclusion for handwritten implementations. |
+
+Low coverage alone is not grounds for exclusion. MCP, policy hooks, provider
+adapters, persistence, process execution, TUI behavior, and CLI budget/spend
+decisions remain counted. The policy test checks every other compiled module
+from `lib/`, so a namespace-wide exclusion cannot quietly hide new product
+code. Child-VM and platform-specific checks remain separate evidence; this
+percentage does not claim coverage across every process or operating system.
+
 ### Collecting flake evidence
 
 Every root `mix test` run records its outcomes, seed, commit, dirty-tree flag,
@@ -209,6 +291,8 @@ Temper needs both a pass and a failure of a test on the **same clean commit**
 to classify it as flaky. Divergence involving uncommitted changes is only a
 suspect: an edit may explain it. A blank report after one observation proves
 nothing, and repeated passing runs cannot establish that no race exists.
+Intentional failing controls and mutation checks also enter local history;
+record their run IDs and seeds so review does not mistake them for flakes.
 Temper records evidence after execution; it does not predict fragile code.
 Its analysis also does not distinguish environments within one commit, so
 compare like environments and use the recorded toolchain and CI metadata
@@ -313,6 +397,7 @@ git push --force-with-lease
 | Elixir floor (1.19 / OTP 28) | compilation and the suite on the oldest Elixir minor that `mix.exs` accepts |
 | Security | `mix hex.audit` and `mix deps.audit` for the library and for `dist/lmx`, and lockfile drift between the two |
 | Dialyzer | `mix dialyzer` |
+| Coverage threshold | the ordinary suite with coverage and module preloading; fails below the 85% floor in `mix.exs` |
 | Hex package (pinned) and Hex package (floor Elixir 1.19.0 / OTP 27.0) | builds the package and compiles it as a dependency (`scripts/check_package.sh`) |
 | Example NAME | each example project, and the bundled System One compaction extension, against this checkout (`scripts/check_example.sh NAME`) |
 | Standalone release host | compilation, the format check and the tests of `dist/lmx` |
@@ -324,9 +409,9 @@ git push --force-with-lease
 | Secret scan (full history) | gitleaks over every reachable commit, pull-request heads included |
 
 Pull requests from forks get a read-only token and no secrets. Scheduled
-workflows run the suite on macOS and check test coverage (`nightly.yml`), and
-run the recorded offline evaluation (`eval.yml`); neither runs on pull
-requests.
+workflows run the suite on macOS and repeat the coverage check (`nightly.yml`),
+and run the recorded offline evaluation (`eval.yml`). These scheduled
+workflows do not run on pull requests; CI's coverage job does.
 
 `mix precommit.full` runs most of this on your machine: `mix precommit`, the
 multi-node suite, the package check, every example and the Python tests. It

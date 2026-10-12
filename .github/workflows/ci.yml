@@ -40,6 +40,38 @@ env:
 # those triggers.
 
 jobs:
+  # Keep instrumentation in its own lane so ordinary test timing and flake
+  # history stay comparable. Coverage is a PR check, not a surprise after merge.
+  coverage:
+    name: Coverage threshold
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: coverage
+          python: "true"
+      - uses: ./.github/actions/temper
+        with:
+          phase: restore
+      - name: Run tests with coverage
+        id: tests
+        run: mix test --cover --preload-modules --warnings-as-errors
+      - uses: ./.github/actions/temper
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        with:
+          phase: report
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: cover/
+          if-no-files-found: ignore
+
   test:
     name: Lint & test
     runs-on: ubuntu-24.04

@@ -4,8 +4,9 @@ defmodule Lemieux.Tools.EvalTest do
   claims this tool makes are claims about node boundaries, and a mock of a
   node would only be able to confirm what it was written to confirm.
 
-  That costs a few hundred milliseconds per runtime, so the sandbox is shared
-  across the tests in a describe block wherever what they assert allows it.
+  The sandbox is reused across calls in one session. Each test gets a fresh
+  session so a module, credential or working directory left by another test
+  cannot satisfy an isolation assertion by accident.
   """
 
   use ExUnit.Case, async: true
@@ -162,6 +163,31 @@ defmodule Lemieux.Tools.EvalTest do
                eval(context, ~s|:ets.whereis(:a_table_only_the_test_vm_has)|)
 
       assert output =~ ":undefined"
+    end
+
+    test "separate sessions cannot read each other's modules or environment", %{context: context} do
+      name = "LEMIEUX_CHILD_SESSION_#{System.unique_integer([:positive])}_TOKEN"
+
+      assert {:ok, _} =
+               eval(context, """
+               defmodule SessionOwnedFixture, do: (def value, do: :private)
+               System.put_env(#{inspect(name)}, "private")
+               """)
+
+      sibling = %{context | session_id: "isolated-sibling-#{System.unique_integer([:positive])}"}
+
+      assert {:ok, sibling_state} =
+               eval(
+                 sibling,
+                 "{Code.ensure_loaded?(SessionOwnedFixture), System.get_env(#{inspect(name)})}"
+               )
+
+      assert sibling_state =~ "{false, nil}"
+
+      assert {:ok, original_state} =
+               eval(context, "{SessionOwnedFixture.value(), System.get_env(#{inspect(name)})}")
+
+      assert original_state =~ ~s({:private, "private"})
     end
   end
 

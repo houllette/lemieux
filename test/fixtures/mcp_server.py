@@ -32,6 +32,7 @@ import base64
 import hashlib
 import json
 import os
+import socket
 import socketserver
 import sys
 import threading
@@ -47,7 +48,10 @@ SESSION_ID = "fixture-session-1"
 
 # What the duplex modes remember: requests the client withdrew, whether the
 # tool list has changed, and replies to the requests this server sent.
-DUPLEX = {"cancelled": [], "changed": False, "replies": {}, "lock": threading.Lock()}
+DUPLEX = {
+    "cancelled": [], "changed": False, "replies": {}, "holds": {},
+    "cancel_signal": threading.Event(), "lock": threading.Lock(),
+}
 WRITE_LOCK = threading.Lock()
 
 DUPLEX_TOOLS = [
@@ -60,6 +64,7 @@ DUPLEX_TOOLS = [
                 "seconds": {"type": "number"},
                 "progress": {"type": "boolean"},
                 "interval": {"type": "number"},
+                "control_port": {"type": "integer"},
             },
         },
     },
@@ -71,7 +76,7 @@ DUPLEX_TOOLS = [
     {
         "name": "cancelled",
         "description": "Lists the request ids the client withdrew.",
-        "inputSchema": {"type": "object", "properties": {}},
+        "inputSchema": {"type": "object", "properties": {"wait": {"type": "boolean"}}},
     },
     {
         "name": "change",
@@ -245,7 +250,15 @@ def dispatch(request, headers=None):
 
     if method == "notifications/cancelled":
         with DUPLEX["lock"]:
-            DUPLEX["cancelled"].append(params.get("requestId"))
+            request_id = params.get("requestId")
+            DUPLEX["cancelled"].append(request_id)
+            control = DUPLEX["holds"].get(request_id)
+            DUPLEX["cancel_signal"].set()
+        if control is not None:
+            try:
+                control.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass  # The released tool may already have closed its socket.
         return None
 
     if modern:
@@ -401,6 +414,25 @@ def duplex_tool(request_id, name, arguments, params, modern):
     token = (params.get("_meta") or {}).get("progressToken")
 
     if name == "slow":
+        # A side channel acknowledges that the real stdio request reached the
+        # server and holds it until the test releases it. No sleep can prove
+        # that a concurrently launched request has actually started.
+        if "control_port" in arguments:
+            with socket.create_connection(("127.0.0.1", arguments["control_port"]),
+                                          timeout=60) as control:
+                with DUPLEX["lock"]:
+                    DUPLEX["holds"][request_id] = control
+                try:
+                    control.sendall(b"ready\n")
+                    control.recv(1)
+                finally:
+                    with DUPLEX["lock"]:
+                        DUPLEX["holds"].pop(request_id, None)
+            with DUPLEX["lock"]:
+                if request_id in DUPLEX["cancelled"]:
+                    return None
+            return text(request_id, "released", modern)
+
         seconds = float(arguments.get("seconds", 1))
         interval = float(arguments.get("interval", 0.05))
         report = bool(arguments.get("progress"))
@@ -421,6 +453,8 @@ def duplex_tool(request_id, name, arguments, params, modern):
         return text(request_id, "fast: " + str(arguments.get("text")), modern)
 
     if name == "cancelled":
+        if arguments.get("wait"):
+            DUPLEX["cancel_signal"].wait(60)
         with DUPLEX["lock"]:
             ids = list(DUPLEX["cancelled"])
         return text(request_id, json.dumps(ids), modern)

@@ -140,7 +140,8 @@ defmodule Lemieux.MCP.Protocol do
   """
   @spec classify(error :: map()) :: {:modern, [String.t()]} | :legacy
   def classify(%{"code" => @unsupported_version} = error) do
-    {:modern, get_in(error, ["data", "supported"]) || []}
+    supported = error |> Map.get("data") |> json_map() |> Map.get("supported", [])
+    {:modern, if(is_list(supported), do: supported, else: [])}
   end
 
   def classify(_error), do: :legacy

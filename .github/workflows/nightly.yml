@@ -1,6 +1,6 @@
 name: Nightly
 
-# Checks too slow to run on every push. Standard GitHub-hosted runners,
+# Scheduled platform checks and repeated observations. Standard GitHub-hosted runners,
 # macOS included, are free for public repositories, so cost no longer keeps
 # the platform suite off pull requests; queue time and the 5-job macOS
 # concurrency limit do. Trigger it by hand before merging anything that
@@ -54,8 +54,8 @@ jobs:
           phase: report
 
   # `mix test --cover` fails below the threshold configured under
-  # :test_coverage in mix.exs (80%; 85.8% measured on 2026-09-28), so the
-  # number cannot erode unnoticed between the reports someone reads.
+  # :test_coverage in mix.exs (85%). CI checks the same floor on every push
+  # and pull request; this scheduled observation also preserves flake evidence.
   coverage:
     name: Coverage threshold
     runs-on: ubuntu-24.04
@@ -75,7 +75,7 @@ jobs:
 
       - name: Run tests with coverage
         id: tests
-        run: mix test --cover
+        run: mix test --cover --preload-modules --warnings-as-errors
 
       - uses: ./.github/actions/temper
         if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}

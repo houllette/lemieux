@@ -14,6 +14,17 @@ API.
 - Root test runs record Temper flake evidence locally and in CI. A bounded
   multi-seed runner, review guidance, and nightly observations help expose
   timing and shared-state failures while preserving every failing result.
+- Coverage requires 85% in CI on every pull request and main push, with an
+  explicit exclusion ledger for test scaffolding, generated inspection code
+  and execution outside the measured VM. MCP wire failures and hook
+  approval/rewrite composition have additional regression tests.
+
+### Fixes
+
+- MCP clients report malformed discovery/initialization replies and rejected
+  version negotiation as errors instead of crashing or reusing a refused
+  version. Repeated pagination cursors, including cycles, fail the listing
+  instead of looping or returning a partial tool catalog.
 
 ## 0.10.0 — 2026-10-09
 

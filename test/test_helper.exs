@@ -132,6 +132,14 @@ System.delete_env("NO_COLOR")
 # otherwise find that machine's skills. Tests that exercise it pass `env:`.
 System.delete_env("OMARCHY_PATH")
 
+# Each eval sandbox, frozen consumer and CLI fixture boots another real BEAM.
+# Giving every child all workstation cores multiplies scheduler threads while
+# several cases run together; it measures contention rather than the boundary
+# those fixtures exercise. This changes future children only: this VM has
+# already booted, and its scheduler count / --max-cases remain the caller's.
+# Keep other emulator flags (for example diagnostics), then bound child CPUs.
+System.put_env("ERL_FLAGS", String.trim(System.get_env("ERL_FLAGS", "") <> " +S 2:2"))
+
 # Git reads more than the repository it is pointed at, and none of it may
 # reach a fixture. From the contributor's global configuration, a
 # `commit.gpgsign = true` failed nine tests (and with a real key would have put

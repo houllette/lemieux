@@ -276,11 +276,14 @@ defmodule Lemieux.MCP.Client do
 
   defp probe(state) do
     case sync_request(state, :modern, "server/discover", %{}, state.startup_timeout) do
-      {:ok, %{"result" => result}, state} ->
+      {:ok, %{"result" => result}, state} when is_map(result) ->
         modern(state, Map.get(result, "supportedVersions"), result)
 
-      {:ok, %{"error" => error}, state} ->
+      {:ok, %{"error" => error}, state} when is_map(error) ->
         era_from_error(state, error)
+
+      {:ok, response, state} ->
+        fail(state, "the server returned an unreadable response: #{inspect(response)}")
 
       {:error, reason, state} ->
         fail(state, reason)
@@ -289,8 +292,17 @@ defmodule Lemieux.MCP.Client do
 
   defp era_from_error(state, error) do
     case Protocol.classify(error) do
-      {:modern, versions} -> modern(state, versions, %{})
-      :legacy -> initialize(state)
+      {:modern, versions} ->
+        # Unlike a successful discovery that omits versions, this peer has
+        # explicitly rejected ours. Missing/malformed supported versions are
+        # no agreement, not permission to reuse the version it just refused.
+        case Protocol.choose(versions) do
+          {:ok, version} -> modern_state(state, version, %{})
+          {:error, reason} -> fail(state, reason)
+        end
+
+      :legacy ->
+        initialize(state)
     end
   end
 
@@ -324,7 +336,7 @@ defmodule Lemieux.MCP.Client do
     }
 
     case sync_request(state, :legacy, "initialize", params, state.startup_timeout) do
-      {:ok, %{"result" => result}, state} ->
+      {:ok, %{"result" => result}, state} when is_map(result) ->
         state = %{
           state
           | era: :legacy,
@@ -335,8 +347,11 @@ defmodule Lemieux.MCP.Client do
 
         send_message(state, Protocol.notification("notifications/initialized"))
 
-      {:ok, %{"error" => error}, state} ->
+      {:ok, %{"error" => error}, state} when is_map(error) ->
         fail(state, "the server refused to initialize: #{message(error)}")
+
+      {:ok, response, state} ->
+        fail(state, "the server returned an unreadable response: #{inspect(response)}")
 
       {:error, reason, state} ->
         fail(state, reason)
@@ -484,17 +499,18 @@ defmodule Lemieux.MCP.Client do
     {tools, %{state | transport: transport, notices: problems ++ renamed}}
   end
 
-  # A paginated listing. A server that keeps handing back the same cursor would
-  # page forever; the only defence that does not need a heuristic is to stop
-  # when the cursor stops changing.
-  defp collect(state, method, cursor, acc, opts, parse, done) do
+  # Cursors are opaque, but one already followed cannot advance a listing.
+  # Remember all of them: comparing only the previous cursor misses A → B → A
+  # and keeps paging forever. An incomplete catalog must be an error rather
+  # than a successful partial list that silently hides the server's tools.
+  defp collect(state, method, cursor, acc, opts, parse, done, seen \\ %{}) do
     params = if cursor, do: %{"cursor" => cursor}, else: %{}
 
     dispatch(state, method, params, opts, fn
       {:ok, %{"result" => result}}, state when is_map(result) ->
         case parse.(result) do
-          {:ok, items, next} when is_binary(next) and next != cursor ->
-            collect(state, method, next, acc ++ page(items), opts, parse, done)
+          {:ok, items, next} when is_binary(next) ->
+            collect_next(state, method, next, acc ++ page(items), opts, parse, done, seen)
 
           {:ok, items, _next} ->
             done.({:ok, acc ++ page(items)}, state)
@@ -509,6 +525,12 @@ defmodule Lemieux.MCP.Client do
       {:error, reason}, state ->
         done.({:error, reason}, state)
     end)
+  end
+
+  defp collect_next(state, method, next, acc, opts, parse, done, seen) do
+    if Map.has_key?(seen, next),
+      do: done.({:error, "the server repeated a pagination cursor"}, state),
+      else: collect(state, method, next, acc, opts, parse, done, Map.put(seen, next, true))
   end
 
   # A tools listing is collected as whole results, the others as their items.

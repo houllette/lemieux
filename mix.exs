@@ -11,18 +11,34 @@ defmodule Lemieux.MixProject do
 
   # Built-in :cover observes the current BEAM node. These modules either run
   # on a child/remote node or only dispatch into an optional host, so counting
-  # them measures test topology rather than exercised product logic. Protocol,
-  # session, persistence, policy, tool, MCP, subagent and TUI implementation
+  # them measures test topology rather than exercised product logic. The
+  # consumer is exercised by the frozen-build/confirmation tests in its own VM.
+  # Test scaffolding and compiler-derived Inspect bodies are not product logic;
+  # redaction assertions still exercise the owning structs. Keep these exact:
+  # blanket namespace exclusions would hide new handwritten implementations.
+  # Protocol, session, persistence, policy, tool, MCP, subagent and TUI implementation
   # modules remain in the report.
   @coverage_ignored_modules [
     Lemieux.A2A.Transport.Distribution,
     Lemieux.CLI.TUI,
     Lemieux.Eval.Attach,
     Lemieux.Eval.Runner,
+    Lemieux.Learning.Extension.Consumer,
     Mix.Tasks.Lemieux.Eval,
     Mix.Tasks.Lemieux.Eval.Bless,
     Mix.Tasks.Lmx,
-    Mix.Tasks.Lmx.Tui
+    Mix.Tasks.Lmx.Tui,
+    Lemieux.TUI.TestSupport,
+    Lemieux.TestSupport.HarnessLearningFixtures,
+    Inspect.Lemieux.A2A.Server.State,
+    Inspect.Lemieux.A2A.PeerTool,
+    Inspect.Lemieux.CLI.Config,
+    Inspect.Lemieux.CLI.ProviderMux,
+    Inspect.Lemieux.Extensions.Web.Brave,
+    Inspect.Lemieux.Ixway,
+    Inspect.Lemieux.Learning.Builder.Workflow,
+    Inspect.Lemieux.Providers.ReqLLM.State,
+    Inspect.LemieuxTest.StaticRoute
   ]
 
   def project do
@@ -39,7 +55,7 @@ defmodule Lemieux.MixProject do
       test_ignore_filters: [&String.starts_with?(&1, "test/package_consumer/")],
       test_coverage: [
         ignore_modules: coverage_ignored_modules(),
-        summary: [threshold: 80]
+        summary: [threshold: 85]
       ],
       start_permanent: Mix.env() == :prod,
       deps: deps(),

@@ -14,6 +14,15 @@ defmodule LemieuxTest.SuiteIsolationTest do
 
   alias LemieuxTest.Spend
 
+  test "child BEAM fixtures use a bounded scheduler budget" do
+    assert {schedulers, 0} =
+             System.cmd("elixir", ["-e", "IO.write(System.schedulers_online())"],
+               stderr_to_stdout: true
+             )
+
+    assert schedulers == "2"
+  end
+
   describe "a fixture repository" do
     @describetag :tmp_dir
 

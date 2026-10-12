@@ -13,6 +13,7 @@ defmodule Lemieux.MCP.DuplexTest do
   alias Lemieux.MCP.RemoteTool
   alias Lemieux.MCP.Transport.Stdio
   alias Lemieux.Tool.Result
+  alias LemieuxTest.CommandGate
 
   @fixture Path.expand("../../fixtures/mcp_server.py", __DIR__)
 
@@ -32,15 +33,12 @@ defmodule Lemieux.MCP.DuplexTest do
 
   # Waits for the fixture to have recorded a cancellation: it arrives as a
   # notification the server handles on its own schedule.
-  defp cancelled(client, attempts \\ 50) do
-    ids = client |> Client.call_tool("cancelled", %{}) |> text() |> JSON.decode!()
+  defp cancelled(client),
+    do: client |> Client.call_tool("cancelled", %{"wait" => true}) |> text() |> JSON.decode!()
 
-    if ids == [] and attempts > 0 do
-      Process.sleep(20)
-      cancelled(client, attempts - 1)
-    else
-      ids
-    end
+  defp held_call(client, gate) do
+    {:ok, port} = :inet.port(gate.listener)
+    Client.call_tool(client, "slow", %{"control_port" => port})
   end
 
   test "a stdio client is duplex once the handshake is over" do
@@ -49,23 +47,28 @@ defmodule Lemieux.MCP.DuplexTest do
 
   test "a fast call is answered while a slow one on the same server is still running" do
     client = start()
-    slow = Task.async(fn -> Client.call_tool(client, "slow", %{"seconds" => 1.5}) end)
+    gate = CommandGate.new()
+    slow = Task.async(fn -> held_call(client, gate) end)
+    socket = CommandGate.ready(gate)
+    fast = Task.async(fn -> Client.call_tool(client, "fast", %{"text" => "hi"}) end)
 
-    started = System.monotonic_time(:millisecond)
-    assert text(Client.call_tool(client, "fast", %{"text" => "hi"})) == "fast: hi"
-    assert System.monotonic_time(:millisecond) - started < 1_000
-
-    assert text(Task.await(slow, 5_000)) =~ "slept"
+    assert text(Task.await(fast)) == "fast: hi"
+    assert Task.yield(slow, 0) == nil
+    assert :ok = CommandGate.release(socket)
+    assert text(Task.await(slow)) == "released"
   end
 
   test "a call whose caller goes away is withdrawn, and the server hears about it" do
     client = start()
 
-    caller = spawn(fn -> Client.call_tool(client, "slow", %{"seconds" => 5}) end)
-    Process.sleep(200)
+    gate = CommandGate.new()
+    caller = spawn(fn -> held_call(client, gate) end)
+    on_exit(fn -> Process.exit(caller, :kill) end)
+    socket = CommandGate.ready(gate)
     Process.exit(caller, :kill)
 
     assert [_withdrawn] = cancelled(client)
+    assert :ok = CommandGate.closed(socket)
     # And the server is free for the next call rather than waiting it out.
     assert text(Client.call_tool(client, "fast", %{"text" => "next"})) == "fast: next"
   end
@@ -92,8 +95,7 @@ defmodule Lemieux.MCP.DuplexTest do
 
     assert text(Client.call_tool(client, "change", %{})) == "changed"
 
-    assert_receive {:mcp_tools_changed, %{server: "fixture", client: ^client, tools: changed}},
-                   5_000
+    assert_receive {:mcp_tools_changed, %{server: "fixture", client: ^client, tools: changed}}
 
     assert %RemoteTool{client: ^client} = Enum.find(changed, &(&1.name == "added"))
   end
@@ -106,9 +108,14 @@ defmodule Lemieux.MCP.DuplexTest do
     client = start("legacy_duplex")
     assert Client.info(client).era == :legacy
 
-    slow = Task.async(fn -> Client.call_tool(client, "slow", %{"seconds" => 1.0}) end)
-    assert text(Client.call_tool(client, "fast", %{"text" => "old"})) == "fast: old"
-    assert text(Task.await(slow, 5_000)) =~ "slept"
+    gate = CommandGate.new()
+    slow = Task.async(fn -> held_call(client, gate) end)
+    socket = CommandGate.ready(gate)
+    fast = Task.async(fn -> Client.call_tool(client, "fast", %{"text" => "old"}) end)
+    assert text(Task.await(fast)) == "fast: old"
+    assert Task.yield(slow, 0) == nil
+    assert :ok = CommandGate.release(socket)
+    assert text(Task.await(slow)) == "released"
   end
 
   describe "tools whose names no provider accepts" do
@@ -157,12 +164,14 @@ defmodule Lemieux.MCP.DuplexTest do
   describe "a server that goes away" do
     test "fails every call in flight at once, rather than leaving them waiting" do
       client = start()
-      slow = Task.async(fn -> Client.call_tool(client, "slow", %{"seconds" => 10}) end)
-      Process.sleep(200)
+      gate = CommandGate.new()
+      slow = Task.async(fn -> held_call(client, gate) end)
+      socket = CommandGate.ready(gate)
 
       %{transport: %{port: port}} = :sys.get_state(client)
       {:os_pid, os_pid} = Port.info(port, :os_pid)
       System.cmd("kill", ["-9", to_string(os_pid)])
+      assert :ok = CommandGate.closed(socket)
 
       assert {:error, message} = Task.await(slow, 5_000)
       assert message =~ "python3"
