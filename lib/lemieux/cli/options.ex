@@ -431,7 +431,8 @@ defmodule Lemieux.CLI.Options do
       local_model: nil,
       continue: Keyword.get(parsed, :continue, false),
       project_mcp_trusted: project_mcp_trusted?(parsed),
-      permission_mode: parsed[:permission_mode] || get_in_config(config, ["permissions", "mode"]),
+      permission_mode:
+        parsed[:permission_mode] || get_in_config(config, ["permissions", "mode"]) || "auto",
       sandbox: parsed[:sandbox],
       mouse: mouse(parsed, config)
     }

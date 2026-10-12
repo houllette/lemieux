@@ -11,6 +11,12 @@ API.
 
 ### Features
 
+- `lmx` defaults to the `auto` permission policy and uses an OS sandbox when
+  available. Without one, workspace edits remain automatic and commands or
+  external capabilities require approval. Unattended requests that would ask
+  are denied. Explicit sandbox requests still fail closed; `full_auto` or
+  `off` selects unrestricted operation. Library hosts keep their own policy.
+
 - `--max-total-requests` and `--max-total-cost-usd` bound a whole job through
   one atomic ledger shared by parent/child inference, summaries, progress
   checks, the bundled compaction scorer and paid tools. `:job_limits` and

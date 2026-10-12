@@ -191,7 +191,8 @@ The check is a command the repository chose — `make test` is whatever the
 checkout says it is — so it goes through the session's permission policy as
 the `bash` call that would run it, with the `bash` tool's descriptor:
 
-- with no policy, which is `lmx`'s default, it runs without asking;
+- with no host policy, it runs without asking; the CLI defaults to `auto`,
+  which permits commands automatically only inside a sandbox;
 - in `ask` or `accept_edits` mode the approval card shows the command, an
   allow rule such as `Bash(make test)` lets it run unasked, and a `Bash` deny
   rule refuses it;

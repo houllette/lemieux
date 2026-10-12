@@ -56,8 +56,8 @@ preflight](compaction.md) for the options and an Ixway timing-signal example.
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `permissions` | off | Ask before tools change things ([Permissions](#permissions)) |
-| `sandbox` | off | Run commands in an operating-system sandbox ([The sandbox](#the-sandbox)) |
+| `permissions` | `{"mode": "auto"}` | Ask before tools change things ([Permissions](#permissions)) |
+| `sandbox` | automatic when available | Run commands in an operating-system sandbox ([The sandbox](#the-sandbox)) |
 | `scrub_credentials` | `true` | Withhold credential-shaped variables from commands, hooks and MCP servers ([Credential scrubbing](#credential-scrubbing)) |
 | `credential_allowlist` | none | Variable names, or `NAME_*` patterns, passed through anyway |
 | `hooks` | none | Command hooks, in `lmx`'s format or Claude Code's ([Hooks](#hooks-and-approval-policy)) |
@@ -256,9 +256,9 @@ library's four tools (`read`, `write`, `edit`, `bash`):
   machine, so `--config none` keeps it.
 - [System One compaction](#system-one-compaction), when its provider is set up.
 
-Off by default: [permissions](#permissions) (every tool call runs without
-asking, which the startup banner calls "full auto"), [the
-sandbox](#the-sandbox), and hooks.
+The default [permission policy](#permissions) is `auto`, with an OS
+[sandbox](#the-sandbox) when available. Without one, commands require approval.
+Hooks remain off unless selected explicitly.
 
 `"disabled_extensions"` leaves shipped extensions out by name: `planning`,
 `continuation`, `verify`, `search`, `apply_patch`, `checkpoints`,
@@ -420,7 +420,7 @@ The check is a command the repository chose, so it runs under the same rules
 as a command the model runs: it goes to the session's hooks and permission
 policy as `Bash(<command>)` first.
 
-- With permissions off (the default), it runs without asking.
+- With permissions explicitly off, it runs without asking.
 - In `ask` or `accept_edits` mode it asks, and the approval card shows the
   command. `"allow": ["Bash(make test)"]` lets it run unasked, and a `Bash`
   deny rule refuses it.
@@ -464,7 +464,9 @@ has the details.
 
 ### Permissions
 
-Off by default: every tool call runs without asking. To be asked first:
+Default: `auto`. Workspace file edits run automatically; commands run
+automatically only in an OS sandbox. MCP, web and eval capabilities still ask.
+Without a sandbox, commands ask too. To ask before file edits as well:
 
 ```sh
 lmx --permission-mode ask
@@ -501,7 +503,10 @@ on. [Permission modes](hooks.md#permission-modes) has the details.
 
 ### The sandbox
 
-Off by default. `--sandbox`, or `"sandbox": true`, runs every command the
+The default policy uses an available OS sandbox. If the implicit sandbox
+cannot start, `lmx` states that commands require approval and keeps that
+approval policy. `--no-sandbox` or `"sandbox": false` disables it.
+An explicit `--sandbox`, or `"sandbox": true`, runs every command the
 agent starts inside the operating system's sandbox: Seatbelt (`sandbox-exec`)
 on macOS, bubblewrap (`bwrap`) on Linux. A sandbox that was asked for and
 cannot start stops `lmx` rather than running without it.
@@ -1416,8 +1421,8 @@ Confinement is by path, so a hard link inside the tree to a file elsewhere is
 written through. `bash` runs locally as you, non-interactively, in its own
 process group, without credential-shaped variables. `lmx` bounds and cleans
 its output, enforces its timeout, and kills its whole process group when it
-times out, is cancelled or `lmx` stops, but `bash` is not sandboxed unless you
-ask for [the sandbox](#the-sandbox). On Windows (experimental), commands run
+times out, is cancelled or `lmx` stops. The default policy uses an available
+[OS sandbox](#the-sandbox); outside one, commands require approval. On Windows (experimental), commands run
 in Git for Windows' bash, never WSL's `bash.exe`.
 
 An embedding host can replace the environment tools run in

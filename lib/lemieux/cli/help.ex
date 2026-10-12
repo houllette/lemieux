@@ -117,11 +117,10 @@ defmodule Lemieux.CLI.Help do
           --resume SESSION          Resume a session by id or name (wayne-gretzky)
       -C, --cwd DIR                 Work in DIR instead of the current directory
           --permission-mode MODE    ask, accept_edits, auto, full_auto, read_only
-                                    Default: off, so tools run without asking
-                                    (lmx help permissions)
+                                    Default: auto (lmx help permissions)
           --sandbox                 Run commands in a sandbox (lmx help sandbox)
           --max-cost-usd N          Stop before spending more than N dollars
-          --max-total-requests N    Maximum requests for the whole job, including children
+          --max-total-requests N    Whole-job request ceiling (children included)
           --max-total-cost-usd N    Whole-job dollar ceiling, including paid tools
           --max-turns N             Model turns per prompt (default 400)
           --output-format F         lmx run only: text | json | stream-json
@@ -136,7 +135,6 @@ defmodule Lemieux.CLI.Help do
       -v, --version                 Show the version
 
     #{claude_code()}
-
     Exit status (lmx run): 0 answered, 1 other, 2 usage, 3 credentials,
     4 limit reached, 5 cancelled, 6 provider error.
 
@@ -219,7 +217,7 @@ defmodule Lemieux.CLI.Help do
       model                 the model new sessions start with
       providers.NAME        api_key, model, effort for one provider
       scout_model           the model the repository scout runs on
-      permissions           see lmx help permissions (off by default)
+      permissions           see lmx help permissions (auto by default)
       sandbox               see lmx help sandbox (off by default)
       hooks                 command hooks, lmx's format or Claude Code's
       scrub_credentials     false passes variables named *KEY*, *TOKEN*,
@@ -285,7 +283,8 @@ defmodule Lemieux.CLI.Help do
     """
     Usage: lmx --permission-mode MODE, or "permissions": {"mode": MODE}
 
-    Off unless a mode is set. When on, tools that change things ask first:
+    Default: auto. Use the OS sandbox when available; otherwise commands ask.
+    full_auto or off explicitly bypasses approval prompts:
 
       ask            ask before edits, commands and anything else that writes
       accept_edits   file edits in the working directory run unasked
@@ -307,6 +306,9 @@ defmodule Lemieux.CLI.Help do
   defp text("sandbox") do
     """
     Usage: lmx --sandbox, or "sandbox": true | {"enabled": true, ...}
+
+    Automatic with the default policy when available. --no-sandbox disables
+    it; auto then asks before commands. An explicit --sandbox must succeed.
 
     Runs commands inside macOS Seatbelt or Linux bubblewrap: writes only to
     the working directory, temporary directories and tool caches, and no
@@ -535,7 +537,7 @@ defmodule Lemieux.CLI.Help do
       -c, --continue       Resume the newest session that ran here (TUI or run)
           --permission-mode MODE
                            Ask before tools change things: ask, accept_edits,
-                           auto, full_auto or read_only (default: off; see
+                           auto, full_auto or read_only (default: auto; see
                            lmx help permissions)
           --sandbox        Run commands in Seatbelt/bubblewrap (lmx help sandbox)
           --max-turns N    Maximum model turns per prompt (default 400)

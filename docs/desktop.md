@@ -229,7 +229,7 @@ What a launcher, a keybinding or an agent selector such as Omarchy's
 | Open it with a first prompt | `lmx --prompt TEXT` | Sends `TEXT` as the first message once the session is up: after first-run provider setup and the repository MCP servers question, never before. It shows in the transcript as if you had typed it, and the session stays open. Write `--prompt=TEXT` when `TEXT` starts with `-` |
 | Answer one prompt and exit | `lmx run "PROMPT"` | Prints the answer and exits: 0 answered, 1 other, 2 usage, 3 credentials, 4 limit reached, 5 cancelled, 6 provider error ([exit status](cli.md#exit-status)) |
 | Resume | `lmx -c`, `lmx --resume ID` | `-c` resumes the newest session that ran in this directory. With `--prompt`, the prompt is the resumed session's next message |
-| Skip permission prompts | nothing | Permissions are off by default, so tools run without asking. `--sandbox` and `--permission-mode` are opt-ins ([permissions](configuration.md#permissions)) |
+| Skip permission prompts | `lmx --permission-mode full_auto` | Explicitly bypass approvals. The default is bounded `auto` ([permissions](configuration.md#permissions)) |
 | Find settings and sessions | `~/.lmx` (or `$LMX_HOME`) | Updates and `lmx desktop uninstall` leave it alone |
 
 `lmx "fix the bug"` is refused rather than read as a prompt. It names the
@@ -241,8 +241,8 @@ statement:
 
 ```bash
 lmx)
-  # Permissions are off by default, so there is nothing to skip.
-  command=(lmx)
+  # Bypass approvals explicitly for this invocation.
+  command=(lmx --permission-mode full_auto)
   [[ -n ${prompt:-} ]] && command+=("--prompt=$prompt")
   ;;
 ```

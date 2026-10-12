@@ -230,7 +230,7 @@ defmodule Lemieux.Environment.SandboxPathsTest do
 
     test "nothing is created or hidden for a run without a sandbox", context do
       sessions = Path.join(context.root, "not-created")
-      options = options!(["--sessions-dir", sessions])
+      options = options!(["--sessions-dir", sessions, "--no-sandbox"])
 
       assert {:ok, prepared} =
                Runtime.prepare(options,

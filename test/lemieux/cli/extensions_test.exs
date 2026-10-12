@@ -154,6 +154,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
 
       # After what lmx equips, before the host's own.
       assert Enum.map(harness.applied, & &1["module"]) == [
+               "Lemieux.Extensions.Permissions",
                "Lemieux.Extensions.Search",
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",
@@ -212,6 +213,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                prepare(["--extension-dir", second, "--extension-dir", first], tmp_dir)
 
       assert Enum.map(prepared.harness.applied, & &1["module"]) == [
+               "Lemieux.Extensions.Permissions",
                "Lemieux.Extensions.Search",
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",
@@ -424,6 +426,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
       # A config file means a state directory beside it, so the defaults that
       # need one apply, and checkpoints wraps last, over the person's tools too.
       assert Enum.map(prepared.harness.applied, & &1["module"]) == [
+               "Lemieux.Extensions.Permissions",
                "Lemieux.Extensions.Search",
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",
@@ -460,6 +463,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                )
 
       assert Enum.map(prepared.harness.applied, & &1["module"]) == [
+               "Lemieux.Extensions.Permissions",
                "Lemieux.Extensions.Search",
                "Lemieux.Extensions.ApplyPatch",
                "Lemieux.Extensions.Planning",

@@ -78,7 +78,8 @@ defmodule Lemieux.CLI.LimitsTest do
                )
 
       assert prepared.harness.max_turns == if(flags == [], do: nil, else: 30)
-      assert prepared.harness.notices == ["workspace warning"]
+      assert "workspace warning" in prepared.harness.notices
+      refute Enum.any?(prepared.harness.notices, &String.contains?(&1, "max_turns"))
     end
   end
 

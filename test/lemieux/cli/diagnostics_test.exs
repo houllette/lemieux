@@ -92,7 +92,8 @@ defmodule Lemieux.CLI.DiagnosticsTest do
 
     diagnostics = JSON.decode!(output)["diagnostics"]
     assert diagnostics["state_dir"] == dir
-    assert diagnostics["permissions"] == %{"mode" => "off"}
+    assert %{"mode" => "auto", "store" => permission_store} = diagnostics["permissions"]
+    assert String.starts_with?(permission_store, Path.join(dir, "permissions"))
     assert diagnostics["checkpoints"] == Path.join(dir, "checkpoints")
     assert diagnostics["subprocess_credentials"] == %{"scrubbed" => true, "allow" => ["GH_TOKEN"]}
     assert diagnostics["model_source"] in ~w(fallback credential last_used)

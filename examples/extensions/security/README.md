@@ -62,6 +62,11 @@ key in its own configuration; with nothing set, every scan is denied. A host
 that wants a person to approve each scan as well adds its own approval hook
 (`:pending`, see `Lemieux.Hooks`); the scope still applies after it.
 
+The CLI also starts with `auto` permissions. Its TUI can ask for scan
+approval; an unattended run needs an explicit permission rule for
+`nmap_scan`, or an explicit permission mode supplied by the host. The target
+scope applies after that permission decision, including in `full_auto` mode.
+
 ## Budgets and dependencies
 
 The example profile has a $1 cap; select appropriate bounds in `profile/1` or use

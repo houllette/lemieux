@@ -107,8 +107,10 @@ defmodule SecurityExample.ScopeTest do
 
     capture_io(:stderr, fn ->
       capture_io(fn ->
+        # Exercise the scope with explicit command permission. The
+        # ordinary unattended policy refuses this network tool.
         assert :ok =
-                 SecurityExample.cli(["run", "scan"],
+                 SecurityExample.cli(["run", "scan", "--permission-mode", "full_auto"],
                    profile: profile(),
                    provider: provider,
                    scan_targets: ["127.0.0.1"],

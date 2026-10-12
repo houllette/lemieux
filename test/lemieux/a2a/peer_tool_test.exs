@@ -67,7 +67,11 @@ defmodule Lemieux.A2A.PeerToolTest do
 
     File.write!(
       config,
-      JSON.encode!(%{"version" => 1, "a2a_peers" => %{"backend" => %{"url" => endpoint()}}})
+      JSON.encode!(%{
+        "version" => 1,
+        "permissions" => %{"mode" => "auto", "allow" => ["ask_agent"]},
+        "a2a_peers" => %{"backend" => %{"url" => endpoint()}}
+      })
     )
 
     File.chmod!(config, 0o600)

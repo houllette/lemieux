@@ -129,9 +129,9 @@ not know, stops it before the screen opens, with `lmx run`'s sentence and
 status 2.
 
 **When it starts.** A temporary box inside the transcript shows the startup
-banner, which states the permission mode and the sandbox, by default `full auto: tools run
-without asking · commands are not sandboxed`, followed by any workspace or
-configuration notices and the MCP servers that connected. The box closes five
+banner, which states the actual permission mode and sandbox. The default policy
+is `auto`; the banner names the active sandbox or its absence, followed by
+workspace/configuration notices and the MCP servers that connected. The box closes five
 seconds after its newest line, or at once on Esc. The startup never waits: MCP
 servers connect in the background (`connecting NAME…` on the status line,
 details in `/mcp`), and you can type while the session starts; Enter queues
@@ -750,7 +750,7 @@ flags are in `lmx help mcp` and the builder flags in `lmx help learning`.
 | `-c, --continue` | Resume the newest session that ran in this directory |
 | `--resume SESSION` | Continue a stored session, by id or name |
 | `--prompt TEXT` | Terminal UI only: send `TEXT` as the first message once the session is up ([with a first prompt](#terminal-ui)) |
-| `--permission-mode MODE` | Ask before tools change things: `ask`, `accept_edits`, `auto`, `full_auto` or `read_only`. Off by default, so tools run without asking (`lmx help permissions`) |
+| `--permission-mode MODE` | Ask before tools change things: `ask`, `accept_edits`, `auto`, `full_auto` or `read_only`. Default `auto`: workspace edits run automatically; commands do so only in an available sandbox (`lmx help permissions`) |
 | `--sandbox` | Run commands in macOS Seatbelt or Linux bubblewrap (`lmx help sandbox`) |
 | `--config PATH` | The personal JSON configuration; default `~/.lmx/config.json`. `none` reads no config file and, unless `LMX_HOME` is set, keeps no state (no history, checkpoints, log or remembered model); transcripts, MCP tokens and crash dumps still go under `~/.lmx` unless their own options move them ([Running with no configuration](configuration.md#running-with-no-configuration)) |
 | `--max-turns N`, `--max-requests N`, `--max-cost-usd N` | [Session limits](#session-limits) |
