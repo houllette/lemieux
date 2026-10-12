@@ -30,7 +30,7 @@ defmodule Lemieux.CLI.Help do
   alias Lemieux.CLI.Options
   alias Lemieux.Environment.Sandbox
 
-  @topics ~w(config models permissions sandbox mcp plugins skills extensions sessions environment
+  @topics ~w(acp config models permissions sandbox mcp plugins skills extensions sessions environment
              options learning desktop update)
 
   @links [
@@ -64,6 +64,7 @@ defmodule Lemieux.CLI.Help do
   def command("mcp"), do: topic("mcp")
   def command("skills"), do: topic("skills")
   def command("desktop"), do: topic("desktop")
+  def command("acp"), do: topic("acp")
   def command("update"), do: topic("update")
   def command(command) when command in ~w(log fork request), do: topic("sessions")
   def command(command) when command in ~w(feedback corpus harness), do: topic("learning")
@@ -477,6 +478,23 @@ defmodule Lemieux.CLI.Help do
                             that level, which the terminal UI does only when
                             standard error is not the terminal (2> FILE),
                             and on Windows not at all
+    """
+  end
+
+  defp text("acp") do
+    """
+    Usage: lmx acp [agent options]
+
+    Serves ACP versions 1 and 2 over newline-delimited JSON-RPC on stdio.
+    Configure your editor to launch lmx with args ["acp"]. Credentials,
+    permissions, sandboxing and budgets use the ordinary CLI configuration.
+    Standard output is reserved for protocol packets. Disconnecting cancels
+    active work and releases session locks.
+
+    Supports text/resource links, streaming, tool approval, session list,
+    load/resume/close and cancellation. Images, audio, additional workspace
+    roots and client file/terminal delegation are unsupported. See docs/acp.md
+    for the versioned contract and optional question/steering extensions.
     """
   end
 

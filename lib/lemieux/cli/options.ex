@@ -284,6 +284,7 @@ defmodule Lemieux.CLI.Options do
     # alone: they describe how one headless answer is delivered, not a
     # setting any other command could share.
     run: @common ++ @agent ++ [continue: :boolean, output_format: :string, bare: :boolean],
+    acp: @common ++ @agent,
     explain: @common ++ @agent ++ [explain_against: :string],
     log: @common ++ [jsonl: :boolean],
     request: @common,

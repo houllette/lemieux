@@ -28,6 +28,7 @@ defmodule Lemieux.CLI do
   `program/1`, which is `"lmx"` everywhere else.
   """
 
+  alias Lemieux.CLI.ACP
   alias Lemieux.CLI.Corpus
   alias Lemieux.CLI.Desktop
   alias Lemieux.CLI.Explain
@@ -47,7 +48,7 @@ defmodule Lemieux.CLI do
 
   # The subcommands, so a help flag after one of them is recognised as a
   # request for the manual rather than passed on as an option.
-  @commands ~w(tui run log request fork feedback harness corpus explain help plugin extension mcp
+  @commands ~w(tui run acp log request fork feedback harness corpus explain help plugin extension mcp
                 skills desktop update)
 
   @doc """
@@ -334,6 +335,7 @@ defmodule Lemieux.CLI do
   defp route(["help", topic | _rest], _opts), do: help(topic)
   defp route(["tui" | argv], opts), do: tui(argv, opts)
   defp route(["run" | argv], opts), do: Run.main(argv, opts)
+  defp route(["acp" | argv], opts), do: ACP.main(argv, opts)
   defp route(["explain" | argv], opts), do: Explain.run(argv, opts)
   defp route(["log" | argv], opts), do: History.log(argv, opts)
   defp route(["request" | argv], opts), do: History.request(argv, opts)

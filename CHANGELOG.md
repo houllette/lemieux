@@ -11,6 +11,10 @@ API.
 
 ### Features
 
+- `lmx acp` connects editors to the native session runtime over stdio ACP
+  versions 1 and 2, with streaming, approvals, cancellation and durable
+  session loading. Connection closure cancels work and releases locks.
+
 - `lmx` defaults to the `auto` permission policy and uses an OS sandbox when
   available. Without one, workspace edits remain automatic and commands or
   external capabilities require approval. Unattended requests that would ask
