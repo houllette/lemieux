@@ -11,6 +11,15 @@ API.
 
 ### Features
 
+- Opt-in isolated parallel writers add explicit file ownership, host-supplied
+  top-level sessions and one inclusive parent/writer allowance. Reviewed,
+  revision-bound patches integrate under current authority with project checks,
+  dirty-path protection and guarded interruption rollback. Full findings remain
+  linked to transcripts after workspace cleanup. A matched offline comparison
+  exercises serial/parallel mechanics without enabling wider use.
+  **Migration:** hosts supply the allowance and callbacks; read-only scouts
+  and lmx defaults stay unchanged. See [Isolated parallel writers](docs/writers.md).
+
 - Durable background jobs add a separately mounted `Lemieux.Jobs` host and
   `lmx jobs` worker/clients, with bounded queueing, one-shot schedules,
   detach/attach, current-host approvals, cancellation and reviewable results.

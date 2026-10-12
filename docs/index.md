@@ -86,6 +86,8 @@ are runnable agents and extensions, each with a check that runs offline.
   a key, then a real model.
 - [Embedding](embedding.md): lifecycle, the session API, composition
   diagnostics and host examples.
+- [Isolated parallel writers](writers.md): scoped implementation sessions,
+  shared allowances, reviewed integration and comparison evidence.
 - [Transcripts](transcript-compatibility.md): durable records, reconstruction
   and compatibility boundaries.
 - [Telemetry](telemetry.md): lifecycle events, correlation, redaction and

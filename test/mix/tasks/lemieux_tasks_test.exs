@@ -42,7 +42,8 @@ defmodule Mix.Tasks.LemieuxTasksTest do
   test "every lemieux task a consumer's mix help lists says it is experimental" do
     listed = for task <- lemieux_tasks(), Mix.Task.shortdoc(task), do: task
 
-    assert length(listed) == 6
+    assert length(listed) == 7
+    assert Mix.Tasks.Lemieux.Writers.Compare in listed
 
     for task <- listed do
       assert Mix.Task.shortdoc(task) =~ ~r/\(experimental\)\z/, inspect(task)
@@ -52,7 +53,7 @@ defmodule Mix.Tasks.LemieuxTasksTest do
   test "every lemieux research task opens its documentation with the label" do
     tasks = lemieux_tasks()
 
-    assert length(tasks) == 11
+    assert length(tasks) == 12
 
     for task <- tasks do
       assert String.starts_with?(Mix.Task.moduledoc(task), @label), inspect(task)

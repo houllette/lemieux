@@ -329,6 +329,7 @@ defmodule Lemieux.MixProject do
         "docs/cli.md",
         "docs/acp.md",
         "docs/jobs.md",
+        "docs/writers.md",
         "docs/configuration.md",
         "docs/troubleshooting.md",
         "docs/embedding.md",
@@ -413,6 +414,7 @@ defmodule Lemieux.MixProject do
           "docs/troubleshooting.md"
         ],
         "Embedding Lemieux": [
+          "docs/writers.md",
           "docs/embedding.md",
           "docs/transcript-compatibility.md",
           "docs/telemetry.md"

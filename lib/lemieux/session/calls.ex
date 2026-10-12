@@ -409,6 +409,39 @@ defmodule Lemieux.Session.Calls do
     {:reply, :ok, put_in(state.subagent_groups[group_id], group)}
   end
 
+  def call({:register_work_owner, id, _owner}, _from, %{subagent_groups: groups} = state)
+      when is_map_key(groups, id),
+      do: {:reply, {:error, :already_registered}, state}
+
+  def call({:register_work_owner, id, owner}, _from, state) do
+    ref = Process.monitor(owner)
+
+    state = %{
+      state
+      | subagent_groups: Map.put(state.subagent_groups, id, owner),
+        work_owner_monitors: Map.put(state.work_owner_monitors, ref, id)
+    }
+
+    {:reply, :ok, state}
+  end
+
+  def call({:unregister_work_owner, id, owner}, _from, state)
+      when not is_map_key(state.subagent_groups, id) or
+             :erlang.map_get(id, state.subagent_groups) == owner do
+    {removed, kept} = Enum.split_with(state.work_owner_monitors, fn {_ref, key} -> key == id end)
+    Enum.each(removed, fn {ref, _id} -> Process.demonitor(ref, [:flush]) end)
+
+    {:reply, :ok,
+     %{
+       state
+       | subagent_groups: Map.delete(state.subagent_groups, id),
+         work_owner_monitors: Map.new(kept)
+     }}
+  end
+
+  def call({:unregister_work_owner, _id, _owner}, _from, state),
+    do: {:reply, {:error, :owner_changed}, state}
+
   def call({:unregister_subagent_group, group_id}, _from, state) do
     {:reply, :ok, %{state | subagent_groups: Map.delete(state.subagent_groups, group_id)}}
   end

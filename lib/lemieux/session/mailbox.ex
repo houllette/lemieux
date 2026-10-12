@@ -328,6 +328,21 @@ defmodule Lemieux.Session.Mailbox do
     end
   end
 
+  def message(
+        {:DOWN, ref, :process, _owner, _reason},
+        %{work_owner_monitors: monitors} = state
+      )
+      when is_map_key(monitors, ref) do
+    {id, monitors} = Map.pop(monitors, ref)
+
+    {:noreply,
+     %{
+       state
+       | work_owner_monitors: monitors,
+         subagent_groups: Map.delete(state.subagent_groups, id)
+     }}
+  end
+
   def message({:DOWN, ref, :process, subscriber, _reason}, state) do
     case Subscribers.down(state.subscribers, ref, subscriber) do
       {:ok, subscribers} -> {:noreply, %{state | subscribers: subscribers}}
