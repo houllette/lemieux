@@ -116,6 +116,22 @@ defmodule Lemieux.CLI.RunOutputTest do
       assert %{"type" => "session", "model" => "test:chosen"} = session
       assert Map.has_key?(session, "context_window")
     end
+
+    test "stream-json announces the session before startup policy notices", context do
+      result =
+        lmx(
+          ["run", "--output-format", "stream-json", "go"],
+          context,
+          scripted([Scripted.complete("answer")]) ++ [notices: ["startup policy"]]
+        )
+
+      [session | rest] =
+        result.stdout |> String.split("\n", trim: true) |> Enum.map(&JSON.decode!/1)
+
+      assert session["type"] == "session"
+      assert %{"type" => "notice", "text" => "startup policy"} in rest
+      assert List.last(rest)["type"] == "result"
+    end
   end
 
   describe "text mode's account of the run" do

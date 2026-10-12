@@ -49,6 +49,12 @@ API.
   skipped, unavailable and model-run checks. `lmx run` JSON results add a
   `verification` field; a normal stop still does not imply verified completion.
 
+### Fixes
+
+- Stream-JSON announces its session before startup notices, including the
+  automatic-policy sandbox fallback, so consumers receive the session identity
+  before processing activity or diagnostics.
+
 ### Development
 
 - Root test runs record Temper flake evidence locally and in CI. A bounded

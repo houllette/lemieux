@@ -656,6 +656,9 @@ sentence goes to standard error only.
 `--output-format stream-json` writes one JSON object per line as the work
 happens, and ends with the same `result` object:
 
+Once a session starts, its `session` record comes first; startup `notice`
+events follow it. A refusal before a session exists has no `session` record.
+
 | `type` | Fields |
 | --- | --- |
 | `session` | `session_id`, `name`, `model`, `context_window` (tokens, or null when unknown) |

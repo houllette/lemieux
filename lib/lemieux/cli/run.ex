@@ -276,8 +276,7 @@ defmodule Lemieux.CLI.Run do
           checkpoints: prepared.checkpoints
         })
 
-      notices(out, prepared.harness.notices ++ continued)
-      converse(session, prompt, out)
+      converse(session, prompt, out, prepared.harness.notices ++ continued)
     else
       {:error, category, message} ->
         refused(out, options, category, message)
@@ -421,10 +420,10 @@ defmodule Lemieux.CLI.Run do
 
   defp notices(out, notices), do: Enum.each(notices, &say(out, &1))
 
-  defp converse(session, prompt, out) do
+  defp converse(session, prompt, out, startup_notices) do
     id = Session.id(session)
     info = info(session)
-    announce(out, info, id)
+    announce(out, info, id, startup_notices)
     out = Map.put(out, :undo, undo_watch(out.checkpoints, info))
 
     result = Session.await(session, prompt, on_event: &progress(out, &1))
@@ -459,7 +458,9 @@ defmodule Lemieux.CLI.Run do
   # the model's first request, with the size compaction assumes, and this
   # command hears it (`activity/1`). Said here as well, it came out twice,
   # the first line guessing at what the second one knew.
-  defp announce(%{format: :stream_json} = out, info, id) do
+  defp announce(%{format: :stream_json} = out, info, id, startup_notices) do
+    # A stream consumer needs the session identity before any of its notices.
+    # The automatic-policy fallback exposed the reverse ordering on Linux.
     emit(out, %{
       "type" => "session",
       "session_id" => id,
@@ -467,9 +468,13 @@ defmodule Lemieux.CLI.Run do
       "model" => out.model,
       "context_window" => window(info)
     })
+
+    notices(out, startup_notices)
   end
 
-  defp announce(out, info, id) do
+  defp announce(out, info, id, startup_notices) do
+    notices(out, startup_notices)
+
     case window(info) do
       nil ->
         say(out, "session #{id} · #{Shorthand.of(id)} · #{out.model}")
