@@ -161,6 +161,14 @@ For aliases and intents, Ixway publishes the smallest eligible target limit,
 so Lemieux's default 80% auto-compaction threshold uses a conservative ceiling.
 Cache-read input still occupies that window even when its price is lower;
 Lemieux's context accounting includes the provider-reported cached tokens.
+The Ixway route opts into the adapter's session-derived `prompt_cache_key`:
+an opaque hash of the actor's session ID, stable across resume and distinct
+for a delegated actor. A host key supplied in provider options or request
+parameters takes precedence; `prompt_cache_key: false` omits the wire field.
+Without session identity no key is generated. This supplies cache affinity,
+not a guarantee of a hit; gateway routing and upstream cache policy still apply.
+Other routes retain their request shape unless they implement the optional
+`Lemieux.Provider.Route.prompt_cache_key?/2` callback.
 Missing limits remain unknown. Model/profile changes use the same validation
 path. `ixway_reasoning_effort` supplies the reasoning-effort menu, least effort
 first, and for an alias that list is the intersection across every target it may

@@ -160,6 +160,18 @@ defmodule Lemieux.Provider.Route do
   @callback target(state :: term(), request :: Request.t(), options :: keyword()) ::
               {:ok, target()} | {:error, term()}
 
+  @doc """
+  Whether this request's wire target accepts a session-derived `prompt_cache_key`.
+
+  Optional; absent means `false`. The adapter adds no caching options to a
+  route without this opt-in, even when its target speaks OpenAI. A route may
+  decide per request. Opting in uses the same opaque, actor-specific key as
+  direct OpenAI requests, retains an explicit host key and consumes `false`
+  as an opt-out. `c:target/3` must preserve any host cache key it accepts in
+  the returned options; this callback changes no destination or credential.
+  """
+  @callback prompt_cache_key?(state :: term(), request :: Request.t()) :: boolean()
+
   @doc "A pessimistic USD estimate, or `nil` when the route cannot price the request. Absent means `nil`."
   @callback estimate_cost(state :: term(), request :: Request.t()) :: number() | nil
 
@@ -185,6 +197,7 @@ defmodule Lemieux.Provider.Route do
   @optional_callbacks model_metadata: 1,
                       ready: 1,
                       default_model: 1,
+                      prompt_cache_key?: 2,
                       estimate_cost: 2,
                       observe_stream: 3,
                       finish_stream: 3,
@@ -224,6 +237,13 @@ defmodule Lemieux.Provider.Route do
   def target({module, state}, %Request{} = request, options)
       when is_atom(module) and is_list(options),
       do: module.target(state, request, options)
+
+  @doc "Whether the route opts this request into session-derived cache keys; false when absent."
+  @spec prompt_cache_key?(route :: t(), request :: Request.t()) :: boolean()
+  def prompt_cache_key?({module, state}, %Request{} = request) when is_atom(module) do
+    implements?(module, :prompt_cache_key?, 2) and
+      module.prompt_cache_key?(state, request) == true
+  end
 
   @doc "Readies `route`; identity for a route without the callback. See `c:ready/1`."
   @spec ready(route :: t()) :: {:ok, t()} | {:error, term()}
