@@ -1,5 +1,9 @@
 # Delegated investigations
 
+For opt-in implementation sessions with separate workspaces and reviewed
+patch integration, see [Isolated parallel writers](writers.md). The scouts
+described here keep their read-only contract.
+
 A **subagent** is a separate, temporary session a parent session starts to
 answer one question. Lemieux supports one deliberately narrow kind: a parent
 may run one to three read-only investigators at a time, one level deep, over

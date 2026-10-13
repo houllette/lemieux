@@ -1,6 +1,7 @@
 defmodule Lemieux.Tools.WriteTest do
   use ExUnit.Case, async: true
 
+  alias Lemieux.Tool.Result
   alias Lemieux.Tools.Read
   alias Lemieux.Tools.Write
 
@@ -74,8 +75,15 @@ defmodule Lemieux.Tools.WriteTest do
     } do
       File.write!(Path.join(tmp_dir, "a.txt"), "the user's work")
 
-      assert {:error, message} = Write.run(%{"path" => "a.txt", "content" => "new"}, ctx)
-      assert message =~ "has not been read"
+      assert {:error, %Result{} = refusal} =
+               Write.run(%{"path" => "a.txt", "content" => "new"}, ctx)
+
+      assert refusal.model_text =~ "has not been read"
+
+      assert refusal.metadata == %{
+               "mutation" => %{"status" => "not_started", "precondition" => "read_required"}
+             }
+
       assert File.read!(Path.join(tmp_dir, "a.txt")) == "the user's work"
     end
 
@@ -93,8 +101,15 @@ defmodule Lemieux.Tools.WriteTest do
       assert {:ok, _listing} = Read.run(%{"path" => "a.txt"}, ctx)
       File.write!(Path.join(tmp_dir, "a.txt"), "someone else's change")
 
-      assert {:error, message} = Write.run(%{"path" => "a.txt", "content" => "new"}, ctx)
-      assert message =~ "changed since"
+      assert {:error, %Result{} = refusal} =
+               Write.run(%{"path" => "a.txt", "content" => "new"}, ctx)
+
+      assert refusal.model_text =~ "changed since"
+
+      assert refusal.metadata == %{
+               "mutation" => %{"status" => "not_started", "precondition" => "read_stale"}
+             }
+
       assert File.read!(Path.join(tmp_dir, "a.txt")) == "someone else's change"
     end
 
@@ -126,8 +141,11 @@ defmodule Lemieux.Tools.WriteTest do
       assert {:ok, _listing} = Read.run(%{"path" => "d.txt"}, ctx)
 
       other = %{ctx | session_id: ctx.session_id <> "-other"}
-      assert {:error, message} = Write.run(%{"path" => "d.txt", "content" => "new"}, other)
-      assert message =~ "has not been read"
+
+      assert {:error, %Result{} = refusal} =
+               Write.run(%{"path" => "d.txt", "content" => "new"}, other)
+
+      assert refusal.model_text =~ "has not been read"
     end
   end
 

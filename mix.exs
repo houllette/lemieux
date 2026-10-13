@@ -52,7 +52,11 @@ defmodule Lemieux.MixProject do
       # another node to resolve. Anything only one test needs still belongs
       # in that test.
       elixirc_paths: elixirc_paths(Mix.env()),
-      test_ignore_filters: [&String.starts_with?(&1, "test/package_consumer/")],
+      test_ignore_filters: [
+        &String.starts_with?(&1, "test/package_consumer/"),
+        # Executable fixtures run in child VMs, never in ExUnit's own VM.
+        &String.starts_with?(&1, "test/fixtures/")
+      ],
       test_coverage: [
         ignore_modules: coverage_ignored_modules(),
         summary: [threshold: 85]
@@ -329,6 +333,7 @@ defmodule Lemieux.MixProject do
         "docs/cli.md",
         "docs/acp.md",
         "docs/jobs.md",
+        "docs/writers.md",
         "docs/configuration.md",
         "docs/troubleshooting.md",
         "docs/embedding.md",
@@ -413,6 +418,7 @@ defmodule Lemieux.MixProject do
           "docs/troubleshooting.md"
         ],
         "Embedding Lemieux": [
+          "docs/writers.md",
           "docs/embedding.md",
           "docs/transcript-compatibility.md",
           "docs/telemetry.md"

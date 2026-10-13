@@ -11,6 +11,7 @@ defmodule Lemieux.Tool.Result do
   Tools may continue returning `{:ok, iodata}`. Returning
   `{:ok, Lemieux.Tool.Result.new(text, ...)}` opts into the structured
   contract without creating a second dispatch path.
+  Errors may carry the same structured result as `{:error, result}`.
 
   ## Attachments
 

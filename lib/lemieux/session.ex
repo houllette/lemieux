@@ -1241,6 +1241,24 @@ defmodule Lemieux.Session do
   @spec delegation_context(session :: session()) :: map()
   def delegation_context(session), do: GenServer.call(session, :delegation_context)
 
+  @doc """
+  Registers a host-owned asynchronous work owner.
+
+  The session remains busy while this owner is registered. Cancellation sends
+  `{:parent_cancel, reason}`; owner loss removes the registration. The host
+  still owns the work's policy and cleanup. This carries no tool permissions.
+  """
+  @spec register_work_owner(session :: session(), id :: String.t(), owner :: pid()) ::
+          :ok | {:error, :already_registered}
+  def register_work_owner(session, id, owner) when is_binary(id) and is_pid(owner),
+    do: GenServer.call(session, {:register_work_owner, id, owner})
+
+  @doc "Releases a registration only while the supplied owner still holds it; defaults to the caller."
+  @spec unregister_work_owner(session :: session(), id :: String.t(), owner :: pid()) ::
+          :ok | {:error, :owner_changed}
+  def unregister_work_owner(session, id, owner \\ self()) when is_binary(id) and is_pid(owner),
+    do: GenServer.call(session, {:unregister_work_owner, id, owner})
+
   @doc false
   @spec append_subagent_entry(session :: session(), type :: Entry.type(), payload :: map()) ::
           {:ok, Entry.t()}

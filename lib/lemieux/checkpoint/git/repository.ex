@@ -18,7 +18,9 @@ defmodule Lemieux.Checkpoint.Git.Repository do
   #     configuration turns into a program: `core.fsmonitor` runs when the
   #     index is read, a filter driver when content passes between the work
   #     tree and the object store, a partial clone's fetch when an object is
-  #     missing. The command-line settings and variables below are a second
+  #     missing. Isolated writers also use it for host-owned worktree metadata:
+  #     allocation is detached and uses --no-checkout, with all content copied
+  #     through a private index. The command-line settings and variables below are a second
   #     line, for a git that reads more than the question needs.
   #   * `run/3`, inside `with_private/3`: a git directory of this module's
   #     making, outside the work tree, whose configuration it wrote, with the
@@ -192,8 +194,10 @@ defmodule Lemieux.Checkpoint.Git.Repository do
   end
 
   @doc """
-  Asks the real repository a question (see the comment at the top): only
-  `rev-parse`, `check-ignore --no-index` and `config` are asked this way.
+  Asks the real repository a question, or manages a host-owned worktree's
+  metadata under the same hardening. Content operations still require
+  `with_private/3`; worktree creation must use `--no-checkout`, followed by
+  private-index checkout, so repository filters never execute on the host.
   """
   @spec real(directory :: Path.t(), arguments :: [String.t()]) ::
           {:ok, String.t()} | {:error, term()}

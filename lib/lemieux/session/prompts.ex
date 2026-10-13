@@ -505,6 +505,8 @@ defmodule Lemieux.Session.Prompts do
       send(group, {:parent_cancel, reason})
     end)
 
+    Enum.each(state.work_owner_monitors, fn {ref, _id} -> Process.demonitor(ref, [:flush]) end)
+
     # A timeout-zero shutdown is still an exit signal, not a mailbox request:
     # provider HTTP reads and tools blocked in commands stop immediately. The
     # `:shutdown` reason lets OTP children linked by those libraries terminate
@@ -570,7 +572,8 @@ defmodule Lemieux.Session.Prompts do
         # what the person who cancelled asked for.
         reversed_steers: [],
         reversed_follow_ups: [],
-        subagent_groups: %{}
+        subagent_groups: %{},
+        work_owner_monitors: %{}
     }
     |> Audit.ensure_harness_snapshot()
     |> Core.append({:cancelled, %{"reason" => Atom.to_string(reason)}, nil})

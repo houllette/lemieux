@@ -234,7 +234,8 @@ defmodule Lemieux.Session.State do
     approval_timeout: nil,
     reversed_steers: [],
     reversed_follow_ups: [],
-    subagent_groups: %{}
+    subagent_groups: %{},
+    work_owner_monitors: %{}
   ]
 
   defstruct @fields
