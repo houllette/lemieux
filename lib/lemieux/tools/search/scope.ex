@@ -3,11 +3,13 @@ defmodule Lemieux.Tools.Search.Scope do
   Where a search looks: the model's `path`, confined to the working directory
   and classified as a file or a directory.
 
-  Confinement is checked here, before any helper command runs, because the
-  helpers take a path on a command line: `rg -- ../../etc` would search
-  wherever it pointed. `Path.safe_relative/2` is the same symlink-aware check
-  `Lemieux.Environment.Local` makes for `read`, so a search cannot see a file
-  `read` would refuse.
+  The local machine uses `Path.safe_relative/2` before any helper command,
+  the same symlink-aware check `Lemieux.Environment.Local` makes for `read`.
+  Custom environments receive the original path and own confinement, just
+  as they do for file tools. Checking a container's `/app/src` against the
+  BEAM host's cwd refused a path that its `read` accepted (#56), before the
+  environment ever saw it. Its `list_dir` refusal is authoritative here;
+  an environment without that callback must enforce its boundary in `run`.
 
   An absolute path that lies inside the working directory is accepted and
   made relative. Models copy absolute paths out of compiler errors and stack
@@ -17,7 +19,7 @@ defmodule Lemieux.Tools.Search.Scope do
 
   alias Lemieux.Environment
 
-  @typedoc "A confined search location; `relative` is `\"\"` for the working directory itself."
+  @typedoc "A search location; `relative` may be an absolute custom-environment path, or empty for cwd."
   @type t :: %{relative: String.t(), kind: :directory | :file}
 
   @doc """
@@ -27,7 +29,7 @@ defmodule Lemieux.Tools.Search.Scope do
           {:ok, t()} | {:error, String.t()}
   def resolve(environment, cwd, path) do
     with {:ok, given} <- given(path),
-         {:ok, relative} <- confine(cwd, given),
+         {:ok, relative} <- confine(environment, cwd, given),
          {:ok, kind} <- kind(environment, cwd, relative, given) do
       {:ok, %{relative: relative, kind: kind}}
     end
@@ -52,13 +54,27 @@ defmodule Lemieux.Tools.Search.Scope do
   defp given(path) when is_binary(path), do: {:ok, path}
   defp given(_path), do: {:error, "path must be a string"}
 
-  defp confine(cwd, given) do
+  defp confine(environment, cwd, given) do
+    if Environment.name(environment) == "Lemieux.Environment.Local",
+      do: confine_local(cwd, given),
+      else: {:ok, if(given == ".", do: "", else: given)}
+  end
+
+  defp confine_local(cwd, given) do
     relative = relativize(cwd, given)
 
     case Path.safe_relative(relative, cwd) do
       {:ok, confined} -> {:ok, confined}
       :error -> {:error, "#{given}: is outside the working directory"}
     end
+  end
+
+  @doc "A helper command's directory: absolute environment paths retain their own root."
+  @spec location(cwd :: Path.t(), path :: Path.t()) :: Path.t()
+  def location(cwd, ""), do: cwd
+
+  def location(cwd, path) do
+    if Path.type(path) == :absolute, do: path, else: Path.join(cwd, path)
   end
 
   @doc """

@@ -258,7 +258,7 @@ defmodule Lemieux.Tools.Grep do
       case search.scope do
         %{kind: :file, relative: relative} -> {search.cwd, relative}
         %{relative: ""} -> {search.cwd, "."}
-        %{relative: relative} -> {Path.join(search.cwd, relative), "."}
+        %{relative: relative} -> {Scope.location(search.cwd, relative), "."}
       end
 
     command = Command.join(ripgrep_arguments(search, target))
