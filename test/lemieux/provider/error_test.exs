@@ -112,6 +112,56 @@ defmodule Lemieux.Provider.ErrorTest do
     assert Error.category(%Mint.TransportError{reason: :econnrefused}) == :other
   end
 
+  test "recognizes a cause-less stream wrapper's inspected transport failure" do
+    for reason <- [:closed, :econnreset, :econnaborted, :epipe, :enetreset] do
+      transport = %Finch.TransportError{
+        reason: reason,
+        source: %Mint.TransportError{reason: reason}
+      }
+
+      for detail <- [
+            inspect(transport),
+            inspect(%Mint.TransportError{reason: reason}),
+            inspect(reason)
+          ] do
+        error = StreamError.exception(reason: "Stream failed: " <> detail)
+        assert Error.category(error) == :server
+        assert Error.transient?(error)
+        assert Error.message(error) == error.reason
+      end
+    end
+  end
+
+  test "the stream fallback never overrides a cause or guesses from unrelated prose" do
+    detail = "Stream failed: #{inspect(%Mint.TransportError{reason: :closed})}"
+
+    for error <- [
+          detail,
+          %{reason: detail, cause: nil},
+          RequestError.exception(reason: detail, status: 400),
+          StreamError.exception(reason: detail, cause: :badarg),
+          StreamError.exception(reason: "socket closed"),
+          StreamError.exception(reason: "Stream failed: %Other.Error{reason: :closed}"),
+          StreamError.exception(
+            reason: "Stream failed: %Mint.TransportError{reason: :closed_again}"
+          ),
+          StreamError.exception(
+            reason: "Stream failed: %Mint.TransportError{reason: :econnrefused}"
+          ),
+          StreamError.exception(reason: "Stream failed: :badarg")
+        ] do
+      assert Error.category(error) == :other
+      refute Error.transient?(error)
+    end
+
+    refused =
+      RequestError.exception(reason: "policy", status: 400, provider_code: "invalid_prompt")
+
+    error = StreamError.exception(reason: detail, cause: refused)
+    assert Error.category(error) == :refused
+    refute Error.transient?(error)
+  end
+
   test "a stream that carried nothing and ended :incomplete is the provider failing, not refusing" do
     # A gateway behind a CDN answered 200 and closed the stream with no delta,
     # no tool call, no usage and no finish reason. That is the interrupted
