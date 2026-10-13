@@ -232,6 +232,17 @@ answer its filter stopped), which a predicate should not retry: it is
 usually refused again, and each attempt is another flagged request on the
 account.
 
+Native benchmark, discovery, confirmation and profile runs inherit the session's
+shipped provider retry policy. Use `session_options: [provider_retry: false]`
+on a native runtime when the host owns retries; discovery's override is
+`session: [provider_retry: false]`. The effective policy is recorded under
+`workflow.provider_retry` in each harness snapshot. `provider_retries` in the
+observation reports count, scheduled delay milliseconds, retries after output,
+counts by category and delegated count. A cancelled backoff still counts as
+observed; its scheduled delay is not elapsed time. These counters are separate
+from discarded whole-attempt retries, and failed requests without usage keep
+total spend unknown even when recovery succeeds.
+
 Native observations include `tool_metrics`: catalog bytes and exact tokens
 when supplied, tokenizer names, calls, errors, denials, unavailable calls,
 timeouts, output bytes, declared external cost, descriptor digests and profile

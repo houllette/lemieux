@@ -7,6 +7,7 @@ defmodule Lemieux.AgentSessionOptionsTest do
   # They are results again, naming the option and never its value.
   use ExUnit.Case, async: true
 
+  alias Lemieux.Clock.Manual
   alias Lemieux.Providers.Scripted
   alias Lemieux.Store.JSONL
 
@@ -62,5 +63,107 @@ defmodule Lemieux.AgentSessionOptionsTest do
   test "a well-formed run still answers", ctx do
     assert {:ok, %{"status" => "completed", "answer" => "hello"}} =
              run(ctx, provider: provider())
+  end
+
+  test "inherits shipped retries and reports recovered provider faults", ctx do
+    provider =
+      Scripted.new([
+        Scripted.http_error(503, headers: %{"retry-after" => "0"}),
+        Scripted.complete("recovered")
+      ])
+
+    assert {:ok, observation} = run(ctx, provider: provider)
+    assert observation["status"] == "completed"
+    assert observation["answer"] == "recovered"
+    assert length(Scripted.requests(provider)) == 2
+    assert observation["provider_error"] == nil
+
+    assert observation["provider_retries"] == %{
+             "count" => 1,
+             "delay_ms" => 0,
+             "after_output" => 0,
+             "delegated_count" => 0,
+             "categories" => %{"server" => 1}
+           }
+
+    # The unanswered failed request still makes spend incomplete.
+    assert observation["usage"]["cost_usd"] == nil
+
+    assert policy(observation) == %{
+             "enabled" => true,
+             "max_attempts" => 6,
+             "base_delay_ms" => 2_000,
+             "max_delay_ms" => 60_000,
+             "after_output" => true,
+             "classifier" => "default"
+           }
+  end
+
+  test "an explicit retry opt-out is recorded even when host context claims otherwise", ctx do
+    provider = Scripted.new([Scripted.http_error(503), Scripted.complete("never sent")])
+
+    assert {:error, :agent_failed, observation} =
+             run(ctx,
+               provider: provider,
+               session_options: [
+                 provider_retry: false,
+                 harness_context: %{"workflow" => %{"provider_retry" => %{"enabled" => true}}}
+               ]
+             )
+
+    assert observation["status"] == "failed"
+    assert length(Scripted.requests(provider)) == 1
+    assert observation["provider_retries"]["count"] == 0
+    assert policy(observation) == %{"enabled" => false}
+  end
+
+  test "retains host retry tuning and reports it without serializing the classifier", ctx do
+    provider = Scripted.new([Scripted.http_error(503), Scripted.complete("recovered")])
+
+    assert {:ok, observation} =
+             run(ctx,
+               provider: provider,
+               session_options: [
+                 provider_retry: [
+                   base_delay_ms: 1,
+                   max_attempts: 2,
+                   classify: fn _ -> :default end
+                 ]
+               ]
+             )
+
+    assert observation["status"] == "completed"
+    assert observation["provider_retries"]["delay_ms"] == 1
+    assert policy(observation)["base_delay_ms"] == 1
+    assert policy(observation)["max_attempts"] == 2
+    assert policy(observation)["classifier"] == "host"
+  end
+
+  test "a deadline during backoff retains the observed retry without sending another request",
+       ctx do
+    clock = start_supervised!(Manual)
+    provider = Scripted.new([Scripted.http_error(503), Scripted.complete("never sent")])
+
+    task =
+      Task.async(fn ->
+        run(ctx,
+          provider: provider,
+          clock: clock,
+          session_options: [clock: clock, provider_retry: [base_delay_ms: 60_000]]
+        )
+      end)
+
+    Manual.await_timer(clock, &match?({:provider_retry, _}, &1.message))
+    Manual.advance(clock, ctx.task.timeout_ms)
+    assert {:error, :timeout, observation} = Task.await(task, :infinity)
+    assert observation["provider_retries"]["count"] == 1
+    assert observation["provider_retries"]["delay_ms"] == 60_000
+    assert length(Scripted.requests(provider)) == 1
+    assert Manual.pending(clock) == []
+  end
+
+  defp policy(observation) do
+    snapshot = Enum.find(observation["transcript"], &(&1["type"] == "harness_snapshot"))
+    snapshot["payload"]["workflow"]["provider_retry"]
   end
 end
