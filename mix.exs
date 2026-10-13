@@ -52,7 +52,11 @@ defmodule Lemieux.MixProject do
       # another node to resolve. Anything only one test needs still belongs
       # in that test.
       elixirc_paths: elixirc_paths(Mix.env()),
-      test_ignore_filters: [&String.starts_with?(&1, "test/package_consumer/")],
+      test_ignore_filters: [
+        &String.starts_with?(&1, "test/package_consumer/"),
+        # Executable fixtures run in child VMs, never in ExUnit's own VM.
+        &String.starts_with?(&1, "test/fixtures/")
+      ],
       test_coverage: [
         ignore_modules: coverage_ignored_modules(),
         summary: [threshold: 85]

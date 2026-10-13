@@ -40,7 +40,15 @@ defmodule Lemieux.Writers.Worktree do
         }
   @max_patch_bytes 8_000_000
 
-  @doc "Chooses the source repository and a private lease/artifact directory outside it."
+  @doc """
+  Chooses the source repository and a private lease/artifact directory outside it.
+
+  `:source` defaults to `:head`. `:working_tree` captures current bytes without
+  committing or changing the real index, including accepted earlier patches.
+  Supply `:paths` with all relevant granted scopes to distinguish unrelated
+  ignored build outputs from uncaptured deliverables. Each batch still needs
+  a fresh adapter; every member of that batch uses the same captured tree.
+  """
   @spec new(opts :: keyword()) :: Workspace.adapter()
   def new(opts) do
     # Git reports physical roots (notably /private/tmp on macOS). Resolve both
@@ -51,13 +59,13 @@ defmodule Lemieux.Writers.Worktree do
     with {:ok, %{root: ^root} = repository} <- Repository.locate(root),
          false <- directory == root or String.starts_with?(directory, root <> "/"),
          {:ok, revision} <- Git.revision(root),
-         {:ok, tree} <- object(root, ["rev-parse", revision <> "^{tree}"]) do
+         {:ok, tree} <- base_tree(root, directory, revision, opts) do
       {__MODULE__,
        %{
          root: root,
          directory: directory,
          base_revision: revision,
-         base_tree: String.trim(tree),
+         base_tree: tree,
          journal: Files.new(Path.join(repository.common_dir, "lemieux-writers"))
        }}
     else
@@ -65,6 +73,27 @@ defmodule Lemieux.Writers.Worktree do
         raise ArgumentError,
               "writers need a committed repository root and an outside lease directory"
     end
+  end
+
+  defp base_tree(root, directory, revision, opts) do
+    case Keyword.get(opts, :source, :head) do
+      :head ->
+        with {:ok, tree} <- object(root, ["rev-parse", revision <> "^{tree}"]),
+             do: {:ok, String.trim(tree)}
+
+      :working_tree ->
+        working_tree(root, directory, Keyword.get(opts, :paths, :strict))
+
+      _invalid ->
+        {:error, :invalid_source}
+    end
+  end
+
+  defp working_tree(root, directory, paths) do
+    with :ok <- private_directory(directory),
+         {:ok, snapshot} <-
+           complete_snapshot(root, paths, scratch: Path.join(directory, "snapshots")),
+         do: {:ok, snapshot.tree}
   end
 
   @impl true
@@ -100,7 +129,7 @@ defmodule Lemieux.Writers.Worktree do
                  state.root,
                  ["worktree", "add", "--detach", "--no-checkout", path, state.base_revision]
                ),
-             :ok <- checkout(path, state.base_revision),
+             :ok <- checkout(path, state.base_tree),
              {:ok, _} <- Journal.update(state.journal, key, &Map.put(&1, "status", "allocated")),
              do: {:ok, workspace}
 
@@ -385,6 +414,7 @@ defmodule Lemieux.Writers.Worktree do
         with :ok <- no_pending(state, nil),
              :ok <- validate_artifacts(state, artifacts),
              paths = artifacts |> Enum.flat_map(& &1.paths) |> Enum.sort(),
+             :ok <- clean_index(state, paths),
              {:ok, original} <- complete_snapshot(state.root, paths),
              :ok <- unchanged(state.root, state.base_tree, paths),
              {:ok, candidate} <- integration_candidate(state, original, artifacts) do
@@ -397,7 +427,8 @@ defmodule Lemieux.Writers.Worktree do
                  :ok <- unchanged(state.root, original.tree, paths),
                  {:ok, revision} <- Git.revision(state.root),
                  true <- revision == state.base_revision,
-                 :ok <- authorize.() do
+                 :ok <- authorize.(),
+                 :ok <- clean_index(state, paths) do
               transaction(state, original.tree, staged, paths, checks, staged_checks)
             else
               false -> {:error, :stale_base}
@@ -531,44 +562,53 @@ defmodule Lemieux.Writers.Worktree do
          {:ok, _} <- Journal.write(state.journal, key, 0, value) do
       guardian = guardian(self(), state, key)
 
-      try do
-        outcome =
-          with :ok <- restore_images(state.root, after_images),
-               {:ok, evidence} <- checked(checks, state.root),
-               :ok <- unchanged(state.root, later, paths),
-               {:ok, _} <-
-                 Journal.update(
-                   state.journal,
-                   key,
-                   &Map.merge(&1, %{"status" => "integrated", "checks" => evidence})
-                 ) do
-            {:ok,
-             %{
-               status: :integrated,
-               transaction_id: key,
-               paths: paths,
-               staged_checks: staged_checks,
-               checks: evidence
-             }}
-          end
-
-        case outcome do
-          {:ok, _} ->
-            outcome
-
-          error ->
-            case rollback(state, key) do
-              :ok -> error
-              failure -> {:error, {:integration_unresolved, key, error, failure}}
+      # Host checks are a transaction boundary: an exception or exit after
+      # application must roll back just like an error return. The old `after`
+      # disarmed the guardian while unwinding, leaving a prepared transaction
+      # applied. Preserve its identity even when guarded rollback is blocked.
+      outcome =
+        try do
+          outcome =
+            with :ok <- restore_images(state.root, after_images),
+                 {:ok, evidence} <- checked(checks, state.root),
+                 :ok <- unchanged(state.root, later, paths),
+                 {:ok, _} <-
+                   Journal.update(
+                     state.journal,
+                     key,
+                     &Map.merge(&1, %{"status" => "integrated", "checks" => evidence})
+                   ) do
+              {:ok,
+               %{
+                 status: :integrated,
+                 transaction_id: key,
+                 paths: paths,
+                 staged_checks: staged_checks,
+                 checks: evidence
+               }}
             end
-        end
-      after
-        send(guardian, {:finished, self()})
 
-        receive do
-          {:guardian_stopped, ^guardian} -> :ok
+          finish_transaction(state, key, outcome)
+        catch
+          kind, reason ->
+            finish_transaction(
+              state,
+              key,
+              {:error, {:integration_interrupted, key, {kind, reason}}}
+            )
         end
-      end
+
+      stop_guard(guardian)
+      outcome
+    end
+  end
+
+  defp finish_transaction(_state, _key, {:ok, _} = outcome), do: outcome
+
+  defp finish_transaction(state, key, error) do
+    case rollback(state, key) do
+      :ok -> error
+      failure -> {:error, {:integration_unresolved, key, error, failure}}
     end
   end
 
@@ -739,6 +779,39 @@ defmodule Lemieux.Writers.Worktree do
     end
   end
 
+  # Disk can equal HEAD while the index contains staged work and the working
+  # copy contains its inverse. Applying a patch then loses that unstaged edit.
+  # Read a private copy of the index; unrelated staged paths stay untouched.
+  defp clean_index(state, paths) do
+    with {:ok, repository} <- Repository.locate(state.root) do
+      Repository.with_private(
+        repository,
+        [index: :copy],
+        &index_changes(&1, state.base_revision, paths)
+      )
+    end
+  end
+
+  defp index_changes(private, revision, paths) do
+    with {:ok, changed} <-
+           Repository.run(private, [
+             "diff",
+             "--cached",
+             "--name-only",
+             "-z",
+             "--no-renames",
+             "--no-ext-diff",
+             "--no-textconv",
+             revision,
+             "--" | paths
+           ]) do
+      case String.split(changed, <<0>>, trim: true) do
+        [] -> :ok
+        dirty -> {:error, {:dirty_paths, dirty}}
+      end
+    end
+  end
+
   defp regular_entries(root, trees, paths) do
     reduce_ok(trees, &regular_tree(root, &1, paths))
   end
@@ -782,8 +855,8 @@ defmodule Lemieux.Writers.Worktree do
     end
   end
 
-  defp complete_snapshot(root, paths) do
-    with {:ok, snapshot} <- Git.snapshot(root) do
+  defp complete_snapshot(root, paths, opts \\ []) do
+    with {:ok, snapshot} <- Git.snapshot(root, opts) do
       uncaptured = Enum.filter(snapshot.unsaved, &uncaptured?(&1, paths))
 
       if uncaptured == [] and snapshot.unsaved_more == 0,

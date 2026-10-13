@@ -90,6 +90,24 @@ defmodule Lemieux.Writers do
       {:error, :not_running}
   end
 
+  @doc """
+  Finds this live parent's coordinator. Durable documents are observations,
+  never capabilities: a resumed session cannot acquire an old parent's batch.
+  """
+  @spec current(parent :: Session.session()) :: {:ok, Ref.t()} | {:error, term()}
+  def current(parent) do
+    with parent when is_pid(parent) <- GenServer.whereis(parent),
+         context = Session.delegation_context(parent),
+         [{pid, _value}] <-
+           Registry.lookup(Sup.registry(context.supervisor), {:writers, context.id}) do
+      GenServer.call(pid, {:current, parent})
+    else
+      _missing -> {:error, :not_running}
+    end
+  catch
+    :exit, _gone -> {:error, :not_running}
+  end
+
   @doc "Returns current writer identities, statuses, artifacts and inclusive accounting."
   @spec snapshot(ref :: Ref.t()) :: {:ok, map()} | {:error, term()}
   def snapshot(ref), do: GenServer.call(ref.pid, {:snapshot, ref.token})
@@ -192,6 +210,9 @@ defmodule Lemieux.Writers do
 
   @impl true
   def handle_call(:ref, _from, state),
+    do: {:reply, {:ok, %Ref{pid: self(), token: state.token, id: state.id}}, state}
+
+  def handle_call({:current, parent}, _from, %{parent: parent} = state),
     do: {:reply, {:ok, %Ref{pid: self(), token: state.token, id: state.id}}, state}
 
   def handle_call({:snapshot, token}, _from, %{token: token} = state),
@@ -564,13 +585,17 @@ defmodule Lemieux.Writers do
     # A live scheduler also returned a correct patch after an identical-string
     # edit. The builtin executor cannot write for that request. Use the host's
     # certified catalog and recorded effective arguments, never prose claims.
-    # Failed intended mutations, mutation denials and unknown tools still fail; scope
+    # A builtin write refused before mutation may be corrected by reading again.
+    # Require its typed precondition evidence and the host-certified executor;
+    # never infer safety from the error's prose or a model's claim.
+    # Failed actual mutations, permission denials and unknown tools still fail; scope
     # violations and independent verification retain their own hard gates.
     read_only = tools |> Enum.filter(&Tool.read_only?/1) |> Enum.map(&Tool.name/1)
 
     if Enum.any?(entries, fn entry ->
          entry.type == :tool_result and entry.payload["error"] == true and
-           entry.payload["name"] not in read_only and not no_op_edit?(entry, tools)
+           entry.payload["name"] not in read_only and not no_op_edit?(entry, tools) and
+           not precondition_write?(entry, tools)
        end),
        do: {:error, :failed_effect},
        else: :ok
@@ -597,11 +622,33 @@ defmodule Lemieux.Writers do
 
   defp no_op_edit?(_entry, _tools), do: false
 
+  defp precondition_write?(
+         %{
+           payload: %{
+             "name" => name,
+             "outcome" => "error",
+             "arguments" => %{"path" => path, "content" => content},
+             "metadata" => %{"mutation" => %{"status" => "not_started", "precondition" => reason}}
+           }
+         },
+         tools
+       )
+       when is_binary(path) and path != "" and is_binary(content) and
+              reason in ["read_required", "read_stale"] do
+    Enum.any?(tools, fn tool ->
+      Tool.name(tool) == name and Tool.descriptor(tool).executor == Lemieux.Tools.Write
+    end)
+  end
+
+  defp precondition_write?(_entry, _tools), do: false
+
   defp brief(plan) do
     plan.task <>
       "\n\nYou may write only: " <>
       Enum.join(plan.paths, ", ") <>
-      ". Return a JSON object with summary, critical_findings (array), and uncertainties (array). " <>
+      ". Finish with only one JSON object, without prose or code fences, matching " <>
+      ~s({"summary":"a string describing changes and checks","critical_findings":[],"uncertainties":[]}. ) <>
+      "summary must be a string; critical_findings and uncertainties must be arrays. " <>
       "Preserve every critical finding. Do not integrate or publish changes."
   end
 
@@ -828,6 +875,15 @@ defmodule Lemieux.Writers do
       "staged_checks" => Map.get(details, :staged_checks)
     }
   end
+
+  defp integration_proof({:error, {:integration_interrupted, key, _reason} = error}, _digests),
+    do: %{"transaction_id" => key, "error" => inspect(error, printable_limit: 1024)}
+
+  defp integration_proof(
+         {:error, {:integration_unresolved, key, _error, _failure} = error},
+         _digests
+       ),
+       do: %{"transaction_id" => key, "error" => inspect(error, printable_limit: 1024)}
 
   defp integration_proof({:error, reason}, _digests),
     do: %{"error" => inspect(reason, printable_limit: 1024)}

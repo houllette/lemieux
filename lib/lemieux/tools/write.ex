@@ -27,6 +27,11 @@ defmodule Lemieux.Tools.Write do
   the whole price of not doing that. Writing exactly what the file already
   holds is allowed, since it replaces nothing.
 
+  Read-precondition refusals carry structured evidence that mutation never
+  started. A writer may read again and retry safely; treating this refusal
+  as a failed filesystem write discarded independently verified patches.
+  Host permission denials and filesystem failures have no such evidence.
+
   A tool called outside a session (a context with no session to keep a
   record) writes as it always did. There is no confirmation prompt here and no
   backup copy: approval is the host's job, through `before_tool_call`. See
@@ -37,6 +42,7 @@ defmodule Lemieux.Tools.Write do
 
   alias Lemieux.Environment
   alias Lemieux.Tool.FileState
+  alias Lemieux.Tool.Result
 
   @impl Lemieux.Tool
   def name, do: "write"
@@ -117,19 +123,30 @@ defmodule Lemieux.Tools.Write do
         :ok
 
       :unseen ->
-        {:error,
-         "#{path} already exists and has not been read in this session. Read it first — or " <>
-           "use edit to change part of it — so that writing does not replace content you " <>
-           "have not seen."}
+        refuse(
+          "#{path} already exists and has not been read in this session. Read it first — or " <>
+            "use edit to change part of it — so that writing does not replace content you " <>
+            "have not seen.",
+          "read_required"
+        )
 
       {:ok, fingerprint} ->
         if fingerprint == FileState.fingerprint(current),
           do: :ok,
           else:
-            {:error,
-             "#{path} has changed since this session last read or wrote it (another " <>
-               "process, a formatter or a person edited it). Read it again before replacing it."}
+            refuse(
+              "#{path} has changed since this session last read or wrote it (another " <>
+                "process, a formatter or a person edited it). Read it again before replacing it.",
+              "read_stale"
+            )
     end
+  end
+
+  defp refuse(message, precondition) do
+    {:error,
+     Result.new(message,
+       metadata: %{"mutation" => %{"status" => "not_started", "precondition" => precondition}}
+     )}
   end
 
   defp write(environment, context, path, content) do

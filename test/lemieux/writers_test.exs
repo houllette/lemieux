@@ -251,6 +251,194 @@ defmodule Lemieux.WritersTest do
     assert :ok = Writers.close(group, :owner)
   end
 
+  test "a refused unread overwrite can be corrected before independent verification", ctx do
+    plan =
+      Plan.new(
+        id: "one",
+        task: "Update original",
+        paths: ["original.txt"],
+        tools: ["read", "write"]
+      )
+
+    factory = fn _, workspace ->
+      provider =
+        Scripted.new([
+          Scripted.tool_call("unread", "write", %{
+            "path" => "original.txt",
+            "content" => "changed\n"
+          }),
+          fn _request ->
+            assert File.read!(Path.join(workspace.cwd, "original.txt")) == "original\n"
+            Scripted.tool_call("read", "read", %{"path" => "original.txt"})
+          end,
+          Scripted.tool_call("write", "write", %{
+            "path" => "original.txt",
+            "content" => "changed\n"
+          }),
+          Scripted.complete(report("updated"))
+        ])
+
+      {:ok,
+       [provider: provider, model: "test:model", tools: [Lemieux.Tools.Read, Lemieux.Tools.Write]]}
+    end
+
+    verify = fn workspace, _plan, _result ->
+      assert File.read!(Path.join(workspace.cwd, "original.txt")) == "changed\n"
+      {:ok, %{"status" => "passed", "check" => "updated original"}}
+    end
+
+    checks = fn cwd ->
+      assert File.read!(Path.join(cwd, "original.txt")) == "changed\n"
+      {:ok, %{"status" => "passed", "check" => "updated original"}}
+    end
+
+    opts = options(factory, ctx) |> Keyword.merge(verify: verify, checks: checks)
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], opts)
+    assert {:ok, %{status: :ready} = result} = Writers.await(group)
+    assert {:ok, _} = Writers.integrate(group, digests(result), :owner)
+    assert File.read!(Path.join(ctx.root, "original.txt")) == "changed\n"
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "a refused stale overwrite can be corrected by reading the new file state", ctx do
+    plan =
+      Plan.new(
+        id: "one",
+        task: "Update original",
+        paths: ["original.txt"],
+        tools: ["read", "write"]
+      )
+
+    factory = fn _, workspace ->
+      provider =
+        Scripted.new([
+          Scripted.tool_call("read-old", "read", %{"path" => "original.txt"}),
+          fn _request ->
+            File.write!(Path.join(workspace.cwd, "original.txt"), "formatted\n")
+
+            Scripted.tool_call("stale", "write", %{
+              "path" => "original.txt",
+              "content" => "changed\n"
+            })
+          end,
+          fn _request ->
+            assert File.read!(Path.join(workspace.cwd, "original.txt")) == "formatted\n"
+            Scripted.tool_call("read-new", "read", %{"path" => "original.txt"})
+          end,
+          Scripted.tool_call("write", "write", %{
+            "path" => "original.txt",
+            "content" => "changed\n"
+          }),
+          Scripted.complete(report("updated"))
+        ])
+
+      {:ok,
+       [provider: provider, model: "test:model", tools: [Lemieux.Tools.Read, Lemieux.Tools.Write]]}
+    end
+
+    evidence = %{"status" => "passed", "check" => "updated original"}
+
+    opts =
+      options(factory, ctx)
+      |> Keyword.merge(
+        verify: fn workspace, _, _ ->
+          assert File.read!(Path.join(workspace.cwd, "original.txt")) == "changed\n"
+          {:ok, evidence}
+        end,
+        checks: fn cwd ->
+          assert File.read!(Path.join(cwd, "original.txt")) == "changed\n"
+          {:ok, evidence}
+        end
+      )
+
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], opts)
+    assert {:ok, %{status: :ready} = result} = Writers.await(group)
+    assert {:ok, _} = Writers.integrate(group, digests(result), :owner)
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "a host-denied write cannot be redeemed by a later successful write", ctx do
+    plan = Plan.new(id: "one", task: "Create one", paths: ["one.txt"], tools: ["write"])
+
+    factory = fn _, _ ->
+      provider =
+        Scripted.new([
+          Scripted.tool_call("denied", "write", %{"path" => "one.txt", "content" => "one\n"}),
+          Scripted.tool_call("allowed", "write", %{"path" => "one.txt", "content" => "one\n"}),
+          Scripted.complete(report("one"))
+        ])
+
+      {:ok,
+       [
+         provider: provider,
+         model: "test:model",
+         tools: [Lemieux.Tools.Write],
+         hooks: [
+           before_tool_call: fn call, _ ->
+             if call.id == "denied", do: {:deny, "host denied"}, else: :allow
+           end
+         ]
+       ]}
+    end
+
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], options(factory, ctx))
+    assert {:ok, %{status: :failed, writers: [writer]}} = Writers.await(group)
+    assert writer.error == :failed_effect
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "an actual filesystem write failure remains fatal after a later successful write", ctx do
+    plan =
+      Plan.new(
+        id: "one",
+        task: "Update original",
+        paths: ["original.txt"],
+        tools: ["read", "write"]
+      )
+
+    factory = fn _, workspace ->
+      path = Path.join(workspace.cwd, "original.txt")
+
+      provider =
+        Scripted.new([
+          Scripted.tool_call("read", "read", %{"path" => "original.txt"}),
+          fn _request ->
+            File.chmod!(path, 0o400)
+
+            Scripted.tool_call("unwritable", "write", %{
+              "path" => "original.txt",
+              "content" => "changed\n"
+            })
+          end,
+          fn _request ->
+            assert File.read!(path) == "original\n"
+            File.chmod!(path, 0o600)
+
+            Scripted.tool_call("write", "write", %{
+              "path" => "original.txt",
+              "content" => "changed\n"
+            })
+          end,
+          Scripted.complete(report("updated"))
+        ])
+
+      {:ok,
+       [provider: provider, model: "test:model", tools: [Lemieux.Tools.Read, Lemieux.Tools.Write]]}
+    end
+
+    opts =
+      options(factory, ctx)
+      |> Keyword.put(:verify, fn workspace, _, _ ->
+        assert File.read!(Path.join(workspace.cwd, "original.txt")) == "changed\n"
+        {:ok, %{"status" => "passed", "check" => "updated original"}}
+      end)
+
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], opts)
+    assert {:ok, %{status: :failed, writers: [writer]}} = Writers.await(group)
+    assert writer.error == :failed_effect
+    assert :ok = Writers.close(group, :owner)
+  end
+
   test "repository aliases resolve consistently and cannot disguise an inside lease directory",
        ctx do
     root_alias = Path.join(ctx.tmp_dir, "root-alias")
@@ -335,6 +523,46 @@ defmodule Lemieux.WritersTest do
              Writers.integrate(group, digests(result), :owner)
 
     assert File.read!(Path.join(ctx.root, "one.txt")) == "my unsaved edit"
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "staged accepted paths are dirty even when the working copy matches HEAD", ctx do
+    {group, result} = ready(ctx)
+    path = Path.join(ctx.root, "one.txt")
+    File.write!(path, "user staged work\n")
+    git(ctx.root, ["add", "one.txt"])
+    File.rm!(path)
+    index = File.read!(Path.join(ctx.root, ".git/index"))
+
+    assert {:error, {:dirty_paths, ["one.txt"]}} =
+             Writers.integrate(group, digests(result), :owner)
+
+    refute File.exists?(path)
+    assert File.read!(Path.join(ctx.root, ".git/index")) == index
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "staging an accepted path during candidate checks is refused before application", ctx do
+    checks = fn _cwd ->
+      path = Path.join(ctx.root, "one.txt")
+      File.write!(path, "late staged work\n")
+      git(ctx.root, ["add", "one.txt"])
+      File.rm!(path)
+      {:ok, %{"status" => "passed", "check" => "candidate"}}
+    end
+
+    {group, result} = ready(ctx, checks: checks)
+
+    assert {:error, {:dirty_paths, ["one.txt"]}} =
+             Writers.integrate(group, digests(result), :owner)
+
+    refute File.exists?(Path.join(ctx.root, "one.txt"))
+
+    assert {_output, 0} =
+             System.cmd("git", ["diff", "--cached", "--exit-code", "--", "original.txt"],
+               cd: ctx.root
+             )
+
     assert :ok = Writers.close(group, :owner)
   end
 
@@ -509,6 +737,128 @@ defmodule Lemieux.WritersTest do
     end)
   end
 
+  test "a post-application check exit rolls back and identifies the transaction", ctx do
+    checks = fn cwd ->
+      if cwd == ctx.root,
+        do: exit(:intentional_check_failure),
+        else: {:ok, %{"status" => "passed", "check" => "candidate"}}
+    end
+
+    {group, result} = ready(ctx, checks: checks)
+
+    assert {:error, {:integration_interrupted, key, {:exit, :intentional_check_failure}}} =
+             Writers.integrate(group, digests(result), :owner)
+
+    {_module, state} = ctx.workspace
+    assert {:ok, %{value: %{"status" => "rolled_back"}}} = Journal.read(state.journal, key)
+    refute File.exists?(Path.join(ctx.root, "one.txt"))
+    assert File.read!(Path.join(ctx.root, "unrelated.txt")) == "keep my work\n"
+    assert Session.info(ctx.parent).status == :idle
+    assert {:ok, %{integration: %{"transaction_id" => ^key}}} = Writers.snapshot(group)
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "raised and thrown post-application checks roll back", ctx do
+    for {kind, reason, crash} <- [
+          {:error, %RuntimeError{message: "check crashed"}, fn -> raise "check crashed" end},
+          {:throw, :check_thrown, fn -> throw(:check_thrown) end}
+        ] do
+      checks = fn cwd ->
+        if cwd == ctx.root,
+          do: crash.(),
+          else: {:ok, %{"status" => "passed", "check" => "candidate"}}
+      end
+
+      {group, result} = ready(ctx, checks: checks)
+
+      assert {:error, {:integration_interrupted, key, {^kind, ^reason}}} =
+               Writers.integrate(group, digests(result), :owner)
+
+      {_module, state} = ctx.workspace
+      assert {:ok, %{value: %{"status" => "rolled_back"}}} = Journal.read(state.journal, key)
+      refute File.exists?(Path.join(ctx.root, "one.txt"))
+      assert :ok = Writers.close(group, :owner)
+    end
+  end
+
+  test "a post-application exception preserves foreign edits and exposes blocked recovery", ctx do
+    checks = fn cwd ->
+      if cwd == ctx.root do
+        File.write!(Path.join(cwd, "one.txt"), "foreign edit\n")
+        raise "check crashed"
+      end
+
+      {:ok, %{"status" => "passed", "check" => "candidate"}}
+    end
+
+    {group, result} = ready(ctx, checks: checks)
+
+    assert {:error,
+            {:integration_unresolved, key,
+             {:error, {:integration_interrupted, key, {:error, %RuntimeError{}}}},
+             {:error, :foreign_changes}}} = Writers.integrate(group, digests(result), :owner)
+
+    assert {:ok, %{integration: %{"transaction_id" => ^key}}} = Writers.snapshot(group)
+    assert File.read!(Path.join(ctx.root, "one.txt")) == "foreign edit\n"
+    assert {:error, :foreign_changes} = Worktree.recover(ctx.workspace, key)
+
+    assert {:error, {:unresolved_integration, ^key}} =
+             Writers.integrate(group, digests(result), :owner)
+
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  @tag timeout: :timer.minutes(3)
+  test "cold runtime loss recovers prepared and applied transactions but retains committed work",
+       ctx do
+    for phase <- ["prepared", "applied", "rollback", "integrated"] do
+      root = Path.join(Path.dirname(ctx.root), "cold-#{phase}")
+      git(ctx.root, ["clone", "--quiet", ctx.root, root])
+      File.chmod!(Path.join(root, "original.txt"), 0o600)
+      index = File.read!(Path.join(root, ".git/index"))
+      directory = Path.join(Path.dirname(ctx.root), "leases-#{phase}")
+      adapter = Worktree.new(root: root, directory: directory)
+      key = kill_runtime(root, directory, phase)
+
+      assert :ok = Worktree.recover(adapter, key)
+      {_module, state} = adapter
+      assert {:ok, %{value: value}} = Journal.read(state.journal, key)
+
+      if phase == "integrated" do
+        assert value["status"] == "integrated"
+        assert File.read!(Path.join(root, "original.txt")) == "updated\n"
+        assert File.read!(Path.join(root, "one.txt")) == "one\n"
+      else
+        assert value["status"] == "rolled_back"
+        assert File.read!(Path.join(root, "original.txt")) == "original\n"
+        assert Bitwise.band(File.stat!(Path.join(root, "original.txt")).mode, 0o777) == 0o600
+        refute File.exists?(Path.join(root, "one.txt"))
+      end
+
+      assert File.read!(Path.join(root, ".git/index")) == index
+    end
+  end
+
+  test "cold recovery refuses foreign edits without changing either accepted path", ctx do
+    {_module, state} = ctx.workspace
+    key = kill_runtime(ctx.root, state.directory, "applied")
+    File.write!(Path.join(ctx.root, "one.txt"), "foreign edit\n")
+    assert {:error, :foreign_changes} = Worktree.recover(ctx.workspace, key)
+    assert File.read!(Path.join(ctx.root, "one.txt")) == "foreign edit\n"
+    assert File.read!(Path.join(ctx.root, "original.txt")) == "updated\n"
+    assert {:ok, %{value: %{"status" => "blocked"}}} = Journal.read(state.journal, key)
+  end
+
+  test "cold recovery restores a mix of before and after images after partial application", ctx do
+    {_module, state} = ctx.workspace
+    key = kill_runtime(ctx.root, state.directory, "prepared")
+    File.write!(Path.join(ctx.root, "one.txt"), "one\n")
+    assert File.read!(Path.join(ctx.root, "original.txt")) == "original\n"
+    assert :ok = Worktree.recover(ctx.workspace, key)
+    assert File.read!(Path.join(ctx.root, "original.txt")) == "original\n"
+    refute File.exists?(Path.join(ctx.root, "one.txt"))
+  end
+
   test "rollback restores exact original bytes when Git normalizes line endings", ctx do
     File.write!(Path.join(ctx.root, ".gitattributes"), "original.txt text eol=crlf\n")
     git(ctx.root, ["add", ".gitattributes"])
@@ -585,6 +935,34 @@ defmodule Lemieux.WritersTest do
     assert_receive {:transaction, ^key, "rolled_back"}
     refute File.exists?(Path.join(ctx.root, "one.txt"))
     assert File.read!(Path.join(ctx.root, "unrelated.txt")) == "keep my work\n"
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "killing the integration task leaves the guardian able to restore primary files", ctx do
+    observer = self()
+    {module, state} = ctx.workspace
+    journal = {ObservingJournal, %{journal: state.journal, owner: observer}}
+    ctx = %{ctx | workspace: {module, %{state | journal: journal}}}
+
+    checks = fn cwd ->
+      if cwd == ctx.root do
+        send(observer, {:checking_primary, self()})
+        receive do: (:finish -> :ok)
+      end
+
+      {:ok, %{"status" => "passed", "check" => "held check"}}
+    end
+
+    {group, result} = ready(ctx, checks: checks)
+    waiter = Task.async(fn -> Writers.integrate(group, digests(result), :owner) end)
+    assert_receive {:checking_primary, worker}
+    assert_receive {:transaction, key, "prepared"}
+    Process.exit(worker, :kill)
+    assert {:error, {:integration_interrupted, :killed}} = Task.await(waiter, :infinity)
+    assert_receive {:transaction, ^key, "rolled_back"}
+    refute File.exists?(Path.join(ctx.root, "one.txt"))
+    assert File.read!(Path.join(ctx.root, "unrelated.txt")) == "keep my work\n"
+    assert Session.info(ctx.parent).status == :idle
     assert :ok = Writers.close(group, :owner)
   end
 
@@ -1010,6 +1388,29 @@ defmodule Lemieux.WritersTest do
     assert {:ok, result} = Writers.await(group)
     assert result.status == :ready
     {group, result}
+  end
+
+  defp kill_runtime(root, directory, phase) do
+    paths = Enum.flat_map(:code.get_path(), &["-pa", List.to_string(&1)])
+
+    arguments =
+      ["--erl", "+S 2:2"] ++
+        paths ++ ["test/fixtures/writer_runtime_loss.ex", root, directory, phase]
+
+    port =
+      Port.open({:spawn_executable, System.find_executable("elixir")}, [
+        :binary,
+        :exit_status,
+        args: arguments
+      ])
+
+    on_exit(fn -> if Port.info(port), do: Port.close(port) end)
+    assert_receive {^port, {:data, bytes}}
+    %{"transaction_id" => key, "os_pid" => os_pid} = JSON.decode!(String.trim(bytes))
+    assert {_output, 0} = System.cmd("kill", ["-KILL", os_pid], stderr_to_stdout: true)
+    assert_receive {^port, {:exit_status, status}}
+    assert status != 0
+    key
   end
 
   defp digests(result), do: Enum.map(result.writers, & &1.artifact.digest)

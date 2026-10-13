@@ -9,7 +9,26 @@ API.
 
 ## Unreleased
 
+- A writer can correct a built-in write's unread/stale-file precondition refusal
+  before verification. Typed evidence certifies that mutation never started;
+  permission denials and filesystem write failures remain hard failures.
+
+- Writer integration now rolls back when a post-application check raises, throws
+  or exits, and retains transaction identifiers in failure receipts. Accepted
+  paths with staged changes are refused even when their working copy matches
+  HEAD. Recovery tests also kill a separate runtime at durable transaction
+  boundaries and verify exact restoration and foreign-edit preservation.
+
 ### Features
+
+- The opt-in `Lemieux.Extensions.Writers` extension exposes bounded writer
+  briefs, observation, paginated artifact review and guarded integration to the
+  ordinary model tool catalog. Planning guidance covers single sessions,
+  available read-only scouts, serial and parallel writers, including reasons
+  to work directly. Hosts retain scopes, tools, budgets and current authority;
+  complete patch/report retrieval is required before digest acceptance.
+  Multiple batches require a host workspace factory to capture accepted
+  earlier changes; static workspace adapters are limited to one batch.
 
 - Opt-in isolated parallel writers add explicit file ownership, host-supplied
   top-level sessions and one inclusive parent/writer allowance. Reviewed,

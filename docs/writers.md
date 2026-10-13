@@ -4,13 +4,96 @@
 top-level sessions, collects reviewable patches, and integrates accepted
 patches through one coordinator. This is an opt-in embedding API. It does
 not enable writers in ordinary `lmx` or broaden the read-only `subagents`
-tool. No separate job server is required: start a batch from an existing
+tool. A host can expose writers to its model through the optional
+`Lemieux.Extensions.Writers` extension described below. No separate job server
+is required: start a batch from an existing
 parent session.
 
 The parent must already have an inclusive `:job_limits` allowance or
 host-owned `:job_budget`. Writers share that exact ledger, including
 auxiliary inference and declared paid tools, even when their providers differ.
 The host supplies current credentials, environments, permissions and checks.
+
+## Let the planning agent choose
+
+`Lemieux.Extensions.Writers` adds a configured `writers` tool and concise
+selection guidance to an ordinary harness. The extension is opt-in; the four
+default tools and the read-only `subagents` contract do not change.
+
+| Method | Suitable work | Example |
+| --- | --- | --- |
+| Single session | Shared files, changing interfaces, or small changes | Redesign retries across the session lifecycle |
+| Read-only scouts, when supplied by the host | Independent investigations before implementation | Investigate compatibility, persistence and migration impacts |
+| Serial writers | Independent isolated patches with constrained capacity | Two adapters with one available backend slot |
+| Parallel writers | Substantial independent work with stable interfaces and disjoint file/test ownership | CSV and JSONL importers against an agreed ingestion contract; parent owns shared wiring |
+
+These are heuristics to evaluate, not claims of better quality or speed. Large
+tasks may still belong in one session. Serial writers within one batch use the
+same base snapshot: later writers do not receive earlier patches. Dependent
+stages require separately integrated batches with fresh snapshots.
+
+Supply the same explicit host policy as the embedding API, plus maximum path
+and tool grants. The model supplies briefs within those grants:
+
+```elixir
+{:ok, harness} = Lemieux.Harness.assemble(
+  Lemieux.Harness.new(),
+  [{Lemieux.Extensions.Writers,
+    paths: ["importers/csv/", "importers/jsonl/", "test/importers/"],
+    tools: ["read", "write", "edit"],
+    max_writers: 2,
+    max_requests: 40,
+    max_batches: 2,
+    workspace_factory: fn context ->
+      {:ok, Lemieux.Writers.Worktree.new(root: context.cwd, directory: writers_directory,
+        source: :working_tree, paths: ["importers/", "test/importers/"])}
+    end,
+    options: [factory: factory, verify: verify,
+              checks: checks, authorize: authorize, authority: authority,
+              max_active: 2, timeout_ms: 900_000]}]
+)
+
+{:ok, parent} = Lemieux.start_session(
+  harness: harness, supervisor: MyApp.Agents, provider: provider, model: model,
+  store: store, cwd: repository_root, job_limits: [max_requests: 120]
+)
+```
+
+The host callbacks above have the signatures documented in `Lemieux.Writers`.
+`workspace_factory` runs once per start after current authorization and shared
+allowance checks. It must return a freshly captured adapter, so a later batch
+sees accepted earlier changes. A static `options[:workspace]` is supported for
+one batch only; multiple batches without the factory are refused. The default
+batch ceiling is one for a static adapter and two with a factory. Reusing a
+stock adapter after integration otherwise gives a later writer its original
+snapshot, even when the parent working tree has changed.
+The authorization callback also receives `:tool` with the requested action and
+parent identity, before each invocation. It must consult current policy;
+captured authority is not evidence that permission remains valid. `:paths` and
+`:tools` are ceilings; factories must still provide scoped environments,
+explicit tools and credentials. Worktrees alone do not sandbox commands.
+
+The tool supports `start`, `status`, `await`, `review`, `integrate`, `cancel` and
+`close`. Start requires a short reason, stable interfaces, expected checks and
+bounded briefs with exact file or directory-prefix ownership. Shared interfaces
+and expected checks are included in each writer's brief. Host verification is
+independent of those model expectations. Start attempts consume the configured
+batch ceiling once briefs and the live-batch precondition are validated,
+including failed allocations; all inference uses the inclusive
+job allowance. Await may return a running snapshot after its observation window.
+
+The parent retrieves each accepted patch and report using `review`, following
+`next_offset` until it is null, and explicitly supplies accepted artifact
+digests to `integrate`. Both files must be retrieved completely and unchanged.
+Retrieval does not prove understanding; fresh host review authorization and
+project checks still gate integration. Full reports and failed artifacts remain
+available after workspace cleanup. Close a settled batch before starting another.
+
+Choices and retrieval receipts are durable generic documents, under
+`lemieux.writer_dispatch` and `lemieux.writer_reviews`. They grant no runtime
+permissions. Configured tools and live coordinator capabilities are not restored
+from transcripts: a resuming host supplies current policy again. The extension
+mentions scouts only when the catalog actually includes `subagents`.
 
 ## Run a batch
 
@@ -77,8 +160,9 @@ shared. Trusted Elixir callbacks remain host authority.
 
 ## Results and review
 
-Each writer returns JSON with `summary`, `critical_findings` and
-`uncertainties`. The host's `verify/3` receives the complete session
+Each writer returns only a JSON object: `summary` is a string, and
+`critical_findings` and `uncertainties` are arrays. Prose or code fences around
+the object fail report validation. The host's `verify/3` receives the complete session
 result and report and returns `{:ok, %{"status" => "passed", ...}}` with
 a named check, or an error. A model stop does not certify completion. Failed
 effects, missing patches, invalid reports and out-of-scope changes fail the
@@ -111,8 +195,13 @@ use `JobBudget.run/4` against the same ledger.
 
 ## Integration and recovery
 
+A built-in write refused because a file was unread or changed since its last
+read carries typed evidence that mutation never started. The writer may read
+again and correct the write before independent verification. Permission denials,
+failed actual writes and unknown executors cannot use this exception.
+
 The worktree adapter freezes HEAD when constructed. It refuses stale bases,
-dirty accepted paths, overlapping patches and altered artifacts. Unrelated
+staged or unstaged changes to accepted paths, overlapping patches and altered artifacts. Unrelated
 working and staged edits are preserved; the user's index is never changed.
 Checkout and patch capture use private Git configuration so repository
 hooks, filters and external diff programs do not execute.
@@ -129,6 +218,11 @@ integration: filesystem rename is not compare-and-swap against an editor.
 A durable intent, including bounded before/after file images, precedes primary
 writes. Images retain actual bytes and file permissions, including line endings
 that Git normalizes.
+Exceptions, throws and exits from a post-application check also trigger guarded
+rollback. Their error receipts identify the transaction, including when foreign
+edits block recovery. Killing an integration task leaves its guardian armed;
+losing the entire runtime requires explicit cold recovery from the journal.
+
 Recovery does not depend on unreachable Git objects surviving garbage
 collection. Complete binary patches can reconstruct an accepted tree after
 Git prunes its cached objects. Failed checks or interruption
@@ -178,6 +272,21 @@ are hard failures. Quality regression, unknown dollars, unacceptable cost
 or no measured gain fail the pair. Representative matched model runs and
 review of failures are still required before wider adoption. Comparison
 changes no defaults and authorizes no spending.
+
+Measure completed integration separately from candidate correctness. Include
+planning, scouts, review, verification, retries and unsuccessful attempts in the
+elapsed time and inclusive inference usage. Compare a single session and
+scout-assisted coding as well as serial and parallel writers; serial writers
+alone cannot establish that delegation improves on ordinary coding.
+
+Freeze task inputs, hidden graders, reference controls, source revisions and
+model/effort before running a cohort. Balance every method across order positions
+and repeat matched cases. Use tasks with room for improvement, including existing
+repository behavior and coupled component contracts. Report correctness,
+robustness and maintenance review separately; a count of generated tests is not
+a quality score. A host may choose a higher `:max_cost_ratio` to accept measured
+quality gains at higher cost or elapsed time. Unknown costs and missing usage
+remain unknown, and API-equivalent estimates are distinct from billed dollars.
 
 ## Migration
 
