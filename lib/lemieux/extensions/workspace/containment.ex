@@ -24,6 +24,8 @@ defmodule Lemieux.Extensions.Workspace.Containment do
   # (Linux's MAXSYMLINKS), so a loop ends.
   @max_links 40
 
+  alias Lemieux.Extensions.Workspace.AssetReader
+
   @typedoc """
   A repository and a home directory, resolved once: `root` and `home` as
   given, their real paths, and each credential location as `{shown, real}`
@@ -67,11 +69,52 @@ defmodule Lemieux.Extensions.Workspace.Containment do
   def check(path, %__MODULE__{} = scope) do
     real = real_path(path)
 
+    check_resolved(real, scope)
+  end
+
+  @doc "Applies the shared policy to a path already resolved by its chosen reader."
+  @spec check_resolved(real :: Path.t(), scope :: t()) :: {:ok, Path.t()} | refusal()
+  def check_resolved(real, %__MODULE__{} = scope) do
     cond do
       shown = hidden(real, scope) -> {:hidden, shown}
       inside?(real, scope.real_root) -> {:ok, real}
       true -> :outside
     end
+  end
+
+  @doc "Builds a scope entirely in a selected asset reader's namespace."
+  @spec scope(root :: Path.t(), home :: Path.t(), reader :: AssetReader.t()) ::
+          {:ok, t()} | {:error, term()}
+  def scope(root, home, reader) do
+    with {:ok, real_root} <- AssetReader.resolve(reader, root),
+         {:ok, real_home} <- AssetReader.resolve(reader, home),
+         {:ok, hidden} <- reader_hidden(reader, home) do
+      {:ok,
+       %__MODULE__{
+         root: root,
+         real_root: real_root,
+         home: home,
+         real_home: real_home,
+         hidden: hidden
+       }}
+    end
+  end
+
+  @doc "Reuses native discovery's pinned scope, or maps it through a custom reader."
+  @spec for_reader(scope :: t(), reader :: AssetReader.t()) :: {:ok, t()} | {:error, term()}
+  def for_reader(scope, reader) do
+    if AssetReader.native?(reader),
+      do: {:ok, scope},
+      else: scope(scope.real_root, reader.home, reader)
+  end
+
+  defp reader_hidden(reader, home) do
+    Enum.reduce_while(@hidden, {:ok, []}, fn path, {:ok, found} ->
+      case AssetReader.resolve(reader, Path.join(home, path)) do
+        {:ok, real} -> {:cont, {:ok, [{"~/" <> path, real} | found]}}
+        {:error, _reason} = error -> {:halt, error}
+      end
+    end)
   end
 
   @doc """

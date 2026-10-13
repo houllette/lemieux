@@ -32,6 +32,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Policy
     alias Lemieux.TUI.ResourceIndex
     alias Lemieux.TUI.Screen
+    alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.Submission
     alias Lemieux.TUI.Transcript
 
@@ -215,6 +216,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # an exit and a second inside the window leaves.
     @doc false
     @spec interrupt(TUI.t()) :: reply()
+    def interrupt(%TUI{references: %{skill_load: load}} = state) when not is_nil(load),
+      do: {:noreply, state |> SkillLoading.cancel() |> Flash.show("skill load cancelled")}
+
     def interrupt(%TUI{conversation: %{busy?: true}} = state) do
       {conversation, effects} = Conversation.input(state.conversation, "/cancel")
       Effects.run(%{state | conversation: conversation, exit_armed: nil}, effects)

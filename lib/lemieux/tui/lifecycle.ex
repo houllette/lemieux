@@ -29,6 +29,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.SessionHydration
     alias Lemieux.TUI.Setup
     alias Lemieux.TUI.Signals
+    alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.StartupAnimation
     alias Lemieux.TUI.Submission
     alias Lemieux.TUI.Transcript
@@ -509,6 +510,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec switched(TUI.t(), map(), list(), String.t() | nil) :: TUI.t()
     def switched(state, details, sessions, verb) do
+      state = SkillLoading.cancel(state)
       previous = state.session
 
       if is_pid(previous) and previous != details.session do
@@ -815,6 +817,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec terminate(term(), TUI.t()) :: :ok
     def terminate(_reason, %TUI{resume: %{initial_task: %Task{} = task}} = state) do
+      SkillLoading.cancel(state)
       closed(state)
       release_traps(state)
       Task.shutdown(task, :brutal_kill)
@@ -822,6 +825,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def terminate(_reason, state) do
+      SkillLoading.cancel(state)
       closed(state)
       release_traps(state)
       Updates.stop(state)

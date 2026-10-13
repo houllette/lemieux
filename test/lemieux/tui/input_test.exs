@@ -1865,6 +1865,9 @@ defmodule Lemieux.TUI.InputTest do
       assert {:noreply, sent} = TUI.handle_event(key("enter"), state)
       assert screen(sent) =~ "/inspect-file lib/example.ex"
       refute screen(sent) =~ "Review lib/example.ex carefully"
+      ref = sent.references.skill_load.task.ref
+      assert_receive {^ref, result}
+      assert {:noreply, _loaded} = TUI.handle_info({ref, result}, sent)
 
       id = Lemieux.Session.id(session)
       assert_receive {:lemieux, ^id, {:finished, :stop}}

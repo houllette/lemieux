@@ -38,6 +38,8 @@ defmodule Lemieux.Extensions.Workspace.SkillTool do
 
   @behaviour Lemieux.Tool.Configured
 
+  alias Lemieux.Environment
+  alias Lemieux.Extensions.Workspace.AssetReader
   alias Lemieux.Extensions.Workspace.Skill
 
   @max_output_bytes 60_000
@@ -46,17 +48,20 @@ defmodule Lemieux.Extensions.Workspace.SkillTool do
 
   @type t :: %__MODULE__{
           skills: %{required(String.t()) => Skill.t()},
-          home: Path.t() | nil
+          home: Path.t() | nil,
+          asset_reader: AssetReader.selector() | nil
         }
 
   @enforce_keys [:skills]
-  defstruct [:skills, :home]
+  defstruct [:skills, :home, :asset_reader]
 
   @doc """
   Builds a loader from the model-invocable subset of discovered skills.
 
   `:home` is the home directory whose credential locations a skill's files
-  may never come from, the user's by default.
+  may never come from, the user's by default for the native reader.
+  `:asset_reader` is a host selector receiving the tool context's effective
+  environment; custom capabilities carry their own backend home and roots.
   """
   @spec new(skills :: [Skill.t()], opts :: keyword()) :: t()
   def new(skills, opts \\ []) when is_list(skills) and is_list(opts) do
@@ -65,7 +70,11 @@ defmodule Lemieux.Extensions.Workspace.SkillTool do
       |> Enum.filter(& &1.model_invocable?)
       |> Map.new(&{Skill.qualified_name(&1), &1})
 
-    %__MODULE__{skills: available, home: Keyword.get(opts, :home)}
+    %__MODULE__{
+      skills: available,
+      home: Keyword.get(opts, :home),
+      asset_reader: Keyword.get(opts, :asset_reader)
+    }
   end
 
   @impl Lemieux.Tool.Configured
@@ -115,7 +124,7 @@ defmodule Lemieux.Extensions.Workspace.SkillTool do
   def run(%__MODULE__{} = tool, %{"name" => name} = arguments, context)
       when is_binary(name) do
     with {:ok, skill} <- fetch(tool, name),
-         {:ok, text, label} <- content(tool, skill, arguments) do
+         {:ok, text, label} <- content(tool, skill, arguments, context) do
       text
       |> pages(page_bytes(context))
       |> part(Map.get(arguments, "part", 1), label)
@@ -126,26 +135,39 @@ defmodule Lemieux.Extensions.Workspace.SkillTool do
 
   # An empty "file" is the body: models that fill every optional field send
   # one when they mean none.
-  defp content(tool, skill, %{"file" => file} = arguments) when file in [nil, ""],
-    do: content(tool, skill, Map.delete(arguments, "file"))
+  defp content(tool, skill, %{"file" => file} = arguments, context) when file in [nil, ""],
+    do: content(tool, skill, Map.delete(arguments, "file"), context)
 
-  defp content(tool, skill, %{"file" => file}) when is_binary(file) do
+  defp content(tool, skill, %{"file" => file}, context) when is_binary(file) do
     name = Skill.qualified_name(skill)
-    opts = if tool.home, do: [home: tool.home], else: []
+    opts = reader_options(tool, skill, context)
 
     with {:ok, text} <- Skill.file(skill, file, opts) do
-      {:ok, "Skill: #{name}\nFile: #{file} (in #{skill.root})\n\n#{text}",
+      {:ok, "Skill: #{name}\nFile: #{file}\n\n#{text}",
        {name, ~s( file #{file}), ~s( and the same "file")}}
     end
   end
 
-  defp content(_tool, _skill, %{"file" => _other}),
+  defp content(_tool, _skill, %{"file" => _other}, _context),
     do: {:error, "file is a path relative to the skill directory, as a string"}
 
-  defp content(_tool, skill, arguments) do
-    with {:ok, rendered} <- Skill.render(skill, Map.get(arguments, "arguments", "")) do
+  defp content(tool, skill, arguments, context) do
+    with {:ok, rendered} <-
+           Skill.render(
+             skill,
+             Map.get(arguments, "arguments", ""),
+             reader_options(tool, skill, context)
+           ) do
       {:ok, rendered, {Skill.qualified_name(skill), "", ""}}
     end
+  end
+
+  defp reader_options(tool, skill, context) do
+    [
+      home: tool.home,
+      environment: Environment.from_context(context),
+      asset_reader: tool.asset_reader || skill.asset_reader
+    ]
   end
 
   defp fetch(tool, name) do

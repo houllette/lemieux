@@ -50,7 +50,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
           fuzzy: nil,
           # The person's own settings file, where `/mcp add` saves a server
           # they keep for themselves. See `Lemieux.TUI.MCPInteraction`.
-          config_path: Keyword.get(opts, :config_path)
+          config_path: Keyword.get(opts, :config_path),
+          skill_load: nil
         },
         conversation:
           Conversation.new(

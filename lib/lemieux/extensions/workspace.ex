@@ -67,13 +67,24 @@ defmodule Lemieux.Extensions.Workspace do
   `:plugin_dirs`, `:marketplaces`, `:plugins`, `:marketplace_fetch`,
   `:personal?`, `:personal_dir`, `:claude_personal_dir`,
   `:codex_personal_dir`, `:agents_personal_dir`, `:home` and `:supplied`.
+  `:asset_reader` supplies a runtime host selector for skill bodies and
+  supporting files, including slash commands. See
+  `Lemieux.Extensions.Workspace.AssetReader`; discovery and asset selection
+  retain their native conventions.
   """
   @impl Lemieux.Extension
   @spec init(opts :: keyword()) :: {:ok, Discovery.t()} | {:error, String.t()}
   def init(opts) do
     case Keyword.fetch(opts, :workspace) do
       {:ok, %Discovery{} = workspace} ->
-        {:ok, workspace}
+        case Keyword.fetch(opts, :asset_reader) do
+          {:ok, selector} ->
+            {:ok,
+             %{workspace | skills: Enum.map(workspace.skills, &%{&1 | asset_reader: selector})}}
+
+          :error ->
+            {:ok, workspace}
+        end
 
       {:ok, other} ->
         {:error,

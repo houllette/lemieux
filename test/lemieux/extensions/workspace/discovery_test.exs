@@ -84,7 +84,11 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
     assert SkillTool.schema(tool)["properties"]["name"]["enum"] == ["review"]
     refute SkillTool.description(tool) =~ "review"
 
-    assert {:ok, body} = SkillTool.run(tool, %{"name" => "review"}, %{})
+    assert {:ok, body} =
+             SkillTool.run(tool, %{"name" => "review"}, %{
+               environment: Lemieux.Environment.local()
+             })
+
     assert body =~ "Skill directory: #{Path.join(tmp_dir, ".agents/skills/review")}"
     assert body =~ "DO NOT LOAD THIS BODY AT STARTUP"
   end
@@ -168,7 +172,9 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
     assert %SkillTool{} = tool
 
     assert {:ok, body} =
-             SkillTool.run(tool, %{"name" => "review", "arguments" => "lib/example.ex"}, %{})
+             SkillTool.run(tool, %{"name" => "review", "arguments" => "lib/example.ex"}, %{
+               environment: Lemieux.Environment.local()
+             })
 
     assert body =~ "Review lib/example.ex carefully."
   end
