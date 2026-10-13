@@ -412,6 +412,100 @@ defmodule Lemieux.IxwayTest do
     assert opts[:base_url] == "https://gateway.example/v1"
   end
 
+  describe "routed prompt cache keys" do
+    test "the route preserves a host key in its option allowlist" do
+      assert {:ok, {_model, options}} =
+               Ixway.target(connection(), Request.new("ixway:team/coding"),
+                 prompt_cache_key: "host-key",
+                 api_key: "must-not-cross"
+               )
+
+      assert options[:prompt_cache_key] == "host-key"
+      assert options[:api_key] == "gateway-key"
+    end
+
+    test "fresh connections use stable opaque keys for each actor" do
+      request = cache_request(%{session_id: "root-session", agent_id: "child-session"})
+      first = cache_body(request)["prompt_cache_key"]
+      assert first =~ ~r/^lemieux-[0-9a-f]{32}$/
+      refute first =~ "child-session"
+      assert cache_body(request)["prompt_cache_key"] == first
+
+      other = cache_request(%{session_id: "root-session", agent_id: "other-child"})
+      assert cache_body(other)["prompt_cache_key"] != first
+
+      root = cache_request(%{session_id: "root-session"})
+      assert cache_body(root)["prompt_cache_key"] != first
+    end
+
+    test "host keys win and request parameters override provider options" do
+      request = cache_request(%{agent_id: "session"})
+      assert cache_body(request, prompt_cache_key: "host-key")["prompt_cache_key"] == "host-key"
+
+      request = %{request | params: [prompt_cache_key: "request-key"]}
+
+      assert cache_body(request, prompt_cache_key: "host-key")["prompt_cache_key"] ==
+               "request-key"
+    end
+
+    test "false opts out at either layer and missing session identity generates no key" do
+      request = cache_request(%{agent_id: "session"})
+      refute Map.has_key?(cache_body(request, prompt_cache_key: false), "prompt_cache_key")
+
+      request = %{request | params: [prompt_cache_key: false]}
+      refute Map.has_key?(cache_body(request, prompt_cache_key: "host-key"), "prompt_cache_key")
+      refute Map.has_key?(cache_body(cache_request(%{})), "prompt_cache_key")
+    end
+
+    test "another OpenAI-compatible route without the callback receives no automatic key" do
+      config =
+        stream_fixture(self(), [
+          %{
+            "choices" => [
+              %{"index" => 0, "delta" => %{"content" => "hello"}, "finish_reason" => "stop"}
+            ]
+          }
+        ])
+
+      route =
+        {LemieuxTest.StaticRoute,
+         LemieuxTest.StaticRoute.new(endpoint: config.endpoint, models: ["team/coding"])}
+
+      provider = Adapter.new(route: route, max_retries: 0)
+      request = %{cache_request(%{agent_id: "session"}) | model: "relay:team/coding"}
+
+      assert :ok = Provider.run(provider, request, fn _ -> :ok end)
+      assert_receive {:wire, body}
+      refute Map.has_key?(body, "prompt_cache_key")
+    end
+  end
+
+  defp cache_request(context) do
+    Request.new("ixway:team/coding",
+      context: context,
+      entries: [Lemieux.Entry.new(:user, %{"text" => "hello"})]
+    )
+  end
+
+  defp cache_body(request, options \\ []) do
+    config =
+      stream_fixture(self(), [
+        %{
+          "choices" => [
+            %{"index" => 0, "delta" => %{"content" => "hello"}, "finish_reason" => "stop"}
+          ]
+        }
+      ])
+
+    assert :ok =
+             Provider.run(Ixway.provider(config, [max_retries: 0] ++ options), request, fn _ ->
+               :ok
+             end)
+
+    assert_receive {:wire, body}
+    body
+  end
+
   @tag :tmp_dir
   test "startup resolves the default and resume retains the model with a fresh connection", %{
     tmp_dir: tmp_dir

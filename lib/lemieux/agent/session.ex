@@ -24,6 +24,15 @@ defmodule Lemieux.Agent.Session do
   An unanswered request can therefore leave the reported totals partial. Check
   request coverage and terminal run evidence before treating them as full totals.
 
+  Provider retries use the session's shipped policy, just as `lmx` does. A
+  host can tune or disable it through `session_options: [provider_retry: ...]`.
+  The effective policy is retained in the harness snapshot. Observations expose
+  bounded `provider_retries` counters: total count, scheduled delay milliseconds,
+  retries after output, counts by category and delegated count. Delays are what
+  was scheduled, not measured elapsed time; a deadline can cancel a backoff.
+  Failed requests without usage still leave total spend unknown, even when a
+  retry succeeds. Network recovery must not make missing billing disappear.
+
   A host deadline cancels the session and returns `{:error, :timeout, observation}`,
   preserving the terminal transcript and workspace changes. The session is
   given the same deadline as `:deadline_ms`, unless `:session_options` names
@@ -129,10 +138,9 @@ defmodule Lemieux.Agent.Session do
       model: model,
       subscriber: self(),
       cwd: task.cwd,
-      # The lane retries a timed-out attempt itself and counts what it paid
-      # for; a session that also retried underneath it would hide the
-      # network from the measurement the lane exists to make.
-      provider_retry: false,
+      # Inherit the shipped session retry policy (#54). Retry events and the
+      # effective harness snapshot expose network recovery to the lane, while
+      # a host owning its own retry scheduler can opt out in session_options.
       # The deadline `execute/4` enforces, for the session to report: a model
       # is told how long it has only if the session knows (#35).
       deadline_ms: Keyword.get(opts, :timeout_ms, task.timeout_ms)
@@ -179,7 +187,7 @@ defmodule Lemieux.Agent.Session do
 
     try do
       case Session.prompt(session, task.prompt) do
-        :ok -> await(session, id, monitor, bound, [], [])
+        :ok -> await(session, id, monitor, bound, [], [], empty_retries())
         {:error, reason} -> {:error, {:prompt, reason}}
       end
     after
@@ -206,20 +214,43 @@ defmodule Lemieux.Agent.Session do
          monitor,
          {deadline, timeout_reason} = bound,
          direct_usages,
-         delegated_usages
+         delegated_usages,
+         retries
        ) do
     receive do
       {:lemieux, ^id, {:usage, usage}} ->
-        await(session, id, monitor, bound, [usage | direct_usages], delegated_usages)
+        await(session, id, monitor, bound, [usage | direct_usages], delegated_usages, retries)
 
       {:lemieux, ^id, {:subagent, _path, {:usage, usage}}} ->
-        await(session, id, monitor, bound, direct_usages, [usage | delegated_usages])
+        await(session, id, monitor, bound, direct_usages, [usage | delegated_usages], retries)
+
+      {:lemieux, ^id, {:provider_retry, retry}} ->
+        await(
+          session,
+          id,
+          monitor,
+          bound,
+          direct_usages,
+          delegated_usages,
+          count_retry(retries, retry, false)
+        )
+
+      {:lemieux, ^id, {:subagent, _path, {:provider_retry, retry}}} ->
+        await(
+          session,
+          id,
+          monitor,
+          bound,
+          direct_usages,
+          delegated_usages,
+          count_retry(retries, retry, true)
+        )
 
       {:lemieux, ^id, {:finished, reason}} ->
-        observation(session, id, reason, direct_usages, delegated_usages)
+        observation(session, id, reason, direct_usages, delegated_usages, retries)
 
       {:lemieux, ^id, _event} ->
-        await(session, id, monitor, bound, direct_usages, delegated_usages)
+        await(session, id, monitor, bound, direct_usages, delegated_usages, retries)
 
       {:DOWN, ^monitor, :process, _pid, reason} ->
         {:error, {:session_died, reason}}
@@ -229,27 +260,55 @@ defmodule Lemieux.Agent.Session do
         # cancel/2 is synchronous: the session checkpoints partial work before
         # replying. Drain usage it emitted before that reply, then snapshot it
         # before execute/4 terminates the session.
-        {direct, delegated} = drain_usage(id, direct_usages, delegated_usages)
-        observation(session, id, timeout_reason, direct, delegated)
+        {direct, delegated, retries} = drain_events(id, direct_usages, delegated_usages, retries)
+        observation(session, id, timeout_reason, direct, delegated, retries)
     end
   end
 
-  defp drain_usage(id, direct, delegated) do
+  defp drain_events(id, direct, delegated, retries) do
     receive do
       {:lemieux, ^id, {:usage, usage}} ->
-        drain_usage(id, [usage | direct], delegated)
+        drain_events(id, [usage | direct], delegated, retries)
 
       {:lemieux, ^id, {:subagent, _path, {:usage, usage}}} ->
-        drain_usage(id, direct, [usage | delegated])
+        drain_events(id, direct, [usage | delegated], retries)
+
+      {:lemieux, ^id, {:provider_retry, retry}} ->
+        drain_events(id, direct, delegated, count_retry(retries, retry, false))
+
+      {:lemieux, ^id, {:subagent, _path, {:provider_retry, retry}}} ->
+        drain_events(id, direct, delegated, count_retry(retries, retry, true))
 
       {:lemieux, ^id, _event} ->
-        drain_usage(id, direct, delegated)
+        drain_events(id, direct, delegated, retries)
     after
-      0 -> {direct, delegated}
+      0 -> {direct, delegated, retries}
     end
   end
 
-  defp observation(session, id, reason, direct, delegated) do
+  defp empty_retries do
+    %{
+      "count" => 0,
+      "delay_ms" => 0,
+      "after_output" => 0,
+      "delegated_count" => 0,
+      "categories" => %{}
+    }
+  end
+
+  # Keep counters, never the raw reasons or an unbounded list of failures.
+  defp count_retry(retries, retry, delegated?) do
+    category = Atom.to_string(retry.category)
+
+    retries
+    |> Map.update!("count", &(&1 + 1))
+    |> Map.update!("delay_ms", &(&1 + retry.delay_ms))
+    |> Map.update!("after_output", &(&1 + if(retry.after_output, do: 1, else: 0)))
+    |> Map.update!("delegated_count", &(&1 + if(delegated?, do: 1, else: 0)))
+    |> Map.update!("categories", &Map.update(&1, category, 1, fn count -> count + 1 end))
+  end
+
+  defp observation(session, id, reason, direct, delegated, retries) do
     snapshot = Session.snapshot(session)
     metrics = tool_metrics(snapshot.entries)
     measured = usage(direct, delegated)
@@ -275,6 +334,7 @@ defmodule Lemieux.Agent.Session do
        "resources" => Resources.from_entries(snapshot.entries),
        "tool_metrics" => metrics,
        "provider_error" => provider_error(snapshot.entries),
+       "provider_retries" => retries,
        "transcript" => Enum.map(snapshot.entries, &entry/1)
      }}
   end

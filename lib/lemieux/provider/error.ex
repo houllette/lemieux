@@ -14,14 +14,17 @@ defmodule Lemieux.Provider.Error do
   mutate it. Unknown shapes remain unknown rather than being classified from
   provider prose.
 
-  Three exceptions to that last rule are deliberate and narrow. A provider that
+  Four exceptions to that last rule are deliberate and narrow. A provider that
   gives a context overflow no code — Anthropic, Gemini — is recognised by its
   own sentence, but only by the adapter, which knows which provider a request
   went to: see `recognize_overflow/2`. A stream that ended before the answer
   did becomes a `Lemieux.Provider.Interrupted`, because `req_llm` reports two
   such endings as success. And the error event `req_llm`'s Codex provider
   raises, rather than returns, is read back out of the crash it causes: see
-  `recognize_crash/1`.
+  `recognize_crash/1`. A cause-less `ReqLLM.Error.API.Stream` can retain only
+  the lazy stream's inspected Finch/Mint transport error; that exact wrapper
+  is recognised for known dropped connections, without interpreting arbitrary
+  error prose or replacing the original failure.
   """
 
   alias Lemieux.Provider.Interrupted
@@ -95,7 +98,7 @@ defmodule Lemieux.Provider.Error do
                    "invalid_prompt"
                  ])
 
-  @typedoc "A stable policy category derived from typed fields, never error prose."
+  @typedoc "A stable policy category from typed fields or a recognised stream transport wrapper."
   @type category :: :context_limit | :refused | :rate_limit | :server | :timeout | :other
 
   # A gateway in development answers a failed request with its whole debug page —
@@ -598,6 +601,18 @@ defmodule Lemieux.Provider.Error do
   defp dropped?(reason) when reason in @dropped_transport_reasons, do: true
   defp dropped?(%{reason: reason}) when reason in @dropped_transport_reasons, do: true
   defp dropped?(%{cause: cause}) when not is_nil(cause), do: dropped?(cause)
+
+  # #53 retained req_llm's "Stream failed: %Finch.TransportError{...}" but
+  # no cause, so a reset ended the session as :other. The current lazy stream,
+  # adapter and Ixway route preserve the cause; accept the observed legacy
+  # shape only on this typed wrapper, and never override a surviving cause.
+  defp dropped?(%ReqLLM.Error.API.Stream{cause: nil, reason: "Stream failed: " <> detail}) do
+    case Regex.run(~r/\A%(?:Finch|Mint)\.TransportError\{reason: :([a-z]+)(?:, .*)?\}\z/s, detail) do
+      [_whole, name] -> Enum.any?(@dropped_transport_reasons, &(Atom.to_string(&1) == name))
+      nil -> Enum.any?(@dropped_transport_reasons, &(inspect(&1) == detail))
+    end
+  end
+
   defp dropped?(_reason), do: false
 
   # Gated by status first: a sentence only counts in the refusal the provider

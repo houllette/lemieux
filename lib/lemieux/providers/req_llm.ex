@@ -1913,7 +1913,8 @@ defmodule Lemieux.Providers.ReqLLM do
   # last message, so each request reads what the previous one wrote. An
   # explicit `anthropic_prompt_cache: false` — in provider options or request
   # params — turns it off. A route owns its own request shape, so routed
-  # requests are left exactly as the route sent them.
+  # requests are left exactly as the route sent them unless it explicitly
+  # advertises session-derived cache-key support.
   #
   # OpenAI caches without being asked, but routes a hit by `prompt_cache_key`:
   # a request without one may land on a machine that never saw the prefix. A
@@ -1923,7 +1924,11 @@ defmodule Lemieux.Providers.ReqLLM do
   # carries a key derived from its session: a hash of the session's id, so no
   # local identifier leaves the machine, and stable across resume. A host's own
   # key wins, and `prompt_cache_key: false` turns it off.
-  defp with_prompt_cache(options, _target, _request, route) when not is_nil(route), do: options
+  defp with_prompt_cache(options, _target, request, route) when not is_nil(route) do
+    if Route.prompt_cache_key?(route, request),
+      do: with_cache_key(options, request),
+      else: options
+  end
 
   defp with_prompt_cache(options, target, request, nil) do
     cond do

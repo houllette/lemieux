@@ -63,7 +63,12 @@ defmodule Lemieux.Session.Audit do
         },
         tool_profile: Profile.snapshot(state.tool_profile),
         hooks: Map.get(context, "hooks", %{"configured" => state.hooks != []}),
-        workflow: Map.get(context, "workflow", %{}),
+        workflow:
+          Map.put(
+            Map.get(context, "workflow", %{}),
+            "provider_retry",
+            retry_policy_snapshot(state.provider_retry_policy)
+          ),
         compaction: %{
           "auto_compaction" => state.compaction.auto_compaction?,
           "compact_at" => state.compaction.compact_at,
@@ -86,6 +91,18 @@ defmodule Lemieux.Session.Audit do
       )
 
     record_harness_snapshot(state, snapshot)
+  end
+
+  # Describe the effective session policy, never the caller's claim about it.
+  # A classifier is host code: record its presence, not its closure or state.
+  defp retry_policy_snapshot(nil), do: %{"enabled" => false}
+
+  defp retry_policy_snapshot(policy) do
+    policy
+    |> Map.take([:max_attempts, :base_delay_ms, :max_delay_ms, :after_output])
+    |> Contract.json()
+    |> Map.put("enabled", true)
+    |> Map.put("classifier", if(is_nil(policy.classify), do: "default", else: "host"))
   end
 
   # A long tool loop sends many requests under one unchanged harness, and each

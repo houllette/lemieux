@@ -166,7 +166,9 @@ defmodule Lemieux.AgentTest do
                provider: provider,
                model: "test:model",
                supervisor: supervisor,
-               sessions_dir: Path.join(context.tmp_dir, "sessions")
+               sessions_dir: Path.join(context.tmp_dir, "sessions"),
+               # Inspect the first failure; this test does not exercise recovery.
+               session_options: [provider_retry: false]
              )
 
     assert observation["status"] == "failed"

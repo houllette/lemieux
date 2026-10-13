@@ -205,6 +205,39 @@ defmodule Lemieux.SessionRetryTest do
   end
 
   describe "a transient failure before any output" do
+    test "a cause-less transport stream error retries and preserves the original reason",
+         context do
+      transport = %Finch.TransportError{
+        reason: :closed,
+        source: %Mint.TransportError{reason: :closed}
+      }
+
+      error = ReqLLM.Error.API.Stream.exception(reason: "Stream failed: #{inspect(transport)}")
+      owner = self()
+
+      {session, provider} =
+        start_session(context, [[{:error, error}], Scripted.complete("recovered")],
+          provider_retry: [
+            base_delay_ms: 1,
+            classify: fn reason ->
+              send(owner, {:classified, reason})
+              :default
+            end
+          ]
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "go")
+      assert_receive {:classified, ^error}
+
+      assert_receive {:lemieux, ^id,
+                      {:provider_retry, %{attempt: 1, category: :server, after_output: false}}}
+
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      assert length(Scripted.requests(provider)) == 2
+      assert Session.snapshot(session).status == :idle
+    end
+
     test "response metadata remains observable without preventing retry", context do
       metadata = {:response_metadata, %{status: 503, headers: %{"x-id" => ["failed-attempt"]}}}
 

@@ -80,10 +80,27 @@ defmodule Lemieux.Learning.Discovery.ProviderTimeoutTest do
     )
   end
 
-  test "a stalled stream is retried once, and the discarded try is kept beside the attempt it replaced",
-       ctx do
+  test "the shipped session policy recovers a stalled stream within the same attempt", ctx do
     provider = flaky_provider(1)
     assert {:ok, %{evaluations: [evaluation], incomplete: []}} = run(ctx, provider, [])
+
+    assert calls(provider) == 3
+    assert evaluation.objectives["task_success"] == 1.0
+    assert evaluation.within_budget
+    assert evaluation.completeness["usage"] == "partial"
+    refute Evaluation.eligible?(evaluation)
+    assert evaluation.observations["retries"] == []
+    assert evaluation.observations["provider_retries"]["count"] == 1
+    assert evaluation.observations["provider_retries"]["categories"] == %{"timeout" => 1}
+    assert evaluation.observations["provider_retries"]["delay_ms"] == 2_000
+  end
+
+  test "with session retry disabled a stalled attempt is retried once and retained",
+       ctx do
+    provider = flaky_provider(1)
+
+    assert {:ok, %{evaluations: [evaluation], incomplete: []}} =
+             run(ctx, provider, session: [provider_retry: false])
 
     # Three provider calls — the stall, then the two turns that solved it —
     # and one recorded attempt: a retry is not a second sample.
@@ -97,6 +114,7 @@ defmodule Lemieux.Learning.Discovery.ProviderTimeoutTest do
     assert discarded["discarded"] == true
     assert discarded["finish_reason"] == ":error"
     assert discarded["provider_error"]["category"] == "timeout"
+    assert discarded["provider_retries"]["count"] == 0
     assert discarded["provider_error"]["reason"] =~ "timeout"
     assert is_binary(discarded["session_id"])
   end
@@ -104,7 +122,9 @@ defmodule Lemieux.Learning.Discovery.ProviderTimeoutTest do
   test "a stall that outlives its retry is recorded as unmeasured, never as a wrong answer",
        ctx do
     provider = flaky_provider(2)
-    assert {:ok, %{evaluations: [evaluation]}} = run(ctx, provider, [])
+
+    assert {:ok, %{evaluations: [evaluation]}} =
+             run(ctx, provider, session: [provider_retry: false])
 
     # One retry and no more: the lane does not keep paying for a dead stream.
     assert calls(provider) == 2
@@ -123,7 +143,7 @@ defmodule Lemieux.Learning.Discovery.ProviderTimeoutTest do
     provider = flaky_provider(1)
 
     assert {:ok, %{evaluations: [evaluation]}} =
-             run(ctx, provider, retry_provider_timeouts: false)
+             run(ctx, provider, retry_provider_timeouts: false, session: [provider_retry: false])
 
     assert calls(provider) == 1
     assert evaluation.observations["retries"] == []
@@ -154,7 +174,10 @@ defmodule Lemieux.Learning.Discovery.ProviderTimeoutTest do
 
   test "the failure digest clusters a stalled stream apart from a failed grader", ctx do
     {:ok, %{evaluations: [stalled], artifacts: artifacts}} =
-      run(ctx, flaky_provider(2), retry_provider_timeouts: false)
+      run(ctx, flaky_provider(2),
+        retry_provider_timeouts: false,
+        session: [provider_retry: false]
+      )
 
     digest = Digest.build(ctx.plan, [stalled], artifacts, %{})
 

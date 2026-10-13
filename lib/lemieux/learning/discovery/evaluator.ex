@@ -35,13 +35,16 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
       is terminal and within budget with `task_success` 0. The evaluator's
       wall-clock timeouts and a provider stream that stalled mid-answer
       leave an attempt outside budget and therefore ineligible.
-    * **A provider stream timeout is the apparatus, not the candidate.** It is
+    * **A provider stream timeout is the apparatus, not the candidate.** The
+      session first uses its shipped retry policy; `:session` may tune or
+      disable `:provider_retry`. Observed session retries are retained in
+      `"provider_retries"`. A timeout that still ends the attempt is
       retried once by default, the discarded try is retained in the
       evaluation's observations as `"retries"`, and the attempt keeps its own
       number: a retry is never a second sample. If the retry stalls too, the
       attempt is recorded outside budget rather than as a wrong answer,
       because a stream that never delivered measured nothing. Pass
-      `retry_provider_timeouts: false` to record the first failure instead, or
+      `retry_provider_timeouts: false` to keep that terminal attempt instead, or
       supply a `:retry` inside `:benchmark` to decide differently.
 
   Transcripts are retained as content-addressed artifacts and returned beside
@@ -796,6 +799,7 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
       # discarded tries, so an attempt that needed two connections is still
       # one sample and says so.
       "provider_error" => observation["provider_error"],
+      "provider_retries" => observation["provider_retries"],
       "retries" => result["retries"] || [],
       "passed" => result["passed"] == true,
       "grader" => grader(result["grader"]),

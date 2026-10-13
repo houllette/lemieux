@@ -250,6 +250,7 @@ defmodule Lemieux.Benchmark.Runner do
       "wall_time_ms" => result["wall_time_ms"],
       "finish_reason" => get_in(result, ["observation", "finish_reason"]),
       "provider_error" => get_in(result, ["observation", "provider_error"]),
+      "provider_retries" => get_in(result, ["observation", "provider_retries"]),
       "session_id" => get_in(result, ["observation", "session_id"]),
       "cost_usd" => get_in(result, ["observation", "usage", "cost_usd"]),
       "resources" => get_in(result, ["observation", "resources"])

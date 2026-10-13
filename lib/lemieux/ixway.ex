@@ -363,6 +363,7 @@ defmodule Lemieux.Ixway do
           :stream_idle_timeout,
           :total_timeout,
           :max_retries,
+          :prompt_cache_key,
           :propagate_trace_context
         ])
 
@@ -376,6 +377,13 @@ defmodule Lemieux.Ixway do
           ]}}
     end
   end
+
+  # This integration fixes the OpenAI Chat Completions grammar. Advertise
+  # cache-key support explicitly: a model's upstream name cannot establish
+  # what a gateway accepts, and the adapter must not guess for other routes.
+  @impl Lemieux.Provider.Route
+  @spec prompt_cache_key?(connection :: t(), request :: Request.t()) :: true
+  def prompt_cache_key?(_connection, _request), do: true
 
   defp protect_logs do
     case LogFilter.install() do
