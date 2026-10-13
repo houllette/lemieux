@@ -561,14 +561,16 @@ defmodule Lemieux.Writers do
     # A live CLI writer probed USAGE.md before creating it and passed its
     # tests, but the missing read discarded the entire patch as a failed
     # effect. Read-only observations cannot have a missing write effect.
-    # Use the host's certified catalog, never a model-authored claim. Failed
-    # mutations and unknown tools still fail; scope violations and independent
-    # verification retain their own hard gates.
+    # A live scheduler also returned a correct patch after an identical-string
+    # edit. The builtin executor cannot write for that request. Use the host's
+    # certified catalog and recorded effective arguments, never prose claims.
+    # Failed intended mutations, mutation denials and unknown tools still fail; scope
+    # violations and independent verification retain their own hard gates.
     read_only = tools |> Enum.filter(&Tool.read_only?/1) |> Enum.map(&Tool.name/1)
 
     if Enum.any?(entries, fn entry ->
          entry.type == :tool_result and entry.payload["error"] == true and
-           entry.payload["name"] not in read_only
+           entry.payload["name"] not in read_only and not no_op_edit?(entry, tools)
        end),
        do: {:error, :failed_effect},
        else: :ok
@@ -576,6 +578,24 @@ defmodule Lemieux.Writers do
 
   defp successful(result, _tools),
     do: {:error, {:unfinished_writer, result.stop_reason, result.error}}
+
+  defp no_op_edit?(
+         %{
+           payload: %{
+             "name" => name,
+             "outcome" => "error",
+             "arguments" => %{"path" => path, "old" => old, "new" => new}
+           }
+         },
+         tools
+       )
+       when is_binary(path) and path != "" and is_binary(old) and old != "" and old == new do
+    Enum.any?(tools, fn tool ->
+      Tool.name(tool) == name and Tool.descriptor(tool).executor == Lemieux.Tools.Edit
+    end)
+  end
+
+  defp no_op_edit?(_entry, _tools), do: false
 
   defp brief(plan) do
     plan.task <>

@@ -167,8 +167,8 @@ defmodule Lemieux.WritersTest do
         Scripted.new([
           Scripted.tool_call("edit", "edit", %{
             "path" => "one.txt",
-            "old_string" => "missing",
-            "new_string" => "one"
+            "old" => "missing",
+            "new" => "one"
           }),
           Scripted.tool_call("write", "write", %{"path" => "one.txt", "content" => "one\n"}),
           Scripted.complete(report("one"))
@@ -183,6 +183,71 @@ defmodule Lemieux.WritersTest do
     assert writer.error == :failed_effect
     assert {:error, :not_ready} = Writers.integrate(group, [writer.artifact.digest], :owner)
     refute File.exists?(Path.join(ctx.root, "one.txt"))
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "a rejected no-op edit does not discard independently verified effects", ctx do
+    File.write!(Path.join(ctx.root, "unrelated.txt"), "keep my work\n")
+
+    plan =
+      Plan.new(id: "one", task: "Create one.txt", paths: ["one.txt"], tools: ["edit", "write"])
+
+    factory = fn _, _ ->
+      provider =
+        Scripted.new([
+          Scripted.tool_call("write", "write", %{"path" => "one.txt", "content" => "one\n"}),
+          Scripted.tool_call("noop", "edit", %{
+            "path" => "one.txt",
+            "old" => "one\n",
+            "new" => "one\n"
+          }),
+          Scripted.complete(report("one"))
+        ])
+
+      {:ok,
+       [provider: provider, model: "test:model", tools: [Lemieux.Tools.Edit, Lemieux.Tools.Write]]}
+    end
+
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], options(factory, ctx))
+    assert {:ok, %{status: :ready} = result} = Writers.await(group)
+    assert {:ok, _} = Writers.integrate(group, digests(result), :owner)
+    assert File.read!(Path.join(ctx.root, "one.txt")) == "one\n"
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "a denied no-op edit remains a hard failure", ctx do
+    plan =
+      Plan.new(id: "one", task: "Create one.txt", paths: ["one.txt"], tools: ["edit", "write"])
+
+    factory = fn _, _ ->
+      provider =
+        Scripted.new([
+          Scripted.tool_call("write", "write", %{"path" => "one.txt", "content" => "one\n"}),
+          Scripted.tool_call("noop", "edit", %{
+            "path" => "one.txt",
+            "old" => "one\n",
+            "new" => "one\n"
+          }),
+          Scripted.complete(report("one"))
+        ])
+
+      {:ok,
+       [
+         provider: provider,
+         model: "test:model",
+         tools: [Lemieux.Tools.Edit, Lemieux.Tools.Write],
+         hooks: [
+           before_tool_call: fn call, _ ->
+             if call.name == "edit", do: {:deny, "host denied edit"}, else: :allow
+           end
+         ]
+       ]}
+    end
+
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], options(factory, ctx))
+    assert {:ok, %{status: :failed, writers: [writer]}} = Writers.await(group)
+    assert writer.error == :failed_effect
+    assert {:error, :not_ready} = Writers.integrate(group, [writer.artifact.digest], :owner)
     assert :ok = Writers.close(group, :owner)
   end
 
