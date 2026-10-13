@@ -131,6 +131,61 @@ defmodule Lemieux.WritersTest do
     refute File.exists?(Path.join(elem(ctx.workspace, 1).directory, "worktrees"))
   end
 
+  test "a missing read does not discard subsequently verified file effects", ctx do
+    File.write!(Path.join(ctx.root, "unrelated.txt"), "keep my work\n")
+
+    plan =
+      Plan.new(id: "one", task: "Create one.txt", paths: ["one.txt"], tools: ["read", "write"])
+
+    factory = fn _, _ ->
+      provider =
+        Scripted.new([
+          Scripted.tool_call("probe", "read", %{"path" => "one.txt"}),
+          Scripted.tool_call("write", "write", %{"path" => "one.txt", "content" => "one\n"}),
+          Scripted.complete(report("one"))
+        ])
+
+      {:ok,
+       [provider: provider, model: "test:model", tools: [Lemieux.Tools.Read, Lemieux.Tools.Write]]}
+    end
+
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], options(factory, ctx))
+    assert {:ok, %{status: :ready} = result} = Writers.await(group)
+    assert hd(result.writers).artifact.verification["status"] == "passed"
+    assert {:ok, _} = Writers.integrate(group, digests(result), :owner)
+    assert File.read!(Path.join(ctx.root, "one.txt")) == "one\n"
+    assert File.read!(Path.join(ctx.root, "unrelated.txt")) == "keep my work\n"
+    assert :ok = Writers.close(group, :owner)
+  end
+
+  test "a failed mutating tool remains an effect failure after a later write", ctx do
+    plan =
+      Plan.new(id: "one", task: "Create one.txt", paths: ["one.txt"], tools: ["edit", "write"])
+
+    factory = fn _, _ ->
+      provider =
+        Scripted.new([
+          Scripted.tool_call("edit", "edit", %{
+            "path" => "one.txt",
+            "old_string" => "missing",
+            "new_string" => "one"
+          }),
+          Scripted.tool_call("write", "write", %{"path" => "one.txt", "content" => "one\n"}),
+          Scripted.complete(report("one"))
+        ])
+
+      {:ok,
+       [provider: provider, model: "test:model", tools: [Lemieux.Tools.Edit, Lemieux.Tools.Write]]}
+    end
+
+    assert {:ok, group} = Writers.start(ctx.parent, [plan], options(factory, ctx))
+    assert {:ok, %{status: :failed, writers: [writer]}} = Writers.await(group)
+    assert writer.error == :failed_effect
+    assert {:error, :not_ready} = Writers.integrate(group, [writer.artifact.digest], :owner)
+    refute File.exists?(Path.join(ctx.root, "one.txt"))
+    assert :ok = Writers.close(group, :owner)
+  end
+
   test "repository aliases resolve consistently and cannot disguise an inside lease directory",
        ctx do
     root_alias = Path.join(ctx.tmp_dir, "root-alias")

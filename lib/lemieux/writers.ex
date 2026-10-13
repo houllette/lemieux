@@ -457,7 +457,7 @@ defmodule Lemieux.Writers do
 
           with {:ok, result} <-
                  Session.await(session, brief(plan), timeout: state.opts[:timeout_ms]),
-               :ok <- successful(result),
+               :ok <- successful(result, options[:tools]),
                {:ok, report} <- JSON.decode(result.text),
                result = Map.put(result, :report, report),
                {:ok, pending} <-
@@ -557,13 +557,25 @@ defmodule Lemieux.Writers do
          end), do: :ok, else: {:error, :tool_permissions_not_granted}
   end
 
-  defp successful(%{stop_reason: :stop, error: nil, entries: entries}) do
-    if Enum.any?(entries, &(&1.type == :tool_result and &1.payload["error"] == true)),
-      do: {:error, :failed_effect},
-      else: :ok
+  defp successful(%{stop_reason: :stop, error: nil, entries: entries}, tools) do
+    # A live CLI writer probed USAGE.md before creating it and passed its
+    # tests, but the missing read discarded the entire patch as a failed
+    # effect. Read-only observations cannot have a missing write effect.
+    # Use the host's certified catalog, never a model-authored claim. Failed
+    # mutations and unknown tools still fail; scope violations and independent
+    # verification retain their own hard gates.
+    read_only = tools |> Enum.filter(&Tool.read_only?/1) |> Enum.map(&Tool.name/1)
+
+    if Enum.any?(entries, fn entry ->
+         entry.type == :tool_result and entry.payload["error"] == true and
+           entry.payload["name"] not in read_only
+       end),
+       do: {:error, :failed_effect},
+       else: :ok
   end
 
-  defp successful(result), do: {:error, {:unfinished_writer, result.stop_reason, result.error}}
+  defp successful(result, _tools),
+    do: {:error, {:unfinished_writer, result.stop_reason, result.error}}
 
   defp brief(plan) do
     plan.task <>
