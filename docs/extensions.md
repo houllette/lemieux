@@ -281,6 +281,11 @@ session would apply.
 | `Lemieux.Extensions.Checkpoints` | Records what tools change, for `/undo`, `/rewind` and `/redo` ([Checkpoints](tool-contracts.md#checkpoints)) | `checkpoints` | default | default |
 | `LemieuxSystemOneCompaction` | System One compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-system-one-projection-before-compaction)) | `systemone_compaction` | when a provider is complete | when a provider is complete |
 
+Embedding hosts can also opt into
+[`Lemieux.Extensions.RepositoryContext`](repository-context.md), which adds a
+bounded semantic-context tool around explicitly chosen indexes or language
+servers. It is not enabled by the stock CLI/TUI defaults.
+
 "New sessions" means a session `lmx` is equipping a fresh catalog for: a
 resumed session keeps the catalog its transcript recorded. `environment_context`,
 `verify` and `checkpoints` need a personal state directory, so `--config none`

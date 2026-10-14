@@ -9,6 +9,17 @@ API.
 
 ## Unreleased
 
+- Repository context budgets include escaped adapter notes and one shared
+  literal-result allowance. Snapshot queries select record kinds before the
+  candidate cap; map ranking keeps exact matches first and separates repository
+  identities. The syntax index handles default arguments and explicit module
+  prefixes, omits quoted/dynamic definitions, and preserves records when a
+  duplicate manifest entry or another file's stream failure is encountered.
+
+- Session discovery excludes terminated processes while Registry is still
+  consuming their exit notifications, including temporary agent sessions that
+  have already completed synchronous deadline cleanup.
+
 - A writer can correct a built-in write's unread/stale-file precondition refusal
   before verification. Typed evidence certifies that mutation never started;
   permission denials and filesystem write failures remain hard failures.
@@ -20,6 +31,15 @@ API.
   boundaries and verify exact restoration and foreign-edit preservation.
 
 ### Features
+
+- Optional repository context adds bounded maps, definitions, references,
+  dependencies, symbols and diagnostics through host-chosen indexes or
+  language-server adapters. Source digests and current path policy gate every
+  disclosure; stale indexes fall back to bounded literal search. An offline
+  Elixir syntax index supports incremental parsing reuse without executing
+  repository code. No servers or retrieval memory start implicitly, and the
+  stock CLI catalog stays unchanged. See [repository context](docs/repository-context.md)
+  for integration, limits and qualification still required before default use.
 
 - The opt-in `Lemieux.Extensions.Writers` extension exposes bounded writer
   briefs, observation, paginated artifact review and guarded integration to the

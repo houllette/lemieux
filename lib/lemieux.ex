@@ -371,7 +371,7 @@ defmodule Lemieux do
   @spec session(supervisor :: atom(), id :: String.t()) :: {:ok, pid()} | :error
   def session(supervisor \\ Sup, id) when is_binary(id) do
     case Registry.lookup(Sup.registry(supervisor), id) do
-      [{pid, _value}] -> {:ok, pid}
+      [{pid, _value}] -> if Process.alive?(pid), do: {:ok, pid}, else: :error
       [] -> :error
     end
   end
@@ -381,6 +381,12 @@ defmodule Lemieux do
   """
   @spec sessions(supervisor :: atom()) :: [{String.t(), pid()}]
   def sessions(supervisor \\ Sup) do
-    Registry.select(Sup.registry(supervisor), [{{:"$1", :"$2", :_}, [], [{{:"$1", :"$2"}}]}])
+    # Registry consumes DOWN asynchronously. A synchronous terminate_child can
+    # finish first, leaving a dead pid visible (observed after an agent deadline
+    # in CI). Discovery reports live processes rather than registry cleanup
+    # progress. A returned process can still terminate after this observation.
+    Sup.registry(supervisor)
+    |> Registry.select([{{:"$1", :"$2", :_}, [], [{{:"$1", :"$2"}}]}])
+    |> Enum.filter(fn {_id, pid} -> Process.alive?(pid) end)
   end
 end

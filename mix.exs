@@ -334,6 +334,7 @@ defmodule Lemieux.MixProject do
         "docs/acp.md",
         "docs/jobs.md",
         "docs/writers.md",
+        "docs/repository-context.md",
         "docs/configuration.md",
         "docs/troubleshooting.md",
         "docs/embedding.md",
@@ -378,7 +379,9 @@ defmodule Lemieux.MixProject do
         ],
         "Harnesses and shipped extensions": [~r/^Lemieux\.(Extension|Extensions|Harness)(\.|$)/],
         "Hooks and policy": [~r/^Lemieux\.Hooks/],
-        "Context and compaction": [~r/^Lemieux\.(Context|Compaction|Messages|Prompt)(\.|$)/],
+        "Context and compaction": [
+          ~r/^Lemieux\.(Context|Compaction|Messages|Prompt|RepositoryContext)(\.|$)/
+        ],
         "Tools and environments": [
           ~r/^Lemieux\.(Tool|Tools|Environment|WebSearch|WebFetch|Background)/
         ],
