@@ -142,6 +142,7 @@ defmodule Lemieux.MCP.ManagedStdio do
          outstanding_bytes: 0,
          pending: nil,
          options: opts,
+         exit_result: nil,
          awaited?: false
        }}
     else
@@ -194,6 +195,13 @@ defmodule Lemieux.MCP.ManagedStdio do
   defp valid_write?({:write, data}, limit), do: is_binary(data) and byte_size(data) <= limit
 
   @impl true
+  def handle_info({exit_ref, result}, %{process: %{exit_ref: exit_ref}} = state) do
+    # ExCmd can report exit before the pipe reader forwards EOF. Consuming that
+    # receipt as an unrelated message made await_exit/2 time out and turned a
+    # genuine zero exit into unknown EOF under Linux coverage instrumentation.
+    {:noreply, %{state | exit_result: {:received, result}}}
+  end
+
   def handle_info({:read, {:ok, data}}, state) do
     send(state.owner, {self(), {:data, data}})
     {:noreply, %{state | outstanding_bytes: byte_size(data)}}
@@ -270,6 +278,13 @@ defmodule Lemieux.MCP.ManagedStdio do
   end
 
   defp await_exit(state) do
+    # Retain the upstream ownership/cleanup handshake, including its monitor,
+    # even when the asynchronous receipt arrived before we began waiting.
+    case state.exit_result do
+      {:received, result} -> send(self(), {state.process.exit_ref, result})
+      nil -> :ok
+    end
+
     ExCmd.Process.await_exit(state.process, state.options[:close_grace_ms])
   catch
     :exit, _reason -> {:error, :unknown}
