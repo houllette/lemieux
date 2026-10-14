@@ -21,6 +21,15 @@ API.
 
 ### Features
 
+- Optional repository context adds bounded maps, definitions, references,
+  dependencies, symbols and diagnostics through host-chosen indexes or
+  language-server adapters. Source digests and current path policy gate every
+  disclosure; stale indexes fall back to bounded literal search. An offline
+  Elixir syntax index supports incremental parsing reuse without executing
+  repository code. No servers or retrieval memory start implicitly, and the
+  stock CLI catalog stays unchanged. See [repository context](docs/repository-context.md)
+  for integration, limits and qualification still required before default use.
+
 - The opt-in `Lemieux.Extensions.Writers` extension exposes bounded writer
   briefs, observation, paginated artifact review and guarded integration to the
   ordinary model tool catalog. Planning guidance covers single sessions,
