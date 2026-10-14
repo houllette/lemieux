@@ -52,7 +52,11 @@ end
         assert report["settings"]["max_requests"] == 7, report
         bash = next(tool for tool in report["tools"] if tool["name"] == "bash")
         assert bash["implementation"] == ["Lemieux.Tool.Override", "Lemieux.Tools.Bash"]
-        assert report["extensions"][-1]["module"] == "NativeExtensionSmoke"
+        # Host policy may follow this extension; its effective settings and
+        # decorated tool above establish the contribution, not catalog order.
+        loaded = [entry for entry in report["extensions"]
+                  if entry["module"] == "NativeExtensionSmoke"]
+        assert len(loaded) == 1, "expected one loaded native smoke extension"
         result = subprocess.run(command + ["--no-user-extensions"], env=env, cwd=scratch,
                                 capture_output=True, text=True, timeout=90, check=True)
         recovered = report_from(result.stdout)

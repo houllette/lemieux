@@ -64,6 +64,8 @@ defmodule ReleaseSessionSmoke do
         [request] = Scripted.requests(provider)
         true = Enum.any?(request.entries, &(&1.type == :tool_result))
       end
+      File.write!(Path.join(root, phase <> "-verified"),
+        "packaged tools and cross-process resume verified\n")
       {:ok, []}
     after
       Supervisor.stop(supervisor)
@@ -488,7 +490,14 @@ def main():
             if result.returncode:
                 raise RuntimeError(f"{phase}: {result.stderr}")
             report = json.loads(result.stdout)
-            assert report["extensions"][-1]["module"] == "ReleaseSessionSmoke"
+            # Host policy composition may follow user extensions. Identity and
+            # the completed tool/resume assertions establish that this one ran;
+            # its position in a growing catalog does not.
+            loaded = [entry for entry in report["extensions"]
+                      if entry["module"] == "ReleaseSessionSmoke"]
+            assert len(loaded) == 1, f"{phase}: expected one loaded smoke extension"
+            assert (scratch / (phase + "-verified")).read_text() == \
+                "packaged tools and cross-process resume verified\n"
         check_child_environment(replacement, env, scratch, manifest["versions"])
         check_signals(replacement, env, scratch, manifest["versions"])
         check_terminal_restored(replacement, env, scratch)

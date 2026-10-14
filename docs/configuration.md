@@ -1080,6 +1080,8 @@ contract.
   commands in `.claude/commands`.
 - Subagent definitions in `.claude/agents`, used as read-only delegation
   targets.
+- Bounded personal and repository `.claude/rules`, with path-scoped rules
+  activated before matching native file operations; see [Claude rule files](#claude-rule-files).
 - Plugins from a local directory (`--plugin-dir`,
   `lmx plugin install PATH|GIT-URL`) or from a marketplace: a local
   directory, GitHub `OWNER/REPO[@ref]`, any Git URL, or a direct https URL to
@@ -1106,8 +1108,8 @@ What is not supported, or ignored:
   startup and resume only. A hook's `systemMessage` is logged, not shown. See
   [Claude Code settings files](hooks.md#claude-code-settings-files).
 - A repository's own `.claude/settings.json` hooks never run on their own
-  (pass the file with `--hooks` if you trust it), and `.claude/rules` is not
-  imported; a startup notice names either when it is there.
+  (pass the file with `--hooks` if you trust it); a startup notice names them
+  when they are present.
 - Plugin options (`userConfig`, `CLAUDE_PLUGIN_OPTION_*`); plugin LSP
   servers, monitors, output styles, themes, executables and settings, which
   are reported as unsupported; plugin sources from npm, archives or commands;
@@ -1130,7 +1132,8 @@ What is not supported, or ignored:
 | Plugin LSP servers, settings, output styles, themes, channels, monitors, experimental components or executables | Named in a notice, not activated |
 | Repository `.mcp.json` | Started once you trust the file (the terminal UI asks; `lmx mcp trust`); `--no-project-mcp` never starts it |
 | Repository and personal `.claude/agents` | Read-only delegation targets beside the scout; tools that could change things are refused, with a notice |
-| Repository `.claude/rules`, or hooks in `.claude/settings*.json` | Named in a startup notice; not imported or run |
+| Personal and repository `.claude/rules` | Bounded text; unscoped rules load immediately, scoped rules activate before matching native file operations |
+| Repository hooks in `.claude/settings*.json` | Named in a startup notice; never run implicitly |
 
 The rule underneath: instructions and skills are text, and `lmx` reads them;
 hooks, MCP servers and plugins run code, and only run after a decision you

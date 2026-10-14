@@ -18,9 +18,11 @@ SCRIPT = r'''
 defmodule ReleaseStdinSmoke do
   import Kernel, except: [apply: 2]
 
-  def init(config: %{"expected" => expected}) do
+  def init(config: %{"expected" => expected, "receipt" => receipt}) do
     case IO.read(:stdio, :eof) do
-      ^expected -> {:ok, []}
+      ^expected ->
+        File.write!(receipt, expected)
+        {:ok, []}
       other -> {:error, "standard input did not reach the release: #{inspect(other)}"}
     end
   end
@@ -48,14 +50,17 @@ def main():
         manifest = {"schema_version": 1, "name": "stdin-smoke", "module": "ReleaseStdinSmoke",
                     "script": "smoke.exs",
                     "versions": json.loads(diagnostics)["diagnostics"]["versions"],
-                    "options": {"expected": EXPECTED}}
+                    "options": {"expected": EXPECTED, "receipt": str(scratch / "stdin-received")}}
         (extension / "extension.json").write_text(json.dumps(manifest))
         result = subprocess.run(base + ["--extension-dir", str(extension)], env=env, cwd=scratch,
                                 input=EXPECTED, capture_output=True, text=True, timeout=120)
         if result.returncode:
             raise RuntimeError(f"stdin smoke failed ({result.returncode}): {result.stderr}")
         report = json.loads(result.stdout)
-        assert report["extensions"][-1]["module"] == "ReleaseStdinSmoke", report["extensions"]
+        loaded = [entry for entry in report["extensions"]
+                  if entry["module"] == "ReleaseStdinSmoke"]
+        assert len(loaded) == 1, "expected one loaded stdin smoke extension"
+        assert (scratch / "stdin-received").read_text() == EXPECTED
         print("verified the installed launcher passes standard input to the release")
 
 
