@@ -9,6 +9,10 @@ API.
 
 ## Unreleased
 
+- Session discovery excludes terminated processes while Registry is still
+  consuming their exit notifications, including temporary agent sessions that
+  have already completed synchronous deadline cleanup.
+
 - A writer can correct a built-in write's unread/stale-file precondition refusal
   before verification. Typed evidence certifies that mutation never started;
   permission denials and filesystem write failures remain hard failures.
