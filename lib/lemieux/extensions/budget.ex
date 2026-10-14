@@ -16,8 +16,7 @@ defmodule Lemieux.Extensions.Budget do
 
   ## What the model is told, and when
 
-  A notice starting `marker/0` is appended to a tool result: the first one
-  the session produces, and the first one after each of `:thresholds`
+  A notice starting `marker/0` is appended to a tool result: the first one after each of `:thresholds`
   (default 50%, 75% and 90%) of the budget is used — of the time or of the
   requests, whichever is further along. It says what is left ("About 4
   minutes and 6 requests are left (90% used)") and asks for a valid result
@@ -25,6 +24,11 @@ defmodule Lemieux.Extensions.Budget do
   after that. The issue proposed that advice as a sentence of the default
   prompt; here it costs nothing in a session without a limit, which is most
   of them, and arrives with the numbers that make it matter.
+
+  The first-tool notice is opt-in through a `0.0` threshold. The #57 pilot
+  observed it in almost every bounded session without measuring its strategy
+  effect. The default therefore waits for actual budget pressure; this is a
+  conservative disclosure choice, not a claim that an ablation improved quality.
 
   Each threshold is told once. The last one told is a session document
   (`lemieux.budget`), committed only against the revision it read: calls made
@@ -56,6 +60,7 @@ defmodule Lemieux.Extensions.Budget do
   @behaviour Lemieux.Extension
   import Kernel, except: [apply: 2]
 
+  alias Lemieux.Attribution
   alias Lemieux.Harness
   alias Lemieux.Session
 
@@ -64,12 +69,12 @@ defmodule Lemieux.Extensions.Budget do
 
   @type t :: %__MODULE__{thresholds: [float()], enabled: boolean()}
 
-  defstruct thresholds: [0.0, 0.5, 0.75, 0.9], enabled: true
+  defstruct thresholds: [0.5, 0.75, 0.9], enabled: true
 
   @doc """
   Options: `:thresholds`, the shares of the budget (from 0 up to but not
   including 1) at which the model is told what is left, default
-  `[0.0, 0.5, 0.75, 0.9]` — `0.0` being the first tool result; `:enabled`
+  `[0.5, 0.75, 0.9]`. Include `0.0` explicitly to request a first-tool notice; `:enabled`
   (default true). Unknown or malformed options are an error rather than a
   policy that silently never applies.
   """
@@ -106,8 +111,16 @@ defmodule Lemieux.Extensions.Budget do
   defp thresholds?(_thresholds), do: false
 
   @impl Lemieux.Extension
-  def apply(%Harness{} = harness, %__MODULE__{} = config),
-    do: Harness.append_hooks(harness, after_tool_call: &after_tool_call(config, &1, &2, &3))
+  def apply(%Harness{} = harness, %__MODULE__{} = config) do
+    Harness.append_hooks(harness,
+      after_tool_call: fn call, result, context ->
+        case after_tool_call(config, call, result, context) do
+          {:feedback, text} -> {:feedback, Attribution.notice(context, __MODULE__, text, :budget)}
+          :ok -> :ok
+        end
+      end
+    )
+  end
 
   @impl Lemieux.Extension
   def describe(%__MODULE__{} = config),

@@ -50,7 +50,11 @@ defmodule Lemieux.Harness.Explanation do
         |> Enum.filter(&(&1 in Harness.session_fields()))
         |> Enum.map(&Atom.to_string/1)
         |> Enum.sort(),
-      "extensions" => Enum.map(harness.applied, &Map.take(&1, ["module", "digest", "changes"])),
+      "extensions" =>
+        Enum.map(
+          harness.applied,
+          &Map.take(&1, ["module", "digest", "changes", "active", "inactive_reason"])
+        ),
       "contributions" =>
         Enum.map(settings.contributions || [], fn source ->
           %{

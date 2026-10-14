@@ -37,6 +37,11 @@ defmodule Lemieux.Extensions.Delegation do
   reports and the parent does the reasoning that matters. The parent's
   model is the default, which is what the scout always was.
 
+  The delegate schema is exposed after three session requests by default,
+  avoiding its fixed catalog cost on short prompts. `:expose_after_requests`
+  selects 0–1000; 0 exposes it immediately. This does not grant or narrow
+  execution authority, and is not evidence of a benchmark quality improvement.
+
   ## Workspace agents
 
   When `Lemieux.Extensions.Workspace` ran first, its discovery sits in the
@@ -61,6 +66,7 @@ defmodule Lemieux.Extensions.Delegation do
   alias Lemieux.Subagent.Definition
   alias Lemieux.Subagent.Delegate
   alias Lemieux.Tool
+  alias Lemieux.Tool.Exposure
   alias Lemieux.Tools
 
   @delegate_child_max_cost_usd 3.00
@@ -82,6 +88,7 @@ defmodule Lemieux.Extensions.Delegation do
 
   @type state :: %{
           model: String.t(),
+          expose_after_requests: non_neg_integer(),
           priced?: boolean(),
           cwd: Path.t(),
           snapshot: map(),
@@ -100,6 +107,11 @@ defmodule Lemieux.Extensions.Delegation do
   @impl Lemieux.Extension
   @spec init(opts :: keyword()) :: {:ok, state()} | {:error, term()}
   def init(opts) do
+    exposure = Keyword.get(opts, :expose_after_requests, 3)
+
+    unless is_integer(exposure) and exposure in 0..1_000,
+      do: raise(ArgumentError, "expose_after_requests must be 0..1000")
+
     model = scout_model(opts)
     cwd = Keyword.get_lazy(opts, :cwd, &File.cwd!/0)
 
@@ -112,6 +124,7 @@ defmodule Lemieux.Extensions.Delegation do
     {:ok,
      %{
        model: model,
+       expose_after_requests: exposure,
        priced?: priced?,
        cwd: cwd,
        snapshot: workspace_snapshot(cwd),
@@ -137,11 +150,20 @@ defmodule Lemieux.Extensions.Delegation do
         else: tools ++ [tool(state, agents)]
     end)
     |> Map.update!(:notices, &(&1 ++ notices))
+    |> Exposure.after_requests(
+      ["delegate", "subagents"],
+      Map.get(state, :expose_after_requests, 3)
+    )
   end
 
   @impl Lemieux.Extension
-  def describe(%{model: model, priced?: priced?}),
-    do: %{"definitions" => ["repository-scout"], "model" => model, "priced" => priced?}
+  def describe(%{model: model, priced?: priced?} = state),
+    do: %{
+      "definitions" => ["repository-scout"],
+      "model" => model,
+      "priced" => priced?,
+      "expose_after_requests" => Map.get(state, :expose_after_requests, 3)
+    }
 
   # The filesystem is read once in init; applying prepared state is pure,
   # including when a screen and a session consume the same preparation.

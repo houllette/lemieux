@@ -847,8 +847,7 @@ value applies.
 - `max_requests` counts the session's own provider requests, retries and
   compaction included. The repository scout's requests have their own caps
   ([below](#delegated-repository-investigation)); use `--no-delegate` when
-  one number must bound every request. The model is told how many it has, on
-  its first tool result, and what is left at 50%, 75% and 90%
+  one number must bound every request. The model is told what is left at 50%, 75% and 90%
   ([Tell the model what is left](workflows.md#tell-the-model-what-is-left));
   `"disabled_extensions": ["budget"]` stops that.
 - `max_cost_usd` stops before a request whose estimated cost could pass the

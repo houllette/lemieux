@@ -3,6 +3,7 @@ defmodule Lemieux.Session.Prompts do
 
   require Logger
 
+  alias Lemieux.Attribution
   alias Lemieux.Clock
   alias Lemieux.Hooks
   alias Lemieux.Ingress
@@ -301,6 +302,9 @@ defmodule Lemieux.Session.Prompts do
 
   def finish_hook(state, {:stop, _stop_reason}, {:deny, feedback}) do
     if state.turns_taken < state.max_turns do
+      payload = Attribution.stop_payload(feedback)
+
+      feedback = Attribution.text(feedback)
       # Not expanded: this text is a hook's, not a person's, and a policy that
       # wants a file in front of the model can put its contents there itself.
       #
@@ -312,7 +316,7 @@ defmodule Lemieux.Session.Prompts do
       # `Lemieux.Transcript.stop_hook?/1` reads the mark.
       state
       |> Input.begin(:extension_injected, feedback)
-      |> Core.append({:user, %{"text" => feedback, "stop_hook" => true}, nil})
+      |> Core.append({:user, payload, nil})
       |> Map.put(:stop_hook_active, true)
       |> Compacting.continue()
     else

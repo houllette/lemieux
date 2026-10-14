@@ -222,6 +222,19 @@ defmodule Lemieux.Extensions.VerifyTest do
       assert {:ok, %{last: %{"status" => "passed"}}} = Verify.status(session)
     end
 
+    test "an edit without a discovered command records explicit runtime inactivity", ctx do
+      {session, provider} = start(ctx, edit_then("Done."), [])
+      assert run(session, "write the file") == :stop
+      id = Session.id(session)
+      assert_receive {:lemieux, ^id, {:run_evidence, evidence}}
+
+      assert evidence.extensions["activity"][inspect(Verify)] ==
+               %{"state" => "inactive", "reason" => "no_command"}
+
+      assert length(Scripted.requests(provider)) == 2
+      assert messages(session) == []
+    end
+
     test "a turn that edited nothing is not checked", ctx do
       {session, _provider} =
         start(ctx, [Scripted.complete("Nothing to change.")], command: "exit 1")

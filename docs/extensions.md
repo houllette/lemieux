@@ -23,6 +23,32 @@ Then use the [worked extension](#a-worked-extension),
 [installation guide](#installing-an-extension-into-lmx), or
 [recipes](#extension-recipes) for your next change.
 
+## Extension accounting and exposure
+
+Each request snapshot measures canonical catalog JSON bytes per tool and source
+extension, with array framing reported separately. Ownership comes from the last
+assembly contribution whose descriptor digest still matches; a host replacement
+is `host_or_unknown`. These are canonical bytes, not provider wire bytes or an
+inferred share of billed tokens.
+
+Run evidence includes `extensions.accounting`: repeated catalog bytes, committed
+notice counts/bytes/categories, and requests plus reported usage in turns each
+extension started. Budget, continuation, completion-check and verification feedback
+carry source metadata only when actually injected. Missing usage stays unknown or
+partial; configured extensions that never fired have explicit zero counters.
+`lmx explain` and harness snapshots also report configured inactive extensions and
+reasons, with runtime inactivity in `extensions.activity`. Source labels describe
+attribution and confer no authority.
+
+Budget's default thresholds are `[0.5, 0.75, 0.9]`; add `0.0` for the initial
+notice. Search exposes `glob` after one request by default (`glob_after_requests:
+0` exposes it immediately). Delegation exposes its schema after three requests
+(`expose_after_requests: 0` exposes it immediately). These thresholds count session
+requests. A host can use `Lemieux.Tool.Exposure.after_requests/3` for its own tools.
+Disclosure changes catalog cost, while the current tool/approval policy continues
+to govern execution. These defaults and counters do not establish a benchmark
+quality effect; paired hosted ablations remain separate qualification.
+
 ## Local status and commands
 
 An extension can append `Lemieux.Contribution.new!("my_extension", MyStatus, state,

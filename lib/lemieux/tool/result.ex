@@ -27,6 +27,8 @@ defmodule Lemieux.Tool.Result do
   still has the text.
   """
 
+  # `metadata["extension_notices"]` is reserved for committed post-tool hook
+  # accounting. The runner replaces tool-supplied values before appending feedback.
   alias Lemieux.Tool.Attachment
 
   @typedoc "A renderer-neutral, transcript-safe tool result."

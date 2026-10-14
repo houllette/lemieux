@@ -12,6 +12,7 @@ defmodule Lemieux.RequestSnapshot do
   HTTP.
   """
 
+  alias Lemieux.Attribution
   alias Lemieux.Entry
   alias Lemieux.Request
   alias Lemieux.Tool
@@ -30,6 +31,12 @@ defmodule Lemieux.RequestSnapshot do
       "schema_version" => @version,
       "id" => Keyword.get_lazy(opts, :id, &Lemieux.ID.generate/0),
       "kind" => opts |> Keyword.get(:kind, :turn) |> to_string(),
+      "extension_source" =>
+        Keyword.get_lazy(opts, :extension_source, fn -> Attribution.request_source(request) end),
+      "extension_turn_category" =>
+        Keyword.get_lazy(opts, :extension_turn_category, fn ->
+          Attribution.request_category(request)
+        end),
       "model" => request.model,
       "system" => request.system,
       "system_sha256" => digest(request.system || ""),
@@ -134,7 +141,7 @@ defmodule Lemieux.RequestSnapshot do
 
         %{
           "enabled" => enabled?,
-          "disabled_reason" => if(enabled?, do: nil, else: "profile_or_session"),
+          "disabled_reason" => disabled_reason(enabled?, tool, request),
           "descriptor" => tool |> Tool.descriptor() |> Descriptor.to_map()
         }
       end)
@@ -154,6 +161,17 @@ defmodule Lemieux.RequestSnapshot do
       "token_count" => token_count,
       "tools" => tools
     }
+    |> Map.merge(
+      Attribution.catalog(request.tools, model_tools, Keyword.get(opts, :tool_owners, []))
+    )
+  end
+
+  defp disabled_reason(true, _tool, _request), do: nil
+
+  defp disabled_reason(false, tool, request) do
+    if Tool.name(tool) in Map.get(request.context, :deferred_tools, []),
+      do: "deferred_exposure",
+      else: "profile_or_session"
   end
 
   defp merge_catalog(catalog, request_tools) do

@@ -57,7 +57,16 @@ defmodule Lemieux.Extensions.ApplyPatch do
 
   @impl Lemieux.Extension
   def describe(state) do
-    %{"model" => state.model, "active" => state.active?, "mode" => Atom.to_string(state.mode)}
+    %{
+      "model" => state.model,
+      "active" => state.active?,
+      "mode" => Atom.to_string(state.mode),
+      "inactive_reason" =>
+        if(state.active?,
+          do: "edit_unavailable_or_already_present",
+          else: "model_not_supported"
+        )
+    }
   end
 
   @doc """

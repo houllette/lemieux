@@ -129,6 +129,7 @@ defmodule Lemieux.Extensions.Continuation do
   @behaviour Lemieux.Extension
   import Kernel, except: [apply: 2]
 
+  alias Lemieux.Attribution
   alias Lemieux.Entry
   alias Lemieux.Extensions.Planning
   alias Lemieux.Extensions.Workflow
@@ -196,8 +197,20 @@ defmodule Lemieux.Extensions.Continuation do
   defp bounded?(value, most), do: is_integer(value) and value in 0..most
 
   @impl Lemieux.Extension
-  def apply(%Harness{} = harness, %__MODULE__{} = config),
-    do: Harness.append_hooks(harness, stop: &stop(config, &1, &2))
+  def apply(%Harness{} = harness, %__MODULE__{} = config) do
+    Harness.append_hooks(harness,
+      stop: fn reason, context ->
+        case stop(config, reason, context) do
+          {:deny, text} -> {:deny, Attribution.turn(context, __MODULE__, text, category(text))}
+          :allow -> :allow
+        end
+      end
+    )
+  end
+
+  defp category(@check_marker <> _rest), do: :completion_check
+  defp category(@output_marker <> _rest), do: :output_continuation
+  defp category(_text), do: :continuation
 
   @impl Lemieux.Extension
   def describe(%__MODULE__{} = config) do
