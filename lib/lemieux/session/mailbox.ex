@@ -38,9 +38,15 @@ defmodule Lemieux.Session.Mailbox do
   def message({:document_timeout, ref}, %{document_request: %{ref: ref}} = state),
     do: {:noreply, DocumentRequest.cancel(state, :timeout)}
 
+  def message({:approval_timeout, call_id, request_id}, state),
+    do: Approvals.expire(state, call_id, request_id)
+
   def message({:park_timeout, call_id}, state) do
     case Map.pop(state.parked, call_id) do
       {nil, _parked} ->
+        {:noreply, state}
+
+      {%{request: %{}}, _parked} ->
         {:noreply, state}
 
       {waiting, parked} ->

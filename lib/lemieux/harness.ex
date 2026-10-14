@@ -125,6 +125,9 @@ defmodule Lemieux.Harness do
           tool_timeout_ms: pos_integer() | nil,
           tool_output_bytes: pos_integer() | nil,
           approval_timeout: pos_integer() | nil,
+          approval_mode: :legacy | :scoped | nil,
+          approval_ttl_ms: pos_integer() | nil,
+          approval_context: (map() -> term()) | nil,
           ingress: Lemieux.Ingress.t(),
           input_capture_bytes: non_neg_integer() | nil,
           input_capture_ttl_ms: pos_integer() | nil,
@@ -172,7 +175,7 @@ defmodule Lemieux.Harness do
   @session_fields ~w(system tools host_tools disabled_tools tool_profile hooks compaction messages
                      guard environment mcp_servers mcp_transports mcp_auth mcp_stdio_launcher
                      provider_retry max_turns max_cost_usd max_requests job_limits tool_timeout_ms
-                     tool_output_bytes approval_timeout ingress input_capture_bytes input_capture_ttl_ms context_window auto_compaction compact_at
+                     tool_output_bytes approval_timeout approval_mode approval_ttl_ms approval_context ingress input_capture_bytes input_capture_ttl_ms context_window auto_compaction compact_at
                      input_token_counter keep
                      keep_recent_tokens
                      keep_attachments summary_sections summary_model summary_params

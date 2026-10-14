@@ -233,6 +233,7 @@ defmodule Lemieux.Session.State do
     wave: %Wave{},
     parked: %{},
     approval_timeout: nil,
+    approval: nil,
     reversed_steers: [],
     reversed_follow_ups: [],
     subagent_groups: %{},

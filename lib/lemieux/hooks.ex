@@ -126,6 +126,7 @@ defmodule Lemieux.Hooks do
 
   require Logger
 
+  alias Lemieux.Approval
   alias Lemieux.Hooks.Claude
   alias Lemieux.Hooks.Command
   alias Lemieux.Hooks.SessionContext
@@ -195,6 +196,16 @@ defmodule Lemieux.Hooks do
           context :: Tool.context()
         ) :: {:ok, map()} | {:deny, String.t()}
   def before_tool_call(hooks, call, context) do
+    case authorize_tool_call(hooks, call, context) do
+      {:ok, args, _grants} -> {:ok, args}
+      {:deny, _reason} = denied -> denied
+    end
+  end
+
+  @doc false
+  @spec authorize_tool_call(hooks :: t(), call :: Provider.tool_call(), context :: Tool.context()) ::
+          {:ok, map(), [String.t()]} | {:deny, String.t()}
+  def authorize_tool_call(hooks, call, context) do
     hooks
     |> Keyword.get_values(:before_tool_call)
     |> Enum.reduce_while({:ok, Map.get(call, :arguments, %{}), context}, fn hook,
@@ -217,12 +228,16 @@ defmodule Lemieux.Hooks do
         {:approved, by, rewritten} ->
           {:cont, {:ok, rewritten, Map.put(context, :approved_by, by)}}
 
+        {:scoped_approved, scope, approved_args} ->
+          context = Map.update(context, :approval_grants, [scope], &[scope | &1])
+          {:cont, {:ok, approved_args, context}}
+
         {:deny, reason} ->
           {:halt, {:deny, reason}}
       end
     end)
     |> case do
-      {:ok, args, _context} -> {:ok, args}
+      {:ok, args, context} -> {:ok, args, Map.get(context, :approval_grants, [])}
       {:deny, reason} -> {:deny, reason}
     end
   end
@@ -248,6 +263,20 @@ defmodule Lemieux.Hooks do
 
   # The call itself keeps its keys; details only add to it. A policy cannot
   # change which call a person believes they are approving.
+  defp park(call, details, %{approval_mode: :scoped} = context) do
+    with :ok <- Approval.validate(call.arguments, context) do
+      payload = details |> Map.drop([:id, :name, :arguments]) |> Map.merge(call)
+      scope = context.approval_scope.(call.arguments)
+
+      case Session.park(context.session, call.id, :approval, payload, approval_scope: scope) do
+        {:allow_once, ^scope} -> {:scoped_approved, scope, call.arguments}
+        {:request_rewrite, args} -> park(%{call | arguments: args}, details, context)
+        {:deny, _reason} = denied -> denied
+        _unavailable -> {:deny, "scoped approval is unavailable"}
+      end
+    end
+  end
+
   defp park(call, details, context) do
     payload = details |> Map.drop([:id, :name, :arguments]) |> Map.merge(call)
     Session.park(context.session, call.id, :approval, payload)

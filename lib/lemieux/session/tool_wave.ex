@@ -301,6 +301,8 @@ defmodule Lemieux.Session.ToolWave do
       supervisor: state.supervisor,
       tool_output_bytes: state.tool_output_bytes,
       deadline_ms: deadline_ms,
+      run_id: get_in(state.input, [:current, :run_id]),
+      approval_runtime: state.approval,
       input_modalities: input_modalities(state)
     }
     |> Map.merge(Input.context(state))

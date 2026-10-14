@@ -636,59 +636,17 @@ defmodule Lemieux.Session.Calls do
   # running: a `write` parked for approval had two minutes, so a person who took
   # three to decide found the call already timed out — and their "yes" recorded
   # as an approval of a call that never ran.
-  def call({:park, call_id, kind, payload, opts}, from, state) do
-    timer = Approvals.park_timer(state, state.approval_timeout, call_id)
-    state = Approvals.pause_tool_clock(state, call_id)
+  def call({:park, call_id, kind, payload, opts}, from, state),
+    do: Approvals.park(state, from, call_id, kind, payload, opts)
 
-    parked =
-      Map.put(state.parked, call_id, %{
-        from: from,
-        kind: kind,
-        payload: payload,
-        timer: timer,
-        timeout_reply: Keyword.get(opts, :timeout_reply)
-      })
+  def call({:approval_request, call_id}, _from, state),
+    do: {:reply, Approvals.request_for(state, call_id), state}
 
-    # Deliberately no reply: this call is answered later, by `resolve_tool/3`,
-    # `answer/3` or the timeout. The task that made it waits; the session goes
-    # on answering everything else.
-    state =
-      state
-      |> Map.put(:parked, parked)
-      |> Core.append(
-        {:approval, Approvals.approval_payload(call_id, kind, :pending, payload), nil}
-      )
-      |> Core.emit({Approvals.announcement(kind), payload})
-      |> Prompts.observe_attention(%{state: :waiting, call_id: call_id, kind: kind})
+  def call({:resolve_approval, request, decision, opts}, from, state),
+    do: Approvals.resolve_scoped(state, from, request, decision, opts)
 
-    {:noreply, state}
-  end
-
-  def call({:resolve, call_id, resolution}, _from, state) do
-    case Map.pop(state.parked, call_id) do
-      {nil, _parked} ->
-        {:reply, {:error, :unknown_call}, state}
-
-      {waiting, parked} ->
-        state =
-          state
-          |> Map.put(:parked, parked)
-          |> Core.append({
-            :approval,
-            Approvals.approval_payload(
-              call_id,
-              waiting.kind,
-              Approvals.resolution_status(resolution),
-              resolution
-            ),
-            nil
-          })
-          |> Prompts.observe_working()
-          |> Approvals.release(call_id, waiting, Approvals.answer_for(resolution))
-
-        {:reply, :ok, state}
-    end
-  end
+  def call({:resolve, call_id, resolution}, _from, state),
+    do: Approvals.resolve_legacy(state, call_id, resolution)
 
   def call({:steer, text}, _from, state) do
     {:reply, :ok, %{state | reversed_steers: [text | state.reversed_steers]}}

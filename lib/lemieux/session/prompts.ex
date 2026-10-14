@@ -485,9 +485,18 @@ defmodule Lemieux.Session.Prompts do
   defp drop_parked(%{parked: parked} = state) when map_size(parked) == 0, do: state
 
   defp drop_parked(state) do
-    Enum.each(state.parked, fn {_call_id, waiting} ->
-      Approvals.cancel_timer(state, waiting.timer)
-    end)
+    state =
+      Enum.reduce(state.parked, state, fn {call_id, waiting}, state ->
+        Approvals.cancel_timer(state, waiting.timer)
+
+        if Map.get(waiting, :request),
+          do:
+            Core.append(
+              state,
+              {:approval, Approvals.record(call_id, waiting, :cancelled, %{}), nil}
+            ),
+          else: state
+      end)
 
     %{state | parked: %{}} |> observe_working()
   end

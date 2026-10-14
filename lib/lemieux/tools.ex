@@ -21,6 +21,7 @@ defmodule Lemieux.Tools do
   the exit into the same shape.
   """
 
+  alias Lemieux.Approval
   alias Lemieux.Execution
   alias Lemieux.Hooks
   alias Lemieux.Provider
@@ -169,7 +170,11 @@ defmodule Lemieux.Tools do
     with {:ok, tool} <- fetch(tools, call.name),
          descriptor = Tool.descriptor(tool),
          context = Map.put(context, :tool_descriptor, Descriptor.to_map(descriptor)),
-         {:ok, args} <- Hooks.before_tool_call(hooks, call, context),
+         {runtime, context} = Map.pop(context, :approval_runtime),
+         context = approval_context(runtime, tool, context),
+         {:ok, args, grants} <- Hooks.authorize_tool_call(hooks, call, context),
+         :ok <- Approval.validate(args, context),
+         :ok <- Approval.verify(grants, args, context),
          {:ok, token} <-
            Execution.start(context[:execution], %{
              "kind" => "tool",
@@ -207,6 +212,13 @@ defmodule Lemieux.Tools do
 
       {:deny, reason} ->
         error(call, "denied: #{reason}", :denied)
+    end
+  end
+
+  defp approval_context(runtime, tool, context) do
+    case context[:approval_factory] do
+      nil -> Approval.context(runtime, tool, context)
+      factory -> factory.(tool, context)
     end
   end
 

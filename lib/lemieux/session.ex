@@ -429,6 +429,8 @@ defmodule Lemieux.Session do
     * `:ingress` — runtime `{module, state}` implementing `Lemieux.Ingress`; never restored.
     * `:input_capture_bytes` and `:input_capture_ttl_ms` — opt-in, bounded original-input
       capture for native hooks (`Lemieux.Input`); default capture is disabled.
+    * `:approval_mode`, `:approval_ttl_ms` and `:approval_context` — opt-in scoped
+      resolution (`Lemieux.Approval`); legacy resolution remains the default.
     * `:approval_timeout` — how long a parked approval, `ask_user` question or
       MCP elicitation waits, or `:infinity` for a host where somebody is
       always there to answer eventually. Defaults to five minutes. The tool's
@@ -999,9 +1001,25 @@ defmodule Lemieux.Session do
   got no error would believe it had approved something it had not.
   """
   @spec resolve_tool(session :: session(), call_id :: String.t(), decision :: Hooks.decision()) ::
-          :ok | {:error, :unknown_call}
+          :ok | {:error, :unknown_call | :unscoped_resolution | :invalid_resolution}
   def resolve_tool(session, call_id, decision) when is_binary(call_id),
     do: GenServer.call(session, {:resolve, call_id, {:decision, decision}})
+
+  @doc "Reads a live scoped challenge from the existing pending queue."
+  @spec approval_request(session :: session(), call_id :: String.t()) ::
+          {:ok, Lemieux.Approval.Request.t()} | {:error, :unknown_call | :unscoped_resolution}
+  def approval_request(session, call_id),
+    do: GenServer.call(session, {:approval_request, call_id})
+
+  @doc "Resolves a live scoped request using a claim verified by the runtime host ingress."
+  @spec resolve_approval(
+          session :: session(),
+          request :: Lemieux.Approval.Request.t(),
+          decision :: Lemieux.Approval.decision(),
+          opts :: keyword()
+        ) :: :ok | {:error, atom()}
+  def resolve_approval(session, request, decision, opts \\ []),
+    do: GenServer.call(session, {:resolve_approval, request, decision, opts})
 
   @doc """
   Answers a question a tool asked.

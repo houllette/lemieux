@@ -1,6 +1,7 @@
 defmodule Lemieux.Session.Boot do
   @moduledoc false
 
+  alias Lemieux.Approval
   alias Lemieux.Contract
   alias Lemieux.Environment
   alias Lemieux.Hooks
@@ -273,6 +274,7 @@ defmodule Lemieux.Session.Boot do
            # somebody to answer.
            parked: %{},
            approval_timeout: Setup.approval_timeout_option(opts),
+           approval: Approval.options(opts),
            # Newest first, like the transcript, and for the same reason.
            reversed_steers: [],
            reversed_follow_ups: [],

@@ -77,6 +77,18 @@ defmodule Lemieux.Ingress do
     end
   end
 
+  @doc false
+  @spec audit(metadata :: map()) :: map()
+  def audit(metadata),
+    do: %{
+      "version" => 1,
+      "source" => Atom.to_string(metadata.source),
+      "attested" => metadata.attested?,
+      "ingress" => metadata.ingress,
+      "actor" => metadata.actor,
+      "channel" => metadata.channel
+    }
+
   defp safe_metadata(module, source, metadata) do
     actor = Map.get(metadata, :actor)
     channel = Map.get(metadata, :channel)
