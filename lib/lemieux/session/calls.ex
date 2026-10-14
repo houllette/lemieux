@@ -11,6 +11,7 @@ defmodule Lemieux.Session.Calls do
   alias Lemieux.Session.Accounting
   alias Lemieux.Session.Approvals
   alias Lemieux.Session.Aside
+  alias Lemieux.Session.Boot
   alias Lemieux.Session.Catalog
   alias Lemieux.Session.Compacting
   alias Lemieux.Session.Core
@@ -36,6 +37,9 @@ defmodule Lemieux.Session.Calls do
              (request in [:mcp_status, :tool_status, :tool_catalog] or
                 (is_tuple(request) and elem(request, 0) == :set_tool_access)),
       do: {:noreply, %{state | mcp_waiters: [{request, from} | state.mcp_waiters]}}
+
+  def call(:contribution_context, _from, state),
+    do: {:reply, {state.contribution_runtime, Boot.contribution_context(state)}, state}
 
   def call(:continue, _from, %{recovery_enabled?: false} = state),
     do: {:reply, {:error, :recovery_not_enabled}, state}

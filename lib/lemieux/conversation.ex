@@ -1073,6 +1073,9 @@ defmodule Lemieux.Conversation do
   def event(conversation, {:export_result, {:error, reason}}),
     do: ready_unless_busy(conversation, [{:say, "could not export: #{describe(reason)}"}])
 
+  def event(conversation, {:extension_result, report}) when is_binary(report),
+    do: ready_unless_busy(conversation, [{:say, report}])
+
   def event(conversation, {:doctor_result, report}) when is_binary(report),
     do: ready_unless_busy(conversation, [{:say, report}])
 

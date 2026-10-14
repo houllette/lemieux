@@ -23,6 +23,28 @@ Then use the [worked extension](#a-worked-extension),
 [installation guide](#installing-an-extension-into-lmx), or
 [recipes](#extension-recipes) for your next change.
 
+## Local status and commands
+
+An extension can append `Lemieux.Contribution.new!("my_extension", MyStatus, state,
+commands: %{"cancel" => :cancel})` to `harness.contributions`. Implement
+`status/2` and, for local commands, `command/4`. Return bounded data such as
+`%{state: :ready, message: "workspace available", badge: "OK", pending: 0}`.
+`open/2` optionally starts an observer linked to its supplied lifecycle owner;
+see `Lemieux.Contribution` for startup and teardown ownership.
+
+`Session.extension_status/1` and `Session.extension_command/4` use the current
+session environment. `/status` and `/status my_extension cancel` run outside the
+terminal draw loop. `mix lmx status` and `mix lmx status my_extension cancel`
+inspect currently selected configuration without starting a session, connecting
+MCP or sending a model request. Selected extensions still execute trusted
+initialization code. Callback code is never restored from a transcript.
+
+Namespaces are unique. Commands declare observation or cancellation, and their
+results are status data; they never grant approval. A refresh cannot hide network
+or billed work behind this local contract. Keep credentials, identities, prompts
+and raw command output out of status. Missing/replaced environments and failed or
+expired callbacks produce explicit unavailable/error states.
+
 ## The harness
 
 `Lemieux.Harness` is a struct holding every seam's current setting. Its

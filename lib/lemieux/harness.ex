@@ -105,6 +105,7 @@ defmodule Lemieux.Harness do
   @type t :: %__MODULE__{
           system: String.t() | nil | :default,
           tools: [Tool.t()] | nil,
+          contributions: [Lemieux.Contribution.t()] | nil,
           host_tools: [Tool.t()] | nil,
           disabled_tools: [String.t()] | nil,
           tool_profile: term(),
@@ -173,7 +174,7 @@ defmodule Lemieux.Harness do
   # without a session option of the same name would be passed to a session
   # that ignores it; keep the two in step.
   @session_fields ~w(system tools host_tools disabled_tools tool_profile hooks compaction messages
-                     guard environment mcp_servers mcp_transports mcp_auth mcp_stdio_launcher
+                     guard environment contributions mcp_servers mcp_transports mcp_auth mcp_stdio_launcher
                      provider_retry max_turns max_cost_usd max_requests job_limits tool_timeout_ms
                      tool_output_bytes approval_timeout approval_mode approval_ttl_ms approval_context ingress input_capture_bytes input_capture_ttl_ms context_window auto_compaction compact_at
                      input_token_counter keep

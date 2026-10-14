@@ -213,6 +213,7 @@ defmodule Lemieux.Session do
   use GenServer, restart: :temporary
 
   alias Lemieux.Context
+  alias Lemieux.Contribution.Runtime, as: ContributionRuntime
   alias Lemieux.Entry
   alias Lemieux.Evidence.Run, as: RunEvidence
   alias Lemieux.Harness.Snapshot, as: HarnessSnapshot
@@ -426,6 +427,9 @@ defmodule Lemieux.Session do
       tool is told the deadline it actually got as `deadline_ms` in its
       context, so one that waits on something else can hand that something
       a shorter clock.
+    * `:contributions` — runtime `Lemieux.Contribution` sources for provider-free
+      status and local commands. Namespaces are unique; callbacks and observers
+      are current host code and are never restored from the transcript.
     * `:ingress` — runtime `{module, state}` implementing `Lemieux.Ingress`; never restored.
     * `:input_capture_bytes` and `:input_capture_ttl_ms` — opt-in, bounded original-input
       capture for native hooks (`Lemieux.Input`); default capture is disabled.
@@ -1522,6 +1526,25 @@ defmodule Lemieux.Session do
           {:ok, %{entries: non_neg_integer()}} | {:error, :busy | :nothing_to_do}
   def clear(session), do: GenServer.call(session, :clear)
 
+  @doc "Provider-free bounded extension status, evaluated outside the session process."
+  @spec extension_status(session :: session()) :: [map()]
+  def extension_status(session) do
+    {runtime, context} = GenServer.call(session, :contribution_context)
+    ContributionRuntime.status(runtime, context)
+  end
+
+  @doc "Run an explicitly declared local observation or cancellation command; never grants approval."
+  @spec extension_command(
+          session :: session(),
+          namespace :: String.t(),
+          name :: String.t(),
+          args :: String.t()
+        ) :: {:ok, map()} | {:error, atom()}
+  def extension_command(session, namespace, name, args \\ "") do
+    {runtime, context} = GenServer.call(session, :contribution_context)
+    ContributionRuntime.command(runtime, namespace, name, args, context)
+  end
+
   @impl GenServer
   def init(opts), do: Boot.boot(opts)
 
@@ -1539,6 +1562,7 @@ defmodule Lemieux.Session do
 
   @impl GenServer
   def terminate(reason, state) do
+    ContributionRuntime.close(state.contribution_runtime)
     DocumentRequest.cancel(state, :cancelled)
     Hooks.session_end(state.hooks, reason, Prompts.hook_context(state))
     :ok

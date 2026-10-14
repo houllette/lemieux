@@ -59,6 +59,11 @@ defmodule Lemieux.CLI.Help do
 
   @doc "The topic a command's `--help` prints, when it has one of its own."
   @spec command(command :: String.t()) :: {:ok, String.t()} | :none
+  def command("status"),
+    do:
+      {:ok,
+       "lmx status [NAMESPACE COMMAND [ARGUMENTS]] [options]\n\nInspect current extension readiness or run an explicitly local observation/cancellation command. Sends no model request; uses current configured callbacks and environment. /status inspects a live terminal session."}
+
   def command("plugin"), do: topic("plugins")
   def command("extension"), do: topic("extensions")
   def command("mcp"), do: topic("mcp")
@@ -104,6 +109,7 @@ defmodule Lemieux.CLI.Help do
       lmx jobs COMMAND             Submit, watch and recover bounded background work
       lmx log SESSION               Print a stored conversation
       lmx fork SESSION [CUT]        Copy a conversation to branch from it
+      lmx status [options]          Inspect local extension readiness
       lmx explain [options]         Show what a session would start with (JSON)
       lmx mcp list|trust|import     Manage MCP servers (lmx help mcp)
       lmx plugin install|list|remove Manage Claude Code-compatible plugins
@@ -139,7 +145,6 @@ defmodule Lemieux.CLI.Help do
     #{claude_code()}
     Exit status (lmx run): 0 answered, 1 other, 2 usage, 3 credentials,
     4 limit reached, 5 cancelled, 6 provider error.
-
     #{footer()}
     """
   end
