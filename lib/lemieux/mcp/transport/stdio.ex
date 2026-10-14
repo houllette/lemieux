@@ -19,6 +19,16 @@ defmodule Lemieux.MCP.Transport.Stdio do
   not to, and one stray line should not take down a session that is otherwise
   working.
 
+  Frames, incomplete buffers, total received bytes and discarded diagnostics
+  have finite limits (`Lemieux.MCP.StdioLimits`). Oversized input or a busy
+  outbound Port ends the connection explicitly. Invalid stdout contributes
+  only to a byte count; its contents are never logged. Raw Port delivery itself
+  is asynchronous and its owner's mailbox is not a bounded pipe. A host needing
+  slow-consumer backpressure returns `Lemieux.MCP.ManagedStdio.launch/5` from
+  its existing launcher: the same framing consumes one acknowledged chunk at
+  a time. Cancelling one MCP request remains a protocol notification, while
+  closing the transport ends all calls and its pipes.
+
   ## Two ways to wait for a reply
 
   During the handshake the client is the only thing talking to the server, and
@@ -52,7 +62,8 @@ defmodule Lemieux.MCP.Transport.Stdio do
   lemieux's own. An embedding host passes `:mcp_stdio_launcher` to the session
   to own the process boundary instead. The launcher receives the unmodified
   command, arguments, expanded environment map and effective working directory,
-  and returns `{:ok, port}` or `{:ok, %{port: port, close: close_fun}}`. The
+  and returns `{:ok, port}`, `{:ok, managed_endpoint}` or
+  `{:ok, %{port: port, close: close_fun}}`. The
   second form lets a host couple Port closure to container or microVM teardown
   and termination escalation. That callback is also where it applies its
   environment allowlist, mounts, network policy and bounded diagnostics — the
@@ -63,14 +74,18 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
   @behaviour Lemieux.MCP.Transport
 
-  require Logger
-
   alias Lemieux.Environment.Credentials
   alias Lemieux.Environment.Inherited
   alias Lemieux.MCP
+  alias Lemieux.MCP.ManagedStdio
+  alias Lemieux.MCP.StdioLifecycle
+  alias Lemieux.MCP.StdioLimits
 
   @typedoc "A Port with optional host-owned lifecycle teardown."
-  @type process :: port() | %{required(:port) => port(), optional(:close) => (-> term())}
+  @type process ::
+          port()
+          | ManagedStdio.t()
+          | %{required(:port) => port(), optional(:close) => (-> term())}
 
   @typedoc "A host-owned stdio process launcher."
   @type launcher ::
@@ -91,7 +106,8 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
     with {:ok, args} <- MCP.expand(Map.get(config, "args", []), expansion),
          {:ok, env} <- MCP.expand(Map.get(config, "env", %{}), expansion),
-         {:ok, credentials} <- Credentials.policy(Keyword.get(opts, :credentials, :inherit)) do
+         {:ok, credentials} <- Credentials.policy(Keyword.get(opts, :credentials, :inherit)),
+         {:ok, limits} <- StdioLimits.new(Keyword.get(opts, :stdio_limits, [])) do
       {:ok,
        %{
          command: command,
@@ -99,7 +115,9 @@ defmodule Lemieux.MCP.Transport.Stdio do
          env: project_dir(env, Keyword.get(opts, :cwd)),
          cwd: Map.get(config, "cwd") || Keyword.get(opts, :cwd),
          launcher: Keyword.get(opts, :stdio_launcher),
-         credentials: credentials
+         credentials: credentials,
+         limits: limits,
+         observer: Keyword.get(opts, :stdio_observer)
        }}
     end
   end
@@ -126,13 +144,34 @@ defmodule Lemieux.MCP.Transport.Stdio do
       Map.get(config, :launcher) ||
         fn command, args, env, cwd -> launch_local(command, args, env, cwd, credentials) end
 
-    with {:ok, process} <- invoke_launcher(launcher, command, args, environment, cwd),
+    with {:ok, limits} <- StdioLimits.new(Map.to_list(Map.get(config, :limits, %{}))),
+         {:ok, process} <- invoke_launcher(launcher, command, args, environment, cwd),
          {:ok, port, close} <- process(process) do
-      {:ok, %{port: port, close: close, buffer: "", command: command}}
+      {:ok,
+       %{
+         port: port,
+         close: once_close(close),
+         buffer: "",
+         command: command,
+         limits: limits,
+         total_bytes: 0,
+         diagnostic_bytes: 0,
+         observer: Map.get(config, :observer),
+         managed: if(match?(%ManagedStdio{}, process), do: process)
+       }}
     else
-      {:error, reason} -> {:error, reason}
-      invalid -> {:error, "the stdio launcher returned #{inspect(invalid)}"}
+      {:error, reason} ->
+        StdioLifecycle.emit(Map.get(config, :observer), nil, :launch_failed)
+        {:error, reason}
+
+      invalid ->
+        {:error, "the stdio launcher returned #{inspect(invalid)}"}
     end
+  end
+
+  defp once_close(close) do
+    once = :atomics.new(1, [])
+    fn -> if :atomics.compare_exchange(once, 1, 0, 1) == :ok, do: close.() end
   end
 
   @impl Lemieux.MCP.Transport
@@ -140,12 +179,20 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
   @impl Lemieux.MCP.Transport
   def handle_message(%{port: port} = state, {port, {:data, data}}) do
-    {messages, state} = take_all(%{state | buffer: state.buffer <> data}, [])
-    {:ok, messages, state}
+    acknowledge(state)
+    with {:ok, state} <- append(state, data), do: take_all(state, [])
   end
 
-  def handle_message(%{port: port} = state, {port, {:exit_status, status}}),
-    do: {:closed, "the MCP server #{state.command} exited with status #{status}", state}
+  def handle_message(%{port: port} = state, {port, {:exit_status, status}}) do
+    StdioLifecycle.emit(state.observer, port, :wrapper_exit, status)
+    {:closed, "the MCP server #{state.command} exited with status #{status}", state}
+  end
+
+  def handle_message(%{port: port} = state, {port, :eof}) do
+    StdioLifecycle.emit(state.observer, port, :eof)
+    close(state)
+    {:closed, "the MCP stdio stream ended", %{state | buffer: ""}}
+  end
 
   def handle_message(%{port: port} = state, {:EXIT, port, reason}),
     do: {:closed, "the MCP server #{state.command} stopped: #{inspect(reason)}", state}
@@ -155,11 +202,32 @@ defmodule Lemieux.MCP.Transport.Stdio do
   defp take_all(state, acc) do
     case take_message(state) do
       {:ok, message, state} -> take_all(state, [message | acc])
-      {:none, state} -> {Enum.reverse(acc), state}
+      {:none, state} -> {:ok, Enum.reverse(acc), state}
+      {:closed, _reason, _state} = closed -> closed
     end
   end
 
+  defp append(state, data) do
+    total = state.total_bytes + byte_size(data)
+    size = byte_size(state.buffer) + byte_size(data)
+
+    cond do
+      total > state.limits.max_total_bytes -> limit(state, :total)
+      size > state.limits.max_buffer_bytes -> limit(state, :buffer)
+      true -> {:ok, %{state | buffer: state.buffer <> data, total_bytes: total}}
+    end
+  end
+
+  defp limit(state, kind) do
+    StdioLifecycle.emit(state.observer, state.port, :output_limit)
+    close(state)
+    {:closed, {:stdio_limit, kind}, %{state | buffer: ""}}
+  end
+
   defp process(port) when is_port(port), do: {:ok, port, fn -> close_port(port) end}
+
+  defp process(%ManagedStdio{pid: pid} = process),
+    do: {:ok, pid, fn -> ManagedStdio.close(process) end}
 
   defp process(%{port: port, close: close}) when is_port(port) and is_function(close, 0),
     do: {:ok, port, close}
@@ -242,11 +310,29 @@ defmodule Lemieux.MCP.Transport.Stdio do
   def notify(state, notification), do: write(state, notification)
 
   defp write(state, message) do
-    Port.command(state.port, JSON.encode!(message) <> "\n")
+    data = JSON.encode!(message) <> "\n"
 
-    {:ok, state}
+    cond do
+      byte_size(data) - 1 > state.limits.max_frame_bytes -> write_limit(state, :frame)
+      send_data(state, data) == :ok -> {:ok, state}
+      true -> write_limit(state, :write_queue)
+    end
   rescue
     ArgumentError -> {:error, "the MCP server #{state.command} is no longer running", state}
+  end
+
+  defp send_data(%{managed: %ManagedStdio{} = process}, data),
+    do: ManagedStdio.write(process, data)
+
+  defp send_data(state, data),
+    do: if(Port.command(state.port, data, [:nosuspend]), do: :ok, else: {:error, :busy})
+
+  defp acknowledge(%{managed: %ManagedStdio{} = process}), do: ManagedStdio.ack(process)
+  defp acknowledge(_native), do: :ok
+
+  defp write_limit(state, kind) do
+    {:closed, reason, state} = limit(state, kind)
+    {:error, reason, state}
   end
 
   defp deadline(timeout), do: System.monotonic_time(:millisecond) + timeout
@@ -255,6 +341,7 @@ defmodule Lemieux.MCP.Transport.Stdio do
     case take_message(state) do
       {:ok, message, state} -> match(state, message, id, deadline)
       {:none, state} -> read_more(state, id, deadline)
+      {:closed, reason, state} -> {:error, reason, state}
     end
   end
 
@@ -279,9 +366,19 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
     receive do
       {^port, {:data, data}} ->
-        await(%{state | buffer: state.buffer <> data}, id, deadline)
+        acknowledge(state)
+
+        case append(state, data) do
+          {:ok, state} -> await(state, id, deadline)
+          {:closed, reason, state} -> {:error, reason, state}
+        end
+
+      {^port, :eof} ->
+        {:closed, reason, state} = handle_message(state, {port, :eof})
+        {:error, reason, state}
 
       {^port, {:exit_status, status}} ->
+        StdioLifecycle.emit(state.observer, port, :wrapper_exit, status)
         {:error, "the MCP server #{state.command} exited with status #{status}", state}
 
       {:EXIT, ^port, reason} ->
@@ -295,30 +392,32 @@ defmodule Lemieux.MCP.Transport.Stdio do
   # Takes one decodable message out of the buffer, skipping anything that is
   # not JSON.
   defp take_message(state) do
-    case String.split(state.buffer, "\n", parts: 2) do
-      [_partial] ->
-        {:none, state}
+    case :binary.match(state.buffer, "\n") do
+      :nomatch ->
+        if byte_size(state.buffer) > state.limits.max_frame_bytes,
+          do: limit(state, :frame),
+          else: {:none, state}
 
-      [line, rest] ->
-        state = %{state | buffer: rest}
+      {size, 1} when size > state.limits.max_frame_bytes ->
+        limit(state, :frame)
 
-        case decode(line) do
-          {:ok, message} -> {:ok, message, state}
-          :error -> take_message(state)
-        end
+      {size, 1} ->
+        <<line::binary-size(^size), _newline, rest::binary>> = state.buffer
+        decode(%{state | buffer: rest}, line)
     end
   end
 
-  defp decode(line) do
-    case line |> String.trim() |> JSON.decode() do
+  defp decode(state, line) do
+    case JSON.decode(line) do
       {:ok, message} when is_map(message) ->
-        {:ok, message}
+        {:ok, message, state}
 
       _otherwise ->
-        unless String.trim(line) == "",
-          do: Logger.debug("lemieux: ignoring non-JSON line from an MCP server: #{inspect(line)}")
+        bytes = state.diagnostic_bytes + byte_size(line)
 
-        :error
+        if bytes > state.limits.max_diagnostic_bytes,
+          do: limit(state, :diagnostics),
+          else: take_message(%{state | diagnostic_bytes: bytes})
     end
   end
 
