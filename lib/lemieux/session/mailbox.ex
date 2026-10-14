@@ -2,6 +2,7 @@ defmodule Lemieux.Session.Mailbox do
   @moduledoc false
 
   alias Lemieux.Clock
+  alias Lemieux.Input
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Session.Accounting
   alias Lemieux.Session.Approvals
@@ -17,6 +18,8 @@ defmodule Lemieux.Session.Mailbox do
   alias Lemieux.Session.ToolWave
   alias Lemieux.Session.Window
   alias Lemieux.Usage
+
+  def message({:input_expired, id, token}, state), do: {:noreply, Input.expire(state, id, token)}
 
   def message({:document_event, ref, event}, %{document_request: %{ref: ref}} = state),
     do: {:noreply, DocumentRequest.event(state, event)}
@@ -35,9 +38,15 @@ defmodule Lemieux.Session.Mailbox do
   def message({:document_timeout, ref}, %{document_request: %{ref: ref}} = state),
     do: {:noreply, DocumentRequest.cancel(state, :timeout)}
 
+  def message({:approval_timeout, call_id, request_id}, state),
+    do: Approvals.expire(state, call_id, request_id)
+
   def message({:park_timeout, call_id}, state) do
     case Map.pop(state.parked, call_id) do
       {nil, _parked} ->
+        {:noreply, state}
+
+      {%{request: %{}}, _parked} ->
         {:noreply, state}
 
       {waiting, parked} ->

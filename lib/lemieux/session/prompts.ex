@@ -5,6 +5,8 @@ defmodule Lemieux.Session.Prompts do
 
   alias Lemieux.Clock
   alias Lemieux.Hooks
+  alias Lemieux.Ingress
+  alias Lemieux.Input
   alias Lemieux.MCP
   alias Lemieux.Messages
   alias Lemieux.Reference
@@ -26,7 +28,10 @@ defmodule Lemieux.Session.Prompts do
   alias Lemieux.Telemetry
   alias Lemieux.Tool
 
-  def start_prompt_hook(state, from, text) do
+  def start_prompt_hook(state, from, text, attestation \\ Ingress.unknown()) do
+    source = if state.aside, do: :aside, else: :prompt
+    state = Input.begin(state, source, text, attestation)
+
     if Hooks.registered?(state.hooks, :user_prompt) do
       hooks = state.hooks
       context = hook_context(state)
@@ -40,7 +45,12 @@ defmodule Lemieux.Session.Prompts do
     end
   end
 
-  def start_follow_up_hook(state, text) do
+  def start_follow_up_hook(state, text) when is_binary(text),
+    do: start_follow_up_hook(state, {text, Ingress.unknown()})
+
+  def start_follow_up_hook(state, {text, attestation}) do
+    state = Input.begin(state, :queued_follow_up, text, attestation)
+
     if Hooks.registered?(state.hooks, :user_prompt) do
       hooks = state.hooks
       context = hook_context(state)
@@ -78,7 +88,7 @@ defmodule Lemieux.Session.Prompts do
     run_id =
       case {sequence, Map.get(state.evidence.correlation_ids, "run_id")} do
         {1, id} when is_binary(id) and id != "" -> id
-        _other -> "run_" <> Lemieux.ID.generate()
+        _other -> get_in(state.input, [:current, :run_id]) || "run_" <> Lemieux.ID.generate()
       end
 
     correlations =
@@ -253,19 +263,20 @@ defmodule Lemieux.Session.Prompts do
     end
   end
 
-  def finish_hook(state, {:prompt, from, _original}, {:ok, text}),
-    do: expand(state, {:prompt, from}, text)
+  def finish_hook(state, {:prompt, from, original}, {:ok, text}),
+    do: expand(Input.transformed(state, original, text), {:prompt, from}, text)
 
   def finish_hook(state, {:prompt, from, _original}, {:deny, reason}) do
     GenServer.reply(from, {:error, {:hook_denied, reason}})
-    %{state | aside: nil}
+    Input.clear(%{state | aside: nil})
   end
 
-  def finish_hook(state, {:follow_up, _original}, {:ok, text}),
-    do: expand(state, :follow_up, text)
+  def finish_hook(state, {:follow_up, original}, {:ok, text}),
+    do: expand(Input.transformed(state, original, text), :follow_up, text)
 
   def finish_hook(state, {:follow_up, _original}, {:deny, reason}) do
     state
+    |> Input.clear()
     |> Core.append({:error, %{"reason" => "follow-up denied: #{inspect(reason)}"}, nil})
     |> Recovery.maybe_follow_up()
   end
@@ -300,6 +311,7 @@ defmodule Lemieux.Session.Prompts do
       # a resumed screen drew the hook's words as a line the person had typed.
       # `Lemieux.Transcript.stop_hook?/1` reads the mark.
       state
+      |> Input.begin(:extension_injected, feedback)
       |> Core.append({:user, %{"text" => feedback, "stop_hook" => true}, nil})
       |> Map.put(:stop_hook_active, true)
       |> Compacting.continue()
@@ -344,13 +356,14 @@ defmodule Lemieux.Session.Prompts do
 
   def hook_crashed(state, {:prompt, from, _text}, reason) do
     GenServer.reply(from, {:error, {:hook_failed, reason}})
-    %{state | aside: nil}
+    Input.clear(%{state | aside: nil})
   end
 
   def hook_crashed(state, {:follow_up, _text}, reason) do
     Logger.warning("lemieux: follow-up hook failed: #{Exception.format_exit(reason)}")
 
     state
+    |> Input.clear()
     |> Core.append({:error, %{"reason" => "follow-up hook failed"}, nil})
     |> Recovery.maybe_follow_up()
   end
@@ -453,6 +466,7 @@ defmodule Lemieux.Session.Prompts do
       max_cost_usd: state.max_cost_usd,
       job_budget: state.job_budget
     }
+    |> Map.merge(Input.context(state))
   end
 
   defp aside_kind(%Aside{kind: kind}), do: kind
@@ -471,9 +485,18 @@ defmodule Lemieux.Session.Prompts do
   defp drop_parked(%{parked: parked} = state) when map_size(parked) == 0, do: state
 
   defp drop_parked(state) do
-    Enum.each(state.parked, fn {_call_id, waiting} ->
-      Approvals.cancel_timer(state, waiting.timer)
-    end)
+    state =
+      Enum.reduce(state.parked, state, fn {call_id, waiting}, state ->
+        Approvals.cancel_timer(state, waiting.timer)
+
+        if Map.get(waiting, :request),
+          do:
+            Core.append(
+              state,
+              {:approval, Approvals.record(call_id, waiting, :cancelled, %{}), nil}
+            ),
+          else: state
+      end)
 
     %{state | parked: %{}} |> observe_working()
   end

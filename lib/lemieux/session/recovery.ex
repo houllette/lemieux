@@ -5,6 +5,7 @@ defmodule Lemieux.Session.Recovery do
 
   alias Lemieux.Clock
   alias Lemieux.Entry
+  alias Lemieux.Input
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Session.Accounting
   alias Lemieux.Session.Catalog
@@ -24,7 +25,7 @@ defmodule Lemieux.Session.Recovery do
     state.reversed_steers
     |> Enum.reverse()
     |> Enum.reduce(%{state | reversed_steers: []}, fn text, state ->
-      Core.append(state, {:user, %{"text" => text}, nil})
+      state |> Input.begin(:queued_steer, text) |> Core.append({:user, %{"text" => text}, nil})
     end)
   end
 

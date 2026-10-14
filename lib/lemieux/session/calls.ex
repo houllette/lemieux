@@ -2,6 +2,7 @@ defmodule Lemieux.Session.Calls do
   @moduledoc false
 
   alias Lemieux.Clock
+  alias Lemieux.Input
   alias Lemieux.MCP
   alias Lemieux.MCP.RemoteTool
   alias Lemieux.ModelSpec
@@ -52,6 +53,7 @@ defmodule Lemieux.Session.Calls do
 
         state =
           %{state | recovery_enabled?: false, recovery_calls: [], turns_taken: 0}
+          |> Input.begin(:resumed_history, "")
           |> Prompts.begin_run()
           |> Instrumentation.start_prompt_telemetry()
 
@@ -257,7 +259,7 @@ defmodule Lemieux.Session.Calls do
       cwd: state.cwd,
       pending: Core.pending(state),
       queued_steers: Enum.reverse(state.reversed_steers),
-      queued_follow_ups: Enum.reverse(state.reversed_follow_ups),
+      queued_follow_ups: Enum.map(Enum.reverse(state.reversed_follow_ups), &Input.queued_text/1),
       request_id: state.current_request_id,
       spent_usd: state.spent_usd,
       inclusive_spent_usd: usage.total["cost_usd"],
@@ -295,7 +297,7 @@ defmodule Lemieux.Session.Calls do
       cwd: state.cwd,
       pending: Core.pending(state),
       queued_steers: Enum.reverse(state.reversed_steers),
-      queued_follow_ups: Enum.reverse(state.reversed_follow_ups),
+      queued_follow_ups: Enum.map(Enum.reverse(state.reversed_follow_ups), &Input.queued_text/1),
       request_id: state.current_request_id,
       requests: state.request_count,
       max_requests: state.max_requests,
@@ -563,12 +565,24 @@ defmodule Lemieux.Session.Calls do
     end
   end
 
-  def call({:prompt, text, contexts}, from, state) do
+  def call({:prompt, text, contexts}, from, state),
+    do: call({:prompt, text, contexts, []}, from, state)
+
+  def call({:input_original, id, token}, _from, state),
+    do: {:reply, Input.read(state, id, token), state}
+
+  def call({:prompt, text, contexts, opts}, from, state) do
     if Core.busy?(state) do
       {:reply, {:error, :busy}, state}
     else
-      OpenTelemetry.bind_prompt_parent(state.id, contexts)
-      Prompts.start_prompt_hook(state, from, text)
+      case Input.attest(state, from, :prompt, opts) do
+        {:ok, attestation} ->
+          OpenTelemetry.bind_prompt_parent(state.id, contexts)
+          Prompts.start_prompt_hook(state, from, text, attestation)
+
+        {:error, _reason} = error ->
+          {:reply, error, state}
+      end
     end
   end
 
@@ -622,59 +636,17 @@ defmodule Lemieux.Session.Calls do
   # running: a `write` parked for approval had two minutes, so a person who took
   # three to decide found the call already timed out — and their "yes" recorded
   # as an approval of a call that never ran.
-  def call({:park, call_id, kind, payload, opts}, from, state) do
-    timer = Approvals.park_timer(state, state.approval_timeout, call_id)
-    state = Approvals.pause_tool_clock(state, call_id)
+  def call({:park, call_id, kind, payload, opts}, from, state),
+    do: Approvals.park(state, from, call_id, kind, payload, opts)
 
-    parked =
-      Map.put(state.parked, call_id, %{
-        from: from,
-        kind: kind,
-        payload: payload,
-        timer: timer,
-        timeout_reply: Keyword.get(opts, :timeout_reply)
-      })
+  def call({:approval_request, call_id}, _from, state),
+    do: {:reply, Approvals.request_for(state, call_id), state}
 
-    # Deliberately no reply: this call is answered later, by `resolve_tool/3`,
-    # `answer/3` or the timeout. The task that made it waits; the session goes
-    # on answering everything else.
-    state =
-      state
-      |> Map.put(:parked, parked)
-      |> Core.append(
-        {:approval, Approvals.approval_payload(call_id, kind, :pending, payload), nil}
-      )
-      |> Core.emit({Approvals.announcement(kind), payload})
-      |> Prompts.observe_attention(%{state: :waiting, call_id: call_id, kind: kind})
+  def call({:resolve_approval, request, decision, opts}, from, state),
+    do: Approvals.resolve_scoped(state, from, request, decision, opts)
 
-    {:noreply, state}
-  end
-
-  def call({:resolve, call_id, resolution}, _from, state) do
-    case Map.pop(state.parked, call_id) do
-      {nil, _parked} ->
-        {:reply, {:error, :unknown_call}, state}
-
-      {waiting, parked} ->
-        state =
-          state
-          |> Map.put(:parked, parked)
-          |> Core.append({
-            :approval,
-            Approvals.approval_payload(
-              call_id,
-              waiting.kind,
-              Approvals.resolution_status(resolution),
-              resolution
-            ),
-            nil
-          })
-          |> Prompts.observe_working()
-          |> Approvals.release(call_id, waiting, Approvals.answer_for(resolution))
-
-        {:reply, :ok, state}
-    end
-  end
+  def call({:resolve, call_id, resolution}, _from, state),
+    do: Approvals.resolve_legacy(state, call_id, resolution)
 
   def call({:steer, text}, _from, state) do
     {:reply, :ok, %{state | reversed_steers: [text | state.reversed_steers]}}
@@ -695,11 +667,21 @@ defmodule Lemieux.Session.Calls do
     end
   end
 
-  def call({:follow_up, text}, _from, state) do
-    if Core.busy?(state) do
-      {:reply, :ok, %{state | reversed_follow_ups: [text | state.reversed_follow_ups]}}
-    else
-      {:reply, :ok, Prompts.start_follow_up_hook(state, text)}
+  def call({:follow_up, text}, from, state), do: call({:follow_up, text, []}, from, state)
+
+  def call({:follow_up, text, opts}, from, state) do
+    case Input.attest(state, from, :follow_up, opts) do
+      {:ok, attestation} ->
+        submission = {text, attestation}
+
+        if Core.busy?(state),
+          do:
+            {:reply, :ok,
+             %{state | reversed_follow_ups: [submission | state.reversed_follow_ups]}},
+          else: {:reply, :ok, Prompts.start_follow_up_hook(state, submission)}
+
+      {:error, _reason} = error ->
+        {:reply, error, state}
     end
   end
 

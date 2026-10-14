@@ -8,6 +8,7 @@ defmodule Lemieux.Session.Audit do
   alias Lemieux.Evidence.Run, as: RunEvidence
   alias Lemieux.Harness.Snapshot, as: HarnessSnapshot
   alias Lemieux.Hooks
+  alias Lemieux.Input
   alias Lemieux.Request
   alias Lemieux.Session.Aside
   alias Lemieux.Session.Catalog
@@ -204,11 +205,15 @@ defmodule Lemieux.Session.Audit do
   defp request_kind(_state), do: :turn
 
   def finalize_run(%{evidence: %{current_run: nil}} = state, _stop_reason),
-    do: %{state | aside: nil}
+    do: Input.clear(%{state | aside: nil})
 
   # At `:off` a run leaves no manifest; it only ends.
   def finalize_run(%{evidence: %{level: :off}} = state, _stop_reason),
-    do: state |> Core.put_evidence(:current_run, nil) |> Map.put(:aside, nil)
+    do:
+      state
+      |> Core.put_evidence(:current_run, nil)
+      |> Map.put(:aside, nil)
+      |> Input.clear()
 
   def finalize_run(state, stop_reason) do
     state = ensure_harness_snapshot(state)
@@ -236,6 +241,7 @@ defmodule Lemieux.Session.Audit do
         |> Core.put_evidence(:last_run_evidence, evidence)
         |> Core.put_evidence(:current_run, nil)
         |> Map.put(:aside, nil)
+        |> Input.clear()
         |> Core.append({:run_evidence, RunEvidence.to_map(evidence), nil})
         |> Core.emit({:run_evidence, evidence})
 
@@ -253,6 +259,7 @@ defmodule Lemieux.Session.Audit do
         state
         |> Core.put_evidence(:current_run, nil)
         |> Map.put(:aside, nil)
+        |> Input.clear()
         |> Core.append(
           {:run_evidence,
            %{
