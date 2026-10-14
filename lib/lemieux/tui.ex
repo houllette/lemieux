@@ -819,6 +819,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       :export_result,
       :copy_result,
       :doctor_result,
+      :extension_result,
       :undo_result,
       :rewind_result,
       :mcp_prompts_result,

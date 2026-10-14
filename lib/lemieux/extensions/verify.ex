@@ -118,6 +118,7 @@ defmodule Lemieux.Extensions.Verify do
   @behaviour Lemieux.Extension
   import Kernel, except: [apply: 2]
 
+  alias Lemieux.Attribution
   alias Lemieux.Checkpoint
   alias Lemieux.Entry
   alias Lemieux.Environment
@@ -218,7 +219,15 @@ defmodule Lemieux.Extensions.Verify do
   @impl Lemieux.Extension
   def apply(%Harness{} = harness, %__MODULE__{} = config) do
     config = %{config | environment: config.environment || harness.environment}
-    Harness.append_hooks(harness, stop: &stop(config, &1, &2))
+
+    Harness.append_hooks(harness,
+      stop: fn reason, context ->
+        case stop(config, reason, context) do
+          {:deny, text} -> {:deny, Attribution.turn(context, __MODULE__, text, :verification)}
+          :allow -> :allow
+        end
+      end
+    )
   end
 
   @impl Lemieux.Extension
@@ -364,6 +373,8 @@ defmodule Lemieux.Extensions.Verify do
         end
 
       :none ->
+        Attribution.inactive(context, __MODULE__, :no_command)
+
         record(
           session,
           document,

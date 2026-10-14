@@ -23,6 +23,54 @@ Then use the [worked extension](#a-worked-extension),
 [installation guide](#installing-an-extension-into-lmx), or
 [recipes](#extension-recipes) for your next change.
 
+## Extension accounting and exposure
+
+Each request snapshot measures canonical catalog JSON bytes per tool and source
+extension, with array framing reported separately. Ownership comes from the last
+assembly contribution whose descriptor digest still matches; a host replacement
+is `host_or_unknown`. These are canonical bytes, not provider wire bytes or an
+inferred share of billed tokens.
+
+Run evidence includes `extensions.accounting`: repeated catalog bytes, committed
+notice counts/bytes/categories, and requests plus reported usage in turns each
+extension started. Budget, continuation, completion-check and verification feedback
+carry source metadata only when actually injected. Missing usage stays unknown or
+partial; configured extensions that never fired have explicit zero counters.
+`lmx explain` and harness snapshots also report configured inactive extensions and
+reasons, with runtime inactivity in `extensions.activity`. Source labels describe
+attribution and confer no authority.
+
+Budget's default thresholds are `[0.5, 0.75, 0.9]`; add `0.0` for the initial
+notice. Search exposes `glob` after one request by default (`glob_after_requests:
+0` exposes it immediately). Delegation exposes its schema after three requests
+(`expose_after_requests: 0` exposes it immediately). These thresholds count session
+requests. A host can use `Lemieux.Tool.Exposure.after_requests/3` for its own tools.
+Disclosure changes catalog cost, while the current tool/approval policy continues
+to govern execution. These defaults and counters do not establish a benchmark
+quality effect; paired hosted ablations remain separate qualification.
+
+## Local status and commands
+
+An extension can append `Lemieux.Contribution.new!("my_extension", MyStatus, state,
+commands: %{"cancel" => :cancel})` to `harness.contributions`. Implement
+`status/2` and, for local commands, `command/4`. Return bounded data such as
+`%{state: :ready, message: "workspace available", badge: "OK", pending: 0}`.
+`open/2` optionally starts an observer linked to its supplied lifecycle owner;
+see `Lemieux.Contribution` for startup and teardown ownership.
+
+`Session.extension_status/1` and `Session.extension_command/4` use the current
+session environment. `/status` and `/status my_extension cancel` run outside the
+terminal draw loop. `mix lmx status` and `mix lmx status my_extension cancel`
+inspect currently selected configuration without starting a session, connecting
+MCP or sending a model request. Selected extensions still execute trusted
+initialization code. Callback code is never restored from a transcript.
+
+Namespaces are unique. Commands declare observation or cancellation, and their
+results are status data; they never grant approval. A refresh cannot hide network
+or billed work behind this local contract. Keep credentials, identities, prompts
+and raw command output out of status. Missing/replaced environments and failed or
+expired callbacks produce explicit unavailable/error states.
+
 ## The harness
 
 `Lemieux.Harness` is a struct holding every seam's current setting. Its

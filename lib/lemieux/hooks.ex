@@ -58,7 +58,8 @@ defmodule Lemieux.Hooks do
   `after_tool_call` receives the call, the result and the context. Its return
   value is ignored unless it is `{:feedback, text}`, which is appended to what
   the model reads — the same thing a command hook's `additionalContext` or
-  post-tool block does. It is for observing and for telling the model
+  post-tool block does. Typed `Lemieux.Attribution.Feedback` carries the same
+  text with declared source accounting. It is for observing and for telling the model
   something about what just happened; it cannot undo the call.
 
   The rest of the agent lifecycle uses the same list:
@@ -127,6 +128,8 @@ defmodule Lemieux.Hooks do
   require Logger
 
   alias Lemieux.Approval
+  alias Lemieux.Attribution
+  alias Lemieux.Attribution.Feedback
   alias Lemieux.Hooks.Claude
   alias Lemieux.Hooks.Command
   alias Lemieux.Hooks.SessionContext
@@ -332,7 +335,7 @@ defmodule Lemieux.Hooks do
           call :: Provider.tool_call(),
           result :: {:ok, String.t()} | {:error, String.t()},
           context :: Tool.context()
-        ) :: [String.t()]
+        ) :: [String.t() | Feedback.t()]
   def after_tool_call_feedback(hooks, call, result, context) do
     hooks
     |> Keyword.get_values(:after_tool_call)
@@ -344,17 +347,24 @@ defmodule Lemieux.Hooks do
 
   The feedback follows the output under a marker, so the model can tell what
   the tool said from what a hook said about it. No feedback leaves the result
-  untouched — byte for byte, since the result's size is accounted.
+  untouched, except the reserved `extension_notices` metadata key: tools cannot
+  manufacture the accounting of feedback that hooks did not append.
   """
   @spec append_feedback(
           result :: {:ok | :error, Result.t()},
-          feedback :: [String.t()]
+          feedback :: [String.t() | Feedback.t()]
         ) :: {:ok | :error, Result.t()}
-  def append_feedback(result, []), do: result
+  def append_feedback({status, %Result{} = result}, []) do
+    {status, %{result | metadata: Map.delete(result.metadata, "extension_notices")}}
+  end
 
   def append_feedback({status, %Result{} = result}, feedback) when is_list(feedback) do
-    notes = Enum.map_join(feedback, "\n", &("[hook] " <> &1))
-    {status, %{result | model_text: result.model_text <> "\n\n" <> notes}}
+    notes = Enum.map_join(feedback, "\n", &("[hook] " <> Attribution.text(&1)))
+
+    metadata =
+      Map.put(result.metadata, "extension_notices", Enum.map(feedback, &Attribution.metadata/1))
+
+    {status, %{result | model_text: result.model_text <> "\n\n" <> notes, metadata: metadata}}
   end
 
   defp after_tool(%Command{} = command, call, result, context) do
@@ -374,6 +384,7 @@ defmodule Lemieux.Hooks do
 
   defp after_tool(hook, call, result, context) do
     case hook.(call, result, context) do
+      {:feedback, %Feedback{} = feedback} -> [feedback]
       {:feedback, text} when is_binary(text) and text != "" -> [text]
       _ignored -> []
     end
@@ -659,7 +670,7 @@ defmodule Lemieux.Hooks do
   turn. Rewrites have no meaning at this boundary.
   """
   @spec stop(hooks :: t(), reason :: atom(), context :: map()) ::
-          :allow | {:deny, String.t()}
+          :allow | {:deny, String.t() | Feedback.t()}
   def stop(hooks, reason, context) do
     hooks
     |> Keyword.get_values(:stop)
@@ -668,6 +679,7 @@ defmodule Lemieux.Hooks do
 
       case decision do
         :allow -> {:cont, :allow}
+        {:deny, %Feedback{} = feedback} -> {:halt, {:deny, feedback}}
         {:deny, feedback} when is_binary(feedback) -> {:halt, {:deny, feedback}}
       end
     end)

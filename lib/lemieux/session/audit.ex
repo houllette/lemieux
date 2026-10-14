@@ -3,6 +3,7 @@ defmodule Lemieux.Session.Audit do
 
   require Logger
 
+  alias Lemieux.Attribution
   alias Lemieux.Contract
   alias Lemieux.Environment
   alias Lemieux.Evidence.Run, as: RunEvidence
@@ -20,11 +21,17 @@ defmodule Lemieux.Session.Audit do
 
   def request_snapshot_opts(state, extra) do
     harness = state.evidence.current_harness_snapshot
+    # Projection/compaction may omit the triggering input from the model view.
+    # Request initiation is a fact of the full transcript, not that projection.
+    input = Attribution.input_metadata(state.reversed_entries)
 
     Keyword.merge(
       [
         kind: request_kind(state),
+        extension_source: input["source"],
+        extension_turn_category: input["category"],
         catalog: Catalog.tool_catalog(state),
+        tool_owners: get_in(state.evidence.harness_context, ["extensions", "applied"]) || [],
         tool_profile: Profile.snapshot(state.tool_profile),
         token_counter: state.tool_token_counter,
         harness_snapshot_id: harness && harness.id,
@@ -230,6 +237,14 @@ defmodule Lemieux.Session.Audit do
       harness_snapshot: state.evidence.current_harness_snapshot,
       artifacts: state.evidence.evidence_artifacts,
       hook_outcomes: run.hook_outcomes,
+      extensions: %{
+        "accounting" =>
+          Attribution.accounting(
+            run_entries,
+            get_in(state.evidence.harness_context, ["extensions", "applied"]) || []
+          ),
+        "activity" => Attribution.activity(run_entries)
+      },
       latency_ms: latency_ms,
       sandbox_completeness:
         Map.get(state.evidence.harness_context, "sandbox_completeness", "unknown")

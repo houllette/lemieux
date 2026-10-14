@@ -51,7 +51,7 @@ defmodule Lemieux.Extensions.BudgetTest do
       assert {:error, _} = Budget.init(enabled: "yes")
 
       assert {:ok, %Budget{enabled: true} = defaults} = Budget.init([])
-      assert defaults.thresholds == [0.0, 0.5, 0.75, 0.9]
+      assert defaults.thresholds == [0.5, 0.75, 0.9]
       assert {:ok, %Budget{thresholds: [0.25, 0.8]}} = Budget.init(thresholds: [0.8, 0.25])
     end
 
@@ -110,12 +110,13 @@ defmodule Lemieux.Extensions.BudgetTest do
 
     defp notices(session), do: session |> outputs() |> Enum.filter(&(&1 =~ Budget.marker()))
 
-    test "the first tool result says what the session has, in all", ctx do
+    test "an explicit zero threshold reports the budget with the first tool result", ctx do
       {session, _provider} =
-        start(ctx, [ping("p1"), Scripted.complete("Done.")],
-          max_requests: 10,
-          deadline_ms: 600_000,
-          clock: Manual.new()
+        start(
+          ctx,
+          [ping("p1"), Scripted.complete("Done.")],
+          [max_requests: 10, deadline_ms: 600_000, clock: Manual.new()],
+          thresholds: [0.0, 0.5, 0.75, 0.9]
         )
 
       assert run(session) == :stop
@@ -144,10 +145,10 @@ defmodule Lemieux.Extensions.BudgetTest do
         |> Enum.filter(fn {output, _n} -> output =~ Budget.marker() end)
         |> Enum.map(fn {_output, n} -> n end)
 
-      # 10%, 50%, 80% (past 75%) and 90% of ten requests.
-      assert told == [1, 5, 8, 9]
+      # The default waits for 50%, then 80% (past 75%) and 90%.
+      assert told == [5, 8, 9]
 
-      assert [_first, half, three_quarters, last] = notices(session)
+      assert [half, three_quarters, last] = notices(session)
       assert half =~ "5 requests are left (50% used)"
       assert three_quarters =~ "2 requests are left (80% used)"
       assert last =~ "1 request is left (90% used)"
@@ -168,8 +169,9 @@ defmodule Lemieux.Extensions.BudgetTest do
         )
 
       assert run(session) == :stop
-      assert [first, second] = notices(session)
-      assert first =~ "This session has about 10 minutes left"
+      assert [first, second] = outputs(session)
+      refute first =~ Budget.marker()
+      assert [^second] = notices(session)
       assert second =~ "About 5 minutes are left (50% used)"
       refute second =~ "request"
     end
@@ -178,7 +180,7 @@ defmodule Lemieux.Extensions.BudgetTest do
       calls = for n <- 1..3, do: %{id: "p#{n}", name: "ping", arguments: %{"n" => n}}
 
       {session, _provider} =
-        start(ctx, [Scripted.tool_calls(calls), Scripted.complete("Done.")], max_requests: 10)
+        start(ctx, [Scripted.tool_calls(calls), Scripted.complete("Done.")], max_requests: 2)
 
       assert run(session) == :stop
       assert length(outputs(session)) == 3

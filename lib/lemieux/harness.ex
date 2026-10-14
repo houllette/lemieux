@@ -99,12 +99,13 @@ defmodule Lemieux.Harness do
   JSON-shaped so it can go into the harness snapshot as it is.
   """
   @type applied :: %{
-          required(String.t()) => String.t() | map()
+          required(String.t()) => String.t() | map() | list() | boolean() | nil
         }
 
   @type t :: %__MODULE__{
           system: String.t() | nil | :default,
           tools: [Tool.t()] | nil,
+          contributions: [Lemieux.Contribution.t()] | nil,
           host_tools: [Tool.t()] | nil,
           disabled_tools: [String.t()] | nil,
           tool_profile: term(),
@@ -173,7 +174,7 @@ defmodule Lemieux.Harness do
   # without a session option of the same name would be passed to a session
   # that ignores it; keep the two in step.
   @session_fields ~w(system tools host_tools disabled_tools tool_profile hooks compaction messages
-                     guard environment mcp_servers mcp_transports mcp_auth mcp_stdio_launcher
+                     guard environment contributions mcp_servers mcp_transports mcp_auth mcp_stdio_launcher
                      provider_retry max_turns max_cost_usd max_requests job_limits tool_timeout_ms
                      tool_output_bytes approval_timeout approval_mode approval_ttl_ms approval_context ingress input_capture_bytes input_capture_ttl_ms context_window auto_compaction compact_at
                      input_token_counter keep
@@ -313,7 +314,16 @@ defmodule Lemieux.Harness do
       with :ok <- extension?(module),
            {:ok, state} <- init(module, opts) do
         updated = apply_extension(harness, module, state)
-        {:cont, {:ok, record(updated, module, state, changed_fields(harness, updated))}}
+
+        {:cont,
+         {:ok,
+          record(
+            updated,
+            module,
+            state,
+            changed_fields(harness, updated),
+            ownership(harness, updated)
+          )}}
       else
         {:error, reason} -> {:halt, {:error, {module, reason}}}
       end
@@ -372,15 +382,40 @@ defmodule Lemieux.Harness do
       )
       |> Enum.map(&Atom.to_string/1)
 
-  defp record(harness, module, state, changes) do
+  defp record(harness, module, state, changes, ownership) do
+    described = describe(module, state)
+
+    active? =
+      changes != [] and Map.get(described, "active", true) != false and
+        Map.get(described, "enabled", true) != false
+
     entry = %{
       "module" => inspect(module),
       "digest" => module |> module_digest() |> Base.encode16(case: :lower),
-      "options" => describe(module, state),
-      "changes" => changes
+      "options" => described,
+      "changes" => changes,
+      "tool_ownership" => ownership,
+      "active" => active?,
+      "inactive_reason" =>
+        if(not active?, do: Map.get(described, "inactive_reason", "no_effective_contribution"))
     }
 
     %{harness | applied: harness.applied ++ [entry]}
+  end
+
+  defp ownership(before, updated) do
+    original =
+      Map.new(
+        (before.tools || Tools.default()) ++ (before.host_tools || []),
+        &{Tool.name(&1), Tool.descriptor(&1).digest}
+      )
+
+    ((updated.tools || Tools.default()) ++ (updated.host_tools || []))
+    |> Enum.flat_map(fn tool ->
+      name = Tool.name(tool)
+      digest = Tool.descriptor(tool).digest
+      if original[name] != digest, do: [%{"name" => name, "digest" => digest}], else: []
+    end)
   end
 
   # The md5 the compiler writes into the beam: two builds of the same source

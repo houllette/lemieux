@@ -65,6 +65,7 @@ defmodule Lemieux.Conversation.Command.Builtin do
       Command.Theme,
       Command.Refresh,
       Command.Update,
+      Command.Status,
       Command.Doctor,
       Command.Help,
       Command.Quit,

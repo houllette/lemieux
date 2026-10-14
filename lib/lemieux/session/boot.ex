@@ -3,6 +3,7 @@ defmodule Lemieux.Session.Boot do
 
   alias Lemieux.Approval
   alias Lemieux.Contract
+  alias Lemieux.Contribution.Runtime, as: ContributionRuntime
   alias Lemieux.Environment
   alias Lemieux.Hooks
   alias Lemieux.Input
@@ -281,11 +282,23 @@ defmodule Lemieux.Session.Boot do
            subagent_groups: %{}
          },
          {:ok, store_lock} <- Setup.claim_transcript(opts) do
-      {:ok, %{state | store_lock: store_lock}, {:continue, :connect_mcp}}
+      {:ok, runtime} =
+        ContributionRuntime.start(
+          self(),
+          Keyword.get(opts, :contributions, []),
+          contribution_context(state)
+        )
+
+      {:ok, %{state | store_lock: store_lock, contribution_runtime: runtime},
+       {:continue, :connect_mcp}}
     else
       {:error, reason} -> {:stop, reason}
     end
   end
+
+  @spec contribution_context(state :: map()) :: map()
+  def contribution_context(state),
+    do: %{environment: state.environment, cwd: state.cwd, session_id: state.id}
 
   defp job_budget(opts, supervisor, entries) do
     case {opts[:job_budget], opts[:job_limits]} do

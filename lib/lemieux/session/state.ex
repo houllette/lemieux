@@ -166,6 +166,7 @@ defmodule Lemieux.Session.State do
     mcp_needs_auth: %{},
     mcp_notices: %{},
     mcp_connect_opts: [],
+    contribution_runtime: nil,
     model: nil,
     input_modalities: nil,
     system: nil,

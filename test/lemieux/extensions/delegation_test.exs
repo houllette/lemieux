@@ -49,6 +49,7 @@ defmodule Lemieux.Extensions.DelegationTest do
 
     assert options == %{
              "definitions" => ["repository-scout"],
+             "expose_after_requests" => 3,
              "model" => "test:model",
              "priced" => true
            }

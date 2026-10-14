@@ -123,8 +123,7 @@ enforces itself and passes as `:deadline_ms`. Nothing told the model, which
 then worked as though it had all the time it wanted: a benchmark task ended
 at its hour with a working model in `/tmp` and none where the task required
 it. `Lemieux.Extensions.Budget` appends a notice starting `[lmx budget]` to
-a tool result: the first one, saying what the session has, and the first
-after each of 50%, 75% and 90% of the budget is used (of the time or the
+a tool result after each of 50%, 75% and 90% of the budget is used (of the time or the
 requests, whichever is further along), saying what is left:
 
 ```text
@@ -132,6 +131,10 @@ requests, whichever is further along), saying what is left:
 result is not yet where the task requires it, put one there now, then
 improve it in place.
 ```
+
+A first-tool notice is opt-in: include `0.0` in `thresholds`, such as
+`[0.0, 0.5, 0.75, 0.9]`. The default waits for budget pressure; the effect of
+the early strategy advice on benchmark quality remains unmeasured.
 
 Each threshold is told once, recorded in a session document so that calls
 made together give one notice between them and a resumed session does not

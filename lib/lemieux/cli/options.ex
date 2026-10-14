@@ -288,6 +288,7 @@ defmodule Lemieux.CLI.Options do
         @agent ++
         [continue: :boolean, output_format: :string, output_schema: :string, bare: :boolean],
     acp: @common ++ @agent,
+    status: @common ++ @agent,
     explain: @common ++ @agent ++ [explain_against: :string],
     log: @common ++ [jsonl: :boolean],
     request: @common,

@@ -185,7 +185,20 @@ defmodule Lemieux.ConfigurationTest do
 
     test "an explicit --delegate re-supplies runtime definitions", context do
       :ok = Store.append(context.store, "recorded", [Entry.new(:session, recorded_config())])
-      provider = Scripted.new([[{:done, :stop}]])
+      parent = self()
+
+      provider =
+        Scripted.new([
+          fn _request ->
+            [{_id, session, _kind, _modules}] =
+              context.supervisor
+              |> Lemieux.Supervisor.session_supervisor()
+              |> DynamicSupervisor.which_children()
+
+            send(parent, {:resumed_tools, Session.tools(session)})
+            [{:done, :stop}]
+          end
+        ])
 
       capture(fn ->
         CLI.run(
@@ -205,7 +218,9 @@ defmodule Lemieux.ConfigurationTest do
       end)
 
       assert [request] = Scripted.requests(provider)
-      assert Enum.map(request.tools, &Lemieux.Tool.name/1) == ["subagents"]
+      assert request.tools == []
+      assert_received {:resumed_tools, configured}
+      assert Enum.map(configured, &Lemieux.Tool.name/1) == ["read", "subagents"]
     end
 
     test "interactive resume does not leak the first session's tool-profile flags" do
@@ -264,39 +279,41 @@ defmodule Lemieux.ConfigurationTest do
     end
 
     test "gets no way to run Elixir unless it was asked for", context do
-      refute "elixir" in Enum.map(offered(context, []), &Lemieux.Tool.name/1)
+      refute "elixir" in Enum.map(configured(context, []), &Lemieux.Tool.name/1)
     end
 
     test "and gets the Elixir tool instead of the file tools when it was", context do
-      assert Enum.map(offered(context, ["--elixir"]), &Lemieux.Tool.name/1) ==
+      assert Enum.map(configured(context, ["--elixir"]), &Lemieux.Tool.name/1) ==
                ~w(elixir subagents)
     end
 
     test "--elixir replaces an interactive host's default tools too", context do
-      offered = offered(context, ["--elixir"], default_tools: Tools.default() ++ [Tools.AskUser])
+      offered =
+        configured(context, ["--elixir"], default_tools: Tools.default() ++ [Tools.AskUser])
 
       assert Enum.map(offered, &Lemieux.Tool.name/1) == ~w(elixir subagents)
     end
 
     # `lmx` supplies delegation unless told not to, which the library does not:
     # `Tools.default/0` is still the four. See `Lemieux.CLI.Options`.
-    test "delegation is offered without being asked for", context do
-      assert Enum.map(offered(context, []), &Lemieux.Tool.name/1) == @lmx_tools ++ ["subagents"]
+    test "delegation is configured without being asked for", context do
+      assert Enum.map(configured(context, []), &Lemieux.Tool.name/1) ==
+               @lmx_tools ++ ["subagents"]
     end
 
     test "--no-delegate leaves lmx's catalog without the scout", context do
-      assert offered(context, ["--no-delegate"]) == @lmx_catalog
-      refute "subagents" in Enum.map(offered(context, ["--no-delegate"]), &Lemieux.Tool.name/1)
+      assert configured(context, ["--no-delegate"]) == @lmx_catalog
+      refute "subagents" in Enum.map(configured(context, ["--no-delegate"]), &Lemieux.Tool.name/1)
     end
 
     # The mode narrows what the parent may run, not who it may ask. A scout
     # that reads the tree and reports back is the one thing an Elixir-only
     # session cannot cheaply do for itself.
     test "--elixir keeps delegation, and --no-delegate still takes it away", context do
-      assert Enum.map(offered(context, ["--elixir"]), &Lemieux.Tool.name/1) ==
+      assert Enum.map(configured(context, ["--elixir"]), &Lemieux.Tool.name/1) ==
                ~w(elixir subagents)
 
-      assert offered(context, ["--elixir", "--no-delegate"]) == [Lemieux.Tools.Eval]
+      assert configured(context, ["--elixir", "--no-delegate"]) == [Lemieux.Tools.Eval]
     end
 
     # `Lemieux.Session` refuses a request it cannot price against a cost cap,
@@ -305,7 +322,7 @@ defmodule Lemieux.ConfigurationTest do
     # stopped before its first request and came back `budget_exhausted` with
     # an empty answer, every time. The bound has to be one the route enforces.
     test "a child is bounded in requests when the route cannot price one", context do
-      delegate = List.last(offered(context, []))
+      delegate = List.last(configured(context, []))
 
       assert Lemieux.Tool.name(delegate) == "subagents"
       scout = delegate.definitions["repository-scout"]
@@ -325,19 +342,19 @@ defmodule Lemieux.ConfigurationTest do
     # Measured on one scout with the cap as the only difference: 1153 output
     # tokens and a structured answer became 270 and "stopped after 6 turns".
     test "an unpriced child is not given an output bound it has no gate for", context do
-      delegate = List.last(offered(context, []))
+      delegate = List.last(configured(context, []))
 
       assert get_in(delegate.options, [:child_options, :params, :max_tokens]) == nil
     end
 
     test "a priced child keeps the bound its gate needs", context do
-      delegate = List.last(offered(context, [], estimated_cost_usd: 0.001))
+      delegate = List.last(configured(context, [], estimated_cost_usd: 0.001))
 
       assert get_in(delegate.options, [:child_options, :params, :max_tokens]) == 8_192
     end
 
     test "and in dollars when it can", context do
-      delegate = List.last(offered(context, [], estimated_cost_usd: 0.001))
+      delegate = List.last(configured(context, [], estimated_cost_usd: 0.001))
 
       scout = delegate.definitions["repository-scout"]
 
@@ -345,8 +362,8 @@ defmodule Lemieux.ConfigurationTest do
       assert scout.max_requests == nil
     end
 
-    test "--delegate exposes one bounded repository scout to the model", context do
-      offered = offered(context, ["--delegate"])
+    test "--delegate configures one bounded repository scout for later exposure", context do
+      offered = configured(context, ["--delegate"])
 
       assert Enum.map(offered, &Lemieux.Tool.name/1) == @lmx_tools ++ ["subagents"]
 
@@ -363,9 +380,31 @@ defmodule Lemieux.ConfigurationTest do
     # workspace's `skill` tool — and this repository's own instructions, since
     # the suite runs here — are not what these tests pin. The catalog and the
     # scout are; the workspace default is covered in `Lemieux.CLITest`.
-    defp offered(context, flags, runtime_opts \\ []) do
+    defp configured(context, flags, runtime_opts \\ []) do
       {provider_opts, runtime_opts} = Keyword.split(runtime_opts, [:estimated_cost_usd])
-      provider = Scripted.new([[{:done, :stop}]], provider_opts)
+      parent = self()
+
+      provider =
+        Scripted.new(
+          [
+            fn request ->
+              [{_id, session, _kind, _modules}] =
+                context.supervisor
+                |> Lemieux.Supervisor.session_supervisor()
+                |> DynamicSupervisor.which_children()
+
+              tools = Session.tools(session)
+
+              expected_visible =
+                Enum.reject(tools, &(Lemieux.Tool.name(&1) in ["glob", "delegate", "subagents"]))
+
+              assert request.tools == expected_visible
+              send(parent, {:configured_tools, tools})
+              [{:done, :stop}]
+            end
+          ],
+          provider_opts
+        )
 
       capture(fn ->
         CLI.run(
@@ -378,9 +417,9 @@ defmodule Lemieux.ConfigurationTest do
         )
       end)
 
-      [request] = Scripted.requests(provider)
-
-      request.tools
+      assert [_request] = Scripted.requests(provider)
+      assert_received {:configured_tools, tools}
+      tools
     end
   end
 

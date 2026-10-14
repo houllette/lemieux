@@ -186,4 +186,55 @@ defmodule Lemieux.MCP.ManagedStdioTest do
     assert :ok = CommandGate.release(socket)
     assert :ok = CommandGate.closed(socket)
   end
+
+  test "an upstream exit received before reader EOF retains the actual wrapper status", %{
+    tmp_dir: dir
+  } do
+    process =
+      launch("import sys\nsys.stdin.read()\nprint('done', flush=True)\n", dir, observer: self())
+
+    pid = process.pid
+    state = :sys.get_state(pid)
+    upstream = state.process.pid
+    exit_ref = state.process.exit_ref
+    reader = state.reader
+    :erlang.trace(pid, true, [:receive])
+
+    try do
+      assert :ok = ManagedStdio.finish_input(process)
+      assert_receive {^pid, {:data, "done\n"}}
+      # Hold the reader's actual EOF reply while the executor reports its
+      # real exit to the manager. No sleeps or fabricated exit evidence.
+      :sys.suspend(upstream)
+      :erlang.trace(reader, true, [:send])
+      send(reader, {:read, 65_531})
+      assert_receive {:trace, ^reader, :send, {:"$gen_call", _from, _read}, ^upstream}
+      :erlang.suspend_process(reader)
+      :sys.resume(upstream)
+      assert_receive {:trace, ^pid, :receive, {^exit_ref, {:ok, 0}}}
+      ManagedStdio.info(process)
+      :erlang.trace(pid, false, [:receive])
+      :erlang.resume_process(reader)
+      assert_receive {^pid, {:exit_status, 0}}
+
+      assert_receive {:mcp_stdio, ^pid,
+                      %StdioLifecycle{kind: :wrapper_exit, status: 0, target_outcome: :unknown}}
+    after
+      resume_reader(reader)
+      resume_executor(upstream)
+      ManagedStdio.close(process)
+    end
+  end
+
+  defp resume_reader(reader) do
+    :erlang.resume_process(reader)
+  rescue
+    ArgumentError -> :ok
+  end
+
+  defp resume_executor(upstream) do
+    :sys.resume(upstream)
+  catch
+    :exit, _closed -> :ok
+  end
 end
