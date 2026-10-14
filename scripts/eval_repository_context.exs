@@ -4,7 +4,12 @@ alias Lemieux.RepositoryContext.Elixir, as: Indexer
 alias Lemieux.RepositoryContext.Index
 alias Lemieux.Tools.Grep
 
-root = Path.join(System.tmp_dir!(), "lemieux-context-eval-#{System.unique_integer([:positive])}")
+root =
+  Path.join(
+    System.tmp_dir!(),
+    "lemieux-context-eval-#{Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)}"
+  )
+
 File.mkdir_p!(root)
 
 try do
@@ -70,11 +75,28 @@ try do
   )
 
   {:ok, stale} =
-    RepositoryContext.run(tool, %{"operation" => "definitions", "query" => "hello"}, context)
+    RepositoryContext.run(
+      tool,
+      %{"operation" => "definitions", "query" => "Service.greet"},
+      context
+    )
 
   true = String.contains?(stale.model_text, "stale") and stale.metadata["fallback"]
   true = Enum.all?(stale.structured_content["items"], &(&1["kind"] == "text"))
-  true = Enum.any?(stale.structured_content["items"], &(&1["path"] == "service.ex"))
+  true = Enum.any?(stale.structured_content["items"], &(&1["path"] == "caller.ex"))
+  false = Enum.any?(stale.structured_content["items"], &(&1["path"] == "service.ex"))
+
+  {:ok, added} =
+    RepositoryContext.run(tool, %{"operation" => "definitions", "query" => "hello"}, context)
+
+  true = added.metadata["fallback"]
+
+  true =
+    Enum.any?(
+      added.structured_content["items"],
+      &(&1["path"] == "service.ex" and &1["kind"] == "text")
+    )
+
   {:ok, updated, update_metrics} = Indexer.build(environment, root, paths, previous: warm)
   true = update_metrics.parsed == 1 and update_metrics.reused == 1
   true = updated.revision != cold.revision
