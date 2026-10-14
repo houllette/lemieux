@@ -19,6 +19,30 @@ defmodule Lemieux.RepositoryContext.BoundsTest do
     def run(_root, _command, _opts), do: {:error, :no_commands}
   end
 
+  defmodule Observed do
+    @behaviour Lemieux.Environment
+    def read_file(_owner, _cwd, _path), do: {:error, :unsupported}
+    def write_file(_owner, _cwd, _path, _bytes), do: {:error, :denied}
+    def run(_owner, _command, _opts), do: {:error, :no_commands}
+
+    def stream_file(owner, _cwd, path) do
+      send(owner, {:source_read, path})
+      {:ok, ["hello\nhello\n"]}
+    end
+  end
+
+  defmodule BrokenSource do
+    @behaviour Lemieux.Environment
+    def read_file(_state, _cwd, _path), do: {:error, :unsupported}
+    def write_file(_state, _cwd, _path, _bytes), do: {:error, :denied}
+    def run(_state, _command, _opts), do: {:error, :no_commands}
+    def stream_file(_state, _cwd, "a.ex"), do: {:ok, ["hello"]}
+
+    def stream_file(_state, _cwd, "b.ex") do
+      {:ok, Stream.repeatedly(fn -> raise "PRIVATE STREAM ERROR" end)}
+    end
+  end
+
   defp record(text, fields \\ %{}) do
     Map.merge(
       %{path: "a.ex", line: 1, kind: "definition", symbol: "hello", digest: Reader.digest(text)},
@@ -297,5 +321,70 @@ defmodule Lemieux.RepositoryContext.BoundsTest do
       refute result.model_text =~ "PRIVATE ERROR"
       assert byte_size(JSON.encode!(result.model_text)) <= 512
     end
+  end
+
+  test "JSON escaping of adapter limitations cannot exhaust the output budget", %{tmp_dir: root} do
+    limitations = [
+      String.duplicate("\\", 128),
+      String.duplicate("\"", 128),
+      String.duplicate("\\\"", 64)
+    ]
+
+    index = Index.new([], revision: "r1", limitations: limitations)
+
+    tool =
+      RepositoryContext.new(
+        repositories: [%{id: "app", backend: {Index, index}}],
+        max_tokens: 512
+      )
+
+    assert {:ok, result} = RepositoryContext.run(tool, %{"operation" => "map"}, ctx(root))
+    assert byte_size(JSON.encode!(result.model_text)) <= 512
+    assert result.model_text =~ "Limited repository context"
+    assert result.model_text =~ "Fallback"
+    assert result.metadata["truncated"]
+    assert Enum.all?(limitations, &(&1 in result.metadata["limitations"]))
+  end
+
+  test "literal matches share one result allowance across files and repositories" do
+    repos =
+      for id <- ["app", "other"] do
+        %{
+          id: id,
+          backend: nil,
+          paths: ["a.ex", "b.ex", "c.ex"],
+          root: "/remote",
+          environment: {Observed, self()}
+        }
+      end
+
+    tool = RepositoryContext.new(repositories: repos, max_results: 1)
+
+    assert {:ok, result} =
+             RepositoryContext.run(tool, %{"operation" => "search", "query" => "hello"}, ctx("/"))
+
+    assert_receive {:source_read, "a.ex"}
+    refute_receive {:source_read, _path}, 20
+    assert length(result.structured_content["items"]) == 1
+    assert result.metadata["source_bytes"] == byte_size("hello\nhello\n")
+    assert result.metadata["candidates"] == 1
+    assert result.metadata["truncated"]
+  end
+
+  test "one failed source stream cannot discard verified context from another file" do
+    records = [record("hello"), record("hello", %{path: "b.ex"})]
+
+    scope = Map.merge(repo(records), %{root: "/remote", environment: BrokenSource})
+
+    assert {:ok, result} =
+             RepositoryContext.run(
+               RepositoryContext.new(repositories: [scope]),
+               %{"operation" => "definitions", "query" => "hello"},
+               ctx("/")
+             )
+
+    assert [%{"path" => "a.ex", "freshness" => "verified"}] = result.structured_content["items"]
+    assert result.model_text =~ "unreadable"
+    refute result.model_text =~ "PRIVATE STREAM ERROR"
   end
 end

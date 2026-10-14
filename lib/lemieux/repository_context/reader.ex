@@ -22,6 +22,13 @@ defmodule Lemieux.RepositoryContext.Reader do
          {:ok, stream} <- Environment.stream_file(environment, root, resolved) do
       bounded(stream, max_bytes)
     end
+  rescue
+    # A stream may fail after it was opened (for example, a remote read or
+    # filesystem error). Withhold this file without discarding other verified
+    # records, and never expose the environment's raw exception text.
+    _error -> {:error, :unreadable}
+  catch
+    _kind, _reason -> {:error, :unreadable}
   end
 
   defp authorize(repo, context, path) do

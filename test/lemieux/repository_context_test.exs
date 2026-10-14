@@ -265,4 +265,92 @@ defmodule Lemieux.RepositoryContextTest do
 
     refute inspect(Harness.explain(harness)) =~ "PRIVATE_BACKEND_STATE"
   end
+
+  test "snapshot operations select definitions before the candidate allowance", %{context: ctx} do
+    text = "def hello, do: World.call()\n"
+
+    records = [
+      item(text, %{kind: "reference"}),
+      item(text, %{kind: "dependency"}),
+      item(text)
+    ]
+
+    assert {:ok, result} =
+             RepositoryContext.run(
+               tool(records, max_candidates: 1),
+               %{"operation" => "definitions", "query" => "hello"},
+               ctx
+             )
+
+    assert [%{"kind" => "definition", "symbol" => "hello/0"}] = result.structured_content["items"]
+    assert result.metadata["candidates"] == 1
+    refute result.metadata["fallback"]
+  end
+
+  test "exact symbol matches rank before heavily referenced substring matches", %{
+    context: ctx,
+    root: root
+  } do
+    text = String.duplicate("hello\n", 112)
+    File.write!(Path.join(root, "a.ex"), text)
+
+    records =
+      [item(text, %{symbol: "hello"}), item(text, %{symbol: "hello_extra", line: 2})] ++
+        Enum.map(3..112, &item(text, %{kind: "reference", symbol: "hello_extra", line: &1}))
+
+    assert {:ok, result} =
+             RepositoryContext.run(
+               tool(records, max_results: 1),
+               %{"operation" => "map", "query" => "hello"},
+               ctx
+             )
+
+    assert [%{"symbol" => "hello"}] = result.structured_content["items"]
+  end
+
+  test "references in another repository do not promote an unrelated same-named definition", %{
+    context: ctx
+  } do
+    text = "def hello, do: World.call()\n"
+    definitions = [item(text, %{symbol: "A"}), item(text, %{symbol: "Z"})]
+
+    repos = [
+      %{id: "app", backend: {Index, Index.new(definitions, revision: "app")}},
+      %{
+        id: "other",
+        backend:
+          {Index, Index.new([item(text, %{kind: "reference", symbol: "Z"})], revision: "other")}
+      }
+    ]
+
+    assert {:ok, result} =
+             RepositoryContext.run(
+               RepositoryContext.new(repositories: repos, max_results: 1),
+               %{"operation" => "map"},
+               ctx
+             )
+
+    assert [%{"repository" => "app", "symbol" => "A"}] = result.structured_content["items"]
+  end
+
+  test "duplicate index edges cannot inflate a map's reference ranking", %{
+    context: ctx,
+    root: root
+  } do
+    text = "hello\nhello\nhello\n"
+    File.write!(Path.join(root, "a.ex"), text)
+
+    records =
+      [item(text, %{symbol: "A"}), item(text, %{symbol: "B"})] ++
+        List.duplicate(item(text, %{kind: "reference", symbol: "A"}), 10) ++
+        [
+          item(text, %{kind: "reference", symbol: "B", line: 2}),
+          item(text, %{kind: "reference", symbol: "B", line: 3})
+        ]
+
+    assert {:ok, result} =
+             RepositoryContext.run(tool(records, max_results: 1), %{"operation" => "map"}, ctx)
+
+    assert [%{"symbol" => "B"}] = result.structured_content["items"]
+  end
 end

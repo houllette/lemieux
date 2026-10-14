@@ -61,10 +61,19 @@ retains kind, symbol, container and selected diagnostic message/severity.
 Maps rank exact query matches first, then referenced definitions, with stable
 repository/path/line tie breaks. The incoming-reference score covers only the
 bounded, authorized, verified candidate set; it is not a complete call graph.
+Duplicate edges count once, and identical symbol names in different repositories
+are separate nodes. Operation-specific snapshot queries filter record kinds
+before applying the candidate cap.
 
 The built-in index is **syntax only**. It reports definitions, syntactic calls,
 module dependencies and parse errors. Aliases, imports, macros, generated code
 and dynamic dispatch remain unresolved; these limits are shown in results.
+Default arguments expose each syntactically callable arity, and calls in defaults
+and guards are included. Explicit `Elixir.` module prefixes and lexical
+`__MODULE__` aliases are resolved; other aliases remain unresolved.
+Quoted forms and dynamic module definitions are omitted because their expansion
+or destination cannot be established by syntax alone. Parsing emits no source
+warnings to the host's stderr.
 It handles identifier strings without interning repository names as VM atoms.
 
 ## Hosts choose indexes and language servers
@@ -117,6 +126,8 @@ root, environment or executable. `max_tokens` conservatively allows one UTF-8
 byte per token, accounting for JSON string escaping. This is an intentionally
 small allowance, not a measured tokenizer count. Audit fields have the normal
 tool-result evidence budget separately.
+The mandatory warning, adapter limitations and results all share that encoded
+output allowance; notes omitted from the model text remain in audit metadata.
 
 A worker deadline includes adapters, enumeration, source verification and
 ranking. Cancelling the tool kills its worker; a guardian also kills it when
@@ -147,6 +158,10 @@ fallback is labeled as literal search and has current source digests. An
 empty query or missing manifest yields search/read guidance. An incomplete
 index can still return verified useful items; its coverage limit remains
 visible. Budget exhaustion does not establish the absence of other results.
+Literal matches share one result allowance across all files and repositories,
+with one extra match to establish truncation. Fallback scans in the host's
+repository and manifest order and stops once that allowance is full. A source
+stream failure withholds that file and preserves other verified results.
 
 ## Updates and evaluation
 
@@ -155,6 +170,8 @@ is still read and hashed, including same-size edits. A new manifest removes
 deleted or no-longer-authorized files. The host explicitly replaces backend
 state or supplies a newly configured tool when resuming. No index is restored
 as executable state from transcript evidence.
+Duplicate retained manifest paths are read and parsed once; the manifest
+examination cap still bounds repeated entries.
 
 Run the offline mechanical comparison after compiling:
 

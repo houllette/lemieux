@@ -9,6 +9,13 @@ API.
 
 ## Unreleased
 
+- Repository context budgets include escaped adapter notes and one shared
+  literal-result allowance. Snapshot queries select record kinds before the
+  candidate cap; map ranking keeps exact matches first and separates repository
+  identities. The syntax index handles default arguments and explicit module
+  prefixes, omits quoted/dynamic definitions, and preserves records when a
+  duplicate manifest entry or another file's stream failure is encountered.
+
 - Session discovery excludes terminated processes while Registry is still
   consuming their exit notifications, including temporary agent sessions that
   have already completed synchronous deadline cleanup.

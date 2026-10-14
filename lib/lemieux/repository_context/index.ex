@@ -46,18 +46,29 @@ defmodule Lemieux.RepositoryContext.Index do
      |> Map.put(:items, items)}
   end
 
-  defp matches?(%{symbol: symbol, path: path}, request)
+  defp matches?(%{kind: kind, symbol: symbol, path: path}, request)
        when is_binary(symbol) and is_binary(path) do
     if String.valid?(symbol) and String.valid?(path) do
       in_path? =
         is_nil(request.path) or path == request.path or
           String.starts_with?(path, request.path <> "/")
 
-      in_path? and String.contains?(String.downcase(symbol), String.downcase(request.query))
+      in_operation?(kind, request.operation) and in_path? and
+        String.contains?(String.downcase(symbol), String.downcase(request.query))
     else
       true
     end
   end
 
   defp matches?(_malformed, _request), do: true
+
+  # Maps retain reference edges for ranking. Other queries must not spend
+  # their candidate allowance on a different record kind with the same name.
+  defp in_operation?(kind, "map"), do: kind in ~w(definition symbol reference dependency)
+  defp in_operation?(kind, "definitions"), do: kind == "definition"
+  defp in_operation?(kind, "references"), do: kind == "reference"
+  defp in_operation?(kind, "dependencies"), do: kind == "dependency"
+  defp in_operation?(kind, "symbols"), do: kind in ~w(definition symbol)
+  defp in_operation?(kind, "diagnostics"), do: kind == "diagnostic"
+  defp in_operation?(_kind, _operation), do: false
 end

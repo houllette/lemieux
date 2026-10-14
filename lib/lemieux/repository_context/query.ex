@@ -15,6 +15,7 @@ defmodule Lemieux.RepositoryContext.Query do
       cache: %{},
       bytes: 0,
       seen: 0,
+      literal_count: 0,
       fallback: false,
       truncated: false
     }
@@ -202,6 +203,9 @@ defmodule Lemieux.RepositoryContext.Query do
     counted = %{state | seen: state.seen + 1}
 
     cond do
+      state.literal_count > limits.max_results ->
+        {:halt, state}
+
       state.seen >= limits.max_candidates or expired?(request) ->
         {:halt, limited(state)}
 
@@ -228,7 +232,9 @@ defmodule Lemieux.RepositoryContext.Query do
           |> Stream.filter(fn {text, _line} ->
             String.contains?(String.downcase(text), String.downcase(request.query))
           end)
-          |> Enum.take(limits.max_results + 1)
+          # One shared lookahead establishes truncation without retaining
+          # max_results matches for every file and exhausting the worker heap.
+          |> Enum.take(limits.max_results + 1 - state.literal_count)
           |> Enum.map(fn {text, line} ->
             %{
               "repository" => repo.id,
@@ -244,7 +250,14 @@ defmodule Lemieux.RepositoryContext.Query do
             }
           end)
 
-        %{state | items: matches ++ state.items}
+        count = state.literal_count + length(matches)
+
+        %{
+          state
+          | items: matches ++ state.items,
+            literal_count: count,
+            truncated: state.truncated or count > limits.max_results
+        }
 
       {:error, _reason} ->
         note(state, "unreadable or byte-limited source items omitted")
@@ -280,11 +293,23 @@ defmodule Lemieux.RepositoryContext.Query do
     notes =
       state.notes
       |> MapSet.to_list()
-      |> Enum.sort_by(&note_priority/1)
+      |> Enum.sort_by(&{note_priority(&1), &1})
       |> Enum.take(3)
-      |> Enum.map_join("; ", &clip(&1, 90))
 
-    header = @warning <> "\n" <> notes <> "\n[results limited by host budgets]\n"
+    base = @warning <> "\n[results limited by host budgets]\n"
+
+    # Adapter notes are data too. Budget the mandatory header and each note
+    # before results; quotes/backslashes can double their encoded size.
+    {header, shown} =
+      Enum.reduce(notes, {base, 0}, fn note, {text, shown} ->
+        next = text <> clip(note, 90) <> "\n"
+
+        if byte_size(JSON.encode!(next)) <= limits.max_tokens,
+          do: {next, shown + 1},
+          else: {text, shown}
+      end)
+
+    truncated = truncated or shown < MapSet.size(state.notes)
     # Account for JSON escaping too: a source full of quotes/control characters
     # must not exceed the token allowance only once the provider encodes it.
     {items, text} =
@@ -316,16 +341,17 @@ defmodule Lemieux.RepositoryContext.Query do
   defp note_priority(_other), do: 3
 
   defp rank(items, request) do
+    items = Enum.uniq_by(items, &Map.take(&1, ~w(repository path line kind symbol)))
+
     incoming =
       items
       |> Enum.filter(&(&1["kind"] in ["reference", "dependency"]))
-      |> Enum.frequencies_by(& &1["symbol"])
+      |> Enum.frequencies_by(&{&1["repository"], &1["symbol"]})
 
     items
-    |> Enum.uniq_by(&Map.take(&1, ~w(repository path line kind symbol)))
     |> Enum.filter(&wanted?(&1, request))
     |> Enum.sort_by(fn item ->
-      {-score(item, request.query, incoming), item["repository"], item["path"], item["line"],
+      {score(item, request.query, incoming), item["repository"], item["path"], item["line"],
        item["symbol"]}
     end)
   end
@@ -360,8 +386,11 @@ defmodule Lemieux.RepositoryContext.Query do
         true -> 0
       end
 
-    match + Map.get(incoming, item["symbol"], 0) +
-      if(item["kind"] == "definition", do: 1, else: 0)
+    # Query relevance is an ordering, not a weight that enough unrelated
+    # edges can overwhelm. Identical names in separate repositories are
+    # separate nodes; no cross-repository resolution was established.
+    {-match, -Map.get(incoming, {item["repository"], item["symbol"]}, 0),
+     if(item["kind"] == "definition", do: -1, else: 0)}
   end
 
   defp format(item) do

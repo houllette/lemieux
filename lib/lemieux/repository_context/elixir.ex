@@ -10,7 +10,9 @@ defmodule Lemieux.RepositoryContext.Elixir do
   Definitions, syntactic calls and module dependencies carry source SHA-256
   digests and one-based lines. Parse errors become selected diagnostics. This
   is an approximate syntax index: aliases, imports, generated definitions,
-  macros and dynamic dispatch are not resolved. For compiler semantics, supply
+  macros and dynamic dispatch are not resolved. Quoted forms and dynamic module
+  definitions are omitted rather than attributed to a fabricated module.
+  For compiler semantics, supply
   a host-owned language-server adapter through `Lemieux.RepositoryContext.Source`.
 
   `build/4` accepts `:previous` for incremental parsing reuse, `:allow` for a
@@ -128,7 +130,10 @@ defmodule Lemieux.RepositoryContext.Elixir do
       Index.new(items,
         revision: revision,
         complete?: state.complete?,
-        limitations: ["syntax index only; aliases, macros and dynamic dispatch are unresolved"]
+        limitations: [
+          "syntax index only; aliases, macros and dynamic dispatch are unresolved",
+          "quoted forms and dynamic module definitions are omitted"
+        ]
       )
       | files: state.files
     }
@@ -142,6 +147,12 @@ defmodule Lemieux.RepositoryContext.Elixir do
   end
 
   defp index_file(repo, context, path, previous, limits, state) do
+    if Map.has_key?(state.files, path),
+      do: state,
+      else: read_file(repo, context, path, previous, limits, state)
+  end
+
+  defp read_file(repo, context, path, previous, limits, state) do
     allowance = min(limits.max_file_bytes, limits.max_source_bytes - state.read_bytes)
 
     read =
@@ -212,7 +223,10 @@ defmodule Lemieux.RepositoryContext.Elixir do
   end
 
   defp parse(text, path, digest) do
-    case Code.string_to_quoted(text, static_atoms_encoder: fn name, _metadata -> {:ok, name} end) do
+    case Code.string_to_quoted(text,
+           emit_warnings: false,
+           static_atoms_encoder: fn name, _metadata -> {:ok, name} end
+         ) do
       {:ok, ast} ->
         {walk(ast, "", [], path, digest), true}
 
@@ -234,34 +248,43 @@ defmodule Lemieux.RepositoryContext.Elixir do
   end
 
   defp walk({"defmodule", meta, [name, body]}, parent, acc, path, digest) do
-    module = module_name(name)
+    case definition_module(name, parent) do
+      "" ->
+        acc
 
-    module =
-      if parent == "" or String.starts_with?(module, parent <> "."),
-        do: module,
-        else: parent <> "." <> module
-
-    acc = add(acc, "definition", module, meta, parent, path, digest)
-    walk(body, module, acc, path, digest)
+      module ->
+        acc = add(acc, "definition", module, meta, parent, path, digest)
+        walk(body, module, acc, path, digest)
+    end
   end
 
   defp walk({definition, meta, [head | body]}, module, acc, path, digest)
        when definition in ["def", "defp", "defmacro", "defmacrop"] do
     acc =
       case head(head) do
-        {name, arity} ->
-          add(acc, "definition", qualify(module, name, arity), meta, module, path, digest)
+        {name, args} ->
+          arity = length(args)
+          defaults = Enum.count(args, &match?({:\\, _, _}, &1))
+
+          Enum.reduce((arity - defaults)..arity, acc, fn arity, acc ->
+            add(acc, "definition", qualify(module, name, arity), meta, module, path, digest)
+          end)
 
         nil ->
           acc
       end
 
+    acc = walk(head_sources(head), module, acc, path, digest)
     walk(body, module, acc, path, digest)
   end
 
+  # Walking quoted definitions as ordinary code invents functions on the
+  # quoting module, even though expansion may install them somewhere else.
+  defp walk({"quote", _meta, _args}, _module, acc, _path, _digest), do: acc
+
   defp walk({{:., _dot_meta, [target, function]}, meta, args}, module, acc, path, digest)
        when is_binary(function) and is_list(args) do
-    target = module_name(target)
+    target = module_name(target, module)
 
     acc =
       if target == "",
@@ -283,8 +306,12 @@ defmodule Lemieux.RepositoryContext.Elixir do
     walk(args, module, acc, path, digest)
   end
 
-  defp walk({:__aliases__, meta, _parts} = node, module, acc, path, digest),
-    do: add(acc, "dependency", module_name(node), meta, module, path, digest)
+  defp walk({:__aliases__, meta, _parts} = node, module, acc, path, digest) do
+    case module_name(node, module) do
+      "" -> acc
+      target -> add(acc, "dependency", target, meta, module, path, digest)
+    end
+  end
 
   defp walk({name, meta, args}, module, acc, path, digest)
        when is_binary(name) and is_list(args) do
@@ -306,11 +333,49 @@ defmodule Lemieux.RepositoryContext.Elixir do
   defp walk(_node, _module, acc, _path, _digest), do: acc
 
   defp head({:when, _meta, [head | _guards]}), do: head(head)
-  defp head({name, _meta, args}) when is_binary(name) and is_list(args), do: {name, length(args)}
-  defp head({name, _meta, nil}) when is_binary(name), do: {name, 0}
+  defp head({name, _meta, args}) when is_binary(name) and is_list(args), do: {name, args}
+  defp head({name, _meta, nil}) when is_binary(name), do: {name, []}
   defp head(_head), do: nil
-  defp module_name({:__aliases__, _meta, parts}), do: Enum.join(parts, ".")
-  defp module_name(_node), do: ""
+
+  defp head_sources({:when, _meta, [head | guards]}), do: [head_sources(head) | guards]
+  defp head_sources({_name, _meta, args}) when is_list(args), do: args
+  defp head_sources(_head), do: []
+
+  defp definition_module({:__aliases__, _meta, ["Elixir" | parts]}, _parent),
+    do: alias_name(parts)
+
+  defp definition_module({:__aliases__, _meta, [{"__MODULE__", _, nil} | _parts]} = name, parent),
+    do: module_name(name, parent)
+
+  defp definition_module(name, ""), do: module_name(name, "")
+
+  defp definition_module(name, parent) do
+    # A syntactic nested alias is relative even when it repeats its parent:
+    # `defmodule Parent.Child` inside Parent defines Parent.Parent.Child.
+    case module_name(name, parent) do
+      "" -> ""
+      module -> parent <> "." <> module
+    end
+  end
+
+  defp module_name({"__MODULE__", _meta, nil}, module), do: module
+  defp module_name({:__aliases__, _meta, ["Elixir" | parts]}, _module), do: alias_name(parts)
+
+  defp module_name({:__aliases__, _meta, [{"__MODULE__", _, nil} | parts]}, module) do
+    case {module, alias_name(parts)} do
+      {"", _suffix} -> ""
+      {_module, ""} -> ""
+      {module, suffix} -> module <> "." <> suffix
+    end
+  end
+
+  defp module_name({:__aliases__, _meta, parts}, _module), do: alias_name(parts)
+  defp module_name(_node, _module), do: ""
+
+  defp alias_name(parts) do
+    if Enum.all?(parts, &is_binary/1), do: Enum.join(parts, "."), else: ""
+  end
+
   defp qualify("", name, arity), do: "#{name}/#{arity}"
   defp qualify(module, name, arity), do: "#{module}.#{name}/#{arity}"
 

@@ -137,4 +137,120 @@ defmodule Lemieux.RepositoryContext.ElixirTest do
     refute File.exists?(marker)
     assert_raise ArgumentError, fn -> String.to_existing_atom(name) end
   end
+
+  test "default arguments and guards retain their syntactic calls and callable arities", %{
+    root: root,
+    env: env
+  } do
+    File.write!(Path.join(root, "example.ex"), ~S"""
+    defmodule Example do
+      def greet(name \\ Defaults.name()) when Guards.valid?(name), do: Other.hello(name)
+    end
+    """)
+
+    assert {:ok, index, _} = Indexer.build(env, root, ["example.ex"])
+    definitions = index.items |> Enum.filter(&(&1.kind == "definition")) |> Enum.map(& &1.symbol)
+    references = index.items |> Enum.filter(&(&1.kind == "reference")) |> Enum.map(& &1.symbol)
+    assert "Example.greet/0" in definitions
+    assert "Example.greet/1" in definitions
+    assert "Defaults.name/0" in references
+    assert "Guards.valid?/1" in references
+    assert "Other.hello/1" in references
+  end
+
+  test "explicit Elixir module names are absolute in nested definitions and calls", %{
+    root: root,
+    env: env
+  } do
+    File.write!(Path.join(root, "example.ex"), """
+    defmodule Parent do
+      defmodule Elixir.Absolute do
+        def run(), do: Elixir.Other.hello()
+      end
+    end
+    """)
+
+    assert {:ok, index, _} = Indexer.build(env, root, ["example.ex"])
+    assert Enum.any?(index.items, &(&1.kind == "definition" and &1.symbol == "Absolute.run/0"))
+    assert Enum.any?(index.items, &(&1.kind == "reference" and &1.symbol == "Other.hello/0"))
+    refute Enum.any?(index.items, &String.contains?(&1.symbol, "Elixir."))
+  end
+
+  test "quoted and dynamic module definitions do not fabricate concrete symbols", %{
+    root: root,
+    env: env
+  } do
+    File.write!(Path.join(root, "example.ex"), """
+    defmodule Example do
+      defmacro template() do
+        quote do
+          def generated(), do: Ghost.call()
+        end
+      end
+      defmodule unquote(name) do
+        def dynamic(), do: Phantom.call()
+      end
+    end
+    """)
+
+    assert {:ok, index, _} = Indexer.build(env, root, ["example.ex"])
+    assert Enum.any?(index.items, &(&1.symbol == "Example.template/0"))
+    refute Enum.any?(index.items, &String.contains?(&1.symbol, "generated"))
+    refute Enum.any?(index.items, &String.contains?(&1.symbol, "dynamic"))
+    refute Enum.any?(index.items, &(&1.symbol in ["Ghost.call/0", "Phantom.call/0"]))
+    assert Enum.any?(index.limitations, &String.contains?(&1, "quoted"))
+  end
+
+  test "duplicate manifest entries do not overwrite records or consume the item allowance", %{
+    root: root,
+    env: env
+  } do
+    assert {:ok, single, _} = Indexer.build(env, root, ["example.ex"])
+
+    assert {:ok, repeated, metrics} =
+             Indexer.build(env, root, ["example.ex", "example.ex"],
+               max_items: length(single.items) + 1
+             )
+
+    assert repeated.items == single.items
+    assert repeated.complete?
+    assert repeated.revision == single.revision
+    assert metrics.parsed == 1
+    assert metrics.read_bytes == byte_size(@code)
+  end
+
+  test "indexing repository source cannot emit parser warnings to stderr", %{root: root, env: env} do
+    File.write!(Path.join(root, "example.ex"), "def hello(), do: 'legacy charlist'\n")
+
+    output =
+      ExUnit.CaptureIO.capture_io(:stderr, fn ->
+        assert {:ok, index, _} = Indexer.build(env, root, ["example.ex"])
+        assert Enum.any?(index.items, &(&1.symbol == "hello/0"))
+      end)
+
+    assert output == ""
+  end
+
+  test "nested names keep repeated parent segments and resolve lexical __MODULE__ aliases", %{
+    root: root,
+    env: env
+  } do
+    File.write!(Path.join(root, "example.ex"), """
+    defmodule Parent do
+      defmodule Parent.Child do
+        def run(), do: __MODULE__.helper()
+      end
+      defmodule __MODULE__.Explicit do
+        def run(), do: __MODULE__.Worker.call()
+      end
+    end
+    """)
+
+    assert {:ok, index, _} = Indexer.build(env, root, ["example.ex"])
+    assert Enum.any?(index.items, &(&1.symbol == "Parent.Parent.Child.run/0"))
+    assert Enum.any?(index.items, &(&1.symbol == "Parent.Parent.Child.helper/0"))
+    assert Enum.any?(index.items, &(&1.symbol == "Parent.Explicit.run/0"))
+    assert Enum.any?(index.items, &(&1.symbol == "Parent.Explicit.Worker.call/0"))
+    refute Enum.any?(index.items, &(&1.symbol == "Parent.Child.run/0"))
+  end
 end
