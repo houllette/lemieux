@@ -7,28 +7,15 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 0.11.0 — 2026-10-13
 
-- Repository context budgets include escaped adapter notes and one shared
-  literal-result allowance. Snapshot queries select record kinds before the
-  candidate cap; map ranking keeps exact matches first and separates repository
-  identities. The syntax index handles default arguments and explicit module
-  prefixes, omits quoted/dynamic definitions, and preserves records when a
-  duplicate manifest entry or another file's stream failure is encountered.
-
-- Session discovery excludes terminated processes while Registry is still
-  consuming their exit notifications, including temporary agent sessions that
-  have already completed synchronous deadline cleanup.
-
-- A writer can correct a built-in write's unread/stale-file precondition refusal
-  before verification. Typed evidence certifies that mutation never started;
-  permission denials and filesystem write failures remain hard failures.
-
-- Writer integration now rolls back when a post-application check raises, throws
-  or exits, and retains transaction identifiers in failure receipts. Accepted
-  paths with staged changes are refused even when their working copy matches
-  HEAD. Recovery tests also kill a separate runtime at durable transaction
-  boundaries and verify exact restoration and foreign-edit preservation.
+This release requires restarting `lmx` on every platform. Save an unsent draft,
+quit after staging the update, and use `lmx -c` or the named `--resume` command.
+New session/harness state and modules have no live migration from 0.10.0.
+Script extensions pinned to the 0.10 patch line need their code and manifest
+reviewed for 0.11; compiled bundles retain extension API 1. The CLI's default
+permission mode is now `auto`; select `full_auto` or `off` explicitly to retain
+unrestricted execution. Library hosts keep their own policy.
 
 ### Features
 
@@ -107,14 +94,57 @@ API.
   skipped, unavailable and model-run checks. `lmx run` JSON results add a
   `verification` field; a normal stop still does not imply verified completion.
 
+
+- Current input provenance and scoped approvals use a runtime host attestor and
+  bounded capture. Approval resolution binds the effective call and current
+  context; persisted claims never restore executable authority. Extension status,
+  local commands and accounting expose effective contributions, catalog bytes,
+  committed notices and extension-started requests without inventing usage.
+
 ### Fixes
+
+- Repository context budgets include escaped adapter notes and one shared
+  literal-result allowance. Snapshot queries select record kinds before the
+  candidate cap; map ranking keeps exact matches first and separates repository
+  identities. The syntax index handles default arguments and explicit module
+  prefixes, omits quoted/dynamic definitions, and preserves records when a
+  duplicate manifest entry or another file's stream failure is encountered.
+
+- Session discovery excludes terminated processes while Registry is still
+  consuming their exit notifications, including temporary agent sessions that
+  have already completed synchronous deadline cleanup.
+
+- A writer can correct a built-in write's unread/stale-file precondition refusal
+  before verification. Typed evidence certifies that mutation never started;
+  permission denials and filesystem write failures remain hard failures.
+
+- Writer integration now rolls back when a post-application check raises, throws
+  or exits, and retains transaction identifiers in failure receipts. Accepted
+  paths with staged changes are refused even when their working copy matches
+  HEAD. Recovery tests also kill a separate runtime at durable transaction
+  boundaries and verify exact restoration and foreign-edit preservation.
 
 - Stream-JSON announces its session before startup notices, including the
   automatic-policy sandbox fallback, so consumers receive the session identity
   before processing activity or diagnostics.
 
+- MCP clients report malformed discovery/initialization replies and rejected
+  version negotiation as errors instead of crashing or reusing a refused
+  version. Repeated pagination cursors, including cycles, fail the listing
+  instead of looping or returning a partial tool catalog.
+
+- Workspace reads and instruction discovery honor the effective execution
+  environment. Provider retry ownership and stable session cache keys are
+  consistent across hosts. MCP stdio caps frames, pending responses and stderr,
+  retaining process termination and cleanup evidence.
+- Todo, subagent and completion receipts use scannable statuses and spacing;
+  compatibility documentation now describes supported scoped `.claude/rules`.
+
 ### Development
 
+- Native archive qualification checks extension identity, effective decoration,
+  received stdin and completed tool/resume evidence without requiring a smoke
+  extension to be the last catalog entry; host policy can follow user extensions.
 - Root test runs record Temper flake evidence locally and in CI. A bounded
   multi-seed runner, review guidance, and nightly observations help expose
   timing and shared-state failures while preserving every failing result.
@@ -122,13 +152,6 @@ API.
   explicit exclusion ledger for test scaffolding, generated inspection code
   and execution outside the measured VM. MCP wire failures and hook
   approval/rewrite composition have additional regression tests.
-
-### Fixes
-
-- MCP clients report malformed discovery/initialization replies and rejected
-  version negotiation as errors instead of crashing or reusing a refused
-  version. Repeated pagination cursors, including cycles, fail the listing
-  instead of looping or returning a partial tool catalog.
 
 ## 0.10.0 — 2026-10-09
 

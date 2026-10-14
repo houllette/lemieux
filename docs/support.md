@@ -53,6 +53,9 @@ What works:
   `AGENTS.override.md`, `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md`, with
   `@path` imports confined as the
   [trust model](../SECURITY.md#guarded-by-default) describes;
+- bounded personal and repository `.claude/rules` files, with scoped rules
+  activated before matching native file operations; see
+  [Claude rule files](configuration.md#claude-rule-files);
 - Agent Skills from `.agents/skills`, `.claude/skills`, `~/.lmx/skills` and
   `~/.claude/skills`; legacy slash commands from `.claude/commands`;
 - subagent definitions (`.claude/agents`), used as read-only delegation
@@ -74,7 +77,7 @@ What does not:
   (skipped with a warning); the hook fields `if`, `async`, `asyncRewake`,
   `once` and `shell`; comma-separated matchers;
 - a repository's own `.claude/settings.json` hooks, which never run unless you
-  pass them with `--hooks`, and `.claude/rules`;
+  pass them with `--hooks`;
 - npm, archive and command plugin sources; LSP servers, monitors, themes,
   executables and settings in plugins; plugin options (`userConfig`).
 
