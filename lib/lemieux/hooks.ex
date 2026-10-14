@@ -129,6 +129,7 @@ defmodule Lemieux.Hooks do
   alias Lemieux.Hooks.Claude
   alias Lemieux.Hooks.Command
   alias Lemieux.Hooks.SessionContext
+  alias Lemieux.Input
   alias Lemieux.Provider
   alias Lemieux.Session
   alias Lemieux.Tool
@@ -560,11 +561,13 @@ defmodule Lemieux.Hooks do
   @spec user_prompt(hooks :: t(), prompt :: String.t(), context :: map()) ::
           {:ok, String.t()} | {:deny, String.t()}
   def user_prompt(hooks, prompt, context) do
+    original = prompt
+
     hooks
     |> Keyword.get_values(:user_prompt)
     |> Enum.reduce_while({:ok, prompt}, fn hook, {:ok, prompt} ->
       hook
-      |> before_prompt(prompt, context)
+      |> before_prompt(prompt, Input.hook_context(context, original, prompt))
       |> case do
         :allow -> {:cont, {:ok, prompt}}
         {:rewrite, rewritten} when is_binary(rewritten) -> {:cont, {:ok, rewritten}}

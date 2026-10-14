@@ -2,6 +2,7 @@ defmodule Lemieux.Session.Calls do
   @moduledoc false
 
   alias Lemieux.Clock
+  alias Lemieux.Input
   alias Lemieux.MCP
   alias Lemieux.MCP.RemoteTool
   alias Lemieux.ModelSpec
@@ -52,6 +53,7 @@ defmodule Lemieux.Session.Calls do
 
         state =
           %{state | recovery_enabled?: false, recovery_calls: [], turns_taken: 0}
+          |> Input.begin(:resumed_history, "")
           |> Prompts.begin_run()
           |> Instrumentation.start_prompt_telemetry()
 
@@ -257,7 +259,7 @@ defmodule Lemieux.Session.Calls do
       cwd: state.cwd,
       pending: Core.pending(state),
       queued_steers: Enum.reverse(state.reversed_steers),
-      queued_follow_ups: Enum.reverse(state.reversed_follow_ups),
+      queued_follow_ups: Enum.map(Enum.reverse(state.reversed_follow_ups), &Input.queued_text/1),
       request_id: state.current_request_id,
       spent_usd: state.spent_usd,
       inclusive_spent_usd: usage.total["cost_usd"],
@@ -295,7 +297,7 @@ defmodule Lemieux.Session.Calls do
       cwd: state.cwd,
       pending: Core.pending(state),
       queued_steers: Enum.reverse(state.reversed_steers),
-      queued_follow_ups: Enum.reverse(state.reversed_follow_ups),
+      queued_follow_ups: Enum.map(Enum.reverse(state.reversed_follow_ups), &Input.queued_text/1),
       request_id: state.current_request_id,
       requests: state.request_count,
       max_requests: state.max_requests,
@@ -563,12 +565,24 @@ defmodule Lemieux.Session.Calls do
     end
   end
 
-  def call({:prompt, text, contexts}, from, state) do
+  def call({:prompt, text, contexts}, from, state),
+    do: call({:prompt, text, contexts, []}, from, state)
+
+  def call({:input_original, id, token}, _from, state),
+    do: {:reply, Input.read(state, id, token), state}
+
+  def call({:prompt, text, contexts, opts}, from, state) do
     if Core.busy?(state) do
       {:reply, {:error, :busy}, state}
     else
-      OpenTelemetry.bind_prompt_parent(state.id, contexts)
-      Prompts.start_prompt_hook(state, from, text)
+      case Input.attest(state, from, :prompt, opts) do
+        {:ok, attestation} ->
+          OpenTelemetry.bind_prompt_parent(state.id, contexts)
+          Prompts.start_prompt_hook(state, from, text, attestation)
+
+        {:error, _reason} = error ->
+          {:reply, error, state}
+      end
     end
   end
 
@@ -695,11 +709,21 @@ defmodule Lemieux.Session.Calls do
     end
   end
 
-  def call({:follow_up, text}, _from, state) do
-    if Core.busy?(state) do
-      {:reply, :ok, %{state | reversed_follow_ups: [text | state.reversed_follow_ups]}}
-    else
-      {:reply, :ok, Prompts.start_follow_up_hook(state, text)}
+  def call({:follow_up, text}, from, state), do: call({:follow_up, text, []}, from, state)
+
+  def call({:follow_up, text, opts}, from, state) do
+    case Input.attest(state, from, :follow_up, opts) do
+      {:ok, attestation} ->
+        submission = {text, attestation}
+
+        if Core.busy?(state),
+          do:
+            {:reply, :ok,
+             %{state | reversed_follow_ups: [submission | state.reversed_follow_ups]}},
+          else: {:reply, :ok, Prompts.start_follow_up_hook(state, submission)}
+
+      {:error, _reason} = error ->
+        {:reply, error, state}
     end
   end
 

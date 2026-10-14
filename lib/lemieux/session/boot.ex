@@ -4,6 +4,7 @@ defmodule Lemieux.Session.Boot do
   alias Lemieux.Contract
   alias Lemieux.Environment
   alias Lemieux.Hooks
+  alias Lemieux.Input
   alias Lemieux.JobBudget
   alias Lemieux.MCP
   alias Lemieux.Prompt
@@ -134,6 +135,7 @@ defmodule Lemieux.Session.Boot do
            provider_retry_policy: Recovery.retry_policy(Keyword.get(opts, :provider_retry, [])),
            tool_token_counter: Keyword.get(opts, :tool_token_counter),
            hooks: hooks,
+           input: Input.options(opts),
            # A host seam like `:hooks`: what the loop says to the model is host
            # behaviour, so it is neither recorded nor restored. `Lemieux.Messages`
            # says what each sentence is for.

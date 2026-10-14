@@ -426,6 +426,9 @@ defmodule Lemieux.Session do
       tool is told the deadline it actually got as `deadline_ms` in its
       context, so one that waits on something else can hand that something
       a shorter clock.
+    * `:ingress` — runtime `{module, state}` implementing `Lemieux.Ingress`; never restored.
+    * `:input_capture_bytes` and `:input_capture_ttl_ms` — opt-in, bounded original-input
+      capture for native hooks (`Lemieux.Input`); default capture is disabled.
     * `:approval_timeout` — how long a parked approval, `ask_user` question or
       MCP elicitation waits, or `:infinity` for a host where somebody is
       always there to answer eventually. Defaults to five minutes. The tool's
@@ -747,9 +750,14 @@ defmodule Lemieux.Session do
           :ok
           | {:error, :busy | :cancelled}
           | {:error, {:hook_denied, String.t()} | {:hook_failed, term()}}
-  def prompt(session, text) when is_binary(text) do
-    contexts = OpenTelemetry.capture_contexts()
-    GenServer.call(session, {:prompt, text, contexts}, :infinity)
+  def prompt(session, text) when is_binary(text),
+    do: GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts()}, :infinity)
+
+  @doc "Submits an untrusted `:attestation` claim for the runtime host ingress to verify."
+  @spec prompt(session :: session(), text :: String.t(), opts :: keyword()) ::
+          :ok | {:error, term()}
+  def prompt(session, text, opts) when is_binary(text) and is_list(opts) do
+    GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts(), opts}, :infinity)
   end
 
   @doc """
@@ -970,6 +978,12 @@ defmodule Lemieux.Session do
   @spec follow_up(session(), String.t()) :: :ok | {:error, term()}
   def follow_up(session, text) when is_binary(text),
     do: GenServer.call(session, {:follow_up, text}, :infinity)
+
+  @doc "Queues input with a host-verifiable ingress claim; queued source remains distinct."
+  @spec follow_up(session :: session(), text :: String.t(), opts :: keyword()) ::
+          :ok | {:error, term()}
+  def follow_up(session, text, opts) when is_binary(text) and is_list(opts),
+    do: GenServer.call(session, {:follow_up, text, opts}, :infinity)
 
   @doc """
   Answers a tool call that a hook parked.

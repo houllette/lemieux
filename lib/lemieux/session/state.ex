@@ -181,6 +181,7 @@ defmodule Lemieux.Session.State do
     tool_output_bytes: nil,
     tool_token_counter: nil,
     hooks: [],
+    input: %{ingress: nil, capture_bytes: 0, capture_ttl_ms: 60_000, current: nil, capture: nil},
     messages: nil,
     guard: nil,
     attention_observer: nil,

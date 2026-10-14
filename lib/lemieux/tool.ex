@@ -164,6 +164,8 @@ defmodule Lemieux.Tool do
           optional(:execution) => Lemieux.Execution.t(),
           optional(:tool_wave_id) => String.t() | nil,
           optional(:input_modalities) => [atom()] | :unknown,
+          optional(:current_input) => Lemieux.Input.t() | nil,
+          optional(:input_original) => Lemieux.Input.capability(),
           cwd: Path.t(),
           environment: Lemieux.Environment.t(),
           session_id: String.t(),

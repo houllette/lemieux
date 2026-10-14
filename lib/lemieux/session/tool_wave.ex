@@ -2,6 +2,7 @@ defmodule Lemieux.Session.ToolWave do
   @moduledoc false
 
   alias Lemieux.Hooks
+  alias Lemieux.Input
   alias Lemieux.Messages
   alias Lemieux.OpenTelemetry
   alias Lemieux.Provider
@@ -302,6 +303,7 @@ defmodule Lemieux.Session.ToolWave do
       deadline_ms: deadline_ms,
       input_modalities: input_modalities(state)
     }
+    |> Map.merge(Input.context(state))
   end
 
   # What the current model can be shown besides text: the host's answer, or
