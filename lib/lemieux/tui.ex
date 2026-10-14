@@ -157,6 +157,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Selection
     alias Lemieux.TUI.Setup
+    alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.Submission
     alias Lemieux.TUI.Theme
     alias Lemieux.TUI.Turn
@@ -423,7 +424,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
               refreshed_at: integer() | nil,
               index: %{files: [String.t()], at: integer()} | :loading | nil,
               fuzzy: %{query: String.t(), matches: [String.t()]} | nil,
-              config_path: Path.t() | nil
+              config_path: Path.t() | nil,
+              skill_load: %{task: Task.t(), session: Session.session()} | nil
             },
             status: %{
               line: module() | nil,
@@ -561,7 +563,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 # task for the fuzzy `@` picker; see `Lemieux.TUI.FileIndex`.
                 index: nil,
                 fuzzy: nil,
-                config_path: nil
+                config_path: nil,
+                skill_load: nil
               },
               # The things a host can replace in what the screen does on its
               # own account — the status row, what a running turn is called,
@@ -858,6 +861,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
           %__MODULE__{resume: %{monitor: ref}} = state
         ),
         do: {:noreply, Lifecycle.session_down(state, reason)}
+
+    def handle_info(
+          {ref, result},
+          %__MODULE__{references: %{skill_load: %{task: %Task{ref: ref}}}} = state
+        ),
+        do: {:noreply, SkillLoading.answer(state, result)}
+
+    def handle_info(
+          {:DOWN, ref, :process, _pid, _reason},
+          %__MODULE__{references: %{skill_load: %{task: %Task{ref: ref}}}} = state
+        ),
+        do: {:noreply, SkillLoading.failed(state)}
 
     # Replies from the tasks the screen sends off so it never waits.
     def handle_info(message, state)

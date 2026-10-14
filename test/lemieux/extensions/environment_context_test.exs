@@ -42,6 +42,7 @@ defmodule Lemieux.Extensions.EnvironmentContextTest do
     block = block(cwd: dir)
 
     assert block =~ "## Environment"
+    assert block =~ "- Source: BEAM host; tool execution may use another machine"
     assert block =~ "- Date: 2026-09-28 (when this session started)"
     assert block =~ "- Platform: "
     assert block =~ "- Working directory: #{dir}"

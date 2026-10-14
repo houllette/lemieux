@@ -226,6 +226,8 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
   marketplace may be local
   or remote; network access occurs only when the caller explicitly supplies a
   remote marketplace or selects a plugin with a remote source.
+  `:asset_reader` attaches the host-owned environment selector to selected
+  skills for subsequent loads (`Lemieux.Extensions.Workspace.AssetReader`).
   `:marketplace_fetch` carries host/testing overrides such as `:cache_dir`,
   `:get`, `:git` and `:refresh_after_ms`. `:plugin_data_dir` is where plugins'
   persistent data directories go: `plugin-data` under the personal
@@ -354,7 +356,7 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
          instruction_files: instructions,
          rule_files: rules,
          memory_files: memory,
-         skills: skills,
+         skills: Enum.map(skills, &%{&1 | asset_reader: Keyword.get(opts, :asset_reader)}),
          shadowed_skills: shadowed,
          disabled_skills: disabled,
          agents: agents,

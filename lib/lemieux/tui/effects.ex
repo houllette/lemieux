@@ -23,6 +23,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.Lifecycle
     alias Lemieux.TUI.Screen
+    alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.Submission
     alias Lemieux.TUI.Transcript
     alias Lemieux.TUI.Turn
@@ -39,6 +40,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
         run_effect(state, effect)
       end)
     end
+
+    # Loading a selected skill is a host effect. Keep it out of the core's
+    # command-effect contract, which deliberately names no workspace policy.
+    defp run_effect(state, {:load_skill, _skill, _arguments} = effect),
+      do: apply_command_decision(state, effect, :allow)
 
     defp run_effect(state, effect) do
       decision =
@@ -58,6 +64,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp apply_command_decision(state, _effect, {:deny, message}),
       do: {:cont, {:noreply, Transcript.say(state, :lmx, message)}}
+
+    defp perform(state, {:load_skill, skill, arguments}),
+      do: SkillLoading.start(state, skill, arguments)
 
     defp perform(state, :help) do
       help = Conversation.help(state.conversation, Choices.command_policy(state))

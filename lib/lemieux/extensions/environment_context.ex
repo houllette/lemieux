@@ -16,6 +16,10 @@ defmodule Lemieux.Extensions.EnvironmentContext do
 
   ## Once per session
 
+  These facts describe the BEAM host, and the block labels their source.
+  A container or remote environment may execute tools on a different machine;
+  this host snapshot does not attest that machine's platform or workspace.
+
   The block is computed in `init/1` and applied as it stands. A block that
   changed per request would move the end of the system prompt on every
   call and break every provider's prompt cache from that point on, which is
@@ -79,6 +83,7 @@ defmodule Lemieux.Extensions.EnvironmentContext do
 
     lines =
       [
+        "- Source: BEAM host; tool execution may use another machine",
         "- Date: #{date} (when this session started)",
         "- Platform: #{platform()}",
         shell(),
@@ -103,7 +108,7 @@ defmodule Lemieux.Extensions.EnvironmentContext do
 
   @impl Lemieux.Extension
   def describe(%{cwd: cwd, git?: git?, date: date}),
-    do: %{"cwd" => cwd, "git" => git?, "date" => date}
+    do: %{"cwd" => cwd, "git" => git?, "date" => date, "source" => "beam_host"}
 
   @doc """
   `system` with its environment block replaced by `block`.

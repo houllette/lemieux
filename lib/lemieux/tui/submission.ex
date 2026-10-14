@@ -20,6 +20,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Lifecycle
     alias Lemieux.TUI.MCPStatus
     alias Lemieux.TUI.Policy
+    alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.ToolText
     alias Lemieux.TUI.Transcript
 
@@ -61,6 +62,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp sending(typed, state), do: sending_ordinary(typed, state)
+
+    defp sending_ordinary(typed, %TUI{references: %{skill_load: load}} = state)
+         when not is_nil(load) do
+      if String.trim(typed) in ["/quit", "/exit", "/new"] or
+           String.starts_with?(String.trim(typed), "/resume"),
+         do: send_input(typed, SkillLoading.cancel(state)),
+         else: {:noreply, Flash.show(state, "loading skill · wait before sending another prompt")}
+    end
 
     defp sending_ordinary(typed, %{conversation: %{busy?: true}} = state) do
       if pending_steer_text(state) && not String.starts_with?(String.trim_leading(typed), "/"),
@@ -155,10 +164,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp conversation_input(state, typed) do
       case invoked_skill(state, typed) do
         {:ok, skill, arguments} ->
-          case Skill.render(skill, arguments) do
-            {:ok, rendered} -> Conversation.input(state.conversation, rendered)
-            {:error, reason} -> {state.conversation, [{:say, "could not load skill: #{reason}"}]}
-          end
+          {state.conversation, [{:load_skill, skill, arguments}]}
 
         :error ->
           Conversation.input(state.conversation, typed)

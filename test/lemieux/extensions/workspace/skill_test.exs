@@ -2,6 +2,7 @@ defmodule Lemieux.Extensions.Workspace.SkillTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.Extensions.Workspace.Skill
+  alias Lemieux.Extensions.Workspace.SkillTool
 
   @moduletag :tmp_dir
 
@@ -150,8 +151,6 @@ defmodule Lemieux.Extensions.Workspace.SkillTest do
   end
 
   describe "the loader pages a skill longer than one result" do
-    alias Lemieux.Extensions.Workspace.SkillTool
-
     setup %{tmp_dir: tmp_dir} do
       body = Enum.map_join(1..400, "\n", &"step #{&1}: do the thing carefully")
 
@@ -167,7 +166,7 @@ defmodule Lemieux.Extensions.Workspace.SkillTest do
     end
 
     test "parts fit the session's cap, end on whole lines and say what comes next", ctx do
-      assert {:ok, first} = SkillTool.run(ctx.tool, %{"name" => "long"}, ctx.context)
+      assert {:ok, first} = run(ctx.tool, %{"name" => "long"}, ctx.context)
       assert byte_size(first) <= 5_000
       assert first =~ "step 1: do the thing carefully"
       assert first =~ ~s(Call skill again with "part": 2)
@@ -181,7 +180,7 @@ defmodule Lemieux.Extensions.Workspace.SkillTest do
         Stream.iterate(1, &(&1 + 1))
         |> Enum.reduce_while([], fn number, parts ->
           {:ok, page} =
-            SkillTool.run(ctx.tool, %{"name" => "long", "part" => number}, ctx.context)
+            run(ctx.tool, %{"name" => "long", "part" => number}, ctx.context)
 
           if page =~ "the end.]", do: {:halt, [page | parts]}, else: {:cont, [page | parts]}
         end)
@@ -195,14 +194,14 @@ defmodule Lemieux.Extensions.Workspace.SkillTest do
 
     test "a part past the end says how many there are", ctx do
       assert {:error, message} =
-               SkillTool.run(ctx.tool, %{"name" => "long", "part" => 99}, ctx.context)
+               run(ctx.tool, %{"name" => "long", "part" => 99}, ctx.context)
 
       assert message =~ "has"
       assert message =~ "parts"
     end
 
     test "without a cap in the context, a skill that fits is returned whole", ctx do
-      assert {:ok, whole} = SkillTool.run(ctx.tool, %{"name" => "long"}, %{})
+      assert {:ok, whole} = run(ctx.tool, %{"name" => "long"}, %{})
       assert whole =~ "step 400"
       refute whole =~ "[Skill long:"
     end
@@ -215,5 +214,13 @@ defmodule Lemieux.Extensions.Workspace.SkillTest do
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, contents)
     path
+  end
+
+  defp run(tool, arguments, context) do
+    SkillTool.run(
+      tool,
+      arguments,
+      Map.put_new(context, :environment, Lemieux.Environment.local())
+    )
   end
 end

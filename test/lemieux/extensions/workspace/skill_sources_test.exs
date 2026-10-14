@@ -158,7 +158,7 @@ defmodule Lemieux.Extensions.Workspace.SkillSourcesTest do
       [tool] = Discovery.host_tools(workspace)
 
       assert {:ok, reference} =
-               SkillTool.run(tool, %{"name" => "linked", "file" => "reference.md"}, %{})
+               run(tool, %{"name" => "linked", "file" => "reference.md"}, %{})
 
       assert reference =~ "The real reference."
       refute reference =~ "decoy"
@@ -247,7 +247,7 @@ defmodule Lemieux.Extensions.Workspace.SkillSourcesTest do
     assert SkillTool.schema(tool)["properties"]["name"]["enum"] == ["keep"]
     assert Enum.map(Discovery.user_skills(workspace), & &1.name) == ["keep"]
 
-    assert {:error, _unknown} = SkillTool.run(tool, %{"name" => "diagnose-crash"}, %{})
+    assert {:error, _unknown} = run(tool, %{"name" => "diagnose-crash"}, %{})
   end
 
   test "the catalog tells the model how to load a skill's files", ctx do
@@ -278,5 +278,13 @@ defmodule Lemieux.Extensions.Workspace.SkillSourcesTest do
   defp link(target, path) do
     File.mkdir_p!(Path.dirname(path))
     File.ln_s!(target, path)
+  end
+
+  defp run(tool, arguments, context) do
+    SkillTool.run(
+      tool,
+      arguments,
+      Map.put_new(context, :environment, Lemieux.Environment.local())
+    )
   end
 end

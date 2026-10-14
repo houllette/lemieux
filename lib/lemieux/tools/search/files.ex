@@ -29,6 +29,7 @@ defmodule Lemieux.Tools.Search.Files do
   alias Lemieux.Environment
   alias Lemieux.Tools.Search.Command
   alias Lemieux.Tools.Search.Ignore
+  alias Lemieux.Tools.Search.Scope
 
   @default_max_files 50_000
   @walk_budget_ms 15_000
@@ -49,7 +50,7 @@ defmodule Lemieux.Tools.Search.Files do
         ) :: {:ok, listing()} | {:error, String.t()}
   def list(environment, cwd, directory, opts \\ []) do
     max_files = Keyword.get(opts, :max_files, @default_max_files)
-    absolute = if directory == "", do: cwd, else: Path.join(cwd, directory)
+    absolute = Scope.location(cwd, directory)
 
     with :unavailable <- ripgrep(environment, absolute, max_files),
          :unavailable <- git(environment, absolute, max_files) do

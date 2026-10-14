@@ -42,7 +42,7 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
   end
 
   test "the loaded skill lists its files and how to load one", ctx do
-    assert {:ok, body} = SkillTool.run(ctx.tool, %{"name" => "omarchy"}, %{})
+    assert {:ok, body} = run(ctx.tool, %{"name" => "omarchy"}, %{})
 
     assert body =~
              ~s(Files in the skill directory, loaded with the skill tool as {"name": "omarchy", "file": "PATH"}:)
@@ -67,7 +67,7 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
     write(ctx.store, "template.md", "Keep $ARGUMENTS as written.")
 
     assert {:ok, text} =
-             SkillTool.run(
+             run(
                ctx.tool,
                %{"name" => "omarchy", "file" => "template.md", "arguments" => "x"},
                %{}
@@ -107,12 +107,12 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
     tool = SkillTool.new([dotfiles], home: ctx.home)
 
     assert {:error, message} =
-             SkillTool.run(tool, %{"name" => "dotfiles", "file" => ".ssh/id_ed25519"}, %{})
+             run(tool, %{"name" => "dotfiles", "file" => ".ssh/id_ed25519"}, %{})
 
     assert message =~ "~/.ssh, where credentials live"
     refute message =~ "PRIVATE KEY"
 
-    assert {:ok, notes} = SkillTool.run(tool, %{"name" => "dotfiles", "file" => "notes.md"}, %{})
+    assert {:ok, notes} = run(tool, %{"name" => "dotfiles", "file" => "notes.md"}, %{})
     assert notes =~ "Ordinary notes."
   end
 
@@ -125,11 +125,11 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
     {:ok, notes} = Skill.read(Path.join(directory, "SKILL.md"))
     tool = SkillTool.new([notes], home: ctx.home)
 
-    assert {:ok, guide} = SkillTool.run(tool, %{"name" => "notes", "file" => "guide.md"}, %{})
+    assert {:ok, guide} = run(tool, %{"name" => "notes", "file" => "guide.md"}, %{})
     assert guide =~ "My guide."
 
     assert {:error, _outside} =
-             SkillTool.run(tool, %{"name" => "notes", "file" => "config.md"}, %{})
+             run(tool, %{"name" => "notes", "file" => "config.md"}, %{})
   end
 
   test "refuses a binary file and says to run a script with bash", ctx do
@@ -146,7 +146,7 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
     context = %{tool_output_bytes: 5_000}
 
     assert {:ok, first} =
-             SkillTool.run(ctx.tool, %{"name" => "omarchy", "file" => "long.md"}, context)
+             run(ctx.tool, %{"name" => "omarchy", "file" => "long.md"}, context)
 
     assert byte_size(first) <= 5_000
     assert first =~ "line 1 of the reference"
@@ -156,7 +156,7 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
       Stream.iterate(1, &(&1 + 1))
       |> Enum.reduce_while([], fn number, pages ->
         {:ok, page} =
-          SkillTool.run(
+          run(
             ctx.tool,
             %{"name" => "omarchy", "file" => "long.md", "part" => number},
             context
@@ -187,7 +187,7 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
     File.mkdir_p!(Path.join(repo, ".git"))
     {:ok, workspace} = Discovery.discover(repo, personal?: false, plugin_dirs: [plugin])
     [tool] = Discovery.host_tools(workspace)
-    load = &SkillTool.run(tool, %{"name" => "kit:review", "file" => &1}, %{})
+    load = &run(tool, %{"name" => "kit:review", "file" => &1}, %{})
 
     assert {:ok, checklist} = load.("../../shared/checklist.md")
     assert checklist =~ "The shared checklist."
@@ -202,11 +202,11 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
     {:ok, command} = Skill.read_command(Path.join(tmp_dir, "commands/ship.md"))
     tool = SkillTool.new([command])
 
-    assert {:ok, body} = SkillTool.run(tool, %{"name" => "ship"}, %{})
+    assert {:ok, body} = run(tool, %{"name" => "ship"}, %{})
     refute body =~ "other.md"
 
     assert {:error, message} =
-             SkillTool.run(tool, %{"name" => "ship", "file" => "other.md"}, %{})
+             run(tool, %{"name" => "ship", "file" => "other.md"}, %{})
 
     assert message =~ "no files of its own"
   end
@@ -227,7 +227,7 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
 
     test "loads its files from inside the repository", ctx do
       assert {:ok, guide} =
-               SkillTool.run(ctx.repo_tool, %{"name" => "kit", "file" => "guide.md"}, %{})
+               run(ctx.repo_tool, %{"name" => "kit", "file" => "guide.md"}, %{})
 
       assert guide =~ "Repository guide."
     end
@@ -239,7 +239,7 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
       File.ln_s!(ctx.elsewhere, ctx.kit)
 
       assert {:error, message} =
-               SkillTool.run(ctx.repo_tool, %{"name" => "kit", "file" => "guide.md"}, %{})
+               run(ctx.repo_tool, %{"name" => "kit", "file" => "guide.md"}, %{})
 
       refute message =~ "Outside the repository."
     end
@@ -253,11 +253,19 @@ defmodule Lemieux.Extensions.Workspace.SkillFileTest do
     end
   end
 
-  defp load(ctx, file), do: SkillTool.run(ctx.tool, %{"name" => "omarchy", "file" => file}, %{})
+  defp load(ctx, file), do: run(ctx.tool, %{"name" => "omarchy", "file" => file}, %{})
 
   defp write(directory, name, contents) do
     path = Path.join(directory, name)
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, contents)
+  end
+
+  defp run(tool, arguments, context) do
+    SkillTool.run(
+      tool,
+      arguments,
+      Map.put_new(context, :environment, Lemieux.Environment.local())
+    )
   end
 end

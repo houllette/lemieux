@@ -340,7 +340,7 @@ defmodule Lemieux.Extensions.Verify do
   defp discover_and_check(config, document, context, cwd, since, effects, evidence, used) do
     session = context.session
 
-    case discover(config, cwd) do
+    case discover(config, cwd, context) do
       {:ok, discovery} ->
         if model_checked?(since, discovery.command, config.editing_tools, effects) do
           record(
@@ -499,8 +499,12 @@ defmodule Lemieux.Extensions.Verify do
   defp enabled?(_config, %{"enabled" => enabled}) when is_boolean(enabled), do: enabled
   defp enabled?(config, _value), do: config.enabled
 
-  defp discover(%__MODULE__{command: :auto}, cwd), do: Discovery.discover(cwd)
-  defp discover(%__MODULE__{command: command}, cwd), do: Discovery.discover(cwd, command: command)
+  defp discover(config, cwd, context) do
+    Discovery.discover(cwd,
+      command: config.command,
+      environment: context[:environment] || config.environment || Environment.local()
+    )
+  end
 
   # Everything since the person last spoke. A message any stop hook wrote —
   # this one's, or another's sending the model back to its plan — is a

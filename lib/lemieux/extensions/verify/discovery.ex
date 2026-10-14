@@ -30,11 +30,17 @@ defmodule Lemieux.Extensions.Verify.Discovery do
   answer key. A host whose project genuinely uses one passes it as
   `:command`.
 
-  Discovery reads a few file names and a few bytes of manifests on the
-  session's machine. A host that runs tools in a container or on a remote
-  workspace should pass `:command`, since the files the model edits are
-  then somewhere else.
+  Discovery reads through the effective `Lemieux.Environment`, the same
+  boundary that runs the check. `:environment` defaults to the local machine
+  for standalone callers; a custom environment never falls back to host files.
+  Manifest parsing stops at 64 KiB. A host may always supply `:command` when
+  its convention is absent or a manifest exceeds that bound.
   """
+
+  alias Lemieux.Environment
+  alias Lemieux.Environment.Local
+
+  @max_manifest_bytes 65_536
 
   @typedoc "A verification command and the convention that produced it."
   @type discovery :: %{command: String.t(), discovered_from: String.t()}
@@ -54,7 +60,8 @@ defmodule Lemieux.Extensions.Verify.Discovery do
   @doc """
   Discovers the verification command for `cwd`.
 
-  Returns `:none` when no convention matches; nothing is guessed.
+  Options: `:command` and `:environment`. Returns `:none` when no readable
+  convention matches; nothing is guessed.
   """
   @spec discover(cwd :: Path.t(), opts :: keyword()) :: {:ok, discovery()} | :none
   def discover(cwd, opts \\ []) when is_binary(cwd) and is_list(opts) do
@@ -63,17 +70,18 @@ defmodule Lemieux.Extensions.Verify.Discovery do
         {:ok, %{command: command, discovered_from: "command"}}
 
       _absent ->
-        Enum.find_value(@conventions, :none, &convention(&1, cwd))
+        workspace = {Keyword.get(opts, :environment, Environment.local()), cwd}
+        Enum.find_value(@conventions, :none, &convention(&1, workspace))
     end
   end
 
   defp convention(:run_script, cwd) do
-    if File.regular?(Path.join(cwd, "tests/run.sh")),
+    if present?(cwd, "tests/run.sh"),
       do: found("sh tests/run.sh", "tests/run.sh")
   end
 
   defp convention(:makefile, cwd) do
-    with {:ok, contents} <- File.read(Path.join(cwd, "Makefile")),
+    with {:ok, contents} <- read(cwd, "Makefile"),
          {:ok, target} <- make_target(contents) do
       found("make #{target}", "Makefile")
     else
@@ -82,11 +90,11 @@ defmodule Lemieux.Extensions.Verify.Discovery do
   end
 
   defp convention(:mix, cwd) do
-    if File.regular?(Path.join(cwd, "mix.exs")), do: found("mix test", "mix.exs")
+    if present?(cwd, "mix.exs"), do: found("mix test", "mix.exs")
   end
 
   defp convention(:package_json, cwd) do
-    with {:ok, contents} <- File.read(Path.join(cwd, "package.json")),
+    with {:ok, contents} <- read(cwd, "package.json"),
          {:ok, %{"scripts" => %{"test" => script}}} when is_binary(script) <-
            JSON.decode(contents),
          true <- real_test_script?(script) do
@@ -97,11 +105,11 @@ defmodule Lemieux.Extensions.Verify.Discovery do
   end
 
   defp convention(:cargo, cwd) do
-    if File.regular?(Path.join(cwd, "Cargo.toml")), do: found("cargo test", "Cargo.toml")
+    if present?(cwd, "Cargo.toml"), do: found("cargo test", "Cargo.toml")
   end
 
   defp convention(:go, cwd) do
-    if File.regular?(Path.join(cwd, "go.mod")), do: found("go test ./...", "go.mod")
+    if present?(cwd, "go.mod"), do: found("go test ./...", "go.mod")
   end
 
   defp convention(:pytest, cwd) do
@@ -114,28 +122,82 @@ defmodule Lemieux.Extensions.Verify.Discovery do
         {"conftest.py", nil}
       ],
       fn {file, marker} ->
-        if configures_pytest?(Path.join(cwd, file), marker), do: found("pytest -q", file)
+        if configures_pytest?(cwd, file, marker), do: found("pytest -q", file)
       end
     )
   end
 
   defp convention(:gradle, cwd) do
-    if File.regular?(Path.join(cwd, "gradlew")), do: found("./gradlew test", "gradlew")
+    if present?(cwd, "gradlew"), do: found("./gradlew test", "gradlew")
   end
 
   defp convention(:maven, cwd) do
-    if File.regular?(Path.join(cwd, "pom.xml")), do: found("mvn -q test", "pom.xml")
+    if present?(cwd, "pom.xml"), do: found("mvn -q test", "pom.xml")
   end
 
   defp found(command, file), do: {:ok, %{command: command, discovered_from: file}}
 
-  defp configures_pytest?(path, nil), do: File.regular?(path)
+  defp configures_pytest?(workspace, path, nil), do: present?(workspace, path)
 
-  defp configures_pytest?(path, marker) do
-    case File.read(path) do
+  defp configures_pytest?(workspace, path, marker) do
+    case read(workspace, path) do
       {:ok, contents} -> String.contains?(contents, marker)
       {:error, _reason} -> false
     end
+  end
+
+  defp present?({environment, cwd}, path) do
+    if local_regular?(environment, cwd, path) do
+      probe(environment, cwd, path)
+    else
+      false
+    end
+  end
+
+  # A local existence probe must not open a FIFO or device: the old regular?
+  # check rejected those before any I/O. Custom backends own their file kinds.
+  defp local_regular?(environment, cwd, path) do
+    if Environment.name(environment) in [
+         "Lemieux.Environment.Local",
+         "Lemieux.Environment.Sandbox"
+       ] do
+      case Local.confined(cwd, path) do
+        {:ok, full} -> File.regular?(full)
+        _refused -> false
+      end
+    else
+      true
+    end
+  end
+
+  defp probe(environment, cwd, path) do
+    case Environment.stream_file(environment, cwd, path) do
+      {:ok, stream} ->
+        # stream_file may already own a device or remote lease. Taking one
+        # chunk exercises and closes it even when only existence matters.
+        _first_chunk = Enum.take(stream, 1)
+        true
+
+      {:error, _reason} ->
+        false
+    end
+  end
+
+  defp read({environment, cwd}, path) do
+    with {:ok, chunks} <- Environment.stream_file(environment, cwd, path) do
+      chunks
+      |> Enum.reduce_while({[], 0}, &manifest_chunk/2)
+      |> case do
+        :too_large -> {:error, :too_large}
+        {kept, _size} -> {:ok, kept |> Enum.reverse() |> IO.iodata_to_binary()}
+      end
+    end
+  end
+
+  defp manifest_chunk(chunk, {kept, size}) do
+    if size + byte_size(chunk) <= @max_manifest_bytes,
+      do: {:cont, {[chunk | kept], size + byte_size(chunk)}},
+      else: {:halt, :too_large}
   end
 
   # A target line starts the line, so `testdata:` and `.PHONY: test` do not
@@ -157,10 +219,10 @@ defmodule Lemieux.Extensions.Verify.Discovery do
   # can resolve a different dependency graph than the one on disk.
   defp package_manager(cwd) do
     cond do
-      File.regular?(Path.join(cwd, "pnpm-lock.yaml")) -> "pnpm test"
-      File.regular?(Path.join(cwd, "yarn.lock")) -> "yarn test"
-      File.regular?(Path.join(cwd, "bun.lockb")) -> "bun run test"
-      File.regular?(Path.join(cwd, "bun.lock")) -> "bun run test"
+      present?(cwd, "pnpm-lock.yaml") -> "pnpm test"
+      present?(cwd, "yarn.lock") -> "yarn test"
+      present?(cwd, "bun.lockb") -> "bun run test"
+      present?(cwd, "bun.lock") -> "bun run test"
       true -> "npm test"
     end
   end
