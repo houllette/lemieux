@@ -5,9 +5,35 @@ defmodule Lemieux.CLI.HarnessTest do
 
   alias Lemieux.CLI
   alias Lemieux.Learning.Experience.Bundle
+  alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.TestSupport.HarnessLearningFixtures
+  alias LemieuxTest.LessonFixtures
 
   @moduletag :tmp_dir
+
+  test "verifies a retained lesson and refuses altered source bytes without printing them", %{
+    tmp_dir: dir
+  } do
+    lesson = LessonFixtures.lesson()
+    path = Path.join(dir, "lesson.json")
+    File.write!(path, Lesson.encode!(lesson))
+
+    assert capture_io(fn -> assert :ok = CLI.run(["harness", "verify", "lesson", path]) end) ==
+             "verified lesson #{path}\n"
+
+    File.write!(
+      path,
+      lesson |> Lesson.to_map() |> Map.put("mechanism", "sensitive lesson body") |> JSON.encode!()
+    )
+
+    stderr =
+      capture_io(:stderr, fn ->
+        assert {:error, 1} = CLI.run(["harness", "verify", "lesson", path])
+      end)
+
+    assert stderr =~ "digest_mismatch"
+    refute stderr =~ "sensitive lesson body"
+  end
 
   test "verifies a golden contract and rejects a tampered one", %{tmp_dir: tmp_dir} do
     snapshot = HarnessLearningFixtures.contracts()["harness_snapshot"]

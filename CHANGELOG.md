@@ -7,6 +7,20 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Features
+
+- Experimental scoped improvement lessons retain hypotheses, applicability,
+  positive and negative evidence, complete authorized source bytes and
+  transitive case exposure. A host-owned local adapter adds atomic idempotent
+  persistence, explicit supersession/conflict handling and auditable pruning.
+  Recall filters stale identities and expiry, then requires the host to commit
+  exposure before releasing content. `lmx harness verify lesson FILE` inspects
+  integrity offline. **Migration:** this is an additive opt-in API; no existing
+  bundle/overlay changes, automatic capture, activation or model calls. See
+  [Persistent improvement lessons](docs/harness-learning.md#persistent-improvement-lessons).
+
 ## 0.11.0 — 2026-10-13
 
 This release requires restarting `lmx` on every platform. Save an unsent draft,

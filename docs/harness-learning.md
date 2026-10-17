@@ -34,6 +34,7 @@ in these modules. The only local activation is a reviewed overlay file that
 | `Lemieux.Evidence.Run` | 1 | `sha256` | One terminal prompt-level observation and artifact index |
 | `Lemieux.Benchmark.Corpus.Exposure` | 2 | `sha256` | Direct and derived case exposure with transitive source ids |
 | `Lemieux.Learning.Experience.Bundle` | 1 | `sha256` | Authorized, single-scope discovery history |
+| `Lemieux.Learning.Experience.Lesson` | 1 | `id`, `sha256` | Scoped lesson with complete source bytes and exposure ancestry |
 | `Lemieux.Learning.Discovery.Plan` | 1 | `sha256` | Frozen proposer-visible search contract and total budget |
 | `Candidate`, `Evaluation`, `Frontier`, `State` | 1 | `sha256` | Immutable search archive and restart projection |
 | `Lemieux.Experiment.Plan` | 1 | `sha256` | Ordinary preregistered one-factor confirmation plan |
@@ -209,6 +210,139 @@ ancestors, and scope before staging. It writes `.complete` last and atomically
 renames the staging tree. History and the root become read-only; only
 `proposal/` remains writable. It never fetches from a host service or from
 Ixway.
+
+## Persistent improvement lessons
+
+`Experience.Lesson` retains what an improvement attempted and why it appeared
+to work, fail or remain uncertain. It is an opt-in evidence contract; ordinary
+`lmx` sessions do not yet capture or activate these lessons automatically.
+Hosts create a lesson from an authorized `Experience.Bundle`, its complete
+artifact bytes keyed by SHA-256, and string-keyed attributes:
+
+```elixir
+alias Lemieux.Learning.Experience.{Lesson, Lessons}
+alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
+
+# bundle and artifact_bytes are already authorized for this exact host scope.
+context = %{
+  "model" => "test:model",
+  "tools_sha256" => Lemieux.Contract.sha256("host tool catalog identity"),
+  "environment_sha256" => Lemieux.Contract.sha256("host environment identity"),
+  "repository" => "my-project"
+}
+
+{:ok, lesson} = Lesson.new(bundle, artifact_bytes, %{
+  "key" => "check-before-editing",
+  "kind" => "procedure",
+  "outcome" => "supported",
+  "qualification" => "behavioral",
+  "applicability" => ["editing a failing parser"],
+  "mechanism" => "Run the failing check before editing to preserve the baseline.",
+  "supporting" => ["observation-id-in-bundle"],
+  "contradicting" => [],
+  "candidate_ids" => [],
+  "binding" => context,
+  "provenance" => %{"actor" => "my-host", "run_id" => "run-1"},
+  "created_at" => "2026-10-17T00:00:00Z",
+  "expires_at" => nil,
+  "supersedes" => []
+})
+
+# Select a private, ignored directory. Nothing is created until append.
+store = LessonFiles.new(".lmx/lessons", bundle.scope)
+:ok = Lessons.append(store, lesson)
+{:ok, history} = Lessons.history(store)
+{:ok, inspected} = Lessons.read(store, lesson.id)
+```
+
+The host supplies real semantic identities for its effective model, tools,
+environment and repository. They are exact applicability constraints, not
+restored credentials, modules, hooks or permissions. `workspace_fact` also
+requires `revision` and `source_sha256` bindings; `procedure` and
+`proposer_lesson` may omit those two to survive source revisions. An optional
+UTC `expires_at` excludes the record at and after that instant. Missing or
+changed current bindings exclude it. Facts are never rebound to new revisions
+by loading a saved record.
+
+Outcomes remain `supported`, `rejected`, `contradicted` or
+`insufficient_evidence`. Qualification remains `unconfirmed` or `behavioral`,
+even if a source evaluation passed: retention and output adoption establish
+neither independent confirmation nor transfer to another task or model.
+Mechanical evaluation/confirmation evidence remains intact in the source
+bundle, with its original qualification. Storage does not activate a lesson;
+`Asset.Registry` still accepts only approved asset proposals.
+
+Every artifact reference must resolve to supplied bytes in the same exact
+scope; unrelated extra bytes are refused. Observation/candidate ids must
+exist, source references must resolve, and a cyclic proof is invalid. The
+lesson conservatively retains the union of all source case ids in its bundle,
+including earlier exposures. `source_lessons` can contain complete
+`Lesson.to_map/1` manifests used to derive the new lesson; their bytes, scope
+and transitive exposures are verified too. No hidden artifact fetching occurs.
+The whole encoding is limited to two MiB, with 512 bundle sources, at most 16
+direct source lessons and eight ancestry levels. Larger histories need a
+smaller explicitly authorized bundle; they are never silently truncated.
+
+Use `Lessons.recall/5` before giving lessons to an improver:
+
+```elixir
+consumer = %{
+  "id" => "exposure-task-2", "consumer_role" => "proposer",
+  "consumer_id" => "improver-1", "model" => "test:model",
+  "at" => "2026-10-17T01:00:00Z"
+}
+
+# The host's callback must durably commit the Exposure under the given scope
+# before returning :ok. An unavailable store returns {:error, reason}.
+{:ok, lessons, exposure} =
+  Lessons.recall(store, context, consumer, &MyHost.commit_exposure/2)
+```
+
+The callback receives a `Benchmark.Corpus.Exposure` whose derived artifact ids
+are the returned lesson ids and whose source case ids include every direct
+and transitive source. Commit those ids through `Corpus.expose_derived/4` and
+persist the resulting corpus (or an equivalent transactional host ledger).
+A later holdout assignment must consult that exposure history. Reuse an
+exposure id only for the same consumer, timestamp, context and lesson set;
+changed bytes under an id are a host-ledger conflict. Failed commits release
+no content. Empty recall commits nothing. `read/2` is privileged host
+inspection, so a host that feeds it directly to a model bypasses this gate.
+Eligibility filtering is deterministic; task relevance ranking is separate.
+Recall refuses more than 16 current lessons or eight MiB of complete encoded
+records by default (`max_lessons:` and `max_bytes:`). It releases no partial
+result; the host must explicitly narrow the store/scope or choose a larger
+finite limit.
+
+To revise a logical key, put the old lesson ids in `supersedes` and their full
+manifests in `source_lessons`. Append checks that the old records or
+tombstones exist in the same store and key. Old bytes remain inspectable.
+Concurrent siblings are a reported conflict, never a newest-wins selection;
+resolve it by appending a lesson that explicitly supersedes both. Suppression
+persists even if the replacement expires or is pruned, preventing obsolete
+advice from resurfacing.
+
+`Lessons.prune(store, id, reason, at)` is explicit retention. The local adapter
+atomically publishes a digested tombstone before deleting source/content
+bytes. A repeated identical prune finishes interrupted cleanup; a different
+reason/timestamp is a conflict. Tombstones retain identity, scope, key,
+supersession and exposure ancestry. Re-appending a pruned id is refused.
+Private 0600 records publish atomically from synced temporary files, so
+interrupted writes expose no partial lesson and duplicate appends do not
+overwrite bytes. Symlinked ancestors/records, corrupt content and unavailable
+storage return errors. The host owns the directory; these checks are not an
+isolation boundary against another process that can replace its directories.
+After stopping writers, the host can remove abandoned `.partial-*` files.
+The default history limit is 1000 entries, configurable with `max_entries:`;
+hosts archive or raise that limit explicitly instead of silently dropping
+audit history. Derived lessons embed source-lesson bytes: prune those
+descendants too when retention requires removing the source content. Backups
+and other copies remain the host's retention responsibility.
+
+Embedding hosts implement the `Lessons` behavior with a stateful adapter
+tuple; no database, network client, registry process or scheduler is required.
+The local adapter uses atomic hard links and requires a filesystem supporting
+them. `lmx harness verify lesson FILE` checks a saved complete manifest
+offline, without exposing its contents or contacting a provider.
 
 ## Discovery is not confirmation
 
