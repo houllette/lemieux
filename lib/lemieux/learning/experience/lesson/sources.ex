@@ -46,7 +46,7 @@ defmodule Lemieux.Learning.Experience.Lesson.Sources do
     end
   end
 
-  defp references(%{"size_bytes" => _} = value, scope, artifacts) do
+  defp references(%{"size_bytes" => _, "content_schema" => _} = value, scope, artifacts) do
     with {:ok, reference} <- ArtifactReference.from_map(value),
          true <- reference.scope == scope,
          bytes when is_binary(bytes) <- artifacts[reference.sha256],

@@ -69,6 +69,13 @@ defmodule Lemieux.Learning.Experience.Lessons.File do
 
   @impl true
   def history(state) do
+    with {:ok, ids} <- inventory(state) do
+      Enum.reduce_while(ids, {:ok, []}, &collect_summary(state, &1, &2))
+    end
+  end
+
+  @impl true
+  def inventory(state) do
     with :ok <- ancestors(state.dir),
          {:ok, files} <- list_files(state.dir),
          ids =
@@ -78,12 +85,44 @@ defmodule Lemieux.Learning.Experience.Lessons.File do
            |> Enum.uniq()
            |> Enum.sort(),
          true <- length(ids) <= state.max_entries do
-      Enum.reduce_while(ids, {:ok, []}, &collect_summary(state, &1, &2))
+      if Enum.all?(ids, &valid_id?/1), do: {:ok, ids}, else: {:error, :invalid_lesson_id}
     else
       false -> {:error, :lesson_history_limit}
       error -> error
     end
   end
+
+  @impl true
+  def fetch(state, id, max_bytes) when is_integer(max_bytes) and max_bytes > 0 do
+    with {:ok, path} <- path(state, id, ".pruned.json") do
+      fetch_tombstone(read_bytes(path, min(max_bytes, @limit)), state, id, max_bytes)
+    end
+  end
+
+  defp fetch_tombstone({:ok, bytes}, state, id, _max_bytes) do
+    with {:ok, metadata} <- decode_tombstone(state, id, bytes) do
+      {:ok, {:pruned, metadata}, byte_size(bytes)}
+    end
+  end
+
+  defp fetch_tombstone({:error, :enoent}, state, id, max_bytes) do
+    with {:ok, path} <- path(state, id, ".json"),
+         {:ok, bytes} <- read_bytes(path, min(max_bytes, @limit)),
+         {:ok, lesson} <- Lesson.decode(bytes),
+         true <- lesson.id == id,
+         :ok <- scoped(state, lesson.scope) do
+      {:ok, {:retained, lesson}, byte_size(bytes)}
+    else
+      false -> {:error, :lesson_identity_mismatch}
+      {:error, :lesson_too_large} -> {:error, :source_bytes_limit}
+      error -> error
+    end
+  end
+
+  defp fetch_tombstone({:error, :lesson_too_large}, _state, _id, _max_bytes),
+    do: {:error, :source_bytes_limit}
+
+  defp fetch_tombstone(error, _state, _id, _max_bytes), do: error
 
   defp collect_summary(state, id, {:ok, summaries}) do
     case summary(state, id) do
@@ -178,8 +217,13 @@ defmodule Lemieux.Learning.Experience.Lessons.File do
 
   defp read_tombstone(state, id) do
     with {:ok, path} <- path(state, id, ".pruned.json"),
-         {:ok, bytes} <- read_bytes(path, @limit),
-         {:ok, map} <- Contract.decode(bytes),
+         {:ok, bytes} <- read_bytes(path, @limit) do
+      decode_tombstone(state, id, bytes)
+    end
+  end
+
+  defp decode_tombstone(state, id, bytes) do
+    with {:ok, map} <- Contract.decode(bytes),
          :ok <- Contract.verify_version(map, "schema_version", 1),
          :ok <- Contract.verify_digest(map, "sha256"),
          true <- map["id"] == id and map["status"] == "pruned",

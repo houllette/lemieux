@@ -185,6 +185,22 @@ defmodule Lemieux.Learning.Experience.LessonTest do
     assert {:error, :incomplete_lesson_exposure} = Lesson.new(incomplete, artifacts, F.attrs())
   end
 
+  test "ordinary size metadata is not mistaken for an artifact reference" do
+    {bundle, artifacts} = F.evidence()
+
+    assert {:ok, changed} =
+             bundle
+             |> Bundle.to_map()
+             |> Map.delete("sha256")
+             |> put_in(["candidates", Access.at(0), "interface_validation"], %{
+               "detail" => %{"size_bytes" => 100}
+             })
+             |> Bundle.new()
+
+    assert {:ok, lesson} = Lesson.new(changed, artifacts, F.attrs())
+    assert {:ok, ^lesson} = lesson |> Lesson.encode!() |> Lesson.decode()
+  end
+
   test "malformed, correctly rehashed records are refused without reconstructing authority" do
     map = F.lesson() |> Lesson.to_map()
 

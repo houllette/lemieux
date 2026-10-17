@@ -307,7 +307,8 @@ exposure id only for the same consumer, timestamp, context and lesson set;
 changed bytes under an id are a host-ledger conflict. Failed commits release
 no content. Empty recall commits nothing. `read/2` is privileged host
 inspection, so a host that feeds it directly to a model bypasses this gate.
-Eligibility filtering is deterministic; task relevance ranking is separate.
+Eligibility filtering is deterministic; the retrieval API below adds task
+relevance ranking.
 Recall refuses more than 16 current lessons or eight MiB of complete encoded
 records by default (`max_lessons:` and `max_bytes:`). It releases no partial
 result; the host must explicitly narrow the store/scope or choose a larger
@@ -343,6 +344,94 @@ tuple; no database, network client, registry process or scheduler is required.
 The local adapter uses atomic hard links and requires a filesystem supporting
 them. `lmx harness verify lesson FILE` checks a saved complete manifest
 offline, without exposing its contents or contacting a provider.
+
+## Retrieving lessons for later proposals
+
+`Experience.Retrieval` deterministically selects scoped experience without a
+provider call. Freeze the library once for a control arm, or at each task
+boundary for an updating arm. Keep the frozen inventory, query, current
+bindings and replay clock with the receipt to reproduce that selection:
+
+```elixir
+alias Lemieux.Learning.Experience.Retrieval
+
+{:ok, library} = Retrieval.freeze(store, bundle.scope)
+query = %{"task" => "repair a failing parser", "failure_cues" => ["no verification"]}
+options = [now: ~U[2026-10-17 01:00:00Z], max_results: 4]
+{:ok, receipt} = Retrieval.inspect(store, library, query, context, options)
+
+# consumer and commit have the same durable exposure contract as Lessons.recall.
+# Give each distinct consumer/retrieval context its own exposure id.
+{:ok, retrieved} =
+  Retrieval.retrieve(store, library, query, context, consumer, commit, options)
+```
+
+Scope, binding, creation/expiry, supersession and conflicting logical keys
+are checked before ranking. At least one query word must match an
+applicability cue. Unique matching words score four points in applicability,
+two in the mechanism and one in the key; ids break ties. One result slot is
+reserved for the highest-ranked relevant rejected or contradicted lesson.
+Those notes explicitly say `counterexample`; supported records remain
+hypotheses with their original qualification. This lexical policy does not
+establish semantic relevance or confirm a diagnosis.
+
+The digested receipt names selected lesson/source evidence identities, query
+and binding digests, limits, scores and inclusion/exclusion reasons. Defaults
+bound the inventory to 1000 ids, complete source reads to eight MiB, results
+to four, reported decisions to 128, each note's text to 1024 bytes, and
+materialized evidence to 32 KiB. Counts include omitted decisions. Missing
+records or an exhausted source allowance produce an incomplete inspection;
+retrieval refuses to release that partial ranking. Corrupt or foreign records
+fail verification. Pruning still takes effect in a frozen library.
+
+Retrieved notes point to bounded evidence files containing source digests,
+selected observations and explicitly truncated artifact excerpts. A file
+that cannot fit says `not_materialized`. Complete verified plan, candidate
+and evaluation contracts also yield the existing comparative/calibration
+results: no observed fix, an observed regression or fix, and whether the
+proposer's prediction matched it. Provider/runtime failures are identified
+through the existing digest and excluded from edit-effect comparisons.
+Incomplete comparative contracts stay `unassessed`; these observations
+establish no causal diagnosis or activation permission.
+
+To enable this in the first-party proposer, pin
+`Proposer.profile(model, experience: true)` as the plan's evolver identity
+and supply an optional host context:
+
+```elixir
+experience = %{
+  store: store, library: library, query: query, binding: context,
+  consumer: consumer, commit: commit, options: options
+}
+# Pass experience: experience in Proposer.propose/3's context, or in Meta's config.
+```
+
+The host may instead supply `experience: fn proposal_context -> {:ok, config}
+end` to choose a task-specific query, new exposure identity and frozen or
+updated library before each proposal. Returning an error starts no session.
+Capture and library-update policy remain explicit host operations. Existing
+proposer profiles and the provider-free seed path keep their behavior.
+
+Exposure commits before any lesson reaches the sealed workspace. The evolver
+reads `evidence/lessons/index.json` and follows evidence pointers on demand;
+the critic receives the compact index. The candidate's trace and extensions
+retain the retrieval receipt and complete source-case exposure. Retrieval
+adds no reflection session, dependency or allowance; ordinary proposer model
+calls retain their existing host authorization and accounting.
+
+A selected rejected profile cannot be repeated verbatim, or by replaying all
+its recorded changed-field values alongside unrelated edits, without a
+`reconsiderations` manifest entry. It must name the lesson, explain the new
+evidence, and reference genuinely new verified development evaluations by id
+and SHA-256. Old source evaluations, fabricated digests, incomplete/unsafe or
+provider-failed observations do not qualify. The rationale is inspectable;
+this guard does not infer semantic equivalence between differently worded
+edits. It neither evaluates the proposed edit nor changes the mutation
+surface, confirmation lane or active harness.
+
+Embedding adapters can opt into bounded retrieval with `Lessons.inventory/1`
+and `Lessons.fetch/3`; existing adapters remain valid for persistence/recall
+and return an explicit unsupported error for retrieval until implemented.
 
 ## Discovery is not confirmation
 

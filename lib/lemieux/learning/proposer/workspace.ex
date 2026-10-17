@@ -101,8 +101,27 @@ defmodule Lemieux.Learning.Proposer.Workspace do
            }),
          :ok <- write_json(dir, "evidence/calibration.json", Map.get(inputs, :calibration, %{})),
          :ok <- File.write(Path.join(dir, "evidence/summary.md"), summary(inputs)),
+         :ok <- write_experience(dir, Map.get(inputs, :experience)),
          :ok <- write_excerpts(dir, inputs) do
       {:ok, %__MODULE__{root: dir, proposal: proposal}}
+    end
+  end
+
+  defp write_experience(_dir, nil), do: :ok
+
+  defp write_experience(dir, result) do
+    with :ok <- File.mkdir(Path.join(dir, "evidence/lessons")),
+         :ok <-
+           write_json(dir, "evidence/lessons/index.json", %{
+             "receipt_sha256" => result.receipt["sha256"],
+             "library_sha256" => result.receipt["library_sha256"],
+             "receipt_file" => "retrieval.json",
+             "lessons" => result.notes
+           }),
+         :ok <- write_json(dir, "evidence/lessons/retrieval.json", result.receipt) do
+      Enum.reduce_while(result.evidence, :ok, fn {name, value}, :ok ->
+        halt_on_error(write_json(dir, Path.join("evidence/lessons", name), value))
+      end)
     end
   end
 
@@ -218,6 +237,7 @@ defmodule Lemieux.Learning.Proposer.Workspace do
     - evidence/operator.json: the evidence selected for this proposal
     - evidence/transcripts/*.json: bounded excerpts of the transcripts behind that evidence
     - evidence/calibration.json: how well earlier predictions matched outcomes
+    #{if Map.get(inputs, :experience), do: "- evidence/lessons/index.json: scoped prior lessons and counterexamples; follow its bounded evidence pointers", else: ""}
     """
   end
 

@@ -75,7 +75,9 @@ defmodule Lemieux.Learning.Discovery.Meta do
   `:provider` or `:allow_live`), `:validation_inner` (the template names held
   as validation cases; at least one), and `:budget`. Optional:
   `:evolver_profile` (the outer proposer; default the seed), `:search`,
-  `:critic_profile`, `:allow_live`, `:sessions_dir`, `:timeout_ms`.
+  `:critic_profile`, `:allow_live`, `:sessions_dir`, `:timeout_ms`,
+  `:experience` (the host-owned retrieval configuration or callback accepted
+  by `Lemieux.Learning.Proposer.propose/3`).
   """
   @type config :: keyword()
 
@@ -203,7 +205,8 @@ defmodule Lemieux.Learning.Discovery.Meta do
       evolver_profile: outer,
       critic_profile: critic_profile(config, outer),
       sessions_dir: Keyword.get(config, :sessions_dir, Path.join(output_dir, "sessions")),
-      timeout_ms: Keyword.get(config, :timeout_ms, :timer.minutes(10))
+      timeout_ms: Keyword.get(config, :timeout_ms, :timer.minutes(10)),
+      experience: Keyword.get(config, :experience)
     }
 
     proposer = fn plan, state, context ->

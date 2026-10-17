@@ -13,6 +13,7 @@ defmodule LemieuxPackageConsumer do
   alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Experience.Lessons
   alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
+  alias Lemieux.Learning.Experience.Retrieval
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store
@@ -180,6 +181,33 @@ defmodule LemieuxPackageConsumer do
 
     {:ok, [^lesson], _exposure} =
       Lessons.recall(store, context, consumer, commit, now: ~U[2026-10-17 00:00:00Z])
+
+    {:ok, library} = Retrieval.freeze(store, scope)
+    query = %{"task" => "package fixture"}
+    options = [now: ~U[2026-10-17 00:00:00Z]]
+    {:ok, receipt} = Retrieval.inspect(store, library, query, context, options)
+
+    retrieval_commit = fn ^scope, exposure ->
+      ["package-case"] = exposure.source_case_ids
+      File.write(Path.join(directory, "retrieval-exposure.json"), Exposure.encode!(exposure))
+    end
+
+    {:ok, result} =
+      Retrieval.retrieve(
+        store,
+        library,
+        query,
+        context,
+        Map.put(consumer, "id", "package-retrieval"),
+        retrieval_commit,
+        options
+      )
+
+    ^receipt = result.receipt
+    [note] = result.notes
+    true = note["id"] == lesson.id
+    "counterexample" = note["use"]
+    true = Map.has_key?(result.evidence, lesson.id <> ".json")
 
     if phase == "tighten" do
       :ok = Lessons.prune(store, lesson.id, "package-retention", ~U[2026-10-18 00:00:00Z])

@@ -5,8 +5,9 @@ defmodule Lemieux.Learning.Experience.Lessons do
 
   Adapters implement atomic, idempotent append and durable pruning. They bind
   a store to one complete tenant/project scope. `read/2` and `history/1` are
-  host inspection APIs; improvers receive content only through `recall/5`,
-  which calls the host's exposure committer before returning any lesson.
+  host inspection APIs; improvers receive content through `recall/5` or
+  `Lemieux.Learning.Experience.Retrieval`, which call the host's exposure
+  committer before returning lesson content.
   The committer must durably record the supplied `Corpus.Exposure` in the
   named scope, including its complete source-case closure, and return `:ok`.
   An error or exception releases no content. Exposure may conservatively
@@ -34,6 +35,11 @@ defmodule Lemieux.Learning.Experience.Lessons do
   @callback history(state :: term()) :: {:ok, [summary()]} | {:error, term()}
   @callback prune(state :: term(), id :: String.t(), reason :: String.t(), at :: DateTime.t()) ::
               :ok | {:error, term()}
+  @callback inventory(state :: term()) :: {:ok, [String.t()]} | {:error, term()}
+  @callback fetch(state :: term(), id :: String.t(), max_bytes :: pos_integer()) ::
+              {:ok, {:retained, Lesson.t()} | {:pruned, map()}, non_neg_integer()}
+              | {:error, term()}
+  @optional_callbacks inventory: 1, fetch: 3
 
   @doc "Appends verified immutable content under the adapter's bound scope."
   @spec append(store :: t(), lesson :: Lesson.t()) :: :ok | {:error, term()}
@@ -50,6 +56,31 @@ defmodule Lemieux.Learning.Experience.Lessons do
   @doc "Lists bounded metadata for retained and pruned lessons."
   @spec history(store :: t()) :: {:ok, [summary()]} | {:error, term()}
   def history({module, state}), do: module.history(state)
+
+  @doc """
+  Lists immutable ids for bounded retrieval; adapters may opt into this seam.
+  Include retained records and tombstones, enforce a finite inventory limit,
+  and bind every fetched record to the adapter's host-owned scope.
+  """
+  @spec inventory(store :: t()) :: {:ok, [String.t()]} | {:error, term()}
+  def inventory({module, state}), do: retrieval_call(module, :inventory, [state])
+
+  @doc """
+  Fetches a verified record or tombstone within an encoded-byte allowance.
+  The adapter checks the allowance before reading, returns the actual encoded
+  size, and reports `{:error, :source_bytes_limit}` when it cannot fit. A
+  tombstone wins over remaining content after an interrupted prune.
+  """
+  @spec fetch(store :: t(), id :: String.t(), max_bytes :: pos_integer()) ::
+          {:ok, {:retained, Lesson.t()} | {:pruned, map()}, non_neg_integer()} | {:error, term()}
+  def fetch({module, state}, id, max_bytes) when is_integer(max_bytes) and max_bytes > 0,
+    do: retrieval_call(module, :fetch, [state, id, max_bytes])
+
+  defp retrieval_call(module, function, args) do
+    if Code.ensure_loaded?(module) and function_exported?(module, function, length(args)),
+      do: apply(module, function, args),
+      else: {:error, :lesson_retrieval_not_supported}
+  end
 
   @doc "Removes source/content bytes, retaining an immutable audit tombstone."
   @spec prune(store :: t(), id :: String.t(), reason :: String.t(), at :: DateTime.t()) ::

@@ -11,6 +11,16 @@ API.
 
 ### Features
 
+- Experimental lesson retrieval filters current scoped experience before
+  deterministic ranking, retains bounded decision receipts and exposes
+  concise evidence pointers only after durable exposure commit. The proposer
+  can use prior counterexamples across tasks, records comparative/calibration
+  evidence and requires a new-evidence rationale to repeat a known rejected
+  profile or recorded field edit. Frozen and updating libraries support
+  offline controls. **Migration:** opt in with an experience-enabled proposer
+  profile and host retrieval context; existing profiles keep their identity.
+  No automatic capture, model-backed reflection or activation is added. See
+  [Retrieving lessons](docs/harness-learning.md#retrieving-lessons-for-later-proposals).
 - Experimental scoped improvement lessons retain hypotheses, applicability,
   positive and negative evidence, complete authorized source bytes and
   transitive case exposure. A host-owned local adapter adds atomic idempotent
