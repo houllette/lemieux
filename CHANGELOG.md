@@ -9,6 +9,15 @@ API.
 
 ## Unreleased
 
+### Dependencies
+
+- Update ReqLLM to 1.28.0 and its required LLMDB catalog to 2026.10.5 across
+  the library, standalone host, bundled compaction extension and tracked
+  example locks. This includes upstream Codex reasoning/terminal-stream
+  fixes and streamed cache/billing metadata preservation. Embedders with an
+  older provider stack should update `req_llm` and `llm_db` together; see
+  [embedding requirements](docs/embedding.md#1-add-the-dependency).
+
 ### Features
 
 - Experimental lesson retrieval filters current scoped experience before
