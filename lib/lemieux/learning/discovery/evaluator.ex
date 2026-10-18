@@ -141,6 +141,10 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
     end
   end
 
+  defp controller_interrupted?(observation),
+    do:
+      get_in(observation, ["provider_error", "code"]) in ~w(host_admission_denied host_work_interrupted)
+
   defp incomplete(result) do
     %{
       "case_id" => result["task_id"],
@@ -623,7 +627,7 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
         "artifacts" => Enum.map(references, &ArtifactReference.to_map/1),
         "within_budget" =>
           observation["finish_reason"] not in @evaluator_stops and
-            not provider_stream_timeout?(result),
+            not provider_stream_timeout?(result) and not controller_interrupted?(observation),
         "terminal" => true,
         "observations" => observations(result, observation)
       }

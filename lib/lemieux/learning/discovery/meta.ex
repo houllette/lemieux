@@ -36,6 +36,7 @@ defmodule Lemieux.Learning.Discovery.Meta do
   alias Lemieux.Contract
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Campaign
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Confirm
@@ -45,7 +46,6 @@ defmodule Lemieux.Learning.Discovery.Meta do
   alias Lemieux.Learning.Discovery.State
   alias Lemieux.Learning.Discovery.Surface
   alias Lemieux.Learning.Proposer
-  alias Lemieux.Providers.Scripted
 
   # Token spend is measured and reported but is not a frontier objective by
   # default: the first live meta campaign kept a proposer that was worse on yield
@@ -813,7 +813,7 @@ defmodule Lemieux.Learning.Discovery.Meta do
   defp live_allowed(config, provider) do
     cond do
       Keyword.get(config, :allow_live, false) == true -> :ok
-      match?({Scripted, _}, resolve(provider)) -> :ok
+      Controller.scripted?(resolve(provider)) -> :ok
       true -> {:error, :live_campaign_requires_allow_live}
     end
   end

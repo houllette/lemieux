@@ -20,6 +20,15 @@ API.
 
 ### Features
 
+- Experimental bounded refinement shares a host's existing job allowance across
+  task and learning roles, reserves complete frozen experiments, retains
+  unknown/cancelled usage across recovery, and supports explicit no-op proposer
+  outcomes. Cycles keep the baseline on ties or weaker primary scores; host
+  admission failures remain incomplete evidence. **Migration:** opt in with a
+  controller, explicit learning allocation and provider-free token bounds.
+  Default learning allowance is zero. See
+  [bounded refinement](docs/harness-learning.md#bounded-refinement-controller).
+
 - First-party ordinary-session capture records verification failures, recoveries,
   corrections and repeated tool failures without calling a model. Private,
   scoped drafts use bounded pre-effect inputs and require explicit replay

@@ -853,6 +853,90 @@ and records each one as skipped; `promote` refuses a fixture that still has
 one and names it, unless you pass `--allow-secret-files` for a deliberate
 fake. The rule reads names only, so review a draft before you promote it.
 
+### Bounded refinement controller
+
+`Lemieux.Learning.Controller` is an explicit host-owned contract for ordinary
+tasks, proposers, critics, probes, composition, reflection and confirmation.
+It starts only when the host mounts it. The default learning allocation is
+zero. The host supplies the existing `Lemieux.JobBudget`, finite token/time
+ceilings and an allocation inside those ceilings; learning creates no extra
+spend allowance. Request and dollar reservations use that same job ledger.
+
+```elixir
+{:ok, job} = Lemieux.JobBudget.start_link(max_requests: 40, max_cost_usd: 2.0)
+{:ok, controller} = Lemieux.Learning.Controller.start_link(
+  job_id: "task-42", job_budget: job, max_tokens: 100_000, max_time_ms: 120_000,
+  learning: [max_requests: 8, max_tokens: 20_000,
+    max_time_ms: 30_000, max_cost_usd: 0.5]
+)
+controlled = Lemieux.Learning.Controller.provider(controller, :task, provider,
+  token_bound: &host_token_upper_bound/1, timeout_ms: 10_000
+)
+```
+
+The token-bound callback is trusted, provider-free host policy and must cover
+all input, output and cache tokens. An absent bound or provider refuses the
+request. Start the controller before token-consuming parent work and route
+every participant through it. Untracked parent requests close token admission.
+Do not also charge the same provider request to a session-owned job ledger;
+the controlled provider already reserves it. Other paid tools may use the
+shared job ledger normally.
+
+Reservations precede dispatch and persistence precedes effects. Each physical
+retry consumes another request. Cancellation kills guarded work and retains
+unknown usage; it never refunds the request. Reconciliation is idempotent,
+and restoring an interrupted reservation marks it unknown rather than running
+it again. Current limits, providers, callbacks and authority come from fresh
+host options. Checkpoints contain data only and must match the job identity.
+For crash durability, the job ledger and controller both need synchronous
+host-owned persistence; an in-memory snapshot alone is not durable recovery.
+
+Dollars use the job ledger's integer precision. Metered unknown pricing
+refuses admission. Explicit `cost_mode: :quota` permits unknown dollars only
+when the outer ledger and learning allocation have no dollar ceiling; tokens,
+requests and time still count. Unknown cost stays `nil`. Admission estimates
+are bounds supplied by the provider/host, rather than a billing guarantee;
+actual overruns are recorded and stop further work. Runtime deadlines use a
+monotonic clock, with a bounded wall-clock deadline retained for restart.
+
+`Controller.consider/2` inspects bounded deterministic signals and records
+healthy, unsupported and duplicate signals as no-op outcomes. Readiness never
+authorizes dispatch. `reconcile/4` may carry a new information digest; repeated
+uninformative attempts stop learning. `Controller.select/3` keeps the original
+harness/output unless supported comparison bounds show an improvement.
+Status, consideration and selection make no provider request. Decision history
+is finite; reaching its limit stops work instead of forgetting idempotency.
+
+The first-party proposer accepts an explicit
+`{"outcome":"no_supported_improvement","reason":"..."}` manifest without
+inventing a profile edit or invoking a critic. Select `Proposer.profile(model,
+abstain: true)` to include that protocol in its instructions. A controller
+signal can abstain before resolving a provider or exposing lesson evidence.
+No-op usage is retained by the search state without adding a candidate;
+ordinary candidate surface validation is unchanged. Cycles retain the seed on
+primary-objective ties, regressions or missing paired development coverage.
+
+For a preregistered experiment, `Controller.admit/3` checks the entire frozen
+allocation and binds its plan digest. `Controller.experiment/5` reserves the
+whole allocation before mounting a child controller; all child requests draw
+from that reserved capacity. Unused dollars/tokens settle to actual usage;
+allocated request slots are conservatively consumed even when unused. Supply
+an explicit full request bound covering both arms, repetitions, tool turns and
+retries. Admission never rewrites the plan to fit the remainder. Exhaustion or
+interruption remains incomplete execution evidence.
+
+`Campaign.run/1` and `resume/1` accept `controller:`, `token_bound:` and a full
+`controller_allocation:` map with `:requests`, `:tokens`, `:time_ms` and
+`:cost_usd`. Allocation must cover the frozen plan's entire maximum. Proposer
+and critic calls share it with probes. `Confirm.run/3` uses that same host
+controller, with its own `controller_allocation:` in the confirmation options;
+both arms keep their preregistered normalization and sample counts. A recovered
+interrupted allocation cannot be dispatched again. Host admission denials and
+interrupted controller work cannot qualify as a candidate's task-quality
+failure. Other hosts can wrap existing provider seams for any controller role,
+including the meta proposer, without adding a provider adapter or bypassing
+the live-run authorization gate.
+
 ### Ordinary-session capture
 
 `Lemieux.Extensions.Capture` is selected by the stock `lmx` host when personal

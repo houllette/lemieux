@@ -44,12 +44,33 @@ defmodule Lemieux.Learning.Proposer.Workspace do
 
   @doc "Reads the proposal files a session wrote, if any."
   @spec proposal(workspace :: t()) ::
-          {:ok, %{profile: map(), manifest: map(), bytes: binary()}} | {:error, term()}
+          {:ok, %{profile: map(), manifest: map(), bytes: binary()}}
+          | {:noop, map()}
+          | {:error, term()}
   def proposal(%__MODULE__{proposal: proposal}) do
-    with {:ok, bytes} <- read(Path.join(proposal, "profile.json"), :no_profile_written),
-         {:ok, profile} <- decode(bytes, :invalid_profile_json),
-         {:ok, manifest_bytes} <- read(Path.join(proposal, "manifest.json"), :no_manifest_written),
+    with {:ok, manifest_bytes} <- read(Path.join(proposal, "manifest.json"), :no_manifest_written),
          {:ok, manifest} <- decode(manifest_bytes, :invalid_manifest_json) do
+      read_outcome(proposal, manifest)
+    else
+      {:error, :no_manifest_written} -> missing_manifest(proposal)
+      error -> error
+    end
+  end
+
+  defp missing_manifest(proposal) do
+    case read(Path.join(proposal, "profile.json"), :no_profile_written) do
+      {:ok, _bytes} -> {:error, :no_manifest_written}
+      error -> error
+    end
+  end
+
+  defp read_outcome(_proposal, %{"outcome" => "no_supported_improvement", "reason" => reason})
+       when is_binary(reason) and byte_size(reason) in 1..512,
+       do: {:noop, %{"reason" => reason}}
+
+  defp read_outcome(proposal, manifest) do
+    with {:ok, bytes} <- read(Path.join(proposal, "profile.json"), :no_profile_written),
+         {:ok, profile} <- decode(bytes, :invalid_profile_json) do
       {:ok, %{profile: profile, manifest: manifest, bytes: canonical(profile)}}
     end
   end

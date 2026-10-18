@@ -4,6 +4,8 @@ defmodule Lemieux.Learning.Discovery.CampaignTest do
   alias Lemieux.Benchmark.Manifest
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
+  alias Lemieux.JobBudget
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Campaign
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Evaluation
@@ -178,6 +180,45 @@ defmodule Lemieux.Learning.Discovery.CampaignTest do
       ],
       overrides
     )
+  end
+
+  test "a controlled campaign uses one frozen allocation for probes and retains its plan", ctx do
+    allocation = %{requests: 4, tokens: 1_000_000, time_ms: 600_000, cost_usd: nil}
+    budget = start_supervised!({JobBudget, max_requests: 4})
+
+    controller =
+      start_supervised!(
+        {Controller,
+         job_id: "campaign",
+         job_budget: budget,
+         max_tokens: 1_000_000,
+         max_time_ms: 700_000,
+         cost_mode: :quota,
+         learning: [
+           max_requests: 4,
+           max_tokens: 1_000_000,
+           max_time_ms: 600_000,
+           max_cost_usd: nil
+         ]}
+      )
+
+    config =
+      config(ctx, [])
+      |> Keyword.put(:budget, Map.put(config(ctx, [])[:budget], "maximum_candidates", 1))
+      |> Keyword.put(:controller, controller)
+      |> Keyword.put(:controller_allocation, allocation)
+      |> Keyword.put(:token_bound, fn _ -> 1000 end)
+
+    assert {:ok, result} = Campaign.run(config)
+    assert [%{mutation_kind: "seed"}] = result.candidates
+    assert JobBudget.snapshot(budget).requests == 4
+
+    assert Controller.snapshot(controller)["accounting"]["tokens"] ==
+             result.state.budget["tokens"]
+
+    assert {:ok, frozen} = Campaign.read_plan(config[:output_dir])
+    assert frozen.sha256 == result.state.plan_sha256
+    assert frozen.budget["maximum_tokens"] == allocation.tokens
   end
 
   test "a scripted campaign searches, persists its archive and reports a frontier", ctx do

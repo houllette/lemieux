@@ -51,6 +51,24 @@ defmodule Lemieux.Learning.Discovery.EvaluatorTest do
       refute Evaluation.eligible?(val)
     end
 
+    test "controller denials are incomplete execution evidence rather than a candidate failure" do
+      plan = plan(%{})
+      candidate = candidate(plan)
+
+      row =
+        result("dev-1", candidate.id, passed: false)
+        |> put_in(["observation", "provider_error"], %{"code" => "host_admission_denied"})
+
+      assert {:ok, %{evaluations: [evaluation]}} =
+               Evaluator.from_report(plan, candidate, %{"results" => [row]},
+                 sandbox: :not_applicable,
+                 unknown_cost: "allow"
+               )
+
+      refute evaluation.within_budget
+      refute Evaluation.eligible?(evaluation)
+    end
+
     test "allowlists honor the gate's directory prefixes" do
       plan = plan(%{})
       candidate = candidate(plan)

@@ -45,6 +45,7 @@ defmodule Lemieux.Learning.Proposer do
   alias Lemieux.Contract
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Plan
   alias Lemieux.Learning.Discovery.Policy
@@ -105,7 +106,9 @@ defmodule Lemieux.Learning.Proposer do
       "model" => model,
       "tools" => ["read", "write", "edit"],
       "options" => %{
-        "system" => evolver_system(Keyword.get(opts, :experience, false)),
+        "system" =>
+          evolver_system(Keyword.get(opts, :experience, false))
+          |> abstention(Keyword.get(opts, :abstain, false)),
         "max_turns" => Keyword.get(opts, :max_turns, 16),
         # A reasoning model narrating a cross-lineage analysis overran 4096
         # output tokens and stopped at `length` with nothing written, twice
@@ -121,6 +124,15 @@ defmodule Lemieux.Learning.Proposer do
       do: Profile.quota(profile, Keyword.get(opts, :max_requests, 20)),
       else: profile
   end
+
+  defp abstention(system, false), do: system
+
+  defp abstention(system, true),
+    do:
+      system <>
+        "\nWhen evidence supports no improvement, write only proposal/manifest.json with " <>
+        ~s({"outcome":"no_supported_improvement","reason":"a concise evidence-based reason"}. ) <>
+        "Do not fabricate a profile mutation. The original harness remains eligible.\n"
 
   defp evolver_system(false), do: @evolver_system
 
@@ -215,7 +227,7 @@ defmodule Lemieux.Learning.Proposer do
   """
   @impl Lemieux.Learning.Discovery.Proposer
   @spec propose(plan :: Plan.t(), state :: State.t(), context :: map()) ::
-          {:ok, Candidate.t(), map()} | :done | {:error, term()}
+          {:ok, Candidate.t(), map()} | {:noop, map()} | :done | {:error, term()}
   def propose(%Plan{} = plan, %State{}, context) when is_map(context) do
     started = System.monotonic_time(:millisecond)
 
@@ -248,10 +260,31 @@ defmodule Lemieux.Learning.Proposer do
          parent_map,
          started
        ) do
-    with {:ok, context} <- Experience.prepare(plan, Map.put(context, :experience_plan, plan)) do
+    with :ok <- supported_improvement(context),
+         {:ok, context} <- Experience.prepare(plan, Map.put(context, :experience_plan, plan)) do
       evolve(plan, context, operator, parent_ref, parent_bytes, parent_map, started)
     end
   end
+
+  defp supported_improvement(%{controller: controller, controller_event: event}) do
+    case Controller.consider(controller, event) do
+      {:ready, _receipt} ->
+        :ok
+
+      {:noop, receipt} ->
+        {:noop,
+         %{
+           "reason" => receipt["reason"],
+           "controller" => receipt,
+           "tokens" => 0,
+           "time_ms" => 0,
+           "cost_usd" => 0.0,
+           "requests" => 0
+         }}
+    end
+  end
+
+  defp supported_improvement(_context), do: :ok
 
   @doc "The planner's view of the archive: every candidate, its edit, scores and fate."
   @spec landscape(context :: map()) :: map()
@@ -432,6 +465,25 @@ defmodule Lemieux.Learning.Proposer do
     end
   end
 
+  defp finish_evolution(
+         _plan,
+         %{controller: _controller},
+         %{evolver_observation: %{"provider_error" => %{"code" => code}}} = evolution
+       )
+       when code in ~w(host_admission_denied host_work_interrupted) do
+    {:noop,
+     Map.put(
+       accounting([evolution.evolver_observation["usage"]], evolution.started),
+       "reason",
+       code
+     )}
+  end
+
+  defp finish_evolution(_plan, _context, %{proposal: {:noop, facts}} = evolution) do
+    accounting = accounting([evolution.evolver_observation["usage"]], evolution.started)
+    {:noop, Map.merge(accounting, facts)}
+  end
+
   defp finish_evolution(plan, context, evolution) do
     %{operator: operator, evolver_observation: evolver_observation, workspace: workspace} =
       evolution
@@ -487,7 +539,7 @@ defmodule Lemieux.Learning.Proposer do
       profile ->
         prompt = critic_prompt(manifest, workspace)
 
-        case session(context, profile, workspace.root, prompt) do
+        case session(Map.put(context, :controller_role, :critic), profile, workspace.root, prompt) do
           {:ok, observation} -> {parse_verdict(observation["answer"]), observation}
           {:error, reason} -> {%{"verdict" => "unavailable", "reason" => inspect(reason)}, nil}
         end
@@ -625,7 +677,7 @@ defmodule Lemieux.Learning.Proposer do
 
   defp session(context, profile, cwd, prompt) do
     options = [
-      provider: resolve(Map.fetch!(context, :provider)),
+      provider: controlled_provider(context, resolve(Map.fetch!(context, :provider))),
       sessions_dir: Map.get(context, :sessions_dir),
       timeout_ms: Map.get(context, :timeout_ms, :timer.minutes(10))
     ]
@@ -642,6 +694,15 @@ defmodule Lemieux.Learning.Proposer do
       end
     end
   end
+
+  defp controlled_provider(%{controller: controller} = context, provider),
+    do:
+      Controller.provider(controller, Map.get(context, :controller_role, :proposer), provider,
+        token_bound: context[:token_bound],
+        timeout_ms: Map.get(context, :request_timeout_ms, 5000)
+      )
+
+  defp controlled_provider(_context, provider), do: provider
 
   # A zero-arity factory yields a fresh provider per session; a scripted
   # double must not share one consumed script between evolver and critic.

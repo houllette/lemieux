@@ -4,12 +4,107 @@ defmodule Lemieux.Learning.Discovery.ShadowSearchTest do
   alias Lemieux.Contract
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Learning.Discovery.Candidate
+  alias Lemieux.Learning.Discovery.Cycle
   alias Lemieux.Learning.Discovery.Evaluation
   alias Lemieux.Learning.Discovery.Plan
   alias Lemieux.Learning.Discovery.Shadow
 
   @immutable %{"id" => "external", "sha256" => String.duplicate("d", 64)}
   @seed_bytes ~s({"options":{"system":"seed"}})
+
+  test "explicit no-op keeps the evaluated seed and accounts the attempt without a new candidate" do
+    plan = plan(maximum_candidates: 4, seed: 3)
+
+    proposer = fn plan, _state, context ->
+      if context.operator == "seed" do
+        context.retain.(Contract.sha256(@seed_bytes), @seed_bytes)
+
+        {:ok,
+         candidate(
+           plan,
+           1,
+           @seed_bytes,
+           "seed",
+           parent_ref(context.parent, context.candidates),
+           %{}
+         ), %{"tokens" => 0, "time_ms" => 0, "cost_usd" => 0}}
+      else
+        {:noop,
+         %{
+           "reason" => "No supported improvement",
+           "tokens" => 7,
+           "time_ms" => 1,
+           "cost_usd" => 0.01
+         }}
+      end
+    end
+
+    evaluator = fn plan, candidate, context ->
+      assert candidate.mutation_kind == "seed"
+
+      {:ok,
+       %{
+         evaluations: Enum.map(context.case_ids, &evaluation(plan, candidate, &1, 0.0)),
+         artifacts: %{},
+         incomplete: []
+       }}
+    end
+
+    assert {:ok, result} =
+             Shadow.run(plan, proposer, evaluator,
+               mode: :shadow,
+               sandbox: @immutable,
+               exposed_corpus: @immutable,
+               search: true,
+               artifacts: %{Contract.sha256(@seed_bytes) => @seed_bytes}
+             )
+
+    assert [%{mutation_kind: "seed"}] = result.candidates
+    assert Enum.any?(result.state.events, &(&1["type"] == "no_supported_improvement"))
+    assert result.state.budget["tokens"] >= 7
+    assert result.state.plan_sha256 == plan.sha256
+  end
+
+  test "cycle selection retains the seed on ties and weaker primary scores" do
+    plan = plan(maximum_candidates: 4, seed: 3)
+
+    seed =
+      candidate(
+        plan,
+        1,
+        @seed_bytes,
+        "seed",
+        seed_parent(plan),
+        %{}
+      )
+
+    changed =
+      candidate(
+        plan,
+        2,
+        ~s({"options":{"system":"newer"}}),
+        "clonal",
+        %{"id" => seed.id, "content_sha256" => Candidate.content_sha256(seed)},
+        %{}
+      )
+
+    baseline = Enum.map(plan.development_case_ids, &evaluation(plan, seed, &1, 1.0))
+
+    for score <- [0.5, 1.0] do
+      observations =
+        baseline ++ Enum.map(plan.development_case_ids, &evaluation(plan, changed, &1, score))
+
+      result = %{
+        candidates: [seed, changed],
+        evaluations: observations,
+        frontier: %{
+          members: [%{"candidate_id" => changed.id, "scores" => %{"task_success" => score}}]
+        }
+      }
+
+      assert Cycle.selection(plan, result) == nil
+    end
+  end
 
   test "search evaluates the seed first, expands from evidence, and records every decision" do
     plan = plan(maximum_candidates: 4, seed: 3)

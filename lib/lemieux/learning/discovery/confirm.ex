@@ -39,11 +39,11 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   alias Lemieux.Experiment.Decision
   alias Lemieux.Experiment.Plan, as: ExperimentPlan
   alias Lemieux.Extension.Profile
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Confirmation
   alias Lemieux.Learning.Discovery.Evaluator
   alias Lemieux.Learning.Discovery.Plan
-  alias Lemieux.Providers.Scripted
 
   @type prepared :: %{
           dir: Path.t(),
@@ -185,8 +185,15 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   def run(config, candidate_id, opts \\ []) when is_list(config) and is_binary(candidate_id) do
     with {:ok, provider} <- fetch(config, :provider),
          :ok <- live_allowed(config, provider),
-         {:ok, prepared} <- prepare(config, candidate_id, opts),
-         {:ok, exposure} <- expose(prepared),
+         {:ok, prepared} <- prepare(config, candidate_id, opts) do
+      controlled_confirmation(config, prepared, opts, fn effective ->
+        run_prepared(prepared, provider, effective)
+      end)
+    end
+  end
+
+  defp run_prepared(prepared, provider, config) do
+    with {:ok, exposure} <- expose(prepared),
          :ok <-
            File.write(Path.join(prepared.dir, "exposure.json"), Exposure.encode!(exposure), [
              :exclusive
@@ -197,6 +204,49 @@ defmodule Lemieux.Learning.Discovery.Confirm do
       File.write!(Path.join(prepared.dir, "decision.json"), JSON.encode!(result["quality"]))
       File.write!(Path.join(prepared.dir, "result.json"), JSON.encode!(result))
       {:ok, result}
+    end
+  end
+
+  defp controlled_confirmation(config, prepared, opts, work) do
+    case Keyword.get(config, :controller) do
+      nil -> work.(config)
+      controller -> allocate_confirmation(controller, config, prepared, opts, work)
+    end
+  end
+
+  defp allocate_confirmation(controller, config, prepared, opts, work) do
+    case Keyword.fetch(opts, :controller_allocation) do
+      {:ok, required} ->
+        plan = %{
+          sha256: prepared.plan.sha256,
+          budget:
+            Map.put(prepared.plan.budget, "maximum_requests", prepared.policy["maximum_requests"])
+        }
+
+        controller
+        |> Controller.experiment("confirmation/" <> prepared.plan.id, plan, required, fn child ->
+          work.(Keyword.put(config, :controller, child))
+        end)
+        |> controller_result()
+
+      :error ->
+        {:error, :controller_allocation_required}
+    end
+  end
+
+  defp controller_result({:ok, result, _receipt}), do: result
+  defp controller_result({:skip, receipt}), do: {:error, {:controller_admission, receipt}}
+
+  defp controlled_provider(config, provider) do
+    case Keyword.get(config, :controller) do
+      nil ->
+        provider
+
+      controller ->
+        Controller.provider(controller, :confirmation, provider,
+          token_bound: config[:token_bound],
+          timeout_ms: Keyword.get(config, :request_timeout_ms, 5000)
+        )
     end
   end
 
@@ -295,7 +345,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
       agent_options: fn ->
         {:ok, options, _profile} =
           Profile.configure(profile,
-            provider: resolve(provider),
+            provider: controlled_provider(config, resolve(provider)),
             sessions_dir: Keyword.get(config, :sessions_dir, Path.join(dir, "sessions"))
           )
 
@@ -559,7 +609,10 @@ defmodule Lemieux.Learning.Discovery.Confirm do
     end)
   end
 
-  defp terminal?(row), do: is_map(row["observation"]) and is_boolean(row["passed"])
+  defp terminal?(row),
+    do:
+      is_map(row["observation"]) and is_boolean(row["passed"]) and
+        get_in(row, ["observation", "provider_error", "code"]) not in ~w(host_admission_denied host_work_interrupted)
 
   defp resources(rows, policy) do
     variant = Enum.filter(rows, &(&1["runtime"] == "variant"))
@@ -676,7 +729,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   defp live_allowed(config, provider) do
     cond do
       Keyword.get(config, :allow_live, false) == true -> :ok
-      match?({Scripted, _}, resolve(provider)) -> :ok
+      Controller.scripted?(resolve(provider)) -> :ok
       true -> {:error, :live_campaign_requires_allow_live}
     end
   end

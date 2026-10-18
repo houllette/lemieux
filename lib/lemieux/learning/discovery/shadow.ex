@@ -54,7 +54,8 @@ defmodule Lemieux.Learning.Discovery.Shadow do
         }
 
   @type proposer ::
-          (Plan.t(), State.t(), map() -> {:ok, Candidate.t(), map()} | :done | {:error, term()})
+          (Plan.t(), State.t(), map() ->
+             {:ok, Candidate.t(), map()} | {:noop, map()} | :done | {:error, term()})
   @type evaluator ::
           (Plan.t(), Candidate.t(), map() ->
              {:ok, [Evaluation.t()]}
@@ -265,6 +266,10 @@ defmodule Lemieux.Learning.Discovery.Shadow do
     case outcome do
       :done ->
         finish(plan, state, acc, context)
+
+      {:noop, facts} when is_map(facts) ->
+        with {:ok, state} <- State.record_noop(state, plan, facts),
+             do: finish(plan, state, acc, context)
 
       {:ok, %Candidate{} = candidate, accounting} when is_map(accounting) ->
         with :ok <- Candidate.verify(candidate),
@@ -484,6 +489,10 @@ defmodule Lemieux.Learning.Discovery.Shadow do
     case proposer.(plan, state, proposer_context) do
       :done ->
         finish_linear(plan, state, candidates, evaluations, context)
+
+      {:noop, facts} when is_map(facts) ->
+        with {:ok, state} <- State.record_noop(state, plan, facts),
+             do: finish_linear(plan, state, candidates, evaluations, context)
 
       {:ok, %Candidate{} = candidate, accounting} when is_map(accounting) ->
         with :ok <- Candidate.verify(candidate),

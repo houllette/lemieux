@@ -72,6 +72,106 @@ defmodule Lemieux.Learning.ProposerTest do
     assert Scripted.requests(context.provider) == []
   end
 
+  test "explicit model abstention records usage without a fabricated candidate or critic", ctx do
+    seed = seed_candidate(ctx)
+
+    provider =
+      Scripted.new([
+        Scripted.tool_call(
+          "noop",
+          "write",
+          %{
+            "path" => "proposal/manifest.json",
+            "content" =>
+              JSON.encode!(%{
+                "outcome" => "no_supported_improvement",
+                "reason" => "Evidence supports the existing harness."
+              })
+          },
+          usage: %{"input_tokens" => 10, "output_tokens" => 10, "cost_usd" => 0.01}
+        ),
+        Scripted.complete("Keep the baseline.",
+          usage: %{"input_tokens" => 10, "output_tokens" => 5, "cost_usd" => 0.01}
+        )
+      ])
+
+    context =
+      Map.merge(ctx.context, %{
+        parent: {:candidate, seed.id},
+        operator: "clonal",
+        candidates: [seed],
+        provider: provider,
+        critic_profile: Proposer.critic_profile("test:model", quota: true)
+      })
+
+    assert {:noop, facts} = Proposer.propose(ctx.plan, ctx.state, context)
+    assert facts["reason"] == "Evidence supports the existing harness."
+    assert facts["tokens"] == 35
+    assert facts["cost_usd"] == 0.02
+    assert length(Scripted.requests(provider)) == 2
+  end
+
+  test "a healthy controller signal abstains before provider resolution and exposure", ctx do
+    seed = seed_candidate(ctx)
+    budget = start_supervised!({Lemieux.JobBudget, max_requests: 3, max_cost_usd: 1.0})
+
+    controller =
+      start_supervised!(
+        {Lemieux.Learning.Controller,
+         job_id: "healthy", job_budget: budget, max_tokens: 100, max_time_ms: 1000}
+      )
+
+    context =
+      Map.merge(ctx.context, %{
+        parent: {:candidate, seed.id},
+        operator: "clonal",
+        candidates: [seed],
+        controller: controller,
+        controller_event: %{"id" => "healthy", "kind" => "healthy"},
+        provider: fn -> flunk("healthy evidence cannot start a provider") end
+      })
+
+    assert {:noop, %{"reason" => "healthy_task", "tokens" => 0, "cost_usd" => +0.0}} =
+             Proposer.propose(ctx.plan, ctx.state, context)
+
+    refute File.exists?(ctx.context.workspace_root)
+  end
+
+  test "an exhausted learning allocation yields no-op instead of an invalid fabricated edit",
+       ctx do
+    seed = seed_candidate(ctx)
+    budget = start_supervised!({Lemieux.JobBudget, max_requests: 3, max_cost_usd: 1.0})
+
+    controller =
+      start_supervised!(
+        {Lemieux.Learning.Controller,
+         job_id: "empty", job_budget: budget, max_tokens: 100, max_time_ms: 60_000}
+      )
+
+    provider = Scripted.new([], estimated_cost_usd: 0.1)
+
+    context =
+      Map.merge(ctx.context, %{
+        parent: {:candidate, seed.id},
+        operator: "clonal",
+        candidates: [seed],
+        controller: controller,
+        controller_event: %{
+          "id" => "failure",
+          "kind" => "verification_failure",
+          "hypothesis_supported" => true
+        },
+        token_bound: fn _ -> 10 end,
+        provider: provider
+      })
+
+    assert {:noop, %{"reason" => "host_admission_denied"}} =
+             Proposer.propose(ctx.plan, ctx.state, context)
+
+    assert Scripted.requests(provider) == []
+    assert Lemieux.JobBudget.snapshot(budget).requests == 0
+  end
+
   test "the evolver's proposal becomes a validated, predicted, critic-reviewed candidate", ctx do
     seed = seed_candidate(ctx)
 

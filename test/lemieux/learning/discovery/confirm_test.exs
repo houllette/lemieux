@@ -4,6 +4,8 @@ defmodule Lemieux.Learning.Discovery.ConfirmTest do
   alias Lemieux.Benchmark.Corpus.Exposure
   alias Lemieux.Experiment.Plan, as: ExperimentPlan
   alias Lemieux.Extension.Profile
+  alias Lemieux.JobBudget
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Campaign
   alias Lemieux.Learning.Discovery.Confirm
   alias Lemieux.Learning.Proposer
@@ -145,6 +147,76 @@ defmodule Lemieux.Learning.Discovery.ConfirmTest do
     {:ok, result} = Campaign.run(config)
     [seed, improved] = result.candidates
     %{config: config, log: log, seed: seed, improved: improved}
+  end
+
+  test "confirmation shares a reserved allocation and preserves both preregistered arms", ctx do
+    Agent.update(ctx.log, fn _ -> [] end)
+
+    provider = fn ->
+      Scripted.new(
+        for n <- 1..3 do
+          fn request ->
+            [{:usage, %{"input_tokens" => 2, "output_tokens" => 2}} | turn(n, request, ctx.log)]
+          end
+        end
+      )
+    end
+
+    config = controlled(ctx, provider, fn _ -> 10 end)
+    allocation = %{requests: 20, tokens: 1000, time_ms: 10_000, cost_usd: nil}
+
+    assert {:ok, result} =
+             Confirm.run(config, ctx.improved.id,
+               model: "test:target",
+               stopping_rule: %{"minimum_pairs" => 2, "confidence" => 0.9},
+               max_requests_per_attempt: 2,
+               controller_allocation: allocation
+             )
+
+    assert result["verdict"] == "pass"
+    assert length(result["pairs"]) == 3
+    snapshot = Controller.snapshot(config[:controller])
+    assert snapshot["job_budget"]["requests"] == 20
+    assert snapshot["accounting"]["tokens"] == 80
+    assert Agent.get(ctx.log, &Enum.uniq/1) == ["test:target"]
+  end
+
+  test "a controller refusal cannot become a task-quality confirmation", ctx do
+    Agent.update(ctx.log, fn _ -> [] end)
+    config = controlled(ctx, provider_factory(ctx.log), fn _ -> nil end)
+
+    assert {:error, :non_terminal_attempt} =
+             Confirm.run(config, ctx.improved.id,
+               max_requests_per_attempt: 2,
+               controller_allocation: %{
+                 requests: 20,
+                 tokens: 1000,
+                 time_ms: 10_000,
+                 cost_usd: nil
+               }
+             )
+
+    assert Agent.get(ctx.log, & &1) == []
+  end
+
+  defp controlled(ctx, provider, bound) do
+    budget = start_supervised!({JobBudget, max_requests: 20})
+
+    controller =
+      start_supervised!(
+        {Controller,
+         job_id: "confirmation",
+         job_budget: budget,
+         max_tokens: 1000,
+         max_time_ms: 100_000,
+         cost_mode: :quota,
+         learning: [max_requests: 20, max_tokens: 1000, max_time_ms: 10_000, max_cost_usd: nil]}
+      )
+
+    ctx.config
+    |> Keyword.put(:provider, provider)
+    |> Keyword.put(:controller, controller)
+    |> Keyword.put(:token_bound, bound)
   end
 
   test "confirms a frontier member on holdout clusters with both arms on the target model", ctx do
