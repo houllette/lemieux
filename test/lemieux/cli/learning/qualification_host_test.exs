@@ -151,6 +151,32 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   end
 
   @tag capture_log: true
+  test "unknown probe usage keeps the completed original and records required recovery", ctx do
+    config =
+      Map.put(ctx.config, :provider, fn
+        :task -> task_provider(true)
+        :probe -> Scripted.new([Scripted.http_error(503, reason: "temporary upstream failure")])
+      end)
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "frozen"))
+    assert row["passed"]
+    assert row["qualification_complete"] == false
+    assert row["tokens"] == nil
+
+    evidence =
+      Path.join(config.root, "1-#{ctx.fixture.id}-frozen/evidence.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    assert evidence["selected"]["session_id"] == evidence["original"]["session_id"]
+    assert evidence["learning_failure"]["reason"] =~ "requires_recovery"
+    assert evidence["refinement"] == nil
+    assert evidence["promotion"] == nil
+    assert Lemieux.sessions(config.supervisor) == []
+    assert Path.wildcard(Path.join(config.root, "*/leases/*")) == []
+  end
+
+  @tag capture_log: true
   test "shutdown of an integrated episode cancels its request and releases every owned lease",
        ctx do
     test = self()
@@ -224,6 +250,16 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
     assert learned["passed"]
     assert learned["exposed_case_ids"] == [ctx.fixture.id]
+
+    excerpts =
+      Path.wildcard(
+        Path.join(config.root, "1-later-updating/proposals/*/evidence/transcripts/*.json")
+      )
+
+    assert [excerpt_path] = excerpts
+    excerpt = excerpt_path |> File.read!() |> JSON.decode!()
+    assert excerpt["case_id"] == "later"
+    assert excerpt["entry_count"] > 0
     assert {:ok, frozen} = Host.episode(config, context(later, "frozen"))
     refute frozen["passed"]
     assert frozen["exposed_case_ids"] == []

@@ -21,6 +21,18 @@ defmodule Lemieux.Learning.ProposerTest do
 
   @moduletag :tmp_dir
 
+  test "task-local proposals use a concrete current failure without requiring a transfer claim" do
+    default = Proposer.profile("test:model")
+    local = Proposer.profile("test:model", task_local: true, experience: true, abstain: true)
+    assert default["options"]["system"] =~ "failure mechanism with cross-case support"
+    refute local["options"]["system"] =~ "failure mechanism with cross-case support"
+    assert local["options"]["system"] =~ "current task"
+    assert local["options"]["system"] =~ "unconfirmed hypothesis"
+    assert local["options"]["system"] =~ "preserve the parent system text"
+    assert local["options"]["system"] =~ "no_supported_improvement"
+    refute Contract.digest(default) == Contract.digest(local)
+  end
+
   setup %{tmp_dir: tmp_dir} do
     evolver = Proposer.profile("test:model", quota: true)
     seed_profile = seed_profile()

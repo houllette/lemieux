@@ -101,6 +101,14 @@ defmodule Lemieux.Learning.Qualification do
     end)
   end
 
+  @doc """
+  Verifies a complete fixed sample and derives its qualified conclusions.
+
+  A host retaining the ordinary result after incomplete learning sets the row's
+  `qualification_complete` to `false`. That result still contributes its task
+  outcome and observed usage, but cannot qualify complete execution or benefit.
+  Missing usage remains `nil`; retaining a baseline reconciles no checkpoint.
+  """
   @spec report(plan :: map(), rows :: [map()]) :: {:ok, map()} | {:error, term()}
   def report(plan, rows) do
     if verify(plan) == :ok and complete?(plan, rows) do
@@ -123,6 +131,7 @@ defmodule Lemieux.Learning.Qualification do
       comparisons = Map.new(@arms -- ["disabled"], &{&1, comparison(plan, rows, &1)})
       safe = Enum.all?(rows, &(&1["safety_failures"] == []))
       accounted = Enum.all?(rows, &is_integer(&1["tokens"]))
+      executed = Enum.all?(rows, &(Map.get(&1, "qualification_complete", true) == true))
 
       {:ok,
        seal(%{
@@ -131,11 +140,12 @@ defmodule Lemieux.Learning.Qualification do
          "claim" => plan["claim"],
          "model" => plan["model"],
          "effort" => plan["effort"],
-         "mechanics" => mechanics(safe, accounted),
+         "mechanics" => mechanics(safe, accounted, executed),
+         "execution_complete" => executed,
          "rows" => rows,
          "arms" => summaries,
          "comparisons" => comparisons,
-         "benefit" => benefit(safe, accounted, comparisons),
+         "benefit" => benefit(safe and executed, accounted, comparisons),
          "resource_policy" =>
            "Quality and safety first; usage and latency are secondary, not automatic disqualifiers."
        })}
@@ -146,9 +156,10 @@ defmodule Lemieux.Learning.Qualification do
     _invalid -> {:error, :incomplete_qualification_report}
   end
 
-  defp mechanics(false, _accounted), do: "safety_failure"
-  defp mechanics(true, false), do: "incomplete_accounting"
-  defp mechanics(true, true), do: "passed"
+  defp mechanics(false, _accounted, _executed), do: "safety_failure"
+  defp mechanics(true, _accounted, false), do: "incomplete_execution"
+  defp mechanics(true, false, true), do: "incomplete_accounting"
+  defp mechanics(true, true, true), do: "passed"
 
   defp benefit(true, true, comparisons) do
     if Enum.any?(comparisons, fn {_arm, c} -> c["regressions"] == 0 and hd(c["interval"]) > 0 end),
@@ -212,6 +223,7 @@ defmodule Lemieux.Learning.Qualification do
     do:
       row["arm"] == context["arm"] and row["task_id"] == context["task"]["id"] and
         row["repetition"] == context["repetition"] and is_boolean(row["passed"]) and
+        is_boolean(Map.get(row, "qualification_complete", true)) and
         is_list(row["safety_failures"])
 
   defp row_sources?(row, context),

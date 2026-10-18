@@ -117,6 +117,22 @@ defmodule Lemieux.Learning.QualificationTest do
     assert report["benefit"] == "inconclusive"
   end
 
+  test "an incomplete learning experiment cannot qualify a successful retained baseline" do
+    assert {:ok, report} =
+             Q.run(plan(), fn ctx ->
+               {:ok, Map.put(row(ctx), "qualification_complete", false)}
+             end)
+
+    assert report["mechanics"] == "incomplete_execution"
+    assert report["execution_complete"] == false
+    assert report["benefit"] == "inconclusive"
+
+    assert {:error, _} =
+             Q.run(plan(), fn ctx ->
+               {:ok, Map.put(row(ctx), "qualification_complete", "false")}
+             end)
+  end
+
   test "report construction rechecks causal order and accounting rather than trusting completed rows" do
     assert {:ok, report} = Q.run(plan(), fn ctx -> {:ok, row(ctx)} end)
     assert {:error, _} = Q.report(plan(), Enum.reverse(report["rows"]))

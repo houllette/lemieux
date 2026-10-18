@@ -15,12 +15,15 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.CLI.Runtime.Evaluation
   alias Lemieux.Contract
   alias Lemieux.Environment
+  alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
   alias Lemieux.Extensions.Capture
   alias Lemieux.JobBudget
   alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Campaign
   alias Lemieux.Learning.Discovery.Digest
+  alias Lemieux.Learning.Discovery.Evaluation, as: DevelopmentEvaluation
+  alias Lemieux.Learning.Discovery.Policy, as: DevelopmentPolicy
   alias Lemieux.Learning.Discovery.State
   alias Lemieux.Learning.Experience.Lessons
   alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
@@ -287,6 +290,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       "selected_grade" => result.selected.grade,
       "refinement" => result.refinement,
       "promotion" => result.promotion,
+      "learning_failure" => result[:learning_failure],
       "controller" => Controller.snapshot(controller),
       "created_lesson_ids" => created,
       "all_attempt_grades" => Agent.get(config.grades, & &1)
@@ -303,6 +307,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
        "task_id" => fixture.id,
        "repetition" => context["repetition"],
        "passed" => result.selected.grade["passed"],
+       "qualification_complete" => is_nil(result[:learning_failure]),
        "requests" => if(metered, do: map_size(metered), else: accounting["requests"]),
        "tokens" => accounting["tokens"],
        "allocated_requests" => accounting["requests"],
@@ -449,6 +454,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         quota: true,
         experience: true,
         abstain: true,
+        task_local: true,
         reasoning_effort: config.effort,
         max_requests: 16,
         max_tokens: 8192
@@ -464,6 +470,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           seed_profile: baseline,
           evolver_profile: evolver,
           development_case_ids: [fixture.id],
+          objectives: [%{"name" => "task_success", "direction" => "maximize"}],
           validation_case_ids: ["unexposed"],
           budget: %{
             "maximum_candidates" => 2,
@@ -495,7 +502,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           "policy_digest" => Contract.digest(lease.bindings)
         })
 
-      {:ok, receipt} =
+      outcome =
         Refinement.run(checkpoint, "refinement", plan,
           baseline: baseline,
           bindings: lease.bindings,
@@ -542,7 +549,12 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           }
         )
 
-      if receipt["decision"] == "proposed" and enabled?(config) do
+      {receipt, failure} = refinement_outcome(outcome)
+
+      if failure,
+        do: :ok = Installation.write(Path.join(dir, "learning-incomplete.json"), failure)
+
+      if is_map(receipt) and receipt["decision"] == "proposed" and enabled?(config) do
         promote(
           config,
           fixture,
@@ -557,7 +569,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           }
         )
       else
-        %{selected: original, refinement: receipt, promotion: nil}
+        %{selected: original, refinement: receipt, promotion: nil, learning_failure: failure}
       end
     after
       DynamicSupervisor.terminate_child(
@@ -566,6 +578,22 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       )
     end
   end
+
+  # A failed isolated experiment has not installed anything. Retaining the
+  # original does not reconcile its checkpoint or invent missing usage facts.
+  defp refinement_outcome({:ok, receipt}), do: {receipt, nil}
+
+  defp refinement_outcome({:error, reason}),
+    do:
+      {nil,
+       %{
+         "kind" => "refinement_incomplete",
+         "checkpoint_key" => "refinement",
+         "reason" => Kernel.inspect(reason)
+       }}
+
+  defp refinement_outcome({:suspended, _checkpoint} = suspended),
+    do: refinement_outcome({:error, suspended})
 
   defp propose(config, plan, bytes, evolver, provider, experience, dir, original) do
     if enabled?(config) do
@@ -594,7 +622,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           },
           evidence: %{
             "operator" => "task_local",
-            "failed_case_ids" => [original.observation["session_id"]],
+            "failed_case_ids" =>
+              if(original.grade["passed"], do: [], else: plan.development_case_ids),
             "original_observation" => %{
               "answer" => original.observation["answer"],
               "grade" => original.grade,
@@ -608,6 +637,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           retain: fn sha, data -> Agent.update(retained, &Map.put(&1, sha, data)) end
         }
 
+        context = proposal_context(context, plan, original)
         proposed = Proposer.propose(plan, State.new(plan), context)
 
         case proposed do
@@ -621,6 +651,64 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
     else
       {:error, :disabled}
     end
+  end
+
+  # Operator metadata alone does not populate the first-party digest or
+  # transcript directory. Excerpts are selected by Evaluation.id, not a task
+  # or session id, and require matching retained source bytes.
+  defp proposal_context(context, plan, original) do
+    {:ok, seed, _} =
+      Proposer.propose(plan, State.new(plan), %{context | operator: "seed"})
+
+    bytes = JSON.encode!(original.observation["transcript"] || [])
+
+    reference =
+      ArtifactReference.from_bytes("transcript", bytes,
+        scope: plan.scope,
+        id: "original-" <> original.observation["session_id"],
+        media_type: "application/json",
+        content_schema: "lemieux.transcript.entries/v2"
+      )
+
+    usage = original.observation["usage"] || %{}
+    known = is_integer(usage["input_tokens"]) and is_integer(usage["output_tokens"])
+
+    {:ok, evaluation} =
+      DevelopmentEvaluation.new(plan, seed, %{
+        "id" => "evaluation-" <> original.observation["session_id"],
+        "scope" => plan.scope,
+        "case_id" => hd(plan.development_case_ids),
+        "split" => "development",
+        "objectives" => %{"task_success" => original.grade["score"]},
+        "safety" => %{
+          "passed" => original.grade["safety_failures"] == [],
+          "failures" => original.grade["safety_failures"]
+        },
+        "completeness" => %{
+          "usage" => if(known, do: "complete", else: "unknown"),
+          "cost" => "not_applicable",
+          "sandbox" => "complete"
+        },
+        "usage" => usage,
+        "cost" => %{"usd" => nil},
+        "latency" => %{},
+        "artifacts" => [ArtifactReference.to_map(reference)],
+        "within_budget" => is_nil(original.observation["provider_error"]),
+        "terminal" => original.observation["status"] in ~w(completed failed),
+        "observations" =>
+          Map.take(original.observation, ~w(status finish_reason provider_error))
+          |> Map.put("independent_grade", original.grade)
+      })
+
+    context.retain.(reference.sha256, bytes)
+    artifacts = Map.put(context.artifacts, reference.sha256, bytes)
+
+    context
+    |> Map.put(:artifacts, artifacts)
+    |> Map.put(:candidates, [seed])
+    |> Map.put(:evaluations, [evaluation])
+    |> Map.put(:digest, Digest.build(plan, [evaluation], artifacts, DevelopmentPolicy.read(plan)))
+    |> Map.update!(:evidence, &Map.put(&1, "evaluation_ids", [evaluation.id]))
   end
 
   defp promote(config, fixture, lease, controller, details) do

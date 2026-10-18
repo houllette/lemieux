@@ -1,6 +1,6 @@
 # Qualifying learning before release
 
-PR #82's learning APIs remain experimental and opt-in. The qualification host in
+Lemieux's learning APIs remain experimental and opt-in. The qualification host in
 `Lemieux.CLI.Learning.QualificationHost` is an explicit development harness; ordinary
 `lmx` starts none of it. It exercises the ordinary CLI assembly, capture, source-backed
 lessons, exposure-gated retrieval, the first-party proposer, isolated refinement,
@@ -74,6 +74,37 @@ runner/test/contract files have not changed, and evaluates output independently.
 Path-validation and quoted-record fixtures include malformed inputs, traversal,
 Unicode, empty fields and quote edge cases. Variants belong to their original task
 family cluster; additional runs of related cases do not create independent samples.
+
+A host verifier may reject an answer after the agent reports completion and its
+own checks pass. `Lemieux.Extensions.Capture` observes in-session signals; it does
+not automatically receive that later verdict. Persist authorized external feedback
+as source-backed experience with its actual case identity. A failed source outcome
+can warrant investigation while its lesson remains unconfirmed. It establishes
+neither an improvement nor permission to apply an adaptation.
+
+For a direct `Lemieux.Learning.Proposer.propose/3` call, supply typed development
+evaluations, matching retained transcript artifact bytes and a
+`Lemieux.Learning.Discovery.Digest.build/4` result. Select primary excerpts through
+`context.evidence["evaluation_ids"]`, using `Evaluation.id`; case and session ids
+are different identities. An arbitrary operator observation does not populate the
+failure digest or transcript directory. Keep feedback from independent confirmation
+outside development proposals, and retain the source-case ancestry of reused lessons.
+
+Use `Proposer.profile(model, task_local: true, abstain: true)` for a task-local
+proposal. A concrete current failure may support a hypothesis for isolated probes;
+cross-case evidence is required for transfer claims. Candidates remain subject to
+the frozen surface; the effective CLI lane requires preserving the original system
+prefix. A proposal still needs the host's matched
+controls, candidate probes, executed composition and fresh promotion authority.
+
+A retryable provider failure can lack a terminal usage report. The controller then
+refuses further calls with `usage_unknown`, including the session's ordinary retry.
+Quota mode does not waive unknown-token accounting. Retain the original result and
+the in-doubt checkpoint; explicit host reconciliation needs trustworthy usage facts.
+Do not replace unknown usage with zero or replay the experiment automatically.
+The qualification host records this incomplete learning path without discarding the
+ordinary answer. Its row sets `qualification_complete: false`, so finishing the task
+does not qualify an incomplete experiment as passed execution or demonstrated benefit.
 
 Quality and safety lead the decision. Requests, tokens, latency percentiles and
 unknown accounting are reported separately. Extra tokens are not an automatic

@@ -98,7 +98,15 @@ defmodule Lemieux.Learning.Proposer do
   contradicts, an edit that touches unrelated text, or a grader reference.
   """
 
-  @doc "The evolver profile; the host selects the model and may enable quota mode."
+  @doc """
+  The evolver profile; the host selects the model and may enable quota mode.
+
+  `task_local: true` permits an unconfirmed hypothesis about a concrete failure
+  in the current task. The host still owns isolated controls, candidate and
+  composition probes, selection and promotion. Cross-case support remains a
+  requirement for transfer claims; requiring it before a local proposal made
+  the first-party proposer abstain even with a directly observed failure.
+  """
   @spec profile(model :: String.t(), opts :: keyword()) :: map()
   def profile(model, opts \\ []) when is_binary(model) do
     profile = %{
@@ -108,6 +116,7 @@ defmodule Lemieux.Learning.Proposer do
       "options" => %{
         "system" =>
           evolver_system(Keyword.get(opts, :experience, false))
+          |> task_local(Keyword.get(opts, :task_local, false))
           |> abstention(Keyword.get(opts, :abstain, false)),
         "max_turns" => Keyword.get(opts, :max_turns, 16),
         # A reasoning model narrating a cross-lineage analysis overran 4096
@@ -123,6 +132,27 @@ defmodule Lemieux.Learning.Proposer do
     if opts[:quota],
       do: Profile.quota(profile, Keyword.get(opts, :max_requests, 20)),
       else: profile
+  end
+
+  defp task_local(system, false), do: system
+
+  defp task_local(system, true) do
+    String.replace(
+      system,
+      "failure mechanism with cross-case support.",
+      "failure mechanism observed in the current task."
+    ) <>
+      """
+
+      This is a task-local proposal: a concrete current failure can justify an
+      unconfirmed hypothesis for fresh isolated probes. Cross-case support is
+      required for transfer claims, not for proposing this bounded experiment.
+      Do not claim correctness, improvement or transfer before host evaluation.
+      Abstain when the evidence supports no specific mechanism. For an effective
+      CLI lane, preserve the parent system text exactly and append only the
+      targeted instructions; tool descriptions may change only enabled tools
+      within the frozen surface. Keep mechanism at most 256 UTF-8 bytes.
+      """
   end
 
   defp abstention(system, false), do: system
