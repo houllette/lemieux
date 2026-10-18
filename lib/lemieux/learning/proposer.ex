@@ -812,6 +812,13 @@ defmodule Lemieux.Learning.Proposer do
 
   defp level_prefix(_level), do: ""
 
+  defp task_prompt("task_local") do
+    "Operator: task_local. Read the original task and independent verification evidence in " <>
+      "evidence/operator.json and the primary excerpts under evidence/transcripts/. Diagnose " <>
+      "a specific current failure before proposing one bounded, unconfirmed harness edit. " <>
+      "An unknown digest signature is an index, not a diagnosis; inspect the underlying evidence."
+  end
+
   defp task_prompt("reaction_norm") do
     "Operator: reaction_norm. The parent candidate failed several development cases " <>
       "(evidence/operator.json lists them). Find the mechanism those failures share; the " <>

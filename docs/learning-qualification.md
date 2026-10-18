@@ -90,6 +90,16 @@ are different identities. An arbitrary operator observation does not populate th
 failure digest or transcript directory. Keep feedback from independent confirmation
 outside development proposals, and retain the source-case ancestry of reused lessons.
 
+Validate model-facing evidence through the tools the proposer actually receives.
+The read tool clips individual long lines, so compact JSON can hide the decisive
+fields even when the file was materialized successfully. Generated proposal and
+experience manifests put collection members on separate lines. Keep individual
+diagnostics bounded or supply a separate readable projection for long strings;
+line pagination cannot recover the tail of a clipped scalar. Preserve canonical
+contract digests and exact source artifact bytes separately from these display
+projections. A model's abstention is not evidence of insufficient source information
+when its tools could not present that information.
+
 Use `Proposer.profile(model, task_local: true, abstain: true)` for a task-local
 proposal. A concrete current failure may support a hypothesis for isolated probes;
 cross-case evidence is required for transfer claims. Candidates remain subject to

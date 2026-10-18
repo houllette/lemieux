@@ -110,9 +110,9 @@ defmodule Lemieux.Learning.Proposer.Workspace do
          :ok <- File.mkdir_p(Path.join(dir, "parent")),
          :ok <- File.mkdir_p(proposal),
          :ok <- File.write(Path.join(dir, "README.md"), Map.get(inputs, :instructions, "")),
-         :ok <- File.write(Path.join(dir, "plan.json"), Plan.encode!(plan)),
+         :ok <- write_json(dir, "plan.json", Plan.to_map(plan)),
          :ok <-
-           File.write(Path.join(dir, "parent/profile.json"), Map.fetch!(inputs, :parent_bytes)),
+           write_json(dir, "parent/profile.json", JSON.decode!(Map.fetch!(inputs, :parent_bytes))),
          :ok <- write_json(dir, "evidence/digest.json", Map.get(inputs, :digest, %{})),
          :ok <- write_json(dir, "evidence/landscape.json", Map.get(inputs, :landscape, %{})),
          :ok <-
@@ -147,7 +147,7 @@ defmodule Lemieux.Learning.Proposer.Workspace do
   end
 
   defp write_json(dir, name, value),
-    do: File.write(Path.join(dir, name), JSON.encode!(value))
+    do: File.write(Path.join(dir, name), Lemieux.JSON.encode_readable!(value))
 
   defp write_excerpts(dir, inputs) do
     evaluations = Map.get(inputs, :evaluations, [])

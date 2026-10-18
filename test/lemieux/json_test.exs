@@ -1,6 +1,19 @@
 defmodule Lemieux.JSONTest do
   use ExUnit.Case, async: true
 
+  test "readable JSON preserves values, escapes and canonical identity" do
+    value = %{
+      "nested" => [%{}, [], nil, true, false, 12, -1.25],
+      "text" => "a quote: \"; a slash: \\; braces: {},[]; a newline:\n日本語"
+    }
+
+    readable = Lemieux.JSON.encode_readable!(value)
+    assert readable =~ "\n"
+    assert JSON.decode!(readable) == value
+    assert Lemieux.Contract.digest(JSON.decode!(readable)) == Lemieux.Contract.digest(value)
+    assert readable == Lemieux.JSON.encode_readable!(Map.new(Enum.reverse(Enum.to_list(value))))
+  end
+
   # The wording must stay identical to what `JSON.decode!/1` raises, so a
   # person sees the same sentence whether a reader took the raising path or
   # kept the error tuple.

@@ -17,6 +17,7 @@ defmodule Lemieux.Learning.ProposerTest do
   alias Lemieux.Learning.Proposer
   alias Lemieux.Learning.Proposer.Workspace
   alias Lemieux.Providers.Scripted
+  alias Lemieux.Tools.Read
   alias LemieuxTest.LessonFixtures, as: F
 
   @moduletag :tmp_dir
@@ -31,6 +32,86 @@ defmodule Lemieux.Learning.ProposerTest do
     assert local["options"]["system"] =~ "preserve the parent system text"
     assert local["options"]["system"] =~ "no_supported_improvement"
     refute Contract.digest(default) == Contract.digest(local)
+  end
+
+  test "materialized primary evidence remains reachable through the proposer's read tool", ctx do
+    seed = seed_candidate(ctx)
+    evaluation = failed(ctx.plan, seed, "dev-1")
+    diagnostic = "zero threshold must suppress the summary as well as duplicate detection"
+
+    bytes =
+      1..20
+      |> Enum.map(fn seq ->
+        %{
+          "v" => 2,
+          "id" => "source-event-#{seq}",
+          "seq" => seq,
+          "type" => "tool_result",
+          "payload" => %{"name" => "read", "output" => String.duplicate("source", 100)},
+          "at" => "2026-10-18T00:00:00Z"
+        }
+      end)
+      |> JSON.encode!()
+
+    reference = ArtifactReference.from_bytes("transcript", bytes, scope: ctx.plan.scope)
+
+    evaluation = %{
+      evaluation
+      | observations: %{"verification_feedback" => %{"diagnostic" => diagnostic}},
+        artifacts: [reference]
+    }
+
+    {:ok, workspace} =
+      Workspace.materialize(ctx.context.workspace_root, 1, %{
+        plan: ctx.plan,
+        parent_bytes: ctx.seed_bytes,
+        evaluations: [evaluation],
+        artifacts: %{reference.sha256 => bytes},
+        evidence: %{"evaluation_ids" => [evaluation.id]},
+        landscape: %{"candidates" => for(id <- 1..80, do: %{"id" => id, "result" => "failed"})}
+      })
+
+    context = %{
+      cwd: workspace.root,
+      session_id: "evidence-reader",
+      call_id: "read-evidence",
+      environment: Lemieux.Environment.local()
+    }
+
+    path = "evidence/transcripts/#{evaluation.id}.json"
+
+    assert {:ok, output} = Read.run(%{"path" => path}, context)
+    assert output =~ diagnostic
+    refute output =~ "cut at 2000"
+
+    assert %{"observations" => observations} =
+             workspace.root |> Path.join(path) |> File.read!() |> JSON.decode!()
+
+    assert observations == evaluation.observations
+
+    assert {:ok, landscape} =
+             Read.run(%{"path" => "evidence/landscape.json"}, context)
+
+    assert landscape =~ ~s("id": 80)
+    refute landscape =~ "cut at 2000"
+  end
+
+  test "task-local proposals explicitly inspect the original verification evidence", ctx do
+    provider = Scripted.new([Scripted.complete("Insufficient evidence.")])
+
+    context =
+      Map.merge(ctx.context, %{
+        parent: {:seed, hd(ctx.plan.seeds)},
+        operator: "task_local",
+        provider: provider
+      })
+
+    Proposer.propose(ctx.plan, ctx.state, context)
+    [request] = Scripted.requests(provider)
+    prompt = inspect(request.entries)
+    assert prompt =~ "Operator: task_local"
+    assert prompt =~ "evidence/operator.json"
+    assert prompt =~ "verification"
   end
 
   setup %{tmp_dir: tmp_dir} do
