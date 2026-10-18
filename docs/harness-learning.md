@@ -1347,3 +1347,7 @@ changed bindings or missing confirmation also restore the prior harness on
 use a host-owned lifecycle/timer for long-running canaries. An explicit undo
 records the same atomic rollback. A delayed rollback cannot overwrite a newer
 approved registry pointer.
+
+The explicit development host and five-arm protocol are described in
+[Qualifying learning before release](learning-qualification.md). They exercise
+these seams together without enabling default-on learning or durable deployment.

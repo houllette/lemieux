@@ -20,6 +20,18 @@ API.
 
 ### Features
 
+- Experimental preregistered five-arm qualification exercises the opt-in CLI
+  learning path with causal lesson inventories, equal outer allowances,
+  independent grading, original-output retention and exact promotion undo.
+  Quality and safety lead the decision; extra token use is secondary evidence.
+  The explicit live runner uses local Codex subscription access without copying
+  refresh credentials. See [qualification](docs/learning-qualification.md).
+  **Migration:** effective-runtime confirmation now requires intact request,
+  terminal and transcript evidence. Rerun qualifications with current runtime
+  identities; a runtime label or score alone is insufficient. Isolation lease
+  options that conflict with host policy fail before dispatch. Acquisition
+  adapters with partial effects provide idempotent `abort/2` cleanup.
+
 - Experimental host promotion policy distinguishes retained experience,
   task-local guidance and independently confirmed canaries. Named immutable
   policy approval uses the existing asset registry, preserves overlay trust,
