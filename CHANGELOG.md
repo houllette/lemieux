@@ -20,6 +20,15 @@ API.
 
 ### Features
 
+- Experimental task-local propose/probe/compose evaluates bounded mechanisms
+  through the effective CLI harness, fresh host-confined leases and the shared
+  controller. Repeated contrasts and an executed composition keep the original
+  on ties, regressions or conflict; cancellation cleans owned work and requires
+  explicit recovery. **Migration:** opt in with current identity bindings,
+  checkpoint, isolation adapter and evidence callbacks. Behavioral observations
+  without a verifier remain unconfirmed. See
+  [task-local refinement](docs/harness-learning.md#task-local-propose-probe-and-compose).
+
 - Experimental effective-CLI evaluation reuses normal `lmx` assembly for both
   arms, freezes resolved behavior and limits edits to an explicit text/generation
   surface. Request and terminal evidence identify the actual harness; profile-only

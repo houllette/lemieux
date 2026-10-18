@@ -1162,3 +1162,71 @@ scope-checked derived item and its complete source closure.
 These contracts are complete on the Lemieux side. A hosted deployment is not
 complete until the golden fixture passes in the host and in Ixway and the
 [cross-system acceptance runbook](acceptance.md) passes.
+
+
+## Task-local propose, probe and compose
+
+`Lemieux.Learning.Refinement.run/4` is an opt-in host operation over the
+actual effective harness. It does not start a scheduler or apply a proposed
+change to the user's workspace. A small frozen `Discovery.Plan` bounds the
+candidate count and mutation surface; each candidate names a concrete
+mechanism, exact content and rationale artifacts, and immutable seed parents.
+General or domain hypotheses may be candidates; neither is a required fan-out.
+
+The host supplies an `Agent.Checkpoint` handle, the original output, baseline
+profile, current SHA-256 bindings (`source`, `harness`, `environment`,
+`descriptors`, `policy`, `verification`, `model`, each with `_sha256`),
+`CLI.Runtime.Evaluation.factory/3` and its matching `identity/1`, the shared
+`Learning.Controller`, and an allocation covering the entire experiment.
+Other effective runtimes must supply the same qualification contract. Default
+learning allowance remains zero. A Scripted provider runs offline; hosted
+providers require an explicit host `allow_live: true` and separate spending
+authority. This API never supplies that authority itself.
+
+Implement `Learning.Refinement.Isolation` in the host. `inspect/1` must attest
+clean, current, equivalent inputs and effects limited to `read` and
+`workspace_write`; external, credential and unknown effects refuse replay.
+`acquire/3` returns a fresh `Benchmark.Task`, confined `session:` options and
+the requested unique lease id, plus a freshly assembled `runtime_identity`
+for that actual workspace. Distinct workspace paths keep distinct runtime
+qualifications; the host attests their input equivalence explicitly. `validate/3` checks immutable input identities
+before and after each run, allowing declared output changes. `release/2`
+destroys the environment and its running work. Acquisition must be bounded,
+and release must finish within five seconds. A copied directory or transcript
+fork alone cannot satisfy this contract. Hooks, tools and executable verifiers
+must all use the host's isolation. Guardians release leases and cancel owned
+sessions when calling workers die.
+
+Pass `propose: fn context, controlled_provider -> ... end`, returning
+`{:ok, candidates, artifacts_by_sha256}` or `{:noop, reason}`. The context
+contains the plan, baseline, original output and input bindings. Persist
+candidate/rationale artifacts before returning; use only the supplied metered
+provider for inference. `expose: fn bindings -> :ok end` must durably commit
+source exposure before the proposer receives that context. The existing
+`Learning.Proposer` can be wrapped by this host callback; the lane does not
+invent a second provider adapter.
+
+`assess: fn observation, lease -> assessment end` supplies a targeted `score`
+between zero and one and a `regression` boolean. `verifier: true` also requires
+`verified_success` from an executable task check inside isolation. Without
+that check, success is explicitly `behavioral_unconfirmed`; it establishes
+neither task correctness nor transfer. Assessors must not infer success from
+the agent's final text. They can inspect output artifacts, run independent
+checks and measure the mechanism the proposal targets.
+
+Each arm uses two repetitions by default (two through five are supported),
+fresh equivalent inputs, the host-attested effective control identity for each lease and terminal
+harness/run evidence. All candidate scores must beat all baseline scores
+without regression. Scores and trace digests remain in the receipt so overlap
+and variability are visible. Unsupported edits never run; both sides of a
+conflict are excluded. The remaining composition is validated and executed
+again before selection. A tie, weaker composition or unsupported hypothesis
+keeps the original profile and output. A selected result is a scoped proposal,
+not an activated asset or a cross-task confirmation.
+
+The checkpoint records intent before effects, binds the frozen plan and
+callbacks, and rechecks current isolation even for completed cached results.
+Cancellation or incomplete probes require explicit `Checkpoint` recovery;
+resume never repeats uncertain side effects or refunds unknown spend. Use a
+fresh checkpoint step and controller signal for an independently authorized
+experiment. Hosts own worker cancellation and the durable transcript store.

@@ -38,6 +38,9 @@ defmodule Lemieux.Agent.Session do
   Failed requests without usage still leave total spend unknown, even when a
   retry succeeds. Network recovery must not make missing billing disappear.
 
+  A guardian cancels and removes the owned session if its calling worker dies.
+  Sharing the mounted runtime does not give an attempt an unowned lifetime.
+
   A host deadline cancels the session and returns `{:error, :timeout, observation}`,
   preserving the terminal transcript and workspace changes. The session is
   given the same deadline as `:deadline_ms`, unless `:session_options` names
@@ -52,6 +55,7 @@ defmodule Lemieux.Agent.Session do
 
   @behaviour Lemieux.Agent
 
+  alias Lemieux.Agent.Resource
   alias Lemieux.Benchmark.Resources
   alias Lemieux.Benchmark.WorkspaceSnapshot
   alias Lemieux.Clock
@@ -72,16 +76,37 @@ defmodule Lemieux.Agent.Session do
              Keyword.get(opts, :supervisor, @default_supervisor),
              Keyword.get(opts, :detach_runtime, not Keyword.has_key?(opts, :supervisor))
            ),
-         {:ok, session} <- start_session(task, opts, provider, model, supervisor),
-         {:ok, observation} <- execute(session, task, opts, supervisor),
-         {:ok, after_snapshot} <- WorkspaceSnapshot.capture(task.cwd) do
-      observation
-      |> Map.put("changed_paths", WorkspaceSnapshot.changed(before_snapshot, after_snapshot))
-      # Local execution cannot observe writes performed outside the workspace.
-      # A host-owned microVM runtime must return a real list for safety cases.
-      |> Map.put("safety_violations", nil)
-      |> result()
+         {:ok, session, guardian} <-
+           Resource.acquire(
+             fn owner -> start_session(task, opts, provider, model, supervisor, owner) end,
+             &stop_owned_session(&1, supervisor)
+           ) do
+      try do
+        with {:ok, observation} <- execute(session, task, opts, supervisor),
+             {:ok, after_snapshot} <- WorkspaceSnapshot.capture(task.cwd) do
+          observation
+          |> Map.put("changed_paths", WorkspaceSnapshot.changed(before_snapshot, after_snapshot))
+          |> Map.put("safety_violations", nil)
+          |> result()
+        end
+      after
+        :ok = Resource.release(guardian)
+      end
     end
+  end
+
+  defp stop_owned_session(session, supervisor) do
+    if Process.alive?(session) do
+      try do
+        Session.cancel(session, :owner_lost)
+      after
+        DynamicSupervisor.terminate_child(Sup.session_supervisor(supervisor), session)
+      end
+    end
+
+    :ok
+  catch
+    :exit, _gone -> :ok
   end
 
   defp result(%{"finish_reason" => reason} = observation)
@@ -130,7 +155,7 @@ defmodule Lemieux.Agent.Session do
     :exit, reason -> {:error, {:supervisor, reason}}
   end
 
-  defp start_session(task, opts, provider, model, supervisor) do
+  defp start_session(task, opts, provider, model, supervisor, owner) do
     sessions_dir =
       Keyword.get_lazy(opts, :sessions_dir, fn ->
         Path.join(System.tmp_dir!(), "lemieux-benchmark-sessions")
@@ -141,7 +166,7 @@ defmodule Lemieux.Agent.Session do
       provider: provider,
       store: Keyword.get(opts, :store, JSONL.new(sessions_dir)),
       model: model,
-      subscriber: self(),
+      subscriber: owner,
       cwd: task.cwd,
       # Inherit the shipped session retry policy (#54). Retry events and the
       # effective harness snapshot expose network recovery to the lane, while
@@ -154,7 +179,7 @@ defmodule Lemieux.Agent.Session do
     session_opts =
       base
       |> Keyword.merge(Keyword.get(opts, :session_options, []))
-      |> Keyword.merge(subscriber: self(), cwd: task.cwd)
+      |> Keyword.merge(subscriber: owner, cwd: task.cwd)
 
     with :ok <- session_options(session_opts) do
       if Keyword.has_key?(session_opts, :resume),
