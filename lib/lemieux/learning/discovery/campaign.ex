@@ -61,6 +61,9 @@ defmodule Lemieux.Learning.Discovery.Campaign do
   `Lemieux.Learning.Discovery.Evaluator.run/3`), `:proposer_provider`,
   `:critic_profile` (`false` disables the critic),
   `:sessions_dir`, `:benchmark`, `:session`, `:timeout_ms`, `:allow_live`.
+  An optional `:runtime_factory` selects a host runtime for both evaluation
+  arms; it requires a data-only `:runtime_identity` with `"id"` and `"sha256"`,
+  frozen in the plan and checked on resume and confirmation.
   """
   @type config :: keyword()
 
@@ -72,14 +75,15 @@ defmodule Lemieux.Learning.Discovery.Campaign do
          :ok <- Profile.validate(seed_profile),
          {:ok, evolver} <- evolver_profile(config),
          {:ok, budget} <- fetch(config, :budget),
-         {:ok, id} <- fetch(config, :id) do
+         {:ok, id} <- fetch(config, :id),
+         {:ok, runtime_identity} <- Evaluator.runtime_identity(config) do
       seed_bytes = Contract.encode!(seed_profile)
       scope = %{"id" => Keyword.get(config, :scope, "local/" <> id)}
 
       attrs = %{
         "id" => id,
         "scope" => scope,
-        "target_interface" => %{"id" => "lemieux.session-profile/v1"},
+        "target_interface" => runtime_identity,
         "mutation_surface" =>
           config |> Keyword.get(:mutation_surface, @default_surface) |> Enum.map(&%{"path" => &1}),
         "seeds" => [
@@ -237,6 +241,8 @@ defmodule Lemieux.Learning.Discovery.Campaign do
          {:ok, manifest_bytes} <- File.read(manifest_path),
          {:ok, manifest} <- Manifest.read(manifest_path),
          {:ok, plan} <- read_plan(output_dir),
+         {:ok, runtime_identity} <- Evaluator.runtime_identity(config),
+         :ok <- same_runtime(plan, runtime_identity),
          {:ok, evolver} <- evolver_profile(config),
          :ok <- same_campaign(plan, evolver, Contract.sha256(manifest_bytes)),
          {:ok, archive} <- do_read_archive(output_dir, plan) do
@@ -254,6 +260,9 @@ defmodule Lemieux.Learning.Discovery.Campaign do
       end)
     end
   end
+
+  defp same_runtime(%Plan{target_interface: identity}, identity), do: :ok
+  defp same_runtime(_plan, _identity), do: {:error, :campaign_runtime_changed}
 
   defp resume_prepared(
          config,
@@ -582,6 +591,7 @@ defmodule Lemieux.Learning.Discovery.Campaign do
         unknown_cost: plan.budget["unknown_cost"] || "reject",
         sessions_dir: sessions_dir(config, output_dir),
         session: Keyword.get(config, :session, []),
+        runtime_factory: Keyword.get(config, :runtime_factory),
         benchmark:
           Keyword.merge(
             [workspace_root: Path.join(output_dir, "workspaces"), max_concurrency: 1],

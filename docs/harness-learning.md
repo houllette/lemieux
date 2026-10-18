@@ -160,6 +160,98 @@ Usage, cost, cache, retry, sandbox, and artifact facts distinguish `complete`,
 `partial`, `unknown`, and `not_applicable`. Unknown usage or price is never
 encoded as zero. Failed and canceled runs remain observations.
 
+## Evaluating the effective lmx harness
+
+Discovery and confirmation keep a **profile-only** default. Its observations
+say `runtime_qualification.lane: "profile_only"`; a profile plus one overlay
+file does not qualify the ordinary CLI's personal and repository layers.
+
+A host can select `Lemieux.CLI.Runtime.Evaluation` to use the same
+`Runtime.with_workspace/2` and `Runtime.prepare/2` assembly as `lmx run`.
+Both arms receive current CLI options and the same host-supplied provider,
+store, environment, hooks and ceilings. The unmodified control keeps that
+assembled harness. Personal overlay descriptions apply; repository overlay
+descriptions are dropped by normal discovery, with the normal notice. Disabled
+extensions and inactive/declined applications remain visible in the freeze.
+
+```elixir
+alias Lemieux.CLI.Runtime.Evaluation, as: CLI
+
+# options is the parsed CLI configuration; provider and store are fresh host inputs.
+host = [cwd: workspace, provider: provider, store: store,
+        environment: environment, max_requests: 6]
+surface = ["system_suffix", "tool_descriptions.write"]
+{:ok, prepared} = CLI.prepare(options, host, surface: surface)
+
+# The seed is a portable search document. Only its delta is applied to lmx.
+factory = CLI.factory(options, host, parent_profile: seed_profile, surface: surface)
+config = Keyword.merge(campaign_config,
+  runtime_factory: factory,
+  runtime_identity: CLI.identity(prepared)
+)
+```
+
+The frozen surface accepts an appended `system_suffix`, descriptions of
+existing enabled local tools, and explicitly named `generation.max_tokens`,
+`generation.temperature` or `generation.reasoning_effort` fields. It cannot
+add tools, change executors or replace host policy. An edit conflicting with
+a host constraint is refused before dispatch. The profile adapter accepts
+append-only prompt changes, changed descriptions and those generation fields;
+it rejects whole-prompt replacements, catalog/budget edits and description
+removal. This preserves the actual CLI layers instead of replacing them with
+the search profile. The profile's model must match the host's selected model;
+this supplied adapter uses that same model for confirmation. A host supporting
+another confirmation target supplies its own factory and records its model
+normalization explicitly.
+
+`Evaluator.run/3`, `Campaign.run/1`, `Campaign.resume/1` and `Confirm.run/3`
+accept the factory. A campaign freezes its explicit `runtime_identity` in the
+plan, together with one-way identities of the factory code/captured configuration
+and shared session constraints. Resume and confirmation reject changed inputs or a switch to the
+profile-only lane. Recompute the binding from current host inputs when
+resuming; never copy an old identity to conceal changed configuration. A cycle
+using this lane must bind its factory's parent to the cycle's actual seeded
+profile, including the overlay it selected.
+
+Each attempt assembles in the benchmark's actual workspace. Its data-only
+qualification records the resolved prompt, local catalog and visibility,
+applied/declined extensions, disabled selections, overlay assets and
+qualification, generation settings, retry policy, verification configuration,
+environment identity, resume/fork history digest, host configuration and
+runtime code digests. Callback and environment state contributes only a
+one-way digest. No serialized callback, environment credential, provider or
+store is restored from this data. Resuming uses the normal current-host
+assembly and transcript reconstruction; an old catalog cannot restore tools
+that current host constraints withheld.
+
+Observations retain `lane: "effective_lmx"`, the frozen control and effective
+configuration, allowed surface and intentional changes. Request harness
+snapshots carry the qualification reference in `workflow.evaluation`; terminal
+run evidence names the actual request harness snapshot. Request hooks, retry
+budget messages and dynamic MCP discovery can change the actual request: the
+ordinary request snapshots record those facts. A prepared freeze alone does
+not prove a request was authorized or sent.
+
+`CLI.compatible?/2` permits cache reuse only for intact, identical
+qualifications. Supply a non-secret host `provider_identity` map with `"id"`
+and a SHA-256 `"sha256"` binding the serving route/model revision to enable
+reuse. Without that binding, or with opaque process/reference state, reuse is
+refused. Current permission mode and remembered rules are fingerprinted;
+changed code, configuration, closure inputs, layers, generation, retry,
+verification, environment, history or surface invalidate reuse. A host remains
+responsible for external mutable services behind its revision. Different
+workspace paths are different qualifications; copied benchmark workspaces are
+not silently declared equivalent. `expected_control_sha256:` can require an
+exact control before running a pre-isolated workspace.
+
+A comparison qualifies only these recorded host inputs, model, corpus,
+workspace and intentional edit. It does not establish hosted-provider quality,
+transferability, sandbox containment or permission to activate an overlay.
+Providers and environments remain fresh host inputs, frozen sample counts
+remain unchanged, and no factory enables hosted spending implicitly. Use
+isolated evaluation stores and personal-state directories when ordinary capture
+or checkpoints are selected.
+
 ## Artifact-to-event correlation
 
 The golden fixture demonstrates the complete join without embedding content:

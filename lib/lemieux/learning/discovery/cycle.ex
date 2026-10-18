@@ -26,7 +26,10 @@ defmodule Lemieux.Learning.Discovery.Cycle do
   file whole, tool descriptions included. A cycle's verdict is about the
   configured profile and that file. This description once called the seed
   "the harness the host currently runs", which invited reading a verdict as
-  one on `lmx` itself.
+  one on `lmx` itself. A host can instead supply `:runtime_factory` and
+  `:runtime_identity` to evaluate its actual assembled runtime. Its factory
+  must map deltas from the cycle's seeded profile, including the selected
+  overlay; the default lane remains explicitly profile-only.
 
   The recommendation is the whole of the automation's authority. A cycle
   never writes the overlay: `lmx harness export` does, and a person's review

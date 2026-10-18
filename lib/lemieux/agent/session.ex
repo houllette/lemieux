@@ -19,6 +19,11 @@ defmodule Lemieux.Agent.Session do
   starts on library load. This is synchronous: UI callbacks should invoke it
   from their supervised task boundary, not block the UI process.
 
+  `session_options: [resume: id]` continues a host-supplied store through
+  `Lemieux.resume_session/1`. Answers, usage and tool metrics describe the new
+  invocation; the retained transcript includes its history. Historical request
+  ceilings remain session-wide, as they are in the ordinary CLI.
+
   Usage totals retain reported counters. `usage["requests"]` counts usage
   reports, while `tool_metrics["requests"]` counts recorded direct requests.
   An unanswered request can therefore leave the reported totals partial. Check
@@ -151,7 +156,11 @@ defmodule Lemieux.Agent.Session do
       |> Keyword.merge(Keyword.get(opts, :session_options, []))
       |> Keyword.merge(subscriber: self(), cwd: task.cwd)
 
-    with :ok <- session_options(session_opts), do: Lemieux.start_session(session_opts)
+    with :ok <- session_options(session_opts) do
+      if Keyword.has_key?(session_opts, :resume),
+        do: Lemieux.resume_session(session_opts),
+        else: Lemieux.start_session(session_opts)
+    end
   end
 
   # `Lemieux.start_session/1` raises in its caller for a provider or store
@@ -183,7 +192,10 @@ defmodule Lemieux.Agent.Session do
     clock = Keyword.get(opts, :clock)
     deadline = make_ref()
     timer = Clock.send_after(clock, self(), {:agent_deadline, deadline}, timeout)
-    bound = {deadline, Keyword.get(opts, :timeout_reason, :agent_timeout)}
+
+    bound =
+      {deadline, Keyword.get(opts, :timeout_reason, :agent_timeout),
+       length(Session.snapshot(session).entries)}
 
     try do
       case Session.prompt(session, task.prompt) do
@@ -212,7 +224,7 @@ defmodule Lemieux.Agent.Session do
          session,
          id,
          monitor,
-         {deadline, timeout_reason} = bound,
+         {deadline, timeout_reason, cursor} = bound,
          direct_usages,
          delegated_usages,
          retries
@@ -247,7 +259,7 @@ defmodule Lemieux.Agent.Session do
         )
 
       {:lemieux, ^id, {:finished, reason}} ->
-        observation(session, id, reason, direct_usages, delegated_usages, retries)
+        observation(session, id, reason, direct_usages, delegated_usages, retries, cursor)
 
       {:lemieux, ^id, _event} ->
         await(session, id, monitor, bound, direct_usages, delegated_usages, retries)
@@ -261,7 +273,7 @@ defmodule Lemieux.Agent.Session do
         # replying. Drain usage it emitted before that reply, then snapshot it
         # before execute/4 terminates the session.
         {direct, delegated, retries} = drain_events(id, direct_usages, delegated_usages, retries)
-        observation(session, id, timeout_reason, direct, delegated, retries)
+        observation(session, id, timeout_reason, direct, delegated, retries, cursor)
     end
   end
 
@@ -308,9 +320,10 @@ defmodule Lemieux.Agent.Session do
     |> Map.update!("categories", &Map.update(&1, category, 1, fn count -> count + 1 end))
   end
 
-  defp observation(session, id, reason, direct, delegated, retries) do
+  defp observation(session, id, reason, direct, delegated, retries, cursor) do
     snapshot = Session.snapshot(session)
-    metrics = tool_metrics(snapshot.entries)
+    current = Enum.drop(snapshot.entries, cursor)
+    metrics = tool_metrics(current)
     measured = usage(direct, delegated)
 
     measured =
@@ -327,13 +340,13 @@ defmodule Lemieux.Agent.Session do
     {:ok,
      %{
        "status" => if(reason in [:stop, :end_turn], do: "completed", else: "failed"),
-       "answer" => answer(snapshot.entries),
+       "answer" => answer(current),
        "finish_reason" => inspect(reason),
        "session_id" => id,
        "usage" => measured,
-       "resources" => Resources.from_entries(snapshot.entries),
+       "resources" => Resources.from_entries(current),
        "tool_metrics" => metrics,
-       "provider_error" => provider_error(snapshot.entries),
+       "provider_error" => provider_error(current),
        "provider_retries" => retries,
        "transcript" => Enum.map(snapshot.entries, &entry/1)
      }}

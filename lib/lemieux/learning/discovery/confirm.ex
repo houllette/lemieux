@@ -33,8 +33,6 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   alias Lemieux.Benchmark.Corpus.Exposure
   alias Lemieux.Benchmark.Gate
   alias Lemieux.Benchmark.Manifest
-  alias Lemieux.Benchmark.Runtime
-  alias Lemieux.Benchmark.Runtime.Agent, as: AgentRuntime
   alias Lemieux.Contract
   alias Lemieux.Experiment.Decision
   alias Lemieux.Experiment.Plan, as: ExperimentPlan
@@ -139,6 +137,8 @@ defmodule Lemieux.Learning.Discovery.Confirm do
            variant_bytes: variant_bytes,
            control_bytes: control_bytes
          } = arms,
+         {:ok, runtime_identity} <- Evaluator.runtime_identity(config),
+         :ok <- same_runtime(discovery_plan, runtime_identity),
          {:ok, tasks} <-
            holdout_tasks(manifest, discovery_plan, Keyword.get(opts, :holdout_case_ids)),
          {:ok, variant_profile, control_profile, normalization} <-
@@ -155,7 +155,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
                tasks,
                normalization,
                policy,
-               opts
+               Keyword.put(opts, :runtime_identity, runtime_identity)
              )
            ),
          {:ok, dir} <- claim_directory(output_dir, candidate.id, opts),
@@ -175,6 +175,9 @@ defmodule Lemieux.Learning.Discovery.Confirm do
        }}
     end
   end
+
+  defp same_runtime(%Plan{target_interface: identity}, identity), do: :ok
+  defp same_runtime(_plan, _identity), do: {:error, :confirmation_runtime_changed}
 
   @doc """
   Prepares and runs the confirmation, writing `exposure.json`, `report.json`,
@@ -300,6 +303,15 @@ defmodule Lemieux.Learning.Discovery.Confirm do
            "variant" => prepared.candidate.id,
            "model" => prepared.variant_profile["model"]
          },
+         "runtime_qualifications" =>
+           Enum.map(rows, fn row ->
+             %{
+               "case_id" => row["task_id"],
+               "arm" => row["runtime"],
+               "attempt" => row["attempt"],
+               "qualification" => get_in(row, ["observation", "runtime_qualification"])
+             }
+           end),
          "pairs" => pairs(tasks, rows),
          "per_case" => per_case(rows),
          "experiment_id" => prepared.plan.id,
@@ -312,11 +324,6 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   # ---------------------------------------------------------------------------
 
   defp benchmark(prepared, provider, config) do
-    runtimes = [
-      runtime("control", prepared.control_profile, provider, config, prepared.dir),
-      runtime("variant", prepared.variant_profile, provider, config, prepared.dir)
-    ]
-
     options =
       [
         repetitions: prepared.policy["repetitions"],
@@ -328,7 +335,13 @@ defmodule Lemieux.Learning.Discovery.Confirm do
       |> Keyword.merge(cost_options(prepared.policy))
 
     %Manifest{} = manifest = prepared.manifest
-    Benchmark.run(%Manifest{manifest | tasks: prepared.tasks}, runtimes, options)
+
+    with {:ok, control} <-
+           runtime("control", prepared.control_profile, provider, config, prepared.dir),
+         {:ok, variant} <-
+           runtime("variant", prepared.variant_profile, provider, config, prepared.dir) do
+      Benchmark.run(%Manifest{manifest | tasks: prepared.tasks}, [control, variant], options)
+    end
   end
 
   defp cost_options(%{"usage_mode" => "quota"}), do: []
@@ -340,23 +353,10 @@ defmodule Lemieux.Learning.Discovery.Confirm do
     ]
 
   defp runtime(name, profile, provider, config, dir) do
-    Runtime.new(name, AgentRuntime,
-      agent: Lemieux.Agent.Session,
-      agent_options: fn ->
-        {:ok, options, _profile} =
-          Profile.configure(profile,
-            provider: controlled_provider(config, resolve(provider)),
-            sessions_dir: Keyword.get(config, :sessions_dir, Path.join(dir, "sessions"))
-          )
-
-        session =
-          Keyword.merge(
-            Keyword.get(options, :session_options, []),
-            Keyword.get(config, :session, [])
-          )
-
-        Keyword.put(options, :session_options, session)
-      end
+    Evaluator.runtime(name, profile, fn -> controlled_provider(config, resolve(provider)) end,
+      runtime_factory: Keyword.get(config, :runtime_factory),
+      sessions_dir: Keyword.get(config, :sessions_dir, Path.join(dir, "sessions")),
+      session: Keyword.get(config, :session, [])
     )
   end
 
@@ -437,7 +437,11 @@ defmodule Lemieux.Learning.Discovery.Confirm do
           "Candidate #{candidate.id} improves holdout task success over #{control.id}.",
       "control" =>
         Map.merge(
-          %{"digest" => Candidate.content_sha256(control), "candidate_id" => control.id},
+          %{
+            "digest" => Candidate.content_sha256(control),
+            "candidate_id" => control.id,
+            "runtime" => Keyword.fetch!(opts, :runtime_identity)
+          },
           normalization
         ),
       "metric" => %{

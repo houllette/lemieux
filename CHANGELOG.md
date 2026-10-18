@@ -20,6 +20,13 @@ API.
 
 ### Features
 
+- Experimental effective-CLI evaluation reuses normal `lmx` assembly for both
+  arms, freezes resolved behavior and limits edits to an explicit text/generation
+  surface. Request and terminal evidence identify the actual harness; profile-only
+  results keep their own label. **Migration:** opt in with a host runtime factory
+  and frozen runtime identity. Resume and confirmation reject lane changes.
+  See [CLI qualification](docs/harness-learning.md#evaluating-the-effective-lmx-harness).
+
 - Experimental bounded refinement shares a host's existing job allowance across
   task and learning roles, reserves complete frozen experiments, retains
   unknown/cancelled usage across recovery, and supports explicit no-op proposer

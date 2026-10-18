@@ -422,7 +422,7 @@ defmodule Lemieux.CLI.Runtime do
            ),
          {:ok, harness} <-
            Assembly.apply(equipped, Keyword.values(composition), opts) do
-      harness = struct!(harness, host_constraints(opts))
+      harness = constrain(harness, opts)
       harness = %{harness | disabled_tools: harness.disabled_tools || recorded["disabled_tools"]}
       # Keep ceilings in the recorded assembly and `lmx explain`. A notice is
       # rendered as a warning on every TUI start, even when nothing is wrong.
@@ -621,6 +621,10 @@ defmodule Lemieux.CLI.Runtime do
   # explicit session settings are the host's final say, just as they are at
   # Lemieux.start_session/1. In particular a dependency cannot accidentally
   # erase approval hooks, replace a sandbox or relax a request ceiling.
+  @doc "Reapplies fresh host session constraints after composition or a bounded text edit."
+  @spec constrain(harness :: Harness.t(), opts :: keyword()) :: Harness.t()
+  def constrain(%Harness{} = harness, opts), do: struct!(harness, host_constraints(opts))
+
   defp host_constraints(opts) do
     Keyword.take(
       opts,

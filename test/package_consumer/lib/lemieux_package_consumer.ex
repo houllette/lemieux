@@ -5,6 +5,9 @@ defmodule LemieuxPackageConsumer do
   def version, do: Lemieux.version()
 
   alias Lemieux.Benchmark.Corpus.Exposure
+  alias Lemieux.CLI.Options
+  alias Lemieux.CLI.Runtime
+  alias Lemieux.CLI.Runtime.Evaluation, as: CLI
   alias Lemieux.Contract
   alias Lemieux.Extensions.A2UI
   alias Lemieux.Extensions.A2UI.Diagram
@@ -43,6 +46,7 @@ defmodule LemieuxPackageConsumer do
     store = JSONL.new(directory)
     File.mkdir_p!(directory)
     :ok = verify_lessons(phase, directory)
+    :ok = verify_cli_evaluation(directory)
     {:ok, harness} = Harness.assemble(Harness.new(tools: []), [Audit])
 
     script =
@@ -262,6 +266,40 @@ defmodule LemieuxPackageConsumer do
       Enum.any?(entries, &(&1.type == :tool_result and &1.payload["output"] =~ "host policy"))
 
     GenServer.stop(session)
+    :ok
+  end
+
+  defp verify_cli_evaluation(directory) do
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        "none",
+        "--bare",
+        "--no-delegate",
+        "--permission-mode",
+        "off",
+        "--model",
+        "test:model"
+      ])
+
+    host = [cwd: directory, provider: Scripted.new([]), store: JSONL.new(directory)]
+    {:ok, ordinary} = Runtime.prepare(options, host)
+    {:ok, control} = CLI.prepare(options, host, surface: ["system_suffix"])
+    true = control.harness == ordinary.harness
+    :ok = CLI.verify(control.qualification)
+
+    {:ok, candidate} =
+      CLI.prepare(options, host,
+        surface: ["system_suffix"],
+        changes: %{"system_suffix" => "Packaged candidate"}
+      )
+
+    true = candidate.harness.system =~ "Packaged candidate"
+
+    false =
+      candidate.qualification["effective"]["sha256"] ==
+        control.qualification["effective"]["sha256"]
+
     :ok
   end
 

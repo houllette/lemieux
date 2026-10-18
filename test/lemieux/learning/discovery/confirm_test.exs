@@ -2,6 +2,8 @@ defmodule Lemieux.Learning.Discovery.ConfirmTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.Benchmark.Corpus.Exposure
+  alias Lemieux.CLI.Options
+  alias Lemieux.CLI.Runtime.Evaluation, as: CLI
   alias Lemieux.Experiment.Plan, as: ExperimentPlan
   alias Lemieux.Extension.Profile
   alias Lemieux.JobBudget
@@ -10,6 +12,7 @@ defmodule Lemieux.Learning.Discovery.ConfirmTest do
   alias Lemieux.Learning.Discovery.Confirm
   alias Lemieux.Learning.Proposer
   alias Lemieux.Providers.Scripted
+  alias Lemieux.Store.JSONL
 
   @moduletag :tmp_dir
 
@@ -339,5 +342,84 @@ defmodule Lemieux.Learning.Discovery.ConfirmTest do
       },
       6
     )
+  end
+
+  test "effective CLI discovery and confirmation retain the same host and explicit lane", ctx do
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        "none",
+        "--no-delegate",
+        "--permission-mode",
+        "off",
+        "--model",
+        "test:model"
+      ])
+
+    supervisor = :"cli_confirmation_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
+
+    host = [
+      cwd: ctx.tmp_dir,
+      supervisor: supervisor,
+      provider: Scripted.new([]),
+      store: JSONL.new(Path.join(ctx.tmp_dir, "cli-sessions")),
+      max_requests: 3
+    ]
+
+    {:ok, prepared} = CLI.prepare(options, host, surface: ["system_suffix"])
+
+    factory =
+      CLI.factory(options, host, parent_profile: seed_profile(), surface: ["system_suffix"])
+
+    config =
+      Keyword.merge(ctx.config,
+        output_dir: Path.join(ctx.tmp_dir, "cli-campaign"),
+        runtime_factory: factory,
+        runtime_identity: CLI.identity(prepared)
+      )
+
+    assert {:ok, campaign} = Campaign.run(config)
+    [seed, improved] = campaign.candidates
+
+    assert Enum.all?(
+             campaign.evaluations,
+             &(&1.observations["runtime_qualification"]["lane"] == "effective_lmx")
+           )
+
+    assert {:ok, result} =
+             Confirm.run(config, improved.id,
+               stopping_rule: %{"minimum_pairs" => 2, "confidence" => 0.9}
+             )
+
+    assert result["verdict"] == "pass"
+    assert length(result["runtime_qualifications"]) == 10
+
+    assert Enum.all?(
+             result["runtime_qualifications"],
+             &(&1["qualification"]["lane"] == "effective_lmx")
+           )
+
+    controls = Enum.filter(result["runtime_qualifications"], &(&1["arm"] == "control"))
+    variants = Enum.filter(result["runtime_qualifications"], &(&1["arm"] == "variant"))
+    assert Enum.all?(controls, &(&1["qualification"]["intentional_changes"] == %{}))
+
+    assert Enum.all?(
+             variants,
+             &is_binary(&1["qualification"]["intentional_changes"]["system_suffix"])
+           )
+
+    assert result["arms"]["control"] == seed.id
+
+    assert {:error, :confirmation_runtime_changed} =
+             Confirm.run(Keyword.drop(config, [:runtime_factory, :runtime_identity]), improved.id,
+               suffix: "wrong-lane"
+             )
+
+    assert {:error, :campaign_runtime_changed} =
+             Campaign.resume(Keyword.drop(config, [:runtime_factory, :runtime_identity]))
+
+    assert {:error, :runtime_identity_required} =
+             Campaign.plan(Keyword.delete(config, :runtime_identity), String.duplicate("a", 64))
   end
 end

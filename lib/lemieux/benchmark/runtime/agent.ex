@@ -25,6 +25,7 @@ defmodule Lemieux.Benchmark.Runtime.Agent do
          {:ok, before_snapshot} <- WorkspaceSnapshot.capture(task.cwd) do
       input = Map.take(task, [:prompt, :cwd, :timeout_ms])
       result = Agent.run(agent, input, options(Keyword.get(opts, :agent_options, [])))
+      result = qualify(result, Keyword.get(opts, :runtime_qualification))
       capture(result, task.cwd, before_snapshot)
     else
       :error -> {:error, {:agent, :required}}
@@ -34,6 +35,14 @@ defmodule Lemieux.Benchmark.Runtime.Agent do
 
   defp options(factory) when is_function(factory, 0), do: factory.()
   defp options(options), do: options
+
+  defp qualify({:ok, observation}, qualification) when is_map(qualification),
+    do: {:ok, Map.put(observation, "runtime_qualification", qualification)}
+
+  defp qualify({:error, reason, observation}, qualification) when is_map(qualification),
+    do: {:error, reason, Map.put(observation, "runtime_qualification", qualification)}
+
+  defp qualify(result, _qualification), do: result
 
   defp capture({:ok, observation}, cwd, before_snapshot) do
     case changes(observation, cwd, before_snapshot) do
