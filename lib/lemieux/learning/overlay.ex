@@ -11,7 +11,7 @@ defmodule Lemieux.Learning.Overlay do
   provenance that says which campaign, which candidate, which digest and
   which confirmation verdict it came from.
 
-  Activation is a file in version control, on purpose. The architecture
+  Default standalone activation is a file in version control, on purpose. The architecture
   keeps "project-owned changes use ordinary Git review", and a personal
   overlay under `~/.lmx` is the same idea for one person: rollback is
   `git revert` or deleting the file, there is no second mutable memory
@@ -19,6 +19,11 @@ defmodule Lemieux.Learning.Overlay do
   request so evidence says which learned layer was in force. `export/3`
   refuses to write an unconfirmed candidate unless the caller says so, and
   then labels it, because a frontier member is a development result.
+
+  Hosts may separately opt into `Lemieux.Learning.Promotion` for bounded
+  automatic guidance with named policy approval, canary selection and atomic
+  rollback. That API does not silently rewrite these reviewed overlay files
+  or change standalone defaults.
 
   ## Whose overlay may do what
 

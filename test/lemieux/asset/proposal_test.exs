@@ -51,4 +51,34 @@ defmodule Lemieux.Asset.ProposalTest do
     assert {:ok, changed} = Version.new(Map.put(common, :content, %{"a" => 2, "b" => 2}))
     refute left.digest == changed.digest
   end
+
+  test "a delayed rollback cannot clobber a later approved activation" do
+    attrs = %{type: :prompt, layer: :host, scope: :project, project_id: "project"}
+    {:ok, base} = Version.new(Map.put(attrs, :content, "base"))
+    {:ok, first} = Version.new(Map.merge(attrs, %{content: "first", parent_id: base.id}))
+    {:ok, approved} = Proposal.approve(Proposal.new(first), %{"type" => "human", "id" => "owner"})
+    {:ok, registry, activation} = Registry.activate(Registry.new(), approved)
+    {:ok, second} = Version.new(Map.merge(attrs, %{content: "second", parent_id: first.id}))
+
+    {:ok, approved} =
+      Proposal.approve(Proposal.new(second), %{"type" => "human", "id" => "owner"})
+
+    {:ok, registry, _} = Registry.activate(registry, approved)
+    assert {:error, :invalid_rollback_target} = Registry.rollback(registry, activation, base)
+    assert Registry.active(registry, Version.identity(second)) == second
+  end
+
+  test "rollback refuses a pointer that is no longer present" do
+    attrs = %{type: :prompt, layer: :host, scope: :project, project_id: "project"}
+    {:ok, base} = Version.new(Map.put(attrs, :content, "base"))
+    {:ok, changed} = Version.new(Map.merge(attrs, %{content: "changed", parent_id: base.id}))
+
+    {:ok, approved} =
+      Proposal.approve(Proposal.new(changed), %{"type" => "human", "id" => "owner"})
+
+    {:ok, registry, activation} = Registry.activate(Registry.new(), approved)
+
+    assert {:error, :invalid_rollback_target} =
+             Registry.rollback(%{registry | active: %{}}, activation, base)
+  end
 end

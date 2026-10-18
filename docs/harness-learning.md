@@ -1230,3 +1230,120 @@ Cancellation or incomplete probes require explicit `Checkpoint` recovery;
 resume never repeats uncertain side effects or refunds unknown spend. Use a
 fresh checkpoint step and controller signal for an independently authorized
 experiment. Hosts own worker cancellation and the durable transcript store.
+
+
+## Automatic guidance under host promotion policy
+
+Reviewed `harness.json` files remain the standalone default. Automatic use is a
+separate, experimental opt-in through `Lemieux.Learning.Promotion`: a host
+explicitly declares the policy, authority source and atomic runtime owner.
+The API neither rewrites reviewed files nor starts a scheduler or a model.
+Migrate by retaining the reviewed base harness, enabling a small task-local
+policy first, and adding confirmed canaries only after the host implements
+current-authority, observation and rollback handling. Existing file-based
+installations need no migration.
+
+The operations have distinct meanings:
+
+| Operation | Requirement | Result |
+| --- | --- | --- |
+| `retain/3` | Current `retain` capability, applicable scoped lesson, verified sources | Idempotently retained experience; qualification stays behavioral/unconfirmed |
+| `promote/4`, task-local | Current `task_local` capability and supported task-local refinement | A bounded adaptation for exactly the named task, until expiry |
+| `promote/4`, canary | Current `canary` capability and separately approved independent confirmation | Deterministic selected traffic, observations and rollback; no automatic broad deployment from behavioral evidence |
+| `review/1` | An immutable asset version | An unapproved proposal; generated code, privilege, evaluator and policy changes stay behind ordinary review and the existing code/release gates |
+
+`Promotion.Policy.new/1` freezes a named `id` and `actor`, complete `scope`,
+`capabilities`, `trust` (`personal` or `repository`), `maximum_bytes` (up to
+16 KiB), `ttl_ms` (up to one day), UTC `expires_at`, and `canary` settings:
+`percent` (1–100), a fixed `salt`, and `minimum_observations` (1–32).
+The SHA-256 identifies those exact bounds. Possession of that document is not
+a grant. The host supplies a fresh zero-arity authority function returning
+`{:ok, context}` on every operation, including cached use and resume:
+
+- `policy`, current `scope`, current `base` (`Lemieux.Harness`), UTC `now`,
+  and nonempty `task_id`;
+- current refinement `bindings` and `runtime_sha256` (the source effective
+  runtime identity), matching the exact tested configuration;
+- `refinements`, the host-approved immutable refinement receipt digests;
+- `confirmations`, the host-approved independent confirmation attestation
+  digests, and optional `description_tools` for personal local-tool text;
+- `lesson_context` for current lesson applicability, and `revoked: true`
+  when the policy has been withdrawn.
+
+These values come from the host's current control plane, not the candidate,
+repository or historical transcript. In particular, a host adds a refinement
+receipt to its approved set only after validating its persisted checkpoint,
+source bindings, candidate/parent artifacts and terminal traces. A digest
+supplied by a repository cannot approve its own evidence. Authority is checked
+inside the transaction and again after runtime preparation before commit.
+Unavailable authority returns no previously granted harness. A changed current
+base is refused; mount the freshly assembled base rather than resurrecting
+serialized callbacks or older permissions.
+
+For persistent guidance, the host first verifies the independent
+`Discovery.Confirm` experiment plan, result and complete traces. It then
+approves an immutable attestation with `kind: "independent_confirmation"`,
+`verdict: "pass"`, exact selected-profile `content_sha256`, current
+`runtime_sha256`, complete `scope`, the evidence-bundle `evidence_sha256`,
+UTC `issued_at`/`expires_at`, and canonical `sha256`. Its digest must be in the
+fresh host-approved `confirmations` set. A composed profile needs confirmation
+of those exact composed bytes. Renaming behavioral evidence, sealing it again
+or copying a passing verdict does not create that authority. Expired or
+withdrawn confirmation invalidates an active grant.
+
+Guidance may append a prompt suffix and change explicitly authorized enabled
+local-tool descriptions. It cannot replace the prompt, tools, model,
+executors, generation settings, verification, credentials or permissions.
+Repository policy cannot change any tool description, preserving trusted
+personal text. Personal text requires the host's explicit tool-name allowlist.
+Task-local assets have task/session scope and bind their task id; canaries have
+project/host scope. Approval uses `Asset.Version`, `Proposal.approve` with the
+named policy actor and immutable policy hash, then `Registry.activate`.
+Effective harness evidence carries the activated asset and policy identities.
+A discovery candidate or frontier object is never activated directly.
+
+Mount a host implementing `Promotion.Host` and call it explicitly:
+
+```elixir
+alias Lemieux.Learning.Promotion
+alias Lemieux.Learning.Promotion.Memory
+
+# The host supplies base_harness, scope, current_authority and refinement.
+{:ok, owner} = Memory.start_link(base: base_harness, scope: scope)
+host = {Memory, owner}
+request = %{mode: :task_local, baseline: portable_baseline, refinement: refinement}
+{:ok, _prepared, approval} = Promotion.promote(host, "adaptation-1", request, current_authority)
+
+# Obtain the harness afresh before every invocation, including session resume.
+{:ok, harness, selection} = Promotion.current(host, current_authority)
+# Pass harness through the ordinary host session API.
+{:ok, prior_harness, rollback} = Promotion.undo(host, current_authority)
+```
+
+The reference `Memory` host swaps registry, effective harness and audit receipt
+in one GenServer state transition. Its optional `prepare:` function receives
+old harness, proposed harness and receipt and must perform a bounded,
+side-effect-free assembly/restart-preparation check. Failure preserves both
+prior pointers and quarantines attempted activation. This adapter is volatile;
+it is suitable for an explicitly owned in-memory runtime and does not promise
+crash-durable history or install an external runtime. A durable/external host
+implements `Promotion.Host`: serialize authority changes and installation,
+persist intent before effects, commit runtime/registry/audit together, restore
+the exact prior version on apply or restart failure, and block use while
+restoration is uncertain. Reconcile intent before serving work after restart;
+never repeat uncertain effects automatically. Durable quarantine and history
+belong to that same transaction.
+
+Only one unresolved adaptation is permitted per scope. Undo or resolve it
+before testing a replacement, so individually supported edits do not become
+an untested stack. A canary selects task ids with the frozen salt and percentage;
+unselected tasks receive the exact base. `observe/3` requires a unique
+observation id, active version id, selected current task id, `passed`,
+`regression`, and an exact `trace_sha256`. Changed duplicate observations are
+refused. Any failed check or regression rolls back and quarantines the content;
+distinct successful tasks can complete the canary. Expiry, policy withdrawal,
+changed bindings or missing confirmation also restore the prior harness on
+`current/2`. There is no background timer: call it before each invocation and
+use a host-owned lifecycle/timer for long-running canaries. An explicit undo
+records the same atomic rollback. A delayed rollback cannot overwrite a newer
+approved registry pointer.

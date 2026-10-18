@@ -58,11 +58,15 @@ defmodule Lemieux.Asset.Registry do
   def activate(%__MODULE__{}, _discovery_or_other_object),
     do: {:error, :approved_asset_proposal_required}
 
-  @doc "Moves an active pointer to the recorded rollback target."
+  @doc "Moves the still-current activation to its recorded target; stale undo cannot overwrite a newer version."
   @spec rollback(registry :: t(), activation :: activation(), target :: Version.t()) ::
           {:ok, t(), activation()} | {:error, term()}
   def rollback(%__MODULE__{} = registry, activation, %Version{} = target) do
-    if activation.rollback_target_id == target.id and activation.key == Version.identity(target) do
+    current = Map.get(registry.active, activation.key)
+
+    if not is_nil(current) and current.id == activation.version_id and
+         activation in registry.history and
+         activation.rollback_target_id == target.id and activation.key == Version.identity(target) do
       record = %{
         id: "activation_" <> ID.generate(),
         action: :rollback,

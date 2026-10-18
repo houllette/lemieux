@@ -1,11 +1,12 @@
 defmodule Lemieux.Asset.Proposal do
   @moduledoc """
   **Experimental.** May change in any 0.x release.
-  Human-review state for one immutable asset version.
+  Explicit review state for one immutable asset version.
 
-  Phase one deliberately permits no implicit approval. Later hosts may apply
-  their own promotion policy, but it still has to produce the same explicit
-  approval/activation evidence instead of mutating a policy file silently.
+  No helper implicitly approves a proposal. `Learning.Promotion` may record
+  approval by a named host policy actor, with its immutable policy digest,
+  after checking current authority and evidence. Human and policy approvals
+  produce the same explicit approval/activation records.
   """
 
   alias Lemieux.Asset.Version

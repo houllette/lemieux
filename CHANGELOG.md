@@ -20,6 +20,15 @@ API.
 
 ### Features
 
+- Experimental host promotion policy distinguishes retained experience,
+  task-local guidance and independently confirmed canaries. Named immutable
+  policy approval uses the existing asset registry, preserves overlay trust,
+  rebinds authority on resume, and quarantines regressions with atomic rollback.
+  **Migration:** reviewed standalone overlays keep their current behavior;
+  automatic guidance requires an explicit transactional host and current
+  authority source. The reference in-memory host is volatile. See
+  [automatic guidance](docs/harness-learning.md#automatic-guidance-under-host-promotion-policy).
+
 - Experimental task-local propose/probe/compose evaluates bounded mechanisms
   through the effective CLI harness, fresh host-confined leases and the shared
   controller. Repeated contrasts and an executed composition keep the original
