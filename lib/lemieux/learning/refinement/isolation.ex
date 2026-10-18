@@ -11,6 +11,11 @@ defmodule Lemieux.Learning.Refinement.Isolation do
   paths retain distinct qualifications; the host attests input equivalence
   instead of normalizing away those differences. Private handles stay
   in memory; only attested identities enter evidence.
+
+  Acquisition must be atomic under worker cancellation, or implement `abort/2`
+  to reconcile partially created leases by their preallocated id. Killing an
+  acquisition worker does not undo external effects. Abort, like release, must
+  be idempotent and finish within five seconds.
   """
   alias Lemieux.Benchmark.Task
 
@@ -21,4 +26,6 @@ defmodule Lemieux.Learning.Refinement.Isolation do
               | {:error, term()}
   @callback validate(state :: term(), lease :: map(), bindings :: map()) :: :ok | {:error, term()}
   @callback release(state :: term(), lease :: map()) :: term()
+  @callback abort(state :: term(), id :: String.t()) :: :ok | {:error, term()}
+  @optional_callbacks abort: 2
 end

@@ -619,4 +619,122 @@ defmodule Lemieux.Learning.PromotionTest do
     assert Map.drop(Map.from_struct(actual), [:harness_context]) ==
              Map.drop(Map.from_struct(variant.harness), [:harness_context])
   end
+
+  test "regression feedback still rolls back after observation history is full", ctx do
+    assert {:ok, _, receipt} = Promotion.promote(ctx.host, "canary", canary(ctx), ctx.authority)
+
+    for n <- 1..32 do
+      task = "task-#{n}"
+      update_context(ctx, &%{&1 | task_id: task})
+
+      assert {:ok, _, _} =
+               Promotion.observe(
+                 ctx.host,
+                 observation(receipt, "success-#{n}", task),
+                 ctx.authority
+               )
+    end
+
+    update_context(ctx, &%{&1 | task_id: "regression-task"})
+
+    assert {:ok, base, %{"action" => "rolled_back"}} =
+             Promotion.observe(
+               ctx.host,
+               observation(receipt, "regression", "regression-task", true),
+               ctx.authority
+             )
+
+    assert base == ctx.base
+    assert Memory.snapshot(ctx.server).grant == nil
+  end
+
+  test "current use rechecks a revoked tool-description capability", ctx do
+    attrs =
+      ctx.context.policy |> Map.drop(~w(schema_version sha256)) |> Map.put("trust", "personal")
+
+    {:ok, policy} = Policy.new(attrs)
+
+    profile =
+      put_in(ctx.request.refinement["selected_profile"], ["options", "tool_descriptions"], %{
+        "read" => "LEARNED READ"
+      })
+
+    receipt =
+      ctx.request.refinement
+      |> Map.put("selected_profile", profile)
+      |> Map.put("selected_sha256", Contract.digest(profile))
+      |> seal()
+
+    update_context(
+      ctx,
+      &Map.merge(&1, %{
+        policy: policy,
+        description_tools: ["read"],
+        refinements: [receipt["sha256"]]
+      })
+    )
+
+    assert {:ok, changed, _} =
+             Promotion.promote(
+               ctx.host,
+               "personal",
+               %{ctx.request | refinement: receipt},
+               ctx.authority
+             )
+
+    assert Tool.description(hd(changed.tools)) == "LEARNED READ"
+    update_context(ctx, &Map.put(&1, :description_tools, []))
+    assert {:ok, base, %{"action" => "rolled_back"}} = Promotion.current(ctx.host, ctx.authority)
+    assert base == ctx.base
+  end
+
+  test "commit rechecks a tool-description capability revoked during preparation", ctx do
+    attrs =
+      ctx.context.policy |> Map.drop(~w(schema_version sha256)) |> Map.put("trust", "personal")
+
+    {:ok, policy} = Policy.new(attrs)
+
+    profile =
+      put_in(ctx.request.refinement["selected_profile"], ["options", "tool_descriptions"], %{
+        "read" => "LEARNED READ"
+      })
+
+    receipt =
+      ctx.request.refinement
+      |> Map.put("selected_profile", profile)
+      |> Map.put("selected_sha256", Contract.digest(profile))
+      |> seal()
+
+    update_context(
+      ctx,
+      &Map.merge(&1, %{
+        policy: policy,
+        description_tools: ["read"],
+        refinements: [receipt["sha256"]]
+      })
+    )
+
+    server =
+      start_supervised!(
+        {Memory,
+         base: ctx.base,
+         scope: F.scope(),
+         prepare: fn _, _, _ ->
+           update_context(ctx, &Map.put(&1, :description_tools, []))
+           :ok
+         end},
+        id: :revoke_during_prepare
+      )
+
+    result =
+      Promotion.promote(
+        {Memory, server},
+        "personal",
+        %{ctx.request | refinement: receipt},
+        ctx.authority
+      )
+
+    refute match?({:ok, _, _}, result), "withdrawn description capability still committed"
+    assert Memory.snapshot(server).grant == nil
+  end
 end

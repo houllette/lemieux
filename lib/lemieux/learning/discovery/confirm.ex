@@ -42,6 +42,8 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   alias Lemieux.Learning.Discovery.Confirmation
   alias Lemieux.Learning.Discovery.Evaluator
   alias Lemieux.Learning.Discovery.Plan
+  alias Lemieux.Learning.Discovery.ProfileDelta
+  alias Lemieux.Learning.RuntimeEvidence
 
   @type prepared :: %{
           dir: Path.t(),
@@ -51,6 +53,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
           control: Candidate.t(),
           variant_profile: map(),
           control_profile: map(),
+          runtime_parent_profile: map(),
           tasks: [Lemieux.Benchmark.Task.t()],
           manifest: Manifest.t(),
           policy: map()
@@ -121,6 +124,9 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   `:minimum_pairs` (2), `:stopping_rule` (a complete rule map overriding the
   e-process default), `:max_cost_usd` (5.0), `:max_cost_per_attempt_usd`
   (0.25), `:max_requests_per_attempt` (24, quota only).
+  Effective-runtime configuration may supply `:runtime_parent_profile` for
+  attributing edits to the factory's original parent. Otherwise `:seed_profile`
+  or the archive's single verified seed supplies it, before any execution.
   """
   @spec prepare(config :: keyword(), candidate_id :: String.t(), opts :: keyword()) ::
           {:ok, prepared()} | {:error, term()}
@@ -143,6 +149,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
            holdout_tasks(manifest, discovery_plan, Keyword.get(opts, :holdout_case_ids)),
          {:ok, variant_profile, control_profile, normalization} <-
            arm_profiles(variant_bytes, control_bytes, opts),
+         {:ok, runtime_parent_profile} <- runtime_parent(config, output_dir, discovery_plan),
          policy = policy(variant_profile, tasks, opts),
          {:ok, plan} <-
            Confirmation.to_experiment(
@@ -169,12 +176,36 @@ defmodule Lemieux.Learning.Discovery.Confirm do
          control: control,
          variant_profile: variant_profile,
          control_profile: control_profile,
+         runtime_parent_profile: runtime_parent_profile,
          tasks: tasks,
          manifest: manifest,
          policy: policy
        }}
     end
   end
+
+  # A confirmation may be opened from an archive without the campaign's seed
+  # configuration. Reuse the verified seed bytes for edit attribution; requiring
+  # an implicit live :seed_profile would spend the sample and only then reject it.
+  defp runtime_parent(config, dir, plan) do
+    case config[:runtime_parent_profile] || config[:seed_profile] do
+      nil -> archived_parent(dir, plan.seeds)
+      profile -> {:ok, profile}
+    end
+  end
+
+  defp archived_parent(dir, [%{"content_sha256" => digest}]) do
+    with {:ok, bytes} <- read_artifact(dir, digest),
+         true <- Contract.sha256(bytes) == digest,
+         {:ok, profile} <- decode(bytes),
+         :ok <- Profile.validate(profile) do
+      {:ok, profile}
+    else
+      _invalid -> {:error, :invalid_runtime_parent_profile}
+    end
+  end
+
+  defp archived_parent(_dir, _seeds), do: {:error, :runtime_parent_profile_required}
 
   defp same_runtime(%Plan{target_interface: identity}, identity), do: :ok
   defp same_runtime(_plan, _identity), do: {:error, :confirmation_runtime_changed}
@@ -270,11 +301,43 @@ defmodule Lemieux.Learning.Discovery.Confirm do
     allowlists = Evaluator.allowlists(tasks)
 
     cond do
-      Enum.sort(expected) != Enum.sort(actual) -> {:error, :incomplete_confirmation}
-      not Enum.all?(rows, &terminal?/1) -> {:error, :non_terminal_attempt}
-      true -> decide(prepared, tasks, rows, allowlists, policy)
+      Enum.sort(expected) != Enum.sort(actual) ->
+        {:error, :incomplete_confirmation}
+
+      not Enum.all?(rows, &terminal?/1) ->
+        {:error, :non_terminal_attempt}
+
+      true ->
+        with :ok <- runtime_evidence(prepared, rows),
+             do: decide(prepared, tasks, rows, allowlists, policy)
     end
   end
+
+  # A score and a runtime label cannot qualify the assembled CLI. Bind every
+  # arm to the frozen edit and the actual request/terminal transcript before
+  # admitting its quality result. Profile-only archives retain their scope.
+  defp runtime_evidence(
+         %{discovery_plan: %{target_interface: %{"id" => "lemieux.effective-lmx/v1"} = identity}} =
+           prepared,
+         rows
+       ) do
+    Enum.reduce_while(rows, :ok, fn row, :ok ->
+      profile =
+        if row["runtime"] == "control",
+          do: prepared.control_profile,
+          else: prepared.variant_profile
+
+      with {:ok, changes} <- ProfileDelta.changes(prepared.runtime_parent_profile, profile),
+           :ok <- RuntimeEvidence.verify(row["observation"], identity, changes) do
+        {:cont, :ok}
+      else
+        {:error, :invalid_runtime_evidence} = error -> {:halt, error}
+        _invalid -> {:halt, {:error, :invalid_runtime_profile}}
+      end
+    end)
+  end
+
+  defp runtime_evidence(_prepared, _rows), do: :ok
 
   defp decide(prepared, tasks, rows, allowlists, policy) do
     with {:ok, decision} <-

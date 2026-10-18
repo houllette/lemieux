@@ -299,6 +299,7 @@ defmodule Lemieux.Learning.Promotion do
           else: request.refinement["qualification"]
         ),
       "confirmation" => confirmation,
+      "description_tools" => Enum.sort(Map.keys(version.content["tool_descriptions"] || %{})),
       "canary" => context.policy["canary"],
       "observations" => [],
       "stage" => if(request.mode == :canary, do: "canary", else: "task_local"),
@@ -325,6 +326,7 @@ defmodule Lemieux.Learning.Promotion do
     Policy.authorize(context, grant["mode"]) == :ok and
       grant["policy_sha256"] == context.policy["sha256"] and grant["bindings"] == context.bindings and
       grant["runtime_sha256"] == context.runtime_sha256 and
+      Guidance.authorized?(grant, context) and
       grant["refinement_sha256"] in context.refinements and
       before?(context.now, grant["expires_at"]) and
       confirmation_current?(grant["confirmation"], context)
@@ -392,11 +394,11 @@ defmodule Lemieux.Learning.Promotion do
       not is_nil(prior) ->
         {:error, :canary_observation_changed}
 
-      length(state.grant["observations"]) >= 32 ->
-        {:error, :canary_observation_limit}
-
       observation["regression"] or not observation["passed"] ->
         rollback(state, "canary_regression", context, observation)
+
+      length(state.grant["observations"]) >= 32 ->
+        {:error, :canary_observation_limit}
 
       true ->
         successful_observation(state, observation, context)

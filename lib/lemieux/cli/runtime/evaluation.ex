@@ -39,10 +39,11 @@ defmodule Lemieux.CLI.Runtime.Evaluation do
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
   alias Lemieux.CLI.Runtime.Evaluation.Fingerprint
-  alias Lemieux.CLI.Runtime.Evaluation.ProfileDelta
   alias Lemieux.Contract
   alias Lemieux.Harness
+  alias Lemieux.Learning.Discovery.ProfileDelta
   alias Lemieux.Learning.Discovery.Surface
+  alias Lemieux.Learning.RuntimeEvidence
   alias Lemieux.Prompt
   alias Lemieux.Store.JSONL
   alias Lemieux.Tool
@@ -124,7 +125,8 @@ defmodule Lemieux.CLI.Runtime.Evaluation do
       "id" => "lemieux.effective-lmx/v1",
       "sha256" => qualification["sha256"],
       "control_sha256" => qualification["control"]["sha256"],
-      "surface" => qualification["surface"]
+      "surface" => qualification["surface"],
+      "invariants" => RuntimeEvidence.invariants(qualification["control"])
     }
   end
 
@@ -141,9 +143,10 @@ defmodule Lemieux.CLI.Runtime.Evaluation do
 
     fn name, profile, provider, runtime_opts ->
       with {:ok, changes} <- ProfileDelta.changes(parent, profile),
-           true <- profile["model"] == options.model do
+           true <- profile["model"] == options.model,
+           {:ok, host} <- merge_session(host, Keyword.get(runtime_opts, :session, [])) do
         host =
-          Keyword.merge(Keyword.get(runtime_opts, :session, []), host)
+          host
           |> Keyword.put(:provider, provider)
           |> Keyword.put_new(
             :store,
@@ -156,6 +159,24 @@ defmodule Lemieux.CLI.Runtime.Evaluation do
         error -> error
       end
     end
+  end
+
+  # A lease may narrow execution authority. Silently preferring the ordinary
+  # host discarded its sandbox; preferring the lease could discard host policy.
+  # Require the host to resolve conflicts explicitly before any probe effects.
+  # The task supplies cwd at run time and the lane supplies its metered provider.
+  defp merge_session(host, session) do
+    session = Keyword.drop(session, [:cwd, :provider])
+
+    conflict =
+      session
+      |> Keyword.keys()
+      |> Enum.sort()
+      |> Enum.find(&(Keyword.has_key?(host, &1) and host[&1] != session[&1]))
+
+    if conflict,
+      do: {:error, {:evaluation_session_conflict, conflict}},
+      else: {:ok, Keyword.merge(session, host)}
   end
 
   @impl true

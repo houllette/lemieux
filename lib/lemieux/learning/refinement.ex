@@ -40,9 +40,11 @@ defmodule Lemieux.Learning.Refinement do
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Evaluator
   alias Lemieux.Learning.Discovery.Plan
+  alias Lemieux.Learning.Discovery.ProfileDelta
   alias Lemieux.Learning.Discovery.Surface
   alias Lemieux.Learning.Refinement.Edits
   alias Lemieux.Learning.Refinement.Evidence
+  alias Lemieux.Learning.RuntimeEvidence
 
   @bindings ~w(source_sha256 harness_sha256 environment_sha256 descriptors_sha256 policy_sha256 verification_sha256 model_sha256)
 
@@ -322,7 +324,9 @@ defmodule Lemieux.Learning.Refinement do
          {:ok, lease, guardian} <-
            Resource.acquire(
              fn _ -> module.acquire(state, id, config.bindings) end,
-             &module.release(state, &1)
+             &module.release(state, &1),
+             timeout_ms: Keyword.get(opts, :acquisition_timeout_ms, 5000),
+             abort: fn -> abort_lease(module, state, id) end
            ) do
       try do
         with true <- lease.id == id,
@@ -339,6 +343,8 @@ defmodule Lemieux.Learning.Refinement do
              {:ok, observation} <- Runtime.run(runtime, lease.task),
              :ok <- preflight(opts[:isolation], config.bindings),
              :ok <- module.validate(state, lease, config.bindings),
+             {:ok, changes} <- ProfileDelta.changes(config.baseline, profile),
+             :ok <- RuntimeEvidence.verify(observation, lease.runtime_identity, changes),
              assessment <- opts[:assess].(observation, lease),
              {:ok, record} <-
                Evidence.record(observation, assessment, config.verifier, lease.runtime_identity) do
@@ -355,6 +361,10 @@ defmodule Lemieux.Learning.Refinement do
         :ok = Resource.release(guardian)
       end
     end
+  end
+
+  defp abort_lease(module, state, id) do
+    if function_exported?(module, :abort, 2), do: module.abort(state, id), else: :ok
   end
 
   defp controlled(opts, role) do

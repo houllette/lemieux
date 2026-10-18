@@ -8,6 +8,7 @@ defmodule Lemieux.CLI.Runtime.EvaluationTest do
   alias Lemieux.CLI.Runtime
   alias Lemieux.CLI.Runtime.Evaluation
   alias Lemieux.Contract
+  alias Lemieux.Extension.Profile
   alias Lemieux.Extensions.Permissions
   alias Lemieux.Extensions.Workspace.Discovery
   alias Lemieux.Harness
@@ -571,5 +572,108 @@ defmodule Lemieux.CLI.Runtime.EvaluationTest do
              observation["transcript"],
              &(&1["type"] == "assistant" and inspect(&1["payload"]) =~ "historical")
            )
+  end
+
+  defmodule LeaseDenied do
+    @behaviour Lemieux.Environment
+    alias Lemieux.Environment.Local
+    @impl true
+    def read_file(_state, cwd, path), do: Local.read_file(nil, cwd, path)
+    @impl true
+    def write_file(_state, _cwd, _path, _content), do: {:error, :lease_denied}
+    @impl true
+    def run(_state, _command, _opts), do: {:error, :lease_denied}
+  end
+
+  test "isolation lease environment is not silently replaced by the ordinary host", %{
+    tmp_dir: dir
+  } do
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        "none",
+        "--bare",
+        "--no-delegate",
+        "--permission-mode",
+        "off",
+        "--model",
+        "test:model"
+      ])
+
+    profile =
+      Profile.quota(
+        %{
+          "execution" => "live",
+          "model" => "test:model",
+          "tools" => ["read", "write", "edit", "bash"],
+          "options" => %{
+            "system" => "portable",
+            "max_turns" => 4,
+            "max_tokens" => 100,
+            "temperature" => 0.0,
+            "max_cost_usd" => 1.0,
+            "reasoning_effort" => "default",
+            "tool_descriptions" => %{}
+          }
+        },
+        4
+      )
+
+    host = [
+      cwd: dir,
+      supervisor: supervisor(),
+      store: JSONL.new(Path.join(dir, "sessions")),
+      environment: Lemieux.Environment.Local
+    ]
+
+    factory = Evaluation.factory(options, host, parent_profile: profile, surface: [])
+
+    provider =
+      Scripted.new([
+        Scripted.tool_call("write", "write", %{
+          "path" => "escaped-lease.txt",
+          "content" => "unexpected write"
+        }),
+        Scripted.complete("done")
+      ])
+
+    runtime_result =
+      factory.("probe", profile, provider,
+        sessions_dir: Path.join(dir, "sessions"),
+        session: [environment: {LeaseDenied, nil}]
+      )
+
+    case runtime_result do
+      {:error, _conflict} ->
+        :ok
+
+      {:ok, runtime} ->
+        assert {:ok, _observation} = BenchmarkRuntime.run(runtime, task(dir))
+
+        refute File.exists?(Path.join(dir, "escaped-lease.txt")),
+               "the ordinary host executor overrode the lease denial"
+    end
+
+    conflicts = [
+      {:hooks, [], [before_tool: fn _call, _context -> {:error, :denied} end]},
+      {:max_requests, 4, 1},
+      {:store, host[:store], JSONL.new(Path.join(dir, "isolated-sessions"))}
+    ]
+
+    for {key, ordinary, isolated} <- conflicts do
+      factory =
+        Evaluation.factory(options, Keyword.put(host, key, ordinary),
+          parent_profile: profile,
+          surface: []
+        )
+
+      assert {:error, {:evaluation_session_conflict, ^key}} =
+               factory.("refused", profile, provider,
+                 sessions_dir: Path.join(dir, "sessions"),
+                 session: [{key, isolated}]
+               )
+    end
+
+    assert Scripted.requests(provider) == []
   end
 end

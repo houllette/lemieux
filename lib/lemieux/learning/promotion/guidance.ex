@@ -10,6 +10,18 @@ defmodule Lemieux.Learning.Promotion.Guidance do
   alias Lemieux.Tool
   alias Lemieux.Tools
 
+  @spec authorized?(grant :: map(), context :: map()) :: boolean()
+  def authorized?(%{"description_tools" => []}, _context), do: true
+
+  def authorized?(%{"description_tools" => names}, context) when is_list(names) do
+    allowed = context[:description_tools] || []
+
+    context.policy["trust"] == "personal" and is_list(allowed) and
+      Enum.all?(names, &(&1 in allowed))
+  end
+
+  def authorized?(_grant, _context), do: false
+
   @spec prepare(request :: map(), context :: map(), base :: Harness.t()) ::
           {:ok, Overlay.t(), map() | nil} | {:error, term()}
   def prepare(request, context, base) do

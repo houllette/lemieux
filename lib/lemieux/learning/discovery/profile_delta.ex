@@ -1,4 +1,4 @@
-defmodule Lemieux.CLI.Runtime.Evaluation.ProfileDelta do
+defmodule Lemieux.Learning.Discovery.ProfileDelta do
   @moduledoc false
   alias Lemieux.Learning.Discovery.Surface
 

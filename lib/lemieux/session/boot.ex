@@ -51,7 +51,32 @@ defmodule Lemieux.Session.Boot do
   # ever shown. `Lemieux.Compaction.applied/2` says what the older ones carry.
   @keep_attachments 3
 
+  # An explicitly owned agent attempt must be cancellable even while init is
+  # blocked in a host store. The acquisition worker can die after queuing a
+  # DynamicSupervisor start; looking up its eventual handle is too late. Watch
+  # its guardian from inside the initializing child, before any host callback.
+  # Guardian loss also covers acquisition timeout while the caller stays alive. This option
+  # is live host authority and is never recorded or restored from transcripts.
+  defp own_lifetime(nil), do: :ok
+
+  defp own_lifetime(owner) when is_pid(owner) do
+    session = self()
+
+    spawn(fn ->
+      caller = Process.monitor(owner)
+      child = Process.monitor(session)
+
+      receive do
+        {:DOWN, ^caller, :process, ^owner, _} -> Process.exit(session, :kill)
+        {:DOWN, ^child, :process, ^session, _} -> :ok
+      end
+    end)
+
+    :ok
+  end
+
   def boot(opts) do
+    own_lifetime(Keyword.get(opts, :lifetime_owner))
     # OTP only calls terminate/2 for a supervisor shutdown when the child
     # traps exits. SessionEnd hooks are cleanup, so silently skipping them on
     # the ordinary DynamicSupervisor.terminate_child/2 path is worse than the

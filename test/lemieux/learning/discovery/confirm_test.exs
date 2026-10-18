@@ -422,4 +422,104 @@ defmodule Lemieux.Learning.Discovery.ConfirmTest do
     assert {:error, :runtime_identity_required} =
              Campaign.plan(Keyword.delete(config, :runtime_identity), String.duplicate("a", 64))
   end
+
+  test "effective confirmation rejects absent runtime evidence", ctx do
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        "none",
+        "--no-delegate",
+        "--permission-mode",
+        "off",
+        "--model",
+        "test:model"
+      ])
+
+    supervisor = :"cli_confirmation_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
+
+    host = [
+      cwd: ctx.tmp_dir,
+      supervisor: supervisor,
+      provider: Scripted.new([]),
+      store: JSONL.new(Path.join(ctx.tmp_dir, "cli-sessions")),
+      max_requests: 3
+    ]
+
+    {:ok, prepared} = CLI.prepare(options, host, surface: ["system_suffix"])
+
+    factory =
+      CLI.factory(options, host, parent_profile: seed_profile(), surface: ["system_suffix"])
+
+    config =
+      Keyword.merge(ctx.config,
+        output_dir: Path.join(ctx.tmp_dir, "cli-campaign"),
+        runtime_factory: factory,
+        runtime_identity: CLI.identity(prepared)
+      )
+
+    assert {:ok, campaign} = Campaign.run(config)
+    [_seed, improved] = campaign.candidates
+
+    assert Enum.all?(
+             campaign.evaluations,
+             &(&1.observations["runtime_qualification"]["lane"] == "effective_lmx")
+           )
+
+    confirm_config = Keyword.delete(config, :seed_profile)
+
+    assert {:ok, result} =
+             Confirm.run(confirm_config, improved.id,
+               stopping_rule: %{"minimum_pairs" => 2, "confidence" => 0.9}
+             )
+
+    assert result["verdict"] == "pass"
+
+    {:ok, frozen} =
+      Confirm.prepare(confirm_config, improved.id,
+        suffix: "stripped-runtime",
+        stopping_rule: %{"minimum_pairs" => 2, "confidence" => 0.9}
+      )
+
+    report = Path.join(String.replace_suffix(frozen.dir, "-stripped-runtime", ""), "report.json")
+    original = report |> File.read!() |> JSON.decode!()
+
+    stripped =
+      Map.update!(original, "results", fn rows ->
+        Enum.map(
+          rows,
+          &Map.update!(&1, "observation", fn o -> Map.delete(o, "runtime_qualification") end)
+        )
+      end)
+
+    assert {:error, :invalid_runtime_evidence} = Confirm.evaluate(frozen, stripped)
+
+    for mutate <- [
+          fn observation ->
+            put_in(observation, ["runtime_qualification", "lane"], "profile_only")
+          end,
+          fn observation ->
+            put_in(observation, ["runtime_qualification", "effective", "model"], "other:model")
+          end,
+          fn observation -> Map.put(observation, "transcript", []) end,
+          fn observation ->
+            Map.update!(observation, "transcript", fn entries ->
+              Enum.map(entries, fn entry ->
+                if entry["type"] == "request",
+                  do: put_in(entry, ["payload", "model"], "other:model"),
+                  else: entry
+              end)
+            end)
+          end
+        ] do
+      corrupt =
+        Map.update!(
+          original,
+          "results",
+          &Enum.map(&1, fn row -> Map.update!(row, "observation", mutate) end)
+        )
+
+      assert {:error, :invalid_runtime_evidence} = Confirm.evaluate(frozen, corrupt)
+    end
+  end
 end

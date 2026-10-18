@@ -4,12 +4,18 @@ defmodule Lemieux.Agent.Resource do
 
   # Start under the guardian, after its owner monitor exists. Creating a
   # session first and then monitoring the caller leaves an orphan on kill.
-  @spec acquire(start :: (pid() -> {:ok, term()} | {:error, term()}), stop :: (term() -> term())) ::
+  @spec acquire(
+          start ::
+            (pid() -> {:ok, term()} | {:error, term()})
+            | (pid(), pid() -> {:ok, term()} | {:error, term()}),
+          stop :: (term() -> term()),
+          opts :: keyword()
+        ) ::
           {:ok, term(), pid()} | {:error, term()}
-  def acquire(start, stop) do
+  def acquire(start, stop, opts \\ []) do
     owner = self()
     token = make_ref()
-    {guard, monitor} = spawn_monitor(fn -> guard(owner, token, start, stop) end)
+    {guard, monitor} = spawn_monitor(fn -> guard(owner, token, start, stop, opts) end)
 
     receive do
       {^token, {:ok, resource}} ->
@@ -36,18 +42,67 @@ defmodule Lemieux.Agent.Resource do
     end
   end
 
-  defp guard(owner, token, start, stop) do
+  # Acquisition must remain cancellable while the callback is running, not
+  # only after it returns a handle. A host with partially created external
+  # resources supplies :abort to reconcile them after the worker is stopped.
+  defp guard(owner, token, start, stop, opts) do
     monitor = Process.monitor(owner)
+    guardian = self()
 
-    case safe_start(start, owner) do
-      {:ok, resource} ->
-        send(owner, {token, {:ok, resource}})
+    {worker, worker_ref} =
+      spawn_monitor(fn -> send(guardian, {token, safe_start(start, owner, guardian)}) end)
 
-        await_release(owner, monitor)
-        cleanup(stop, resource)
+    receive do
+      {^token, result} ->
+        stop_worker(worker, worker_ref)
+        acquired(result, owner, monitor, token, stop, opts)
 
-      {:error, _reason} = error ->
-        send(owner, {token, error})
+      {:DOWN, ^worker_ref, :process, ^worker, _reason} ->
+        send(owner, {token, {:error, :resource_start_failed}})
+        abort(opts)
+
+      {:DOWN, ^monitor, :process, ^owner, _reason} ->
+        stop_worker(worker, worker_ref)
+        interrupted(token, stop, opts)
+    after
+      Keyword.get(opts, :timeout_ms, 5000) ->
+        stop_worker(worker, worker_ref)
+        interrupted(token, stop, opts)
+        send(owner, {token, {:error, :resource_start_timeout}})
+    end
+  end
+
+  defp acquired({:ok, resource}, owner, monitor, token, stop, _opts) do
+    send(owner, {token, {:ok, resource}})
+    await_release(owner, monitor)
+    cleanup(stop, resource)
+  end
+
+  defp acquired({:error, _reason} = error, owner, _monitor, token, _stop, opts) do
+    abort(opts)
+    send(owner, {token, error})
+  end
+
+  # A result sent before worker termination precedes its DOWN message. Drain
+  # that race before falling back to partial-acquisition reconciliation.
+  defp interrupted(token, stop, opts) do
+    receive do
+      {^token, {:ok, resource}} -> cleanup(stop, resource)
+      {^token, _failed} -> abort(opts)
+    after
+      0 -> abort(opts)
+    end
+  end
+
+  defp abort(opts) do
+    if callback = opts[:abort], do: cleanup(fn _ -> callback.() end, nil), else: :ok
+  end
+
+  defp stop_worker(worker, monitor) do
+    Process.exit(worker, :kill)
+
+    receive do
+      {:DOWN, ^monitor, :process, ^worker, _reason} -> :ok
     end
   end
 
@@ -65,8 +120,8 @@ defmodule Lemieux.Agent.Resource do
     end
   end
 
-  defp safe_start(start, owner) do
-    start.(owner)
+  defp safe_start(start, owner, guardian) do
+    if is_function(start, 2), do: start.(owner, guardian), else: start.(owner)
   rescue
     _failure -> {:error, :resource_start_failed}
   catch

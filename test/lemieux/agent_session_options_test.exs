@@ -36,6 +36,43 @@ defmodule Lemieux.AgentSessionOptionsTest do
 
   defp provider, do: Scripted.new([Scripted.complete("hello")])
 
+  defmodule HeldStore do
+    def lock(owner, _id) do
+      send(owner, {:initializing, self()})
+
+      receive do
+        :never -> {:ok, :lock}
+      after
+        60_000 -> {:error, :late}
+      end
+    end
+  end
+
+  test "caller death interrupts session initialization inside a blocked host store", ctx do
+    owner = self()
+    worker = spawn(fn -> run(ctx, provider: provider(), store: {HeldStore, owner}) end)
+    assert_receive {:initializing, session}
+    monitor = Process.monitor(session)
+    Process.exit(worker, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^session, :killed}
+    assert Lemieux.sessions(ctx.runtime) == []
+  end
+
+  test "acquisition timeout interrupts initialization even while the caller remains alive", ctx do
+    owner = self()
+
+    worker =
+      Task.async(fn ->
+        run(ctx, provider: provider(), store: {HeldStore, owner}, acquisition_timeout_ms: 5000)
+      end)
+
+    assert_receive {:initializing, session}
+    monitor = Process.monitor(session)
+    assert Task.await(worker, 10_000) == {:error, :resource_start_timeout}
+    assert_receive {:DOWN, ^monitor, :process, ^session, _reason}
+    assert Lemieux.sessions(ctx.runtime) == []
+  end
+
   test "a provider that is not a {module, state} pair is an error naming it", ctx do
     for malformed <- [@secret, Scripted, {"Scripted", nil}] do
       assert run(ctx, provider: malformed) == {:error, {:provider, :invalid}}

@@ -615,6 +615,7 @@ defmodule Lemieux.Learning.Proposer do
             "prediction" => prediction,
             "critic" => parts.critic,
             "hypothesis" => manifest["hypothesis"],
+            "mechanism" => manifest["mechanism"],
             "targeted_cluster" => manifest["targeted_cluster"],
             "changed_paths" => changed_paths(parts.validation, manifest),
             "sessions" => parts.sessions,

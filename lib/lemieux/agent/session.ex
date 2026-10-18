@@ -78,8 +78,11 @@ defmodule Lemieux.Agent.Session do
            ),
          {:ok, session, guardian} <-
            Resource.acquire(
-             fn owner -> start_session(task, opts, provider, model, supervisor, owner) end,
-             &stop_owned_session(&1, supervisor)
+             fn owner, guardian ->
+               start_session(task, opts, provider, model, supervisor, owner, guardian)
+             end,
+             &stop_owned_session(&1, supervisor),
+             timeout_ms: Keyword.get(opts, :acquisition_timeout_ms, 5000)
            ) do
       try do
         with {:ok, observation} <- execute(session, task, opts, supervisor),
@@ -155,7 +158,7 @@ defmodule Lemieux.Agent.Session do
     :exit, reason -> {:error, {:supervisor, reason}}
   end
 
-  defp start_session(task, opts, provider, model, supervisor, owner) do
+  defp start_session(task, opts, provider, model, supervisor, owner, guardian) do
     sessions_dir =
       Keyword.get_lazy(opts, :sessions_dir, fn ->
         Path.join(System.tmp_dir!(), "lemieux-benchmark-sessions")
@@ -179,7 +182,7 @@ defmodule Lemieux.Agent.Session do
     session_opts =
       base
       |> Keyword.merge(Keyword.get(opts, :session_options, []))
-      |> Keyword.merge(subscriber: owner, cwd: task.cwd)
+      |> Keyword.merge(subscriber: owner, cwd: task.cwd, lifetime_owner: guardian)
 
     with :ok <- session_options(session_opts) do
       if Keyword.has_key?(session_opts, :resume),
