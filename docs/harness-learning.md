@@ -853,13 +853,74 @@ and records each one as skipped; `promote` refuses a fixture that still has
 one and names it, unless you pass `--allow-secret-files` for a deliberate
 fake. The rule reads names only, so review a draft before you promote it.
 
-The [capture extension](https://github.com/houllette/lemieux/blob/main/examples/extensions/capture/README.md)
-writes the first draft itself: a `session_end` hook that turns a verification
-command left failing, or a correction from the person, into a feedback record
-and a bounded draft under `.lmx/drafts/` for exactly this review. That
-directory carries a `.gitignore` of `*`, so `git add -A` never stages a
-draft, and the snapshot skips the same secret-shaped files plus `lmx`'s own
-`.lmx/config.json`.
+### Ordinary-session capture
+
+`Lemieux.Extensions.Capture` is selected by the stock `lmx` host when personal
+state is enabled. It makes no model request. It observes verification failures
+and failure-to-recovery episodes, corrections, and repeated tool failures or
+recoveries. An observation is separate from a diagnosis: passing a later check
+never establishes task correctness. Corrections without a verifier stay
+`needs_review` drafts.
+
+Before a prompt's first request, capture checkpoints bounded workspace bytes
+through the active environment and effective read policy, without approval
+prompts. Retries reuse those inputs. A resumed prompt
+with earlier effects cannot replace missing inputs with the repaired workspace.
+Terminal capture reads authoritative transcript entries; records contain entry
+identities and hashes, observations, and terminal evidence references, rather
+than copied conversation bodies. Input files remain private source content.
+
+The defaults allow 256 KiB total, 64 KiB per file, 128 visited paths and 250 ms
+per observation. A guarded worker dies when its caller dies or its deadline
+expires. Environments must implement streaming reads, so the project policy cannot
+trigger an unbounded fallback read. Unsupported streaming disables capture.
+Timeouts, missing artifacts, omitted files, secret-shaped names, symlinks and
+size limits produce unavailable or incomplete inputs. Capture never runs a verifier, and unknown replay eligibility is false.
+Only file bytes are captured; permissions, services and external dependencies
+must be reviewed by the host before replay. A generic transcript store owns its
+read bounds; the stock JSONL store is also checked before reading.
+
+Records live under `~/.lmx/capture/PROJECT_DIGEST/`, with private permissions and
+an ignored directory. The host/project scope uses the workspace path digest,
+not its basename. Retention defaults to 128 records for 30 days; expired and
+excess records are removed on terminal capture. Pending checkpoints are bounded
+and pruned during capture and removed after terminal processing. Storage and
+callback failures emit a generic warning without transcript text and leave
+ordinary completion intact.
+
+```elixir
+{:ok, records} = Lemieux.Extensions.Capture.history(capture_root, workspace)
+:ok = Lemieux.Extensions.Capture.prune(capture_root, workspace, 30, 128)
+:ok = Lemieux.Extensions.Capture.forget(capture_root, workspace)
+```
+
+Disable future capture with personal `"capture": false`,
+`"disabled_extensions": ["capture"]`, `--config none`, or project
+`.lmx/capture.json` containing `{"enabled": false}`. Malformed project policy
+also disables capture. The project file cannot override a host opt-out.
+Opting out creates no capture files; use `forget/2` to delete retained content.
+Capture is omitted for extension-profile runs, child sessions and aside work.
+Embedders explicitly select `{Lemieux.Extensions.Capture, dir: private_root,
+store: transcript_store}`; adding the library starts no capture process.
+
+A host may explicitly call `Capture.materialize/2` into a new directory to
+inspect the original bytes. `Capture.validate_replay/3` additionally takes a
+host-owned isolated validator `(directory, command) -> {:ok, exit_status}`;
+it must reproduce the original defect using the exact recorded command and
+exit status. A passing or mismatched check cannot qualify it. The callback is
+trusted host work, never something a stored record authorizes. A copied
+directory alone is not isolation. No provider call or command is triggered by
+reading or loading a record.
+
+Only after that explicit check can `Capture.case_draft/3` create an ordinary
+`Lemieux.Feedback.CaseDraft`, still marked `draft`. Human review of secrets,
+missing runtime requirements, acceptance criteria and the grader's failure on
+the untouched control remains required before `lmx corpus promote`. A
+correction, unavailable checkpoint or incomplete input cannot take this lane.
+Capture does not automatically turn observations into lessons or activate them.
+The [older capture example](https://github.com/houllette/lemieux/blob/main/examples/extensions/capture/README.md)
+illustrates explicit command hooks; use the first-party extension for
+pre-effect inputs and recovery records.
 
 ### What to watch
 

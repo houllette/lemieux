@@ -136,7 +136,7 @@ defmodule Lemieux.CLI.Config do
              systemone_providers max_turns max_requests max_cost_usd max_total_requests max_total_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
              extension_options scout_model verify continuation input_modalities notifications
-             skills)
+             skills capture)
   # A misspelling of one of these is refused rather than ignored: ignoring it
   # could send a request somewhere other than where the file meant, or
   # without the credential it meant to supply.
@@ -155,6 +155,7 @@ defmodule Lemieux.CLI.Config do
   @permission_modes ~w(off ask default accept_edits acceptEdits auto full_auto bypassPermissions
                        read_only plan)
   @sandbox_fields ~w(enabled backend network localhost writable hidden)
+  @capture_fields ~w(enabled max_input_bytes max_file_bytes max_files timeout_ms retention_days max_records verification_commands)
   @verify_fields ~w(enabled command max_continuations timeout_ms)
   @skills_fields ~w(omarchy disabled)
   @continuation_fields ~w(enabled max_continuations max_output_continuations completion_check)
@@ -172,7 +173,7 @@ defmodule Lemieux.CLI.Config do
   @systemone_ixway_fields ~w(base_url model input_per_million output_per_million)
   @shipped_extensions ~w(mcp interactive web elixir workspace delegation a2a systemone_compaction
                          environment_context planning continuation verify budget search
-                         apply_patch checkpoints mcp_discovery)
+                         apply_patch checkpoints mcp_discovery capture)
 
   @doc "Returns the optional personal configuration path."
   @spec default_path() :: Path.t()
@@ -798,6 +799,7 @@ defmodule Lemieux.CLI.Config do
          :ok <- validate_section(settings, "permissions", @permission_fields),
          :ok <- validate_section(settings, "sandbox", @sandbox_fields),
          :ok <- validate_section(settings, "verify", @verify_fields),
+         :ok <- validate_section(settings, "capture", @capture_fields),
          :ok <- validate_skills(Map.get(settings, "skills", %{})),
          :ok <- validate_section(settings, "continuation", @continuation_fields),
          :ok <- validate_mcp_servers(Map.get(settings, "mcp_servers", %{})),
@@ -836,8 +838,26 @@ defmodule Lemieux.CLI.Config do
     do: value in ~w(deny allow)
 
   defp valid_section_entry?(section, {"enabled", value})
-       when section in ~w(sandbox verify continuation),
+       when section in ~w(sandbox verify continuation capture),
        do: is_boolean(value)
+
+  defp valid_section_entry?("capture", {"verification_commands", commands}),
+    do:
+      is_list(commands) and length(commands) <= 32 and
+        Enum.all?(commands, &(is_binary(&1) and byte_size(&1) in 1..4096))
+
+  defp valid_section_entry?("capture", {key, value}) when is_integer(value) and value > 0 do
+    maxima = %{
+      "max_input_bytes" => 1_048_576,
+      "max_file_bytes" => 1_048_576,
+      "max_files" => 512,
+      "timeout_ms" => 2000,
+      "retention_days" => 3650,
+      "max_records" => 1000
+    }
+
+    value <= Map.get(maxima, key, 0)
+  end
 
   defp valid_section_entry?("sandbox", {"backend", value}),
     do: value in ~w(auto seatbelt bubblewrap)
@@ -1058,7 +1078,7 @@ defmodule Lemieux.CLI.Config do
   defp valid_field?("hooks", value), do: is_map(value)
   defp valid_field?("permissions", value), do: is_map(value)
 
-  defp valid_field?(key, value) when key in ~w(sandbox verify continuation),
+  defp valid_field?(key, value) when key in ~w(sandbox verify continuation capture),
     do: is_boolean(value) or is_map(value)
 
   defp valid_field?("mcp_servers", value), do: is_map(value)

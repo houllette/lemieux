@@ -266,6 +266,10 @@ defmodule Lemieux.Hooks do
 
   # The call itself keeps its keys; details only add to it. A policy cannot
   # change which call a person believes they are approving.
+  # Read-only observers may consult policy but cannot open approval requests.
+  defp park(_call, _details, %{approval_mode: :deny}),
+    do: {:deny, "approval is unavailable for this observation"}
+
   defp park(call, details, %{approval_mode: :scoped} = context) do
     with :ok <- Approval.validate(call.arguments, context) do
       payload = details |> Map.drop([:id, :name, :arguments]) |> Map.merge(call)

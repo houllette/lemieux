@@ -61,6 +61,7 @@ preflight](compaction.md) for the options and an Ixway timing-signal example.
 | `scrub_credentials` | `true` | Withhold credential-shaped variables from commands, hooks and MCP servers ([Credential scrubbing](#credential-scrubbing)) |
 | `credential_allowlist` | none | Variable names, or `NAME_*` patterns, passed through anyway |
 | `hooks` | none | Command hooks, in `lmx`'s format or Claude Code's ([Hooks](#hooks-and-approval-policy)) |
+| `capture` | on with personal state | Provider-free failure/recovery drafts; `false`, or bounded options ([Ordinary-session capture](harness-learning.md#ordinary-session-capture)) |
 | `verify` | on | The project's check after a turn that edited files: `false`, or `{"command", "max_continuations", "timeout_ms"}` ([Checks after edits](#checks-after-edits)) |
 | `continuation` | on | Send the model back to its unfinished plan, or past an answer cut off at the output limit: `false`, or `{"max_continuations", "max_output_continuations", "completion_check"}` ([Continuing unfinished work](#continuing-unfinished-work)) |
 | `delegate` | `true` | `false` withholds the repository scout |
@@ -261,7 +262,7 @@ The default [permission policy](#permissions) is `auto`, with an OS
 Hooks remain off unless selected explicitly.
 
 `"disabled_extensions"` leaves shipped extensions out by name: `planning`,
-`continuation`, `verify`, `search`, `apply_patch`, `checkpoints`,
+`continuation`, `verify`, `search`, `apply_patch`, `checkpoints`, `capture`,
 `environment_context`, `mcp_discovery`, `mcp`, `interactive`, `web`, `elixir`,
 `workspace`, `delegation`, `session_summary` (one session-gist request after
 two completed interactive exchanges), `a2a`, `a2ui` (terminal visualization instructions)
@@ -404,6 +405,15 @@ has the whole table. The
 [extension's README](https://github.com/houllette/lemieux/blob/main/dist/lmx/extensions/systemone_compaction/README.md)
 and [Compaction](compaction.md#optional-system-one-projection-before-compaction)
 cover its remaining settings.
+
+### Ordinary-session capture
+
+Capture's object form accepts `enabled`, `max_input_bytes` (up to 1 MiB),
+`max_file_bytes` (no larger than the input bound), `max_files` (up to 512),
+`timeout_ms` (up to 2000), `retention_days` (up to 3650), `max_records` (up to
+1000), and `verification_commands` (up to 32 exact command strings). Numeric
+limits must be positive. The defaults and retention behavior are described in
+[Ordinary-session capture](harness-learning.md#ordinary-session-capture).
 
 ### Checks after edits
 

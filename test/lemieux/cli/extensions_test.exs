@@ -440,6 +440,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                inspect(configured),
                inspect(typed),
                "Lemieux.Extensions.Checkpoints",
+               "Lemieux.Extensions.Capture",
                "Lemieux.Extensions.Workflow"
              ]
     end
@@ -477,6 +478,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                "Lemieux.Extensions.Delegation",
                inspect(module),
                "Lemieux.Extensions.Checkpoints",
+               "Lemieux.Extensions.Capture",
                "Lemieux.Extensions.Workflow"
              ]
     end

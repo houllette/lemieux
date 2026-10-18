@@ -168,7 +168,7 @@ defmodule Lemieux.Tool do
           optional(:input_original) => Lemieux.Input.capability(),
           optional(:run_id) => String.t() | nil,
           optional(:approval_runtime) => struct() | nil,
-          optional(:approval_mode) => :scoped,
+          optional(:approval_mode) => :scoped | :deny,
           optional(:approval_scope) => (map() -> String.t()),
           optional(:approval_factory) => (t(), map() -> map()),
           cwd: Path.t(),

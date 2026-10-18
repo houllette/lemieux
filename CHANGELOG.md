@@ -20,6 +20,15 @@ API.
 
 ### Features
 
+- First-party ordinary-session capture records verification failures, recoveries,
+  corrections and repeated tool failures without calling a model. Private,
+  scoped drafts use bounded pre-effect inputs and require explicit replay
+  validation and human corpus review. **Migration:** personal-state `lmx`
+  sessions enable capture by default; disable with `"capture": false`,
+  `"disabled_extensions": ["capture"]`, `--config none`, or project
+  `.lmx/capture.json` containing `{"enabled": false}`. Embedders opt in.
+  See [ordinary-session capture](docs/harness-learning.md#ordinary-session-capture).
+
 - Experimental lesson retrieval filters current scoped experience before
   deterministic ranking, retains bounded decision receipts and exposes
   concise evidence pointers only after durable exposure commit. The proposer
