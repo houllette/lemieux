@@ -23,11 +23,14 @@ defmodule Lemieux.Conversation.Doctor do
   wherever they were on, and outside a git repository that read as a
   promise about everything the agent did: there, what a command changes is
   never recorded, and the first a person heard of it was an `/undo` after
-  `rm -rf build` that named the command as not undone. `undo_coverage/1` is
+  `rm -rf build` that named the command as not undone. `undo_coverage/2` is
   that rule for a host that records commands at all
   (`Lemieux.Extensions.Checkpoints` with `git: true`, as `lmx` applies it),
   and the terminal UI's startup notice and `lmx run` say it from the same
-  function, so for `lmx` the three cannot disagree about a directory.
+  function, so for `lmx` the three cannot disagree about a directory. A
+  custom environment gets a notice about the host-only snapshot boundary,
+  without probing its path on the host: a remote git worktree can be absent
+  here, or its path can name an unrelated local repository.
 
   Those two take a host that records checkpoints to record commands as
   well. A host that applied the extension without `git: true` is told apart
@@ -40,6 +43,7 @@ defmodule Lemieux.Conversation.Doctor do
   alias Lemieux.Checkpoint.Git
   alias Lemieux.Conversation.Dispatch
   alias Lemieux.Environment
+  alias Lemieux.Environment.Local
   alias Lemieux.Environment.Local.ExCmd
   alias Lemieux.Environment.Sandbox
   alias Lemieux.Extensions.Checkpoints
@@ -90,7 +94,7 @@ defmodule Lemieux.Conversation.Doctor do
       extensions: extensions(applied),
       permissions: permissions(host.permissions),
       checkpoints: host.checkpoints,
-      undo: undo(host.checkpoints, cwd(host, info), applied),
+      undo: undo(host.checkpoints, cwd(host, info), applied, environment),
       environment: %{
         sandbox: Sandbox.describe(environment),
         name: Environment.name(environment),
@@ -116,6 +120,14 @@ defmodule Lemieux.Conversation.Doctor do
   which run nothing the repository configures — rather than a snapshot,
   which would write objects into the repository to answer a question.
 
+  `:environment` is the session's environment (default the local machine,
+  also when `nil`). Only the built-in local environment, optionally wrapped
+  in `Lemieux.Environment.Sandbox`, establishes that `cwd` names the files
+  commands change on this machine. Other environments get
+  `{:file_tools, "command snapshots require a workspace on the host"}`
+  without a filesystem probe: git snapshots do not use the session's
+  environment, even though file-tool checkpoints do.
+
   Runs `git` — one process, two in a subdirectory of a repository — so it
   blocks: the terminal UI asks once per sitting, `lmx run` at its first
   command, and `/doctor` off the draw loop. It blocks for at most
@@ -123,6 +135,17 @@ defmodule Lemieux.Conversation.Doctor do
   """
   @spec undo_coverage(cwd :: Path.t(), opts :: keyword()) :: undo_coverage()
   def undo_coverage(cwd, opts \\ []) when is_binary(cwd) do
+    if local_environment?(Keyword.get(opts, :environment) || Environment.local()),
+      do: local_coverage(cwd, opts),
+      else: {:file_tools, "command snapshots require a workspace on the host"}
+  end
+
+  defp local_environment?(Local), do: true
+  defp local_environment?({Local, _state}), do: true
+  defp local_environment?({Sandbox, %{inner: inner}}), do: local_environment?(inner)
+  defp local_environment?(_environment), do: false
+
+  defp local_coverage(cwd, opts) do
     task = Task.async(fn -> coverage(cwd) end)
 
     case Task.yield(task, Keyword.get(opts, :timeout_ms, @git_timeout_ms)) ||
@@ -155,11 +178,11 @@ defmodule Lemieux.Conversation.Doctor do
   The sentence a front end says once when what commands change in `cwd` is
   not recorded for `/undo` (`undo_coverage/2`), or `nil` when they are, or
   when `git` did not answer in time: a notice said on a guess would be one
-  more thing to distrust.
+  more thing to distrust. Accepts the same options as `undo_coverage/2`.
   """
-  @spec undo_notice(cwd :: Path.t()) :: String.t() | nil
-  def undo_notice(cwd) when is_binary(cwd) do
-    case undo_coverage(cwd) do
+  @spec undo_notice(cwd :: Path.t(), opts :: keyword()) :: String.t() | nil
+  def undo_notice(cwd, opts \\ []) when is_binary(cwd) do
+    case undo_coverage(cwd, opts) do
       {:file_tools, why} -> file_tools_only(why)
       _commands_or_unknown -> nil
     end
@@ -172,13 +195,13 @@ defmodule Lemieux.Conversation.Doctor do
   # and the row says that instead. A host that applied the extension
   # without `git: true` records the file tools alone wherever it runs, and
   # the extension's own description in the session says so.
-  defp undo(dir, cwd, applied) when is_binary(dir) and is_binary(cwd) do
+  defp undo(dir, cwd, applied, environment) when is_binary(dir) and is_binary(cwd) do
     if commands_recorded?(applied),
-      do: undo_coverage(cwd),
+      do: undo_coverage(cwd, environment: environment),
       else: {:file_tools, "this host does not record commands"}
   end
 
-  defp undo(_dir, _cwd, _applied), do: nil
+  defp undo(_dir, _cwd, _applied, _environment), do: nil
 
   # The provenance `Lemieux.Harness` records names a module as `inspect/1`
   # spells it. A session with no record of the extension — a host that

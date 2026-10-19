@@ -13,7 +13,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       * The banner, in the notice box at startup, names the mode and the
         sandbox, and — where checkpoints are on but what commands change is
-        not recorded, outside a git repository — that `/undo` takes back
+        not recorded — that `/undo` takes back
         file-tool edits only there.
       * Shift-Tab steps the mode (`Permissions.cycle/1`, which never lands on
         full auto: that is a choice made in configuration, not by a key held
@@ -58,7 +58,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     The startup notices, in the notice box (`Lemieux.TUI.Notices`): what runs
     without asking and where, then, where checkpoints are on and what
     commands change is not recorded, that `/undo` covers file-tool edits
-    only here (`Lemieux.Conversation.Doctor.undo_notice/1`).
+    only here (`Lemieux.Conversation.Doctor.undo_notice/2`).
 
     `Lemieux.TUI.Lifecycle` calls this once per sitting, as the session
     becomes the screen's and before the first-run panel opens, so it is also
@@ -94,11 +94,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # checkpoints, which is taken to mean commands as well, as `lmx` records
     # them (`git: true`): whether a host does is in the session's harness
     # record, which only a copy of its transcript brings, and `/doctor` is
-    # where that is paid for. `git` runs here, once per sitting, bounded
-    # (`Lemieux.Conversation.Doctor.undo_coverage/2`).
+    # where that is paid for. For a local environment, `git` runs here, once
+    # per sitting, bounded (`Lemieux.Conversation.Doctor.undo_coverage/2`).
+    # A custom environment instead gets the host-only snapshot limitation:
+    # its cwd need not name the same files on this machine.
     defp undo_scope(%TUI{tool_choices: %{checkpoints: dir}, references: %{cwd: cwd}} = state)
          when is_binary(dir) and is_binary(cwd) do
-      case Doctor.undo_notice(cwd) do
+      case Doctor.undo_notice(cwd, environment: state.references.environment) do
         nil -> state
         notice -> Notices.say(state, :info, notice)
       end

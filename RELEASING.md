@@ -774,9 +774,8 @@ Support can remove them.
     and contact links appear, and the Security tab shows the policy and a
     **Report a vulnerability** button. `gh api
     repos/houllette/lemieux/community/profile` lists the community files.
-11. Run the Nightly workflow, then dispatch the release workflow on this
-    repository and watch it to the end, as in
-    [step 2](#2-rehearse-with-a-manual-run). `release.yml` has never run:
+11. Dispatch the release workflow on this repository and watch it to the end,
+    as in [step 2](#2-rehearse-with-a-manual-run). `release.yml` has never run:
     this run is the first proof of its jobs, runners, images and permissions
     here, and its macOS jobs' summaries give the minimum macOS version for
     the release notes. Fix anything red, and fill that last placeholder,

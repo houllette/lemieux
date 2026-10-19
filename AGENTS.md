@@ -304,8 +304,7 @@ Release signing keys:
   trigger (`pull_request_target`, `workflow_run`, `issue_comment`,
   `discussion_comment`): the Lint workflows job fails if one does, and runs
   actionlint and ShellCheck. Public readiness requires a GitHub noreply
-  address on every new commit's author and committer. `nightly.yml` runs the
-  suite on macOS and checks the coverage threshold; `eval.yml` runs the
+  address on every new commit's author and committer. `eval.yml` runs the
   recorded evaluation on a schedule.
 
 ## Framework and library guidelines

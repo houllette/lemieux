@@ -606,7 +606,7 @@ defmodule Lemieux.MixProject do
         "cmd epmd -daemon",
         "test --only distributed --warnings-as-errors"
       ],
-      # Shared by local gates and CI/nightly so instrumentation, warnings and
+      # Shared by local gates and CI so instrumentation, warnings and
       # failure handling cannot quietly diverge. Do not combine it with the
       # ordinary suite in one VM: Mix runs `test` only once per invocation.
       "test.cover": "test --cover --preload-modules --warnings-as-errors --raise",
