@@ -111,6 +111,11 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       |> TranscriptSpacing.separate(nil)
     end
 
+    @doc "Uses optional human copy without replacing a notification's model evidence."
+    @spec notification(value :: map()) :: {:lmx | :notice, String.t()}
+    def notification(%{"display_text" => text}) when is_binary(text), do: {:lmx, text}
+    def notification(value), do: {:notice, value["text"]}
+
     # An attempt the stream broke off: its words dimmed and marked, never the
     # answer. The live screen marks it the same way when it happens.
     defp transcript_entry(
@@ -223,6 +228,14 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     # A message a stop hook sent the model is the harness talking, not the
     # person; `harness_lines/1` says it in that voice.
+    defp entry_lines(%{
+           type: :extension_state,
+           payload: %{"namespace" => "lemieux.notification", "value" => value}
+         }),
+         do: value |> notification() |> then(fn {voice, text} -> split_lines(voice, text) end)
+
+    defp entry_lines(%{type: :user, payload: %{"source" => "notification"}}), do: []
+
     defp entry_lines(%{type: :user, payload: %{"text" => text}} = entry) do
       case harness_lines(entry) do
         [] -> split_lines(:you, text)

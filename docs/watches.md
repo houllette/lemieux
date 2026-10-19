@@ -1,0 +1,156 @@
+# Background tasks and external runs
+
+Open **Tasks** with **F6**, or click the **Tasks** badge on the message box.
+Background Bash commands appear automatically. The view combines local commands
+and registered external runs, with status, deadlines, follow-up mode and logs.
+There is no task-management slash command to learn, and opening the view does
+not consume a model request. The message draft stays intact.
+
+Use [durable jobs](jobs.md) when the assignment itself must run independently.
+The task view observes existing work; adding an external watch never starts or
+restarts that work.
+
+## Native controls
+
+| Control | What it does |
+| --- | --- |
+| Up / Down | Select a task |
+| Enter / Tab | Focus logs; Tab returns to the task list |
+| Page Up / Page Down, or the mouse wheel | Scroll selected output |
+| End | Follow the newest output again |
+| Cancel command (`c`) | Confirm cancellation of a local command; pending continuation is revoked first |
+| Stop watching (`s`) | Stop observation while the command or external run continues |
+| Watch (`w`) | Start a fresh observation of that existing task |
+| Continue (`f`) | Toggle explicit permission for one automatic follow-up while observation is active |
+| Clear logs (`x`) | Confirm clearing retained output after delivery; transcript evidence stays on record |
+| Open run (`o`) | Open the external run's link |
+| Add watch (`a`) | Open native fields for an existing external run |
+| F6 / Esc | Close the view and return to the draft |
+
+The visible controls also accept mouse clicks. Destructive actions require a
+confirmation. External sources expose observation controls; they do not expose
+remote cancellation. The selected command's live preview retains the newest
+32 KB, so a chatty command continues showing progress. Commands retain bounded
+output internally, and external results retain at most 8 KB of logs.
+
+Local commands belong to their runtime and session. Closing that runtime ends
+those processes; reopening a transcript cannot recreate an operating-system
+process. Use an external durable job for work that must survive closing `lmx`.
+
+## Delegates and isolated writers
+
+The same Tasks view includes commands owned by read-only delegates and active
+isolated writers, labelled by their owner. Inspect output or cancel a command
+directly. The bounded assignment manages completion: it stays open, waits
+without model polling, then receives one batch of command results under its
+remaining request, turn, cost and time limits. Human cancellation revokes that
+continuation. These rows do not offer a separate Continue toggle.
+
+The default scout has sandboxed read-only `bash` for inline analysis scripts,
+including `background: true`. A writer factory can explicitly supply the same
+tool without granting unrestricted commands. See [delegates](subagents.md#background-analysis)
+and [writers](writers.md#results-and-review). These capabilities use the native
+runtime; writers still require their existing host opt-in and isolation policy.
+Bounded [A2A peer tasks](a2a.md) and [durable jobs](jobs.md) use the same
+completion lifecycle for background work started by their host-selected tools.
+Remote data-export policies keep their existing command restrictions.
+
+## Observe an external run
+
+In **Tasks → Add watch**, select a source, fill its fields and choose **Create
+watch**. Tab moves between fields; Left / Right chooses a source, Space toggles
+the continuation checkbox, and Enter on Create submits. Ctrl-Enter submits from
+any field. Escape returns to the task list.
+
+GitHub Actions needs `owner/repo`, an existing numeric run ID and the full
+40-character commit SHA. The host needs `gh` installed and signed in. Status
+responses must match all three identity fields. Completion includes the run
+link, outcome and bounded failed logs where available. Authentication failure,
+missing status and deadline expiry have distinct outcomes.
+
+Configured custom sources take an existing run ID. Their reader command is
+selected by the host, never entered through the task view or supplied by the
+model.
+
+## Notifications, defaults and recovery
+
+Native background observation is enabled by default in CLI sessions, including
+restricted profiles and hermetic `--config none` sessions. Hermetic sessions keep
+monitoring state in memory and create no personal watch journal. Restricted
+profiles retain their selected model tools. The Tasks view can inspect and
+cancel owned local commands even when monitoring is disabled.
+
+**Notify only** is the default. Completion waits for the session to become idle,
+records its evidence and sends the normal terminal notification. An unfinished
+plan yields after an automatically tracked background start, so waiting does
+not spend requests nudging the model.
+
+Enable **Continue** on a task, or check **Continue automatically** when adding an
+external watch, to authorize one follow-up. Current prompt hooks, tool approvals,
+sandboxing and remaining request and cost allowances still apply. External logs
+are labelled as data and cannot expand file references into reads. Stopping
+observation or cancelling a command revokes an undelivered continuation.
+Authentication failures and deadline expiry notify without inference.
+
+Ordinary configured sessions also expose the `watch` tool to the model. For
+standing authorization of model-requested continuations, configure
+`"watches":{"follow_up":true}`. Human grants apply to the selected watch;
+historical records never restore general permission to continue. The model
+reuses an automatically registered background observation instead of producing
+duplicate completion notifications.
+
+Set `"watches":false`, or put `"watches"` in `disabled_extensions`, to disable
+automatic observation and external watch registration. Process inspection and
+cancellation remain available in the native task view.
+
+Configured sessions keep records under the personal state directory's
+`watches/SESSION_ID`. Reopening the original session re-observes pending external
+runs and delivers recorded results. Monitoring pauses while no `lmx` runtime
+owns the session; the original deadline continues to elapse. Transcript receipts
+prevent duplicate follow-ups. A crash after recording a receipt but before
+dispatch leaves reviewable evidence without automatically replaying inference.
+
+Each session retains at most 256 watch records and runs at most four readers
+concurrently. Poll intervals back off from one to sixty seconds; source rate
+limits can defer checks longer within the deadline. External watches default to
+one hour, with up to thirty days available. Automatically tracked commands use
+the command's configured lifetime. Delivered watch logs expire after one day,
+or can be cleared in Tasks; small receipts remain. Completed local commands
+retain output for one hour unless cleared earlier. A session and its delegates
+admit at most 256 retained commands together; a full tree refuses another
+command before execution until retention frees a slot. Isolated writer sessions
+have their own command allowance.
+
+## Custom status readers
+
+Personal configuration can name up to sixteen fixed observation commands:
+
+```json
+{"watches":{"sources":{"deployment":"/opt/bin/deployment-status"}}}
+```
+
+The deployment source then appears in **Add watch**. Its reader receives inert
+target JSON in `LMX_WATCH_TARGET`, runs through the session's environment with
+credential scrubbing and confinement, and inspects only the original activity.
+Target values are never interpolated into shell code. Print one JSON object and
+exit zero:
+
+```json
+{"state":"pending","summary":"Rolling out"}
+```
+
+On completion use `{"state":"done","outcome":"success","url":"https://example.test/deployments/42","logs":"Ready"}`.
+Rate limits use `{"state":"retry","retry_after_ms":30000,"summary":"Rate limited"}`.
+Errors use `{"state":"error","category":"authentication","summary":"Login expired"}`;
+other categories are `unavailable` and `failed`. Failed readers, timeouts,
+oversized output and invalid status are reported explicitly.
+
+## Embedding
+
+`Lemieux.Extensions.Watches` equips host-selected monitoring. Its
+`auto_background: true` option wraps the existing Bash tool to register starts;
+`equip_tool: false` preserves a restricted tool catalog. Adding Lemieux starts
+nothing. The embedding host mounts `Lemieux.Extensions.Watches.Server` with its
+session, task supervisor, sources and journal. `journal: nil` explicitly selects
+volatile observation; a filesystem or custom `Lemieux.Jobs.Journal` supplies
+persistence. Hosts retain lifecycle, credentials, storage and continuation policy.

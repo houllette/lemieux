@@ -162,6 +162,7 @@ defmodule Lemieux.Tool do
           optional(:deadline_ms) => pos_integer(),
           optional(:hooks) => Lemieux.Hooks.t(),
           optional(:execution) => Lemieux.Execution.t(),
+          optional(:root_session_id) => String.t(),
           optional(:tool_wave_id) => String.t() | nil,
           optional(:input_modalities) => [atom()] | :unknown,
           optional(:current_input) => Lemieux.Input.t() | nil,

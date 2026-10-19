@@ -285,6 +285,8 @@ defmodule Lemieux.CLI.Help do
       mouse                 false gives the mouse back to the terminal
       notifications         false stops the terminal UI ringing when a turn
                             ends or needs you (default true)
+      watches               false, or {follow_up, sources}: observe existing
+                            jobs; notification only unless authorized
       disabled_extensions   shipped extensions to leave out: planning, verify,
                             continuation, budget, search, apply_patch,
                             checkpoints, environment_context, mcp_discovery,

@@ -333,6 +333,7 @@ defmodule Lemieux.MixProject do
         "docs/cli.md",
         "docs/acp.md",
         "docs/jobs.md",
+        "docs/watches.md",
         "docs/writers.md",
         "docs/repository-context.md",
         "docs/configuration.md",
@@ -415,6 +416,7 @@ defmodule Lemieux.MixProject do
         ],
         "Using lmx": [
           "docs/jobs.md",
+          "docs/watches.md",
           "docs/releases.md",
           "docs/desktop.md",
           "docs/cli.md",

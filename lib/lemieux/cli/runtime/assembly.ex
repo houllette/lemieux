@@ -92,7 +92,9 @@ defmodule Lemieux.CLI.Runtime.Assembly do
   # and changes nothing they do, so a session resumed without it — after
   # `disabled_extensions`, or under `--config none` — simply is not recorded,
   # rather than refusing to resume.
-  @observers ["Lemieux.Extensions.Checkpoints"]
+  # Native task tracking wraps the Bash receipt, not its execution authority.
+  # Rebuild it over the original catalog so resume never loses or stacks Bash.
+  @observers ["Lemieux.Extensions.Checkpoints", "Lemieux.Extensions.Watches"]
 
   defp require_transformation(required, extension, before, updated) do
     name = name(extension)

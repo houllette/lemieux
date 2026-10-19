@@ -10,6 +10,13 @@ trusted runtimes. HTTP listeners, TLS, authentication, tenant routing and budget
 shared across instances belong to the embedding host, so the library takes no
 web or database dependency for any of it.
 
+Host-selected read-only tools can use native background tasks. A peer's task
+stays working until command results are consumed, under its original request
+reservation and execution deadline. Cancellation revokes completion and stops
+owned commands. The A2A file export policy still refuses shell execution:
+remote tools must enforce the host's exported data scope; a local shell is
+never substituted for that environment.
+
 ## Ask a configured peer from lmx
 
 Add this to your personal configuration (`~/.lmx/config.json`, or `--config`):

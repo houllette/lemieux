@@ -136,7 +136,8 @@ defmodule Lemieux.TUI.Keys do
     :external_editor,
     :paste_image,
     :cycle_mode,
-    :toggle_notifications
+    :toggle_notifications,
+    :tasks
   ]
 
   @typedoc "What a key does to the screen. The moduledoc says what each means."
@@ -162,6 +163,7 @@ defmodule Lemieux.TUI.Keys do
           | :paste_image
           | :cycle_mode
           | :toggle_notifications
+          | :tasks
 
   @typedoc """
   A key event as the table sees it: the code and the modifiers held.
@@ -240,6 +242,7 @@ defmodule Lemieux.TUI.Keys do
     {["ctrl"], "v"} => :paste_image,
     {[], "back_tab"} => :cycle_mode,
     {["shift"], "back_tab"} => :cycle_mode,
+    {[], "f6"} => :tasks,
     {["alt"], "n"} => :toggle_notifications
   }
 

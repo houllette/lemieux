@@ -150,6 +150,7 @@ jobs:
           mix test --warnings-as-errors
           test/lemieux/environment/sandbox_test.exs
           test/lemieux/environment/sandbox_*_test.exs
+          test/lemieux/tools/read_only_bash_test.exs
 
       - uses: ./.github/actions/temper
         if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}

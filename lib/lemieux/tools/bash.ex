@@ -452,6 +452,7 @@ defmodule Lemieux.Tools.Bash do
     opts = [
       supervisor: context.supervisor,
       session_id: context.session_id,
+      root_session_id: Map.get(context, :root_session_id, context.session_id),
       owner: context.session,
       command: command,
       cwd: context.cwd,

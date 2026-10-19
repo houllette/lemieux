@@ -32,6 +32,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Selection
     alias Lemieux.TUI.Status
+    alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Theme
     alias Lemieux.TUI.Width
     alias Lemieux.TUI.Window
@@ -712,15 +713,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp selected(%TUI{selection: selection}, view),
       do: Selection.highlight(selection, view, @selection_style)
 
-    defp input_widgets(state, area), do: [{input(state), area} | placeholder_widgets(state, area)]
+    defp input_widgets(state, area),
+      do: [{input(state, area.width), area} | placeholder_widgets(state, area)]
 
-    defp input(state) do
+    defp input(state, width) do
       %Textarea{
         state: state.input,
         wrap_mode: :word_or_glyph,
         cursor_style: cursor_style(state),
         block: %Block{
           title: title(state.conversation),
+          titles: TaskPanel.title(state, width),
           borders: [:all],
           border_type: :rounded
         }

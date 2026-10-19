@@ -477,7 +477,10 @@ defmodule Lemieux.Writers do
           :ok = GenServer.call(coordinator, {:writer_started, plan.id, session, id}, :infinity)
 
           with {:ok, result} <-
-                 Session.await(session, brief(plan), timeout: state.opts[:timeout_ms]),
+                 Session.await(session, brief(plan),
+                   timeout: state.opts[:timeout_ms],
+                   background: true
+                 ),
                :ok <- successful(result, options[:tools]),
                {:ok, report} <- JSON.decode(result.text),
                result = Map.put(result, :report, report),

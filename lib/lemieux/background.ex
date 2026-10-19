@@ -17,6 +17,9 @@ defmodule Lemieux.Background do
   Completed tasks remain queryable for a bounded retention period (one hour by
   default). Output capture is bounded independently of tool output: the head
   and tail are retained and the omitted byte count is explicit.
+  Each session and its delegates admit at most 256 retained commands together;
+  a full tree returns
+  `{:error, :task_limit}` before another command starts.
   """
 
   alias Lemieux.Background.Task, as: BackgroundTask
@@ -108,6 +111,44 @@ defmodule Lemieux.Background do
   def poll(supervisor \\ Sup, session_id, task_id) do
     call(supervisor, session_id, task_id, :poll)
   end
+
+  @doc "Lists at most 256 owned commands without copying their retained logs."
+  @spec list(supervisor :: atom(), session_id :: String.t()) :: [map()]
+  def list(supervisor \\ Sup, session_id) do
+    Sup.background_registry(supervisor)
+    |> Registry.select([{{{session_id, :_}, :"$1", :_}, [], [:"$1"]}])
+    |> summaries()
+  rescue
+    ArgumentError -> []
+  end
+
+  @doc "Lists a root's live commands and those of its depth-one delegates."
+  @spec list_tree(supervisor :: atom(), root_session_id :: String.t()) :: [map()]
+  def list_tree(supervisor, root_session_id) do
+    Sup.background_registry(supervisor)
+    |> Registry.select([{{{:background_root, root_session_id, :_, :_}, :"$1", :_}, [], [:"$1"]}])
+    |> summaries()
+  rescue
+    ArgumentError -> []
+  end
+
+  defp summaries(pids) do
+    pids
+    |> Enum.take(256)
+    |> Enum.flat_map(fn pid ->
+      case safe_call(pid, :summary, 1000) do
+        {:ok, task} -> [task]
+        {:error, _reason} -> []
+      end
+    end)
+    |> Enum.sort_by(& &1.started_at, :desc)
+  end
+
+  @doc "Clears a finished command's retained logs; transcript evidence is immutable."
+  @spec clear_output(supervisor :: atom(), session_id :: String.t(), task_id :: String.t()) ::
+          :ok | {:error, :running | :not_found}
+  def clear_output(supervisor \\ Sup, session_id, task_id),
+    do: call(supervisor, session_id, task_id, :clear_output)
 
   @doc """
   Waits up to `timeout_ms` for a terminal state.

@@ -150,6 +150,7 @@ defmodule Lemieux.CLI.Runtime do
   alias Lemieux.CLI.Skills
   alias Lemieux.CLI.Startup
   alias Lemieux.CLI.SystemOneCompaction
+  alias Lemieux.CLI.Watches
   alias Lemieux.Conversation.Command.Builtin
   alias Lemieux.Environment.Local
   alias Lemieux.Environment.Sandbox
@@ -201,7 +202,7 @@ defmodule Lemieux.CLI.Runtime do
   # (`lmx run`) still records the catalog before the wrappers: a wrapped tool
   # is not a name a transcript can restore, and wrapping on every resume is
   # how the wrappers come back.
-  @composition [:workspace, :loaded, :checkpoints, :host]
+  @composition [:workspace, :loaded, :checkpoints, :watches, :host]
 
   # The tools lmx adds to a new catalog. Equipment, applied only when a
   # catalog is being equipped: a resume keeps the catalog its transcript
@@ -442,6 +443,7 @@ defmodule Lemieux.CLI.Runtime do
          options:
            options
            |> authority(opts, store, provider, model, recorded, resume)
+           |> Keyword.put(:watch_host, Watches.options(options, opts))
            |> Keyword.put_new(:mcp_connect_opts, mcp_connect_opts(options, context))
            |> maybe_put_new(:input_modalities, Config.input_modalities(options.config))
        }}
@@ -473,12 +475,32 @@ defmodule Lemieux.CLI.Runtime do
     with {:ok, _supervisor} <- mount(options) do
       session_opts = [{:harness, harness} | Keyword.merge(options, overrides)]
 
-      case resume do
-        nil -> Lemieux.start_session(session_opts)
-        id -> Lemieux.resume_session([{:resume, id} | session_opts])
-      end
+      result =
+        case resume do
+          nil -> Lemieux.start_session(session_opts)
+          id -> Lemieux.resume_session([{:resume, id} | session_opts])
+        end
+
+      start_watches(result, session_opts)
     end
   end
+
+  defp start_watches({:ok, session}, opts) do
+    case Watches.start(session, opts) do
+      :ok ->
+        {:ok, session}
+
+      {:error, _reason} = error ->
+        DynamicSupervisor.terminate_child(
+          Lemieux.Supervisor.session_supervisor(opts[:supervisor]),
+          session
+        )
+
+        error
+    end
+  end
+
+  defp start_watches(error, _opts), do: error
 
   # Only what was typed on this command line asks for a workspace. Selections
   # saved in the config file (`lmx plugin install`) are standing choices, not
@@ -955,6 +977,7 @@ defmodule Lemieux.CLI.Runtime do
        |> Enum.concat(checkpoints: checkpoints(options, context))
        |> Enum.concat(capture: capture(options, context, profile?))
        |> Enum.concat(workflow: Lemieux.Extensions.Workflow)
+       |> Enum.concat(watches: Watches.spec(options, opts, profile? or elixir_profile?(elixir)))
        |> Enum.concat(
          session_summary:
            if(context.interactive? and not profile?, do: Lemieux.CLI.SessionSummary)

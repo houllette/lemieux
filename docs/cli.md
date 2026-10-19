@@ -263,6 +263,7 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 | Ctrl-R | Search input history across sessions; Enter or Tab takes an entry, Esc restores the draft |
 | Ctrl-G | Edit the draft in `$VISUAL` or `$EDITOR` (`vi` when neither is set); not on native Windows yet |
 | Ctrl-V | Attach the image on the clipboard as an `@path` reference |
+| F6, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls |
 | Ctrl-O | Page through the full output of recent tool calls (less-style keys, ←/→ between outputs, q or Esc to close) |
 | Page Up / Page Down | Scroll the transcript a page |
 | Shift-Up / Shift-Down | Scroll the transcript three rows |

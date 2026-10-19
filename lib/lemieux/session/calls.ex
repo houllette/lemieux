@@ -19,6 +19,7 @@ defmodule Lemieux.Session.Calls do
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.MCPServers
+  alias Lemieux.Session.Notification
   alias Lemieux.Session.Prompts
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Setup
@@ -68,6 +69,9 @@ defmodule Lemieux.Session.Calls do
   end
 
   def call(:id, _from, state), do: {:reply, state.id, state}
+
+  def call({:deliver_notification, event, opts}, _from, state),
+    do: Notification.deliver(state, event, opts)
 
   def call({:subscribe, subscriber}, _from, state) do
     {:reply, :ok, %{state | subscribers: Subscribers.add(state.subscribers, subscriber)}}
@@ -312,6 +316,7 @@ defmodule Lemieux.Session.Calls do
       context: context,
       context_window_known?: is_integer(state.context_window),
       ready?: state.mcp_ready?,
+      supervisor: state.supervisor,
       mcp: MCPServers.mcp_server_statuses(state)
     }
 

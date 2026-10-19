@@ -33,6 +33,44 @@ defmodule Lemieux.BackgroundTest do
     assert error.message =~ "Lemieux.Environment.local()"
   end
 
+  test "a session tree refuses commands beyond the discoverable bound before execution",
+       context do
+    owner = self()
+
+    opts = [
+      supervisor: context.runtime,
+      session_id: "parent",
+      root_session_id: "parent",
+      owner: owner,
+      command: "analysis",
+      cwd: context.tmp_dir,
+      environment: Environment.local(),
+      runner: fn _, _ ->
+        send(owner, :command_started)
+        {:ok, "done", 0}
+      end
+    ]
+
+    for _ <- 1..256 do
+      assert {:ok, id} = Background.start(opts)
+      assert_receive :command_started
+      assert {:ok, %{status: :exited}} = Background.await(context.runtime, "parent", id)
+    end
+
+    assert length(Background.list_tree(context.runtime, "parent")) == 256
+    assert {:error, :task_limit} = Background.start(Keyword.put(opts, :session_id, "delegate"))
+    refute_receive :command_started, 20
+    assert Background.list(context.runtime, "delegate") == []
+    # Another root's allowance remains independent.
+    assert {:ok, id} =
+             Background.start(
+               Keyword.merge(opts, root_session_id: "another-root", session_id: "another-root")
+             )
+
+    assert_receive :command_started
+    assert {:ok, %{status: :exited}} = Background.await(context.runtime, "another-root", id)
+  end
+
   test "starts a command, exposes live status, and awaits its completion", context do
     gate = CommandGate.new("first", "second")
 

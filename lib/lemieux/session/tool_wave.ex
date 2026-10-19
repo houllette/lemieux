@@ -291,6 +291,7 @@ defmodule Lemieux.Session.ToolWave do
       cwd: state.cwd,
       environment: state.environment,
       session_id: state.id,
+      root_session_id: state.root_session_id,
       execution: state.execution,
       tool_wave_id:
         Enum.find_value(state.reversed_entries, fn entry ->

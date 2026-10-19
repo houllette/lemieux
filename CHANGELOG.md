@@ -20,6 +20,23 @@ API.
 
 ### Features
 
+- Background commands remain part of bounded delegate, isolated-writer and
+  session-adapter assignments through completion, under their remaining limits.
+  The native Tasks view exposes their output and cancellation. Read-only
+  delegates gain sandboxed inline analysis scripts with no writable roots or
+  network; general shell authority remains host-controlled.
+
+- The native Tasks view (F6 or its clickable badge) automatically tracks
+  background commands, with live output, direct cancellation, observation
+  controls and forms for external runs. It preserves the message draft and
+  needs no task-management slash commands.
+- Session watches observe existing GitHub Actions runs, background builds and
+  host-configured status readers without model polling. Results persist,
+  queue until the owning session is idle, and admit an explicitly authorized
+  follow-up once under current permissions and remaining allowances. The
+  configured CLI mounts monitoring automatically; embedders retain lifecycle
+  and storage control. See [session watches](docs/watches.md).
+
 - Experimental preregistered five-arm qualification exercises the opt-in CLI
   learning path with causal lesson inventories, equal outer allowances,
   independent grading, original-output retention and exact promotion undo.

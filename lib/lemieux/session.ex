@@ -227,6 +227,7 @@ defmodule Lemieux.Session do
   alias Lemieux.Session.Document
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Mailbox
+  alias Lemieux.Session.Notification
   alias Lemieux.Session.Prompts
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Tool
@@ -375,6 +376,7 @@ defmodule Lemieux.Session do
           context: Context.t(),
           context_window_known?: boolean(),
           ready?: boolean(),
+          supervisor: atom(),
           mcp: [mcp_server_status()]
         }
 
@@ -1157,6 +1159,10 @@ defmodule Lemieux.Session do
       working and `{:error, :timeout}` is returned; `cancel/1` stops it.
     * `:on_event` — a one-argument function called in the caller's process
       with every event, in order, as it arrives.
+    * `:background` — `true` holds a bounded assignment open after an
+      acknowledgement of background work, waits without model polling and
+      supplies one completion batch under current policy and remaining limits.
+      Defaults to `false`; delegates and isolated writers enable this lifecycle.
 
   `{:error, :busy}` and the hook refusals are `prompt/2`'s. A session that goes
   down before the prompt finishes — or was already gone — answers
@@ -1543,6 +1549,27 @@ defmodule Lemieux.Session do
   def extension_command(session, namespace, name, args \\ "") do
     {runtime, context} = GenServer.call(session, :contribution_context)
     ContributionRuntime.command(runtime, namespace, name, args, context)
+  end
+
+  @doc """
+  Records a bounded host notification at an idle boundary, once per event id.
+
+  `event` contains string `"id"` and `"text"` fields and optional JSON evidence.
+  A busy session returns `{:error, :busy}`; the host retains and retries the
+  result. With `follow_up: true`, the host explicitly authorizes one ordinary
+  follow-up, through current prompt hooks, permissions and remaining budgets.
+  The durable receipt precedes dispatch: recovery never duplicates inference,
+  even if a crash prevented an acknowledged follow-up from starting. An event
+  already delivered in this session returns `:duplicate` on resume as well.
+  Loading receipts or recording a notification alone starts no model request.
+  Bounded hosts set `preserve_turns: true` so a completion continues the same
+  assignment's turn allowance rather than starting a fresh one.
+  """
+  @spec deliver_notification(session :: session(), event :: map(), opts :: keyword()) ::
+          :ok | :duplicate | {:error, term()}
+  def deliver_notification(session, event, opts \\ []) do
+    with :ok <- Notification.validate(event),
+         do: GenServer.call(session, {:deliver_notification, event, opts})
   end
 
   @impl GenServer

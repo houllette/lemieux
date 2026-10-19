@@ -1,8 +1,14 @@
 # Durable background jobs
 
+For CI, builds and deployments inside an ordinary conversation, use
+[session watches](watches.md). They start automatically with the equipped
+session and observe existing work without a separate jobs worker.
+
 A job has a submitted task, an inclusive allowance, a managed lifetime and
 reviewable results. Its worker owns the conversation while clients come and
-go. Start a worker, submit a bounded task, then attach when you want to watch:
+go. Owned background commands hold the attempt open until their results are
+consumed under its remaining allowance and deadline. Cancellation revokes that
+continuation. Start a worker, submit a bounded task, then attach when you want to watch:
 
 ```sh
 nohup lmx jobs serve > lmx-jobs.log 2>&1 &

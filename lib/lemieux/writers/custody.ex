@@ -1,6 +1,7 @@
 defmodule Lemieux.Writers.Custody do
   @moduledoc false
   use GenServer, restart: :temporary
+  alias Lemieux.Background.Completion
   alias Lemieux.Session
   alias Lemieux.Session.Core
   alias Lemieux.Store
@@ -132,7 +133,7 @@ defmodule Lemieux.Writers.Custody do
         {state, :ok}
 
       lease ->
-        stop_session(lease.session, state.runtime)
+        stop_session(lease.session, state.runtime, lease.session_id)
 
         outcome =
           with :ok <- preserve_work(state, id, lease),
@@ -189,14 +190,15 @@ defmodule Lemieux.Writers.Custody do
       else: reply_release(state, id, {:error, :cancelled})
   end
 
-  defp stop_session(session, runtime) when is_pid(session) do
+  defp stop_session(session, runtime, id) when is_pid(session) do
     if Process.alive?(session) do
+      Completion.cancel(runtime, id)
       cancel_busy(session)
       DynamicSupervisor.terminate_child(Sup.session_supervisor(runtime), session)
     end
   end
 
-  defp stop_session(_session, _runtime), do: :ok
+  defp stop_session(_session, _runtime, _id), do: :ok
 
   # Cleanup cannot consult an accounting snapshot after a shared ledger loss.
   # Session disappearance between the liveness check and call is a cleanup boundary.

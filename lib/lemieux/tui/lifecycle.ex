@@ -32,6 +32,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.StartupAnimation
     alias Lemieux.TUI.Submission
+    alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Transcript
     alias Lemieux.TUI.Trust
     alias Lemieux.TUI.Turn
@@ -368,6 +369,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       |> Submission.mark_steers(:not_sent)
       |> Turn.stop_processing()
       |> put_in([Access.key!(:conversation), Access.key!(:busy?)], false)
+      |> TaskPanel.disconnected()
       |> Transcript.say(
         :notice,
         "the session stopped (#{Conversation.describe(reason)}); press Enter on an empty line to resume it, or /new"
@@ -701,6 +703,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> session_view(details)
         |> MCPStatus.watch()
         |> monitor()
+        |> TaskPanel.reset(Map.get(details, :info, :unknown))
 
       state =
         if state.conversation.busy?,

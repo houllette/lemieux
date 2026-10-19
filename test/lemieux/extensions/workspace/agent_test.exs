@@ -172,11 +172,12 @@ defmodule Lemieux.Extensions.Workspace.AgentTest do
       reviewer = definitions["reviewer"]
       assert reviewer.model == "test:scout"
       assert reviewer.system_prompt == "Review."
-      assert Enum.map(reviewer.tools, &Tool.name/1) == ~w(read grep)
+      assert Enum.map(reviewer.tools, &Tool.name/1) == ~w(read grep bash)
+      assert List.last(reviewer.tools) == Lemieux.Tools.ReadOnlyBash
       assert reviewer.max_cost_usd == definitions["repository-scout"].max_cost_usd
 
       assert [notice] = notices
-      assert notice =~ "subagent reviewer: Bash, Edit are not available to read-only subagents"
+      assert notice =~ "subagent reviewer: Edit is not available to read-only subagents"
     end
 
     test "an agent naming its own model is bounded in requests" do
@@ -191,7 +192,7 @@ defmodule Lemieux.Extensions.Workspace.AgentTest do
 
     test "an agent asking only for tools it cannot have still reads" do
       {%Delegate{definitions: %{"reviewer" => reviewer}}, [_notice]} =
-        delegate_with([agent(tools: ["Bash"])])
+        delegate_with([agent(tools: ["Edit"])])
 
       assert Enum.map(reviewer.tools, &Tool.name/1) == ["read"]
     end

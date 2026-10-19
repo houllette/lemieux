@@ -488,7 +488,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
       "select_queued" => "pick a queued message",
       "revise_queued" => "edit the picked queued message",
       "unstage_queued" => "drop the picked queued message",
-      "dismiss" => "clear the input, menus and notices"
+      "dismiss" => "clear the input, menus and notices",
+      "tasks" => "open background tasks and live logs"
     }
 
     defp action_words(action),

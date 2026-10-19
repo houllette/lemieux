@@ -14,12 +14,14 @@ decides what to do with the findings.
 
 This is useful for independent repository searches, alternative explanations,
 or a clean-context review. It is intentionally not a general agent team:
-children cannot delegate, edit a checkout, run a shell, message each other,
-stay in the background, or widen the authority the host chose.
+children cannot delegate, edit a checkout, run unrestricted commands, message
+each other, outlive their bounded assignment, or widen the authority the host
+chose. Sandboxed read-only analysis commands can run in the background within
+that assignment.
 
 In `lmx`, the model gets this as the `subagents` tool, with one definition by
-default: the **repository scout**, which reads with `read`, `grep` and
-`glob`. Each scout may spend up to $3, and all of a session's scouts together
+default: the **repository scout**, which reads with `read`, `grep`, `glob`
+and sandboxed read-only `bash`. Each scout may spend up to $3, and all of a session's scouts together
 up to $9; on a route `lmx` cannot price, the bounds are 480 requests a scout
 and 2,880 for the session. `"scout_model"` in `~/.lmx/config.json` runs
 scouts on a cheaper model than the parent's, and `--no-delegate` (or
@@ -165,7 +167,13 @@ annotation is not sufficient authority.
 The bundled `read` tool also lists one directory level, with file, directory,
 and symlink markers. That small discovery surface matters for a repository
 scout: read-only authority should not force it to guess paths it has no way to
-enumerate, while a general shell would be much wider authority than it needs.
+enumerate. `Lemieux.Tools.ReadOnlyBash` also certifies read-only authority:
+it executes inline analysis scripts inside an operating-system sandbox with
+no writable workspace, cache or shared temporary directories, network or
+Unix socket access. General `Lemieux.Tools.Bash` remains outside this contract.
+An unsupported sandbox fails before executing the script. Custom environments
+must supply an enforced `read_only_commands/1` capability; remote execution
+never falls back to the local machine.
 
 The default `Lemieux.Subagent.Result` contract asks the child for an answer,
 sourced findings with confidence, content-addressed artifacts, uncertainties,
@@ -188,7 +196,7 @@ child transcript are preserved in the result's uncertainties.
 
 `Lemieux.Extensions.Delegation` — what `lmx` applies — builds the `subagents`
 tool around one definition, the repository scout. The scout reads with `read`,
-`grep` and `glob` (every one certified read-only), so it can search a tree
+`grep`, `glob` and sandboxed read-only `bash` (every one certified read-only), so it can search a tree
 rather than walk it a directory at a time. It runs on the parent's model unless
 `:scout_model` names another; a cheaper, faster model is the ordinary choice,
 since the scout reads and reports and the parent does the reasoning that
@@ -203,11 +211,25 @@ Claude-compatible subagent definitions it discovered — `.claude/agents/*.md`
 from the person's home and from the repository (the repository's wins for the
 same name), and a selected plugin's `agents/`, prefixed with the plugin's name.
 Each keeps its own description and prompt. Each is still read-only: the tools a
-file asks for that read (`Read`, `Grep`, `Glob`) are granted, and anything else
-(`Bash`, `Edit`, …) is named in a startup notice rather than granted. A
+file asks for that read (`Read`, `Grep`, `Glob`) are granted. `Bash` selects
+`Lemieux.Tools.ReadOnlyBash`; mutation tools such as `Edit` and `Write` are
+named in a startup notice rather than granted. A
 definition whose `model` is a Lemieux `provider:model` runs on that model,
 bounded in requests; Claude aliases (`sonnet`, `opus`, `haiku`) and `inherit`
 mean the scout's model and budget.
+
+### Background analysis
+
+Delegates may use `bash` with `background: true` for long inline Python or
+shell analysis, do independent reading, then yield. The bounded assignment
+waits for its commands, batches their results into one continuation and
+validates the final answer. Waiting uses no model polling or progress-judge
+requests. The original request, turn, cost and elapsed-time limits remain.
+Cancellation stops the commands and revokes the continuation.
+
+The parent's native **Tasks** view includes delegate commands with their
+owner, status and output. A person can inspect or cancel them there; the
+assignment owns completion. See [background tasks](watches.md).
 
 ## Give the model one bounded tool
 
@@ -527,6 +549,8 @@ finishes inside the budget it is given, likewise requires
 the method.
 
 Recursive delegates, sibling negotiation, consensus voting, parallel writers
-and distributed or background peers are outside the current scope.
+and independently running distributed or background peers are outside the
+delegation contract. Background commands within a bounded assignment use the
+completion lifecycle above. Isolated implementation agents use [writers](writers.md).
 Long-lived or remote workers use separate top-level sessions or the
 [A2A](a2a.md) boundary. The [roadmap](roadmap.md) lists the open directions.

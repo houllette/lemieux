@@ -6,11 +6,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
     Routes keys, pastes and drawing to whichever panel holds the keyboard.
 
     `Lemieux.TUI`'s `:modal` field names at most one: the pager, reverse
-    history search, the repository-trust question or the first-run provider
-    picker. Each lives in its own module and answers the same three
-    questions — what a key does, what a paste does, what to draw — so adding
-    one is a clause here and a module there, not another field and another
-    branch through the screen.
+    history search, native task management, the repository-trust question or
+    the first-run provider picker. Each lives in its own module and answers
+    the same three questions — what a key does, what a paste does, what to draw
+    — so adding one is a clause here and a module there, not another field
+    and another branch through the screen.
 
     Closing goes through `close/1` whichever panel it is, and that is also
     where the notice box gets its time back (`Lemieux.TUI.Notices.resume/1`):
@@ -45,6 +45,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def close(state), do: Notices.resume(%{state | modal: nil})
 
     defp module(:pager), do: Pager
+    defp module(:tasks), do: Lemieux.TUI.TaskPanel
     defp module(:diff), do: Lemieux.TUI.DiffPanel
     defp module(:history_search), do: HistorySearch
     defp module(:trust), do: Trust

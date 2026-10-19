@@ -12,6 +12,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Selection
+    alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Transcript
     alias Lemieux.TUI.Window
 
@@ -60,6 +61,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # of is a bad trade however good the scrolling is.
     def mouse(%ExRatatui.Event.Mouse{kind: "down", button: "left"} = event, state) do
       cond do
+        TaskPanel.badge_at?(state, event) ->
+          {:noreply, TaskPanel.open(state)}
+
         scrollback_marker_at?(state, event) ->
           {:noreply, %{state | scroll: 0, selection: nil}}
 

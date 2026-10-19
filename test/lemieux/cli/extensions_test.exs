@@ -163,6 +163,7 @@ defmodule Lemieux.CLI.ExtensionsTest do
                "Lemieux.Extensions.Delegation",
                inspect(module),
                "Lemieux.Extensions.Workflow",
+               "Lemieux.Extensions.Watches",
                "Lemieux.CLI.ExtensionsTest.HostAudit"
              ]
 
@@ -223,7 +224,8 @@ defmodule Lemieux.CLI.ExtensionsTest do
                "Lemieux.Extensions.Delegation",
                inspect(second_module),
                inspect(first_module),
-               "Lemieux.Extensions.Workflow"
+               "Lemieux.Extensions.Workflow",
+               "Lemieux.Extensions.Watches"
              ]
 
       assert Enum.map(prepared.harness.harness_context["extensions"]["loaded"], & &1["name"]) ==
@@ -441,7 +443,8 @@ defmodule Lemieux.CLI.ExtensionsTest do
                inspect(typed),
                "Lemieux.Extensions.Checkpoints",
                "Lemieux.Extensions.Capture",
-               "Lemieux.Extensions.Workflow"
+               "Lemieux.Extensions.Workflow",
+               "Lemieux.Extensions.Watches"
              ]
     end
 
@@ -479,7 +482,8 @@ defmodule Lemieux.CLI.ExtensionsTest do
                inspect(module),
                "Lemieux.Extensions.Checkpoints",
                "Lemieux.Extensions.Capture",
-               "Lemieux.Extensions.Workflow"
+               "Lemieux.Extensions.Workflow",
+               "Lemieux.Extensions.Watches"
              ]
     end
 

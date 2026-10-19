@@ -259,11 +259,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     (`Lemieux.TUI.PlanPanel`), requests against the cap, the sandbox, the
     host's trust and first-run offers (`Lemieux.TUI.Trust`,
     `Lemieux.TUI.FirstRun`), recent full tool outputs (`Lemieux.TUI.Pager`),
-    and whether the host earned the permissions banner
-    (`Lemieux.TUI.Policy`). One field, because `/new` and `/resume` replace
-    all of it together.
+    cached native task metadata (`Lemieux.TUI.TaskPanel`), and whether the
+    host earned the permissions banner (`Lemieux.TUI.Policy`). One field,
+    because `/new` and `/resume` replace all of it together.
     """
     @type session_view :: %{
+            optional(:tasks) => map(),
             mcp: %{optional(String.t()) => map()},
             mcp_ready?: boolean(),
             mcp_announced?: boolean(),

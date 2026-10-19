@@ -68,6 +68,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp sync_event(state, {:tools_changed, _old, names}), do: Choices.elixir_mode(state, names)
 
+    defp sync_event(state, {:entry, %{type: :user, payload: %{"source" => "notification"}}}),
+      do: Turn.start_processing(state)
+
     defp sync_event(state, {:tool_access_changed, _action, _names, local_names}) do
       state
       |> Choices.elixir_mode(local_names)
@@ -456,6 +459,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
            :run_evidence_failed,
            "this turn's run record could not be written: #{inspect(reason)}"
          ), effects}
+
+    defp present_event(
+           state,
+           {:entry,
+            %{
+              type: :extension_state,
+              payload: %{"namespace" => "lemieux.notification", "value" => value}
+            }},
+           effects
+         ) do
+      {voice, text} = TranscriptPresentation.notification(value)
+      state = state |> Transcript.say(voice, text) |> Notify.result()
+      {state, effects}
+    end
 
     defp present_event(state, {:entry, %{type: :extension_state} = entry}, effects),
       do: {PlanPanel.observe(state, entry), effects}

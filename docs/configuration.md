@@ -415,6 +415,17 @@ Capture's object form accepts `enabled`, `max_input_bytes` (up to 1 MiB),
 limits must be positive. The defaults and retention behavior are described in
 [Ordinary-session capture](harness-learning.md#ordinary-session-capture).
 
+### Watching external work
+
+`watches` defaults to automatic, notification-only background observation.
+F6 or the clickable Tasks badge opens native status, log and process controls.
+Hermetic sessions use volatile observation without a personal journal.
+Set it to `false` to disable observation and external registration, or
+`{"follow_up":true}` to permit the model to request one follow-up per watch.
+`sources` maps personal source names to fixed status-reader command strings.
+See [session watches](watches.md) for registration, current authorization,
+recovery, bounds and the status-reader protocol.
+
 ### Checks after edits
 
 After a turn that edited files, `lmx` runs the project's own check and sends a

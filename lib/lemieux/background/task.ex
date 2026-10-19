@@ -52,6 +52,39 @@ defmodule Lemieux.Background.Task do
 
   @impl GenServer
   def init(opts) do
+    case claim_slot(opts) do
+      :ok -> init_task(opts)
+      {:error, reason} -> {:stop, reason}
+    end
+  end
+
+  # The same bound as discovery and completion batches. Without admission,
+  # a host could enumerate 256 commands and accidentally settle while a 257th
+  # kept running. Registry ownership releases the slot even after a crash.
+  defp claim_slot(opts) do
+    Enum.find_value(0..255, fn slot ->
+      case Registry.register(
+             Sup.background_registry(opts[:supervisor]),
+             {:background_slot, Keyword.get(opts, :root_session_id, opts[:session_id]), slot},
+             nil
+           ) do
+        {:ok, _} -> :ok
+        {:error, {:already_registered, _}} -> nil
+      end
+    end) || {:error, :task_limit}
+  end
+
+  defp init_task(opts) do
+    # A live index, separate from transcript lineage: the native task view can
+    # find a root's delegated commands without copying its whole history.
+    {:ok, _} =
+      Registry.register(
+        Sup.background_registry(opts[:supervisor]),
+        {:background_root, Keyword.get(opts, :root_session_id, opts[:session_id]),
+         opts[:session_id], opts[:id]},
+        nil
+      )
+
     owner_ref =
       case Keyword.get(opts, :owner) do
         owner when is_pid(owner) -> Process.monitor(owner)
@@ -106,6 +139,15 @@ defmodule Lemieux.Background.Task do
 
   @impl GenServer
   def handle_call(:poll, _from, state), do: {:reply, {:ok, snapshot(state)}, state}
+
+  def handle_call(:summary, _from, state),
+    do: {:reply, {:ok, state |> snapshot(false)}, state}
+
+  def handle_call(:clear_output, _from, %{status: :running} = state),
+    do: {:reply, {:error, :running}, state}
+
+  def handle_call(:clear_output, _from, state),
+    do: {:reply, :ok, %{state | output_head: "", output_tail: "", output_bytes: 0}}
 
   def handle_call({:subscribe, subscriber}, _from, %{status: status} = state)
       when status in @terminal do
@@ -389,14 +431,14 @@ defmodule Lemieux.Background.Task do
     :exit, _reason -> nil
   end
 
-  defp snapshot(state) do
+  defp snapshot(state, include_output? \\ true) do
     %{
       id: state.id,
       session_id: state.session_id,
       command: state.command,
       status: state.status,
       exit_status: state.exit_status,
-      output: output(state),
+      output: if(include_output?, do: output(state), else: ""),
       output_bytes: state.output_bytes,
       error: state.error,
       started_at: state.started_at,

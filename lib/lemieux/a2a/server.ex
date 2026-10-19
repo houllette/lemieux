@@ -21,6 +21,11 @@ defmodule Lemieux.A2A.Server do
   not create spend room. Dollar budgets retain the session's unknown-price
   refusal. Usage is informational and never subscription billing.
 
+  Host-selected read-only tools may start owned background work. A normal
+  model stop waits for its completion, then resumes under the same reserved
+  request allowance and deadline. Cancellation revokes that continuation.
+  This does not grant shell access or broaden `Policy`'s exported data scope.
+
   HTTP hosts must authenticate before calling Handler and supply an opaque,
   stable `:principal`. Tasks are visible only to their owner. Distribution is
   a trusted runtime domain: cookie peers can execute arbitrary BEAM RPC, so
@@ -41,6 +46,7 @@ defmodule Lemieux.A2A.Server do
 
   alias Lemieux.A2A.{Card, Journal, JSONRPC, Message, Policy, Skill}
   alias Lemieux.A2A.Task, as: A2ATask
+  alias Lemieux.Background.Completion
   alias Lemieux.Checkpoint.Git
   alias Lemieux.{Session, Usage}
   alias Lemieux.Tools.AskUser.Questionnaire
@@ -344,7 +350,8 @@ defmodule Lemieux.A2A.Server do
         }
 
         monitor = Process.monitor(session)
-        guard = guard_session(self(), session)
+        runtime = Keyword.get(state.session_opts, :supervisor, Lemieux.Supervisor)
+        guard = guard_session(self(), session, runtime, id)
 
         timer =
           Process.send_after(self(), {:deadline, id}, limit(state, :task_timeout_ms, 180_000))
@@ -352,6 +359,7 @@ defmodule Lemieux.A2A.Server do
         tracked = %{
           task: task,
           session: session,
+          runtime: runtime,
           from: wait_for(config, from),
           owner: principal(opts),
           awaiting: nil,
@@ -536,6 +544,21 @@ defmodule Lemieux.A2A.Server do
     end
   end
 
+  def handle_info({:lemieux, id, {:finished, :stop}}, state) do
+    case state.tasks[id] do
+      %{session: session} when is_pid(session) ->
+        if Completion.settle(session) == :waiting,
+          do: {:noreply, state},
+          else: {:noreply, finish(state, id, :completed, nil)}
+
+      _finished_or_unknown ->
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:background_cancelled, id}, state),
+    do: {:noreply, finish(state, id, :canceled, "Background command canceled")}
+
   def handle_info({:lemieux, id, {:finished, reason}}, state),
     do:
       {:noreply,
@@ -543,7 +566,7 @@ defmodule Lemieux.A2A.Server do
          state,
          id,
          A2ATask.from_finish(reason),
-         if(reason == :stop, do: nil, else: "Task stopped: #{inspect(reason)}")
+         "Task stopped: #{inspect(reason)}"
        )}
 
   def handle_info({:deadline, id}, state),
@@ -615,14 +638,15 @@ defmodule Lemieux.A2A.Server do
     if tracked.timer, do: Process.cancel_timer(tracked.timer)
     if tracked.monitor, do: Process.demonitor(tracked.monitor, [:flush])
     Enum.each(tracked.watchers, fn {ref, _} -> Process.demonitor(ref, [:flush]) end)
-    stop_session(session)
+    stop_session(session, tracked.runtime, tracked.task.id)
     if tracked.guard, do: send(tracked.guard, :release)
   end
 
   defp cleanup(_tracked), do: :ok
 
-  defp stop_session(session) do
+  defp stop_session(session, runtime, id) do
     if Process.alive?(session) do
+      Completion.cancel(runtime, id)
       Session.cancel(session)
       GenServer.stop(session, :normal)
     end
@@ -630,13 +654,13 @@ defmodule Lemieux.A2A.Server do
     :exit, _ -> :ok
   end
 
-  defp guard_session(server, session) do
+  defp guard_session(server, session, runtime, id) do
     spawn(fn ->
       ref = Process.monitor(server)
 
       receive do
         :release -> Process.demonitor(ref, [:flush])
-        {:DOWN, ^ref, :process, ^server, _reason} -> stop_session(session)
+        {:DOWN, ^ref, :process, ^server, _reason} -> stop_session(session, runtime, id)
       end
     end)
   end

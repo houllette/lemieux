@@ -19,6 +19,7 @@ defmodule Lemieux.Environment.Sandbox.Bubblewrap do
   """
 
   alias Lemieux.Environment.Sandbox
+  alias Lemieux.Environment.Sandbox.ReadOnlyLinux
 
   @doc "The shell command that runs `command` under `bwrap` from `cwd`."
   @spec wrap(sandbox :: Sandbox.t(), command :: String.t(), cwd :: Path.t()) :: String.t()
@@ -34,15 +35,20 @@ defmodule Lemieux.Environment.Sandbox.Bubblewrap do
   @spec arguments(sandbox :: Sandbox.t(), cwd :: Path.t(), command :: String.t()) :: [String.t()]
   def arguments(%Sandbox{} = sandbox, cwd, command) do
     root = Sandbox.real(cwd)
-    roots = Enum.uniq([root | sandbox.writable])
+    roots = if sandbox.read_only, do: [], else: Enum.uniq([root | sandbox.writable])
 
     List.flatten([
       ["--die-with-parent", "--unshare-pid", "--new-session"],
+      if(sandbox.read_only, do: ["--unshare-ipc", "--cap-drop", "ALL"], else: []),
       ["--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc"],
       Enum.map(roots, &["--bind", &1, &1]),
       Enum.map(sandbox.hidden, &hide/1),
       if(sandbox.network, do: [], else: ["--unshare-net"]),
-      ["--chdir", root, "--", sandbox.shell, "-c", command]
+      ["--chdir", root, "--"],
+      if(sandbox.read_only,
+        do: ReadOnlyLinux.arguments(sandbox.shell, command),
+        else: [sandbox.shell, "-c", command]
+      )
     ])
   end
 

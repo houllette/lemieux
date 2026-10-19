@@ -3,6 +3,7 @@ defmodule Lemieux.Writers.Scoped do
   @behaviour Lemieux.Environment
   alias Lemieux.Checkpoint.Git
   alias Lemieux.Environment
+  alias Lemieux.Tools.ReadOnlyBash
   alias Lemieux.Writers.Plan
 
   @impl true
@@ -13,6 +14,11 @@ defmodule Lemieux.Writers.Scoped do
   def stream_file(state, cwd, path), do: Environment.stream_file(state.environment, cwd, path)
   @impl true
   def credentials(state), do: Environment.credentials(state.environment)
+
+  @doc "Read-only scripts stay confined when arbitrary commands are not granted."
+  @spec read_only_commands(state :: map()) :: {:ok, Environment.t()} | {:error, String.t()}
+  @impl true
+  def read_only_commands(state), do: ReadOnlyBash.environment(state.environment)
 
   @impl true
   def write_file(state, cwd, path, content) do

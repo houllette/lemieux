@@ -62,6 +62,8 @@ defmodule Lemieux.Subagent.Group do
 
   use GenServer, restart: :temporary
 
+  alias Lemieux.Background
+  alias Lemieux.Background.Completion
   alias Lemieux.Clock
   alias Lemieux.OpenTelemetry
   alias Lemieux.Progress
@@ -517,6 +519,11 @@ defmodule Lemieux.Subagent.Group do
     {:noreply, fail_child(state, child_id, {:prompt_failed, reason})}
   end
 
+  def handle_info({:background_cancelled, child_id}, state) do
+    Completion.cancel(state.supervisor, child_id)
+    {:noreply, finish_from_session(state, child_id, :cancelled)}
+  end
+
   def handle_info({:lemieux, child_id, event}, state) do
     state = publish_child_event(state, child_id, event)
 
@@ -536,7 +543,7 @@ defmodule Lemieux.Subagent.Group do
       %{status: :running, cancel_status: nil} = child ->
         if Clock.now_ms(state.clock) >= child.deadline_at,
           do: {:noreply, begin_cancel(state, [child], :timeout, :child_deadline, nil)},
-          else: {:noreply, begin_check(state, child)}
+          else: {:noreply, check_background(state, child)}
 
       _cancelling_terminal_or_unknown ->
         {:noreply, state}
@@ -853,6 +860,7 @@ defmodule Lemieux.Subagent.Group do
     group = self()
 
     Task.Supervisor.start_child(Sup.task_supervisor(state.supervisor), fn ->
+      Completion.cancel(state.supervisor, child.id)
       # The child's own status is the cancellation reason the session records; the
       # caller's reason travels beside it in the envelope, because a session's stop
       # reasons are a closed vocabulary and a host's are not. A stall is the exception:
@@ -940,6 +948,24 @@ defmodule Lemieux.Subagent.Group do
       end
 
     %{child | timer: Clock.send_after(state.clock, self(), {:child_clock, child.id}, delay)}
+  end
+
+  defp check_background(state, child) do
+    if Enum.any?(Background.list(state.supervisor, child.id), &(&1.status == :running)) do
+      child = %{child | checks: child.checks + 1} |> arm_clock(state)
+      state = put_in(state.children[child.id], child)
+
+      publish(state, :child_assessed, %{
+        "child_id" => child.id,
+        "outcome" => "progressing",
+        "by" => "activity",
+        "note" => "Waiting for an owned background command; the hard deadline still applies.",
+        "elapsed_ms" => Clock.now_ms(state.clock) - child.started_at,
+        "checks" => child.checks
+      })
+    else
+      begin_check(state, child)
+    end
   end
 
   defp begin_check(state, child) do
@@ -1051,11 +1077,16 @@ defmodule Lemieux.Subagent.Group do
         state
 
       %{session: session} = child ->
-        entries = Session.snapshot(session).entries
-        # A session that was asked to stop reports `:cancelled` whatever the
-        # reason was, so the status the group asked for wins over the one the
-        # session reports: a child killed by its own deadline is a timeout.
-        complete_child(state, child, child.cancel_status || terminal_status(reason), entries)
+        if reason == :stop and child.cancel_status == nil and
+             Completion.settle(session) == :waiting do
+          state
+        else
+          entries = Session.snapshot(session).entries
+          # A session that was asked to stop reports `:cancelled` whatever the
+          # reason was, so the status the group asked for wins over the one the
+          # session reports: a child killed by its own deadline is a timeout.
+          complete_child(state, child, child.cancel_status || terminal_status(reason), entries)
+        end
 
       nil ->
         state
@@ -1080,6 +1111,7 @@ defmodule Lemieux.Subagent.Group do
   end
 
   defp complete_child(state, child, status, entries, reason \\ nil) do
+    Completion.cancel(state.supervisor, child.id)
     OpenTelemetry.drop_prompt_parent(child.id)
     cancel_timer(state, child.timer)
     if child.monitor, do: Process.demonitor(child.monitor, [:flush])
@@ -1307,7 +1339,7 @@ defmodule Lemieux.Subagent.Group do
 
     [
       "You are a depth-one delegated investigator. The parent owns the decision and every write.",
-      "Use only the supplied read-only tools. Do not attempt to delegate, modify files, run shell commands, or mutate an external system.",
+      "Use only the supplied read-only tools. Do not attempt to delegate, modify repository files, or mutate an external system. If read-only bash is supplied, run analysis scripts inline within its enforced sandbox. For long scripts use background true, do independent reading, then yield; the host waits for completion without model polling.",
       "Your context is fresh by design. Treat the explicit brief, policy, snapshot, and references as complete; report uncertainty instead of inventing missing parent context.",
       definition.system_prompt,
       "Definition id: #{definition.id}",
