@@ -33,9 +33,7 @@ defmodule Lemieux.MixProjectTest do
 
     assert Lemieux.MixProject.cli()[:preferred_envs][:"test.cover"] == :test
 
-    for workflow <- ["ci", "nightly"] do
-      assert File.read!(".github/workflows/#{workflow}.yml") =~ "run: mix test.cover"
-    end
+    assert File.read!(".github/workflows/ci.yml") =~ "run: mix test.cover"
   end
 
   test "a coverage failure stops the gate even when every test passes", %{tmp_dir: tmp_dir} do

@@ -232,9 +232,9 @@ real timers in tests whose assertion is specifically about a deadline.
 
 `mise exec -- mix test.cover` must
 reach **85% executable-line coverage**. CI runs a separate coverage job on
-every pull request and push to main, and nightly repeats that check. The
-local `precommit` and `ci` gates run that same alias in a separate VM. The
-ordinary suite stays uninstrumented for comparable timing and flake evidence.
+every pull request and push to main. The local `precommit` and `ci` gates
+run that same alias in a separate VM. The ordinary suite stays uninstrumented
+for comparable timing and flake evidence.
 On macOS, raise the file-descriptor limit as described above before covering
 the suite. Coverage does not establish that an assertion detects a bug or
 that a scripted provider behaves like a hosted model.
@@ -305,11 +305,10 @@ attributing them to the change under review. Reproduce a failing seed with
 the original test selection and concurrency, then replace timer sleeps with
 event synchronization or fix ownership and cleanup as appropriate.
 
-CI's pinned and floor root suites, nightly macOS and coverage suites, and
-nightly three-order Linux run restore and save history per job, toolchain,
-and Git ref. The nightly run varies its starting seed by workflow run number.
-Rerun attempts use distinct cache keys, and failed runs save
-their evidence too. Each job publishes a summary and a `temper-*` artifact
+CI's pinned and floor root suites and coverage suite restore and save
+history per job, toolchain, and Git ref. Rerun attempts use distinct cache
+keys, and failed runs save their evidence too. Each job publishes a summary
+and a `temper-*` artifact
 with history, a doctor check, and human/JSON reports. Recording setup is
 checked; findings are advisory and do not bypass failing tests. Retention
 keeps the last 10 observed commits from 14 days, and artifacts last 14 days.
@@ -411,10 +410,10 @@ git push --force-with-lease
 | Commit identities | a noreply address on every new commit |
 | Secret scan (full history) | gitleaks over every reachable commit, pull-request heads included |
 
-Pull requests from forks get a read-only token and no secrets. Scheduled
-workflows run the suite on macOS and repeat the coverage check (`nightly.yml`),
-and run the recorded offline evaluation (`eval.yml`). These scheduled
-workflows do not run on pull requests; CI's coverage job does.
+Pull requests from forks get a read-only token and no secrets. The scheduled
+`eval.yml` workflow runs the recorded offline evaluation; it does not run on
+pull requests. Run the suite locally on macOS when changing process control
+or the terminal.
 
 `mix precommit.full` runs most of this on your machine: `mix precommit`, the
 multi-node suite, the package check, every example and the Python tests. It
