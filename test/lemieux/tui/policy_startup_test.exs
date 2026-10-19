@@ -11,11 +11,14 @@ defmodule Lemieux.TUI.PolicyStartupTest do
   alias Lemieux.TUI
   alias Lemieux.TUI.Notices
   alias Lemieux.TUI.Policy
+  alias LemieuxTest.ScriptedEnvironment
 
   @moduletag :tmp_dir
 
   @undo_notice "/undo covers file-tool edits only here: not a git repository, " <>
                  "so what commands change is not recorded"
+  @environment_notice "/undo covers file-tool edits only here: command snapshots require a " <>
+                        "workspace on the host, so what commands change is not recorded"
 
   setup %{tmp_dir: tmp_dir} do
     outside = Path.join(System.tmp_dir!(), "lmx-policy-#{System.unique_integer([:positive])}")
@@ -71,6 +74,35 @@ defmodule Lemieux.TUI.PolicyStartupTest do
       state = started(checkpoints: context.checkpoints, cwd: context.repo)
 
       assert texts(state) == ["full auto: tools run without asking · commands are not sandboxed"]
+    end
+
+    test "a custom environment says snapshots need a host workspace, regardless of the host path",
+         context do
+      for cwd <- [Path.join(context.outside, "remote-only"), context.repo],
+          environment <- [ScriptedEnvironment, {ScriptedEnvironment, []}] do
+        state = started(checkpoints: context.checkpoints, cwd: cwd, environment: environment)
+
+        assert @environment_notice in texts(state)
+        refute Enum.any?(texts(state), &(&1 =~ "not a git repository"))
+      end
+    end
+
+    test "a resumed remote session keeps the environment's undo scope", context do
+      cwd = Path.join(context.outside, "remote-only")
+      resumed = %{snapshot("01REMOTE", [Entry.new(:user, %{"text" => "continue"})]) | cwd: cwd}
+      session = fake_session(resumed)
+
+      assert {:ok, state} =
+               TUI.mount(
+                 test_mode: {80, 24},
+                 start: fn -> {:ok, session} end,
+                 environment: {ScriptedEnvironment, []},
+                 checkpoints: context.checkpoints,
+                 permissions: nil
+               )
+
+      assert state.references.cwd == cwd
+      assert @environment_notice in texts(state)
     end
 
     test "with checkpoints off /undo covers nothing, and this notice does not claim it does",

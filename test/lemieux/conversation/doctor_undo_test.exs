@@ -6,11 +6,14 @@ defmodule Lemieux.Conversation.DoctorUndoTest do
 
   alias Lemieux.Conversation.Dispatch
   alias Lemieux.Conversation.Doctor
+  alias Lemieux.Environment.Local
+  alias Lemieux.Environment.Sandbox
   alias Lemieux.Extensions.Checkpoints
   alias Lemieux.Harness
   alias Lemieux.Providers.Scripted
   alias Lemieux.Store.JSONL
   alias Lemieux.Tools
+  alias LemieuxTest.ScriptedEnvironment
 
   @moduletag :tmp_dir
 
@@ -88,6 +91,40 @@ defmodule Lemieux.Conversation.DoctorUndoTest do
     end
   end
 
+  describe "undo_coverage/2" do
+    test "local credential policies and local sandboxes retain git coverage", context do
+      local = Local.new(credentials: {:scrub, []})
+
+      sandbox =
+        {Sandbox,
+         %Sandbox{backend: :seatbelt, executable: "/unused", shell: "/bin/sh", inner: local}}
+
+      for environment <- [nil, Local, local, sandbox] do
+        assert Doctor.undo_coverage(context.repo, environment: environment) == :commands
+
+        assert Doctor.undo_coverage(context.outside, environment: environment) ==
+                 {:file_tools, "not a git repository"}
+      end
+    end
+
+    test "custom environments never probe a host repository, even through a sandbox", context do
+      remote = {ScriptedEnvironment, []}
+
+      sandbox =
+        {Sandbox,
+         %Sandbox{backend: :seatbelt, executable: "/unused", shell: "/bin/sh", inner: remote}}
+
+      for environment <- [ScriptedEnvironment, remote, sandbox] do
+        assert Doctor.undo_coverage(context.repo, environment: environment, timeout_ms: 0) ==
+                 {:file_tools, "command snapshots require a workspace on the host"}
+
+        assert Doctor.undo_notice(context.repo, environment: environment) ==
+                 "/undo covers file-tool edits only here: command snapshots require a " <>
+                   "workspace on the host, so what commands change is not recorded"
+      end
+    end
+  end
+
   describe "undo_notice/1" do
     test "says once what /undo covers where commands are not recorded", context do
       assert Doctor.undo_notice(context.outside) ==
@@ -138,6 +175,17 @@ defmodule Lemieux.Conversation.DoctorUndoTest do
                Doctor.gather(host(nil, checkpoints: context.checkpoints, cwd: context.repo))
 
       assert %{undo: nil} = Doctor.gather(host(nil, checkpoints: nil, cwd: context.outside))
+    end
+
+    test "a custom environment cannot claim coverage from a repository on the host", context do
+      assert %{undo: {:file_tools, "command snapshots require a workspace on the host"}} =
+               Doctor.gather(
+                 host(nil,
+                   checkpoints: context.checkpoints,
+                   cwd: context.repo,
+                   environment: {ScriptedEnvironment, []}
+                 )
+               )
     end
 
     # The extension's own description, which the session keeps, says whether
