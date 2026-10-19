@@ -168,7 +168,8 @@ defmodule Lemieux.TUI.TaskPanelTest do
              _other -> false
            end)
 
-    refute screen(state) =~ "printf READY; sleep 60"
+    assert screen(state) =~ "printf READY; sleep 60"
+    assert screen(state) =~ "v Expand command"
     state = press(state, "v")
     assert screen(state) =~ "printf READY; sleep 60"
     assert screen(state) =~ "Command · full shell source"
@@ -261,6 +262,90 @@ defmodule Lemieux.TUI.TaskPanelTest do
              switched
 
     assert TaskPanel.tick(switched, ctx.session, old.timer) == switched
+  end
+
+  test "switching tasks shows the selected command immediately and fences late output", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    first = TaskPanel.cache(state).detail
+
+    second = %{
+      first
+      | id: "task:second",
+        name: "wayne-gretzky",
+        command: "printf SECOND",
+        logs: ""
+    }
+
+    state = put_in(state.session_view.tasks.rows, [first, second])
+    state = state |> press("v") |> press("tab") |> press("down")
+    pending = TaskPanel.cache(state)
+    assert pending.detail.id == second.id
+    assert screen(state) =~ "printf SECOND"
+    refute screen(state) =~ "printf READY; sleep 60"
+    state = press(state, "up")
+    assert TaskPanel.cache(state).detail.id == first.id
+    assert TaskPanel.cache(state).detail.logs == first.logs
+
+    assert TaskPanel.answer(
+             state,
+             ctx.session,
+             pending.token,
+             :snapshot,
+             {:ok, %{rows: [first, second], selected: second.id, detail: second}}
+           ) == state
+
+    loaded(state)
+    assert :ok = Tasks.action(ctx.session, first.id, :cancel)
+  end
+
+  test "successive long and short task frames repaint without leftover cells", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    detail = TaskPanel.cache(state).detail
+    cells = ExRatatui.CellSession.new(80, 24)
+    on_exit(fn -> ExRatatui.CellSession.close(cells) end)
+
+    for {command, logs} <- [
+          {String.duplicate("printf '長い command'; ", 50), String.duplicate("old output\n", 100)},
+          {"printf NEW", "new"},
+          {"sleep 30", ""}
+        ],
+        content <- ["v", "l"] do
+      updated = %{detail | command: command, logs: logs}
+      next = put_in(state.session_view.tasks.detail, updated) |> press(content)
+      widgets = TUI.render(next, %Frame{width: 80, height: 24})
+      :ok = ExRatatui.CellSession.draw(cells, widgets)
+      actual = ExRatatui.CellSession.take_cells(cells).cells
+      fresh = ExRatatui.CellSession.new(80, 24)
+      :ok = ExRatatui.CellSession.draw(fresh, widgets)
+      assert actual == ExRatatui.CellSession.take_cells(fresh).cells
+      :ok = ExRatatui.CellSession.close(fresh)
+    end
+
+    assert :ok = Tasks.action(ctx.session, detail.id, :cancel)
+  end
+
+  test "expanded commands scroll through the complete source and return to output", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    command = Enum.map_join(1..40, "\n", &"printf STEP_#{&1}") <> "\nprintf SOURCE_END"
+    state = put_in(state.session_view.tasks.detail.command, command)
+    refute painted(state) =~ "SOURCE_END"
+    state = press(state, "v")
+    assert painted(state) =~ "STEP_1"
+    refute painted(state) =~ "SOURCE_END"
+    state = press(state, "end")
+    assert painted(state) =~ "SOURCE_END"
+    state = press(state, "l")
+    assert painted(state) =~ "Output"
+    refute painted(state) =~ "SOURCE_END"
+    assert :ok = Tasks.action(ctx.session, TaskPanel.cache(state).detail.id, :cancel)
+  end
+
+  defp painted(state) do
+    cells = ExRatatui.CellSession.new(80, 24)
+    :ok = ExRatatui.CellSession.draw(cells, TUI.render(state, %Frame{width: 80, height: 24}))
+    text = ExRatatui.CellSession.take_cells(cells).cells |> Enum.map_join(& &1.symbol)
+    :ok = ExRatatui.CellSession.close(cells)
+    text
   end
 
   test "list, logs and form geometry remain inside small and resized terminals", ctx do

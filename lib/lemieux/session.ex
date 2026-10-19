@@ -1567,6 +1567,10 @@ defmodule Lemieux.Session do
   256 component identities. The single transcript receipt deduplicates each
   component across recovery; a mixture of seen and new identities returns
   `{:error, :partial_duplicate}` for the host to reconcile before dispatch.
+  A successful tool result may acknowledge already collected event identities
+  through `metadata["notification_receipt_ids"]`. Those durable acknowledgements
+  also return `:duplicate`, atomically with delivery admission. Inspecting a
+  result through a host UI alone does not acknowledge it to the model.
   """
   @spec deliver_notification(session :: session(), event :: map(), opts :: keyword()) ::
           :ok | :duplicate | {:error, term()}

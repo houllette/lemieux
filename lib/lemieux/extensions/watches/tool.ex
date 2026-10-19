@@ -126,8 +126,19 @@ defmodule Lemieux.Extensions.Watches.Tool do
     |> Enum.join("\n")
   end
 
-  defp result({:ok, value}),
-    do: {:ok, Result.new(format(value), structured_content: %{"watch" => value})}
+  defp result({:ok, value}) do
+    receipts =
+      value
+      |> List.wrap()
+      |> Enum.filter(&(&1["status"] != "watching" and is_map(&1["result"])))
+      |> Enum.map(& &1["id"])
+
+    {:ok,
+     Result.new(format(value),
+       structured_content: %{"watch" => value},
+       metadata: %{"notification_receipt_ids" => receipts}
+     )}
+  end
 
   defp result({:error, reason}), do: {:error, inspect(reason)}
 end

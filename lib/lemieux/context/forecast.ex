@@ -66,8 +66,13 @@ defmodule Lemieux.Context.Forecast do
   defp last_measured_request(entries, %Context{current: current}) do
     tokens = current.input + current.cached + current.cache_write
 
+    # Context.position excludes auxiliary title/guidance usage. Pair its token
+    # count with that same conversation response: using a tiny title request's
+    # byte count can turn a 20k conversation into a 500k forecast.
     with %Entry{usage: %{"request_id" => id}} <-
-           Enum.find(Enum.reverse(entries), &is_map(&1.usage)),
+           Enum.find(Enum.reverse(entries), fn entry ->
+             entry.type not in [:guidance, :extension_state] and is_map(entry.usage)
+           end),
          %Entry{payload: %{"input_bytes" => bytes}} <-
            Enum.find(Enum.reverse(entries), &(&1.type == :request and &1.payload["id"] == id)),
          true <- is_integer(bytes) and bytes > 0 and tokens > 0 do

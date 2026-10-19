@@ -308,7 +308,7 @@ defmodule Lemieux.ConfigurationTest do
       tools = configured(context, ["--no-delegate"])
       assert Enum.map(tools, &without_tracking/1) == @lmx_catalog
 
-      assert %Lemieux.Tool.Override{tool: Tools.Bash, digest: "lemieux-native-background-v1"} =
+      assert %Lemieux.Tool.Override{tool: Tools.Bash, digest: "lemieux-native-background-v2"} =
                Enum.find(tools, &(Lemieux.Tool.name(&1) == "bash"))
 
       refute "subagents" in Enum.map(tools, &Lemieux.Tool.name/1)
@@ -456,7 +456,7 @@ defmodule Lemieux.ConfigurationTest do
 
   defp without_tracking(%Lemieux.Tool.Override{
          tool: tool,
-         digest: "lemieux-native-background-v1"
+         digest: "lemieux-native-background-v2"
        }),
        do: tool
 

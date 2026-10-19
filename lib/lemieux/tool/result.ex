@@ -13,6 +13,11 @@ defmodule Lemieux.Tool.Result do
   contract without creating a second dispatch path.
   Errors may carry the same structured result as `{:error, result}`.
 
+  A host tool that returns a previously queued notification's complete result
+  may set `metadata["notification_receipt_ids"]` to those event identities.
+  Successful recorded results acknowledge delivery without another notification
+  or model turn; failed calls and UI-only inspections do not.
+
   ## Attachments
 
   `attachments` are images and documents the model is shown beside

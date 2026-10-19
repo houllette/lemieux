@@ -8,7 +8,8 @@ with its command, elapsed time and output together. Pausing and resuming trackin
 keeps its observation history inside that activity's details.
 Background commands receive collision-safe hockey-player names. The model supplies
 a one-line purpose summary when launching a task; chat shows the name and summary
-instead of shell source or internal task IDs. F6 retains the full command.
+instead of shell source or internal task IDs. F6 shows a command preview above
+live output; **Expand command** opens the complete, scrollable shell source.
 Task controls accept the player name as well as the internal ID, while keeping
 the same session ownership checks.
 There is no task-management slash command to learn, and opening the view does
@@ -27,7 +28,7 @@ restarts that work.
 | Enter / Tab | Focus logs; Tab returns to the task list |
 | Page Up / Page Down, or the mouse wheel | Scroll selected output |
 | End | Follow the newest output again |
-| Command (`v`) / Output (`l`) | Inspect the full, scrollable shell source or return to live output |
+| Expand command (`v`) / Show output (`l`) | Inspect the full, scrollable shell source or return to live output |
 | Cancel command (`c`) | Confirm cancellation of a local command; pending continuation is revoked first |
 | Pause tracking (`s`) | Pause observation while the command or external run continues |
 | Resume tracking (`w`) | Resume observation of a running command or paused external run |
@@ -83,6 +84,17 @@ selected by the host, never entered through the task view or supplied by the
 model.
 
 ## Notifications, defaults and recovery
+
+Results already collected by a successful model tool call are acknowledged in
+the transcript. They stay available in Tasks history and do not produce another
+completion card or answer. Opening F6 alone does not acknowledge a result to the
+model, so unattended completions still resume the existing task.
+
+Turn dividers show **tokens this turn**: cumulative usage across that turn's
+model requests, including context sent again on each request. The context meter
+shows the latest request's measured context instead. A completion starts a new
+turn with its own usage counter; a smaller turn total does not mean context was
+discarded. Actual compaction has its own visible summary notice.
 
 Native background observation is enabled by default in CLI sessions, including
 restricted profiles and hermetic `--config none` sessions. Hermetic sessions keep

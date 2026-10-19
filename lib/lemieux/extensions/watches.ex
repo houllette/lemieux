@@ -50,7 +50,7 @@ defmodule Lemieux.Extensions.Watches do
     Enum.map(tools, fn tool ->
       if Lemieux.Tool.name(tool) == "bash" do
         Override.new!(tool,
-          digest: "lemieux-native-background-v1",
+          digest: "lemieux-native-background-v2",
           after: fn result, args, context -> track(result, args, context, watcher) end
         )
       else
@@ -111,15 +111,34 @@ defmodule Lemieux.Extensions.Watches do
        }}
   end
 
-  defp track({:ok, _value} = result, %{"task_id" => id, "cancel" => true}, context, tool) do
-    with {:ok, manager} <- Tool.manager(tool, context) do
-      manager
-      |> list()
-      |> Enum.filter(&(&1["source"] == "background" and &1["target"]["task_id"] == id))
-      |> Enum.each(&stop(manager, &1["id"]))
-    end
+  defp track(
+         {:ok, %Result{structured_content: %{"task_id" => id, "status" => status}} = value} =
+           result,
+         args,
+         context,
+         tool
+       )
+       when status in ~w(exited failed cancelled timed_out) do
+    case Tool.manager(tool, context) do
+      {:ok, manager} ->
+        watches =
+          Enum.filter(
+            list(manager),
+            &(&1["source"] == "background" and &1["target"]["task_id"] == id)
+          )
 
-    result
+        if args["cancel"] == true, do: Enum.each(watches, &stop(manager, &1["id"]))
+
+        {:ok,
+         %{
+           value
+           | metadata:
+               Map.put(value.metadata, "notification_receipt_ids", Enum.map(watches, & &1["id"]))
+         }}
+
+      _unavailable ->
+        result
+    end
   catch
     :exit, _reason -> result
   end
@@ -188,6 +207,18 @@ defmodule Lemieux.Extensions.Watches do
     |> Map.values()
     |> Enum.any?()
   end
+
+  defp observe_wait(
+         %{
+           type: :tool_result,
+           payload: %{
+             "error" => false,
+             "metadata" => %{"notification_receipt_ids" => [_ | _] = ids}
+           }
+         },
+         pending
+       ),
+       do: Enum.reduce(ids, pending, &Map.put(&2, &1, false))
 
   defp observe_wait(
          %{

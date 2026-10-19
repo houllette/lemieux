@@ -49,6 +49,13 @@ defmodule Lemieux.Session.Notification do
         value["session_id"] == state.id and
           (value["id"] == id or id in (value["receipt_ids"] || []))
 
+      %{
+        type: :tool_result,
+        payload: %{"error" => false, "metadata" => %{"notification_receipt_ids" => ids}}
+      }
+      when is_list(ids) ->
+        id in ids
+
       _entry ->
         false
     end)

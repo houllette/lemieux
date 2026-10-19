@@ -7,6 +7,26 @@ defmodule Lemieux.SessionNotificationTest do
 
   @moduletag :tmp_dir
 
+  defmodule Collected do
+    @behaviour Lemieux.Tool
+    alias Lemieux.Tool.Result
+    @impl true
+    def name, do: "collected"
+    @impl true
+    def description, do: "Read a queued result."
+    @impl true
+    def schema, do: %{"type" => "object", "properties" => %{}}
+    @impl true
+    def run(args, _context) do
+      result =
+        Result.new("Collected result",
+          metadata: %{"notification_receipt_ids" => ["collected"]}
+        )
+
+      if args["fail"], do: {:error, result}, else: {:ok, result}
+    end
+  end
+
   setup %{tmp_dir: dir} do
     runtime = :"notification_test_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
@@ -114,6 +134,84 @@ defmodule Lemieux.SessionNotificationTest do
     assert :ok = Session.deliver_notification(session, event, follow_up: true)
     assert_receive {:lemieux, ^id, {:finished, {:budget, _}}}
     assert length(Scripted.requests(provider)) == 1
+  end
+
+  test "successful collected-result receipts survive resume and reconcile mixed batches", ctx do
+    provider =
+      Scripted.new([
+        Scripted.tool_call("collect", "collected", %{}),
+        Scripted.complete("Already summarized."),
+        Scripted.complete("The remaining result arrived.")
+      ])
+
+    opts = [
+      supervisor: ctx.runtime,
+      store: ctx.store,
+      provider: provider,
+      model: "test:model",
+      tools: [Collected],
+      subscriber: self()
+    ]
+
+    {:ok, session} = Lemieux.start_session(opts)
+    id = Session.id(session)
+    :ok = Session.prompt(session, "Collect it.")
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    DynamicSupervisor.terminate_child(Lemieux.Supervisor.session_supervisor(ctx.runtime), session)
+    {:ok, session} = Lemieux.resume_session([resume: id] ++ opts)
+
+    assert :duplicate =
+             Session.deliver_notification(
+               session,
+               %{"id" => "collected", "text" => "Already read"},
+               follow_up: true
+             )
+
+    assert {:error, :partial_duplicate} =
+             Session.deliver_notification(
+               session,
+               %{
+                 "id" => "batch",
+                 "receipt_ids" => ["collected", "fresh"],
+                 "text" => "Mixed results"
+               },
+               follow_up: true
+             )
+
+    assert :ok =
+             Session.deliver_notification(session, %{"id" => "fresh", "text" => "New result"},
+               follow_up: true
+             )
+
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert length(Scripted.requests(provider)) == 3
+  end
+
+  test "failed inspection does not acknowledge a queued result", ctx do
+    provider =
+      Scripted.new([
+        Scripted.tool_call("collect", "collected", %{"fail" => true}),
+        Scripted.complete("Could not collect it.")
+      ])
+
+    {:ok, session} =
+      Lemieux.start_session(
+        supervisor: ctx.runtime,
+        store: ctx.store,
+        provider: provider,
+        model: "test:model",
+        tools: [Collected],
+        subscriber: self()
+      )
+
+    id = Session.id(session)
+    :ok = Session.prompt(session, "Try collecting it.")
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+
+    assert :ok =
+             Session.deliver_notification(session, %{"id" => "collected", "text" => "Still new"})
+
+    assert length(Scripted.requests(provider)) == 2
   end
 
   test "prompt denial spends nothing and external logs do not expand references", ctx do

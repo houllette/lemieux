@@ -118,6 +118,17 @@ API.
   bundle/overlay changes, automatic capture, activation or model calls. See
   [Persistent improvement lessons](docs/harness-learning.md#persistent-improvement-lessons).
 
+### Fixes
+
+- Collected background results no longer produce duplicate completion cards or
+  another agent answer. F6 shows the command preview, expands the full source,
+  and keeps task details stable during rapid selection changes.
+- Conversation forecasts ignore auxiliary title and guidance request sizes when
+  calibrating token usage, avoiding premature automatic compaction after a short
+  conversation.
+- Turn dividers label cumulative request usage as "tokens this turn" to
+  distinguish it from the latest request's context size.
+
 ## 0.11.0 — 2026-10-13
 
 This release requires restarting `lmx` on every platform. Save an unsent draft,

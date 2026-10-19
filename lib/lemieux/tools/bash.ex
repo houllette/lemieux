@@ -544,7 +544,7 @@ defmodule Lemieux.Tools.Bash do
       |> Enum.reject(&is_nil/1)
       |> Enum.join("\n")
 
-    Result.new(text, structured_content: json_snapshot(snapshot))
+    Result.new(text, structured_content: Map.put(json_snapshot(snapshot), "task_id", snapshot.id))
   end
 
   defp background_status(%{status: :exited, exit_status: status}), do: "exited (#{status})"

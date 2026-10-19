@@ -115,6 +115,90 @@ defmodule Lemieux.CLITasksTest do
     assert Scripted.requests(ctx.provider) == []
   end
 
+  for inspection <- [:register, :show, :list, :bash] do
+    @tag inspection: inspection
+    test "collected #{inspection} results do not produce a second completion answer", ctx do
+      owner = self()
+
+      provider =
+        Scripted.new([
+          Scripted.tool_call("start", "bash", %{
+            "command" => "printf COLLECTED",
+            "background" => true
+          }),
+          fn _request ->
+            send(owner, {:ready_to_collect, self()})
+
+            receive do
+              {:collect, watch, task} ->
+                case ctx.inspection do
+                  :register ->
+                    Scripted.tool_call("collect", "watch", %{
+                      "action" => "register",
+                      "source" => "background",
+                      "target" => %{"task_id" => task.name}
+                    })
+
+                  :show ->
+                    Scripted.tool_call("collect", "watch", %{
+                      "action" => "show",
+                      "id" => watch["id"]
+                    })
+
+                  :list ->
+                    Scripted.tool_call("collect", "watch", %{"action" => "list"})
+
+                  :bash ->
+                    Scripted.tool_call("collect", "bash", %{"task_id" => task.name})
+                end
+            after
+              60_000 -> raise "collection fixture was not released"
+            end
+          end,
+          Scripted.complete("The collected command completed successfully.")
+        ])
+
+      {:ok, session} =
+        Runtime.start_session(ctx.options,
+          supervisor: ctx.runtime,
+          provider: provider,
+          cwd: ctx.dir,
+          state_dir: Path.join(ctx.dir, "personal"),
+          store: JSONL.new(Path.join(ctx.dir, "collected-sessions"))
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "Start and collect the command.")
+      assert_receive {:ready_to_collect, blocked}
+      [task] = Lemieux.Background.list(ctx.runtime, id)
+      assert {:ok, %{status: :exited}} = Lemieux.Background.await(ctx.runtime, id, task.id, 5000)
+      {:ok, manager} = Lemieux.CLI.Watches.resolve(%{supervisor: ctx.runtime, session_id: id})
+
+      LemieuxTest.Sync.state(manager, fn state ->
+        Enum.all?(state.records, fn {_id, record} -> record.value["status"] == "completed" end)
+      end)
+
+      [watch] = Watches.list(manager)
+      send(blocked, {:collect, watch, task})
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+
+      LemieuxTest.Sync.state(manager, fn state ->
+        Enum.all?(state.records, fn {_id, record} -> record.value["delivery"] == "delivered" end)
+      end)
+
+      assert length(Scripted.requests(provider)) == 3
+      assert Enum.all?(Watches.list(manager), &(&1["continuation"] == "already_delivered"))
+
+      refute Enum.any?(Session.snapshot(session).entries, fn entry ->
+               entry.type == :extension_state and
+                 entry.payload["namespace"] == "lemieux.notification"
+             end)
+
+      assert {:ok, %{rows: [%{status: "success"}], detail: %{logs: "COLLECTED"}}} =
+               Tasks.snapshot(session)
+    end
+  end
+
   test "hermetic CLI starts are tracked automatically and human controls spend no requests",
        ctx do
     :ok = Session.prompt(ctx.session, "Start the fixture in the background.")

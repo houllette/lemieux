@@ -37,6 +37,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         token: nil,
         timer: nil,
         rows: [],
+        details: %{},
         selected: nil,
         detail: nil,
         sources: [],
@@ -59,6 +60,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             token: nil,
             timer: nil,
             rows: [],
+            details: %{},
             selected: nil,
             detail: nil,
             sources: [],
@@ -157,7 +159,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         data =
           case result do
             {:ok, view} ->
-              Map.merge(data, Map.put(view, :error, nil))
+              snapshot_data(data, view)
 
             {:error, :native_tasks_unavailable} ->
               %{data | supported?: false, error: describe(:native_tasks_unavailable)}
@@ -199,6 +201,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def answer(state, _session, _token, _kind, _result), do: state
+
+    defp snapshot_data(data, view) do
+      details = Map.take(data.details, Enum.map(view.rows, & &1.id))
+      details = if view.detail, do: Map.put(details, view.detail.id, view.detail), else: details
+      Map.merge(data, Map.merge(view, %{error: nil, details: details}))
+    end
 
     @doc false
     @spec open(state :: TUI.t()) :: TUI.t()
@@ -278,7 +286,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do: {:noreply, Modal.close(state)}
 
     def key(%Key{code: "enter", modifiers: []}, state),
-      do: {:noreply, put_in(state.modal.focus, :logs)}
+      do: {:noreply, choose(state, :output)}
 
     def key(%Key{code: "tab", modifiers: []}, state),
       do:
@@ -351,8 +359,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp choose(state, view) when view in [:active, :history] do
       state = put_in(state.modal.view, view)
       row = List.first(visible_rows(state))
-      data = %{cache(state) | selected: row && row.id, detail: nil, token: nil}
-      state |> put_in([Access.key!(:session_view), :tasks], data) |> refresh()
+      select_row(state, row)
     end
 
     defp choose(state, nil), do: state
@@ -446,12 +453,23 @@ if Code.ensure_loaded?(ExRatatui.App) do
       rows = visible_rows(state)
       index = Enum.find_index(rows, &(&1.id == data.selected)) || 0
       row = Enum.at(rows, min(max(index + by, 0), max(length(rows) - 1, 0)))
-      data = %{data | selected: row && row.id, detail: nil, token: nil}
+      select_row(state, row)
+    end
+
+    # Selection is immediate; a refresh only replaces that task's output.
+    # Clearing the entire inspector between asynchronous replies caused flashes
+    # of unrelated help text during rapid navigation. Cached output never crosses
+    # task identities, and request tokens still fence late replies.
+    defp select_row(state, row) do
+      data = cache(state)
+      detail = if row, do: Map.merge(Map.get(data.details, row.id, %{logs: nil}), row)
+      data = %{data | selected: row && row.id, detail: detail, token: nil}
 
       state
       |> put_in([Access.key!(:session_view), :tasks], data)
       |> put_in([Access.key!(:modal), :offset], 0)
       |> put_in([Access.key!(:modal), :follow?], state.modal.content == :output)
+      |> put_in([Access.key!(:modal), :notice], nil)
       |> refresh()
     end
 
@@ -531,7 +549,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
         inside?(event, geometry.list) ->
           index = geometry.start + event.y - geometry.list.y
           current = Enum.find_index(visible_rows(state), &(&1.id == cache(state).selected)) || 0
-          {:noreply, select(state, index - current)}
+
+          {:noreply,
+           state |> put_in([Access.key!(:modal), :focus], :list) |> select(index - current)}
+
+        inside?(event, geometry.logs) ->
+          {:noreply, put_in(state.modal.focus, :logs)}
 
         true ->
           {:noreply, state}
@@ -574,6 +597,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
       ) ++
         draw(%Paragraph{text: rows, wrap: false}, g.list) ++
         draw(%Paragraph{text: detail_text(data.detail), wrap: true}, g.detail) ++
+        draw(
+          %Paragraph{
+            text: log_rows(data.detail, g.command.width, theme, :command) |> Enum.take(2),
+            wrap: false,
+            block: %Block{
+              title: " Command · v expand ",
+              borders: [:top],
+              border_style: %Style{fg: theme.text.muted}
+            }
+          },
+          g.command
+        ) ++
         draw(
           %Paragraph{
             text: log_rows,
@@ -640,6 +675,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp log_text(detail, :command),
       do: Map.get(detail, :command) || "No local command is available for this activity."
 
+    defp log_text(%{logs: nil}, _content), do: "Loading output…"
     defp log_text(detail, _content), do: detail.logs || ""
 
     defp log_rows(detail, width, theme, content),
@@ -703,8 +739,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp notice(state),
       do:
         if(state.modal.focus == :logs,
-          do: "↑↓ logs · End follow · Tab task list",
-          else: "1 Active · 2 History · ↑↓ select · Enter logs"
+          do: "↑↓ scroll · Home start · End latest · Tab task list",
+          else: "1 Active · 2 History · ↑↓ select · v expand command · Enter output"
         )
 
     defp geometry(state, panes) do
@@ -723,9 +759,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
       selected = Enum.find_index(rows, &(&1.id == data.selected)) || 0
       start = max(min(selected - div(count, 2), length(rows) - count), 0)
       list = rect(inner, 0, count)
-      detail = rect(inner, count + 1, min(6, max(inner.height - count - 5, 0)))
+      detail = rect(inner, count + 1, min(6, max(div(inner.height, 4), 0)))
       logs_y = detail.y + detail.height + 1 - inner.y
-      logs = rect(inner, logs_y, max(inner.height - logs_y - 4, 0))
+      remaining = max(inner.height - logs_y - 4, 0)
+      preview? = state.modal.content == :output and is_binary(get_in(data, [:detail, :command]))
+      command_height = if preview? and remaining >= 6, do: 3, else: 0
+      command = rect(inner, logs_y, command_height)
+      logs = rect(inner, logs_y + command_height, remaining - command_height)
       notice = rect(inner, max(inner.height - 4, 0), 1)
       buttons = buttons(state) |> place_buttons(inner, max(inner.height - 3, 0))
 
@@ -733,6 +773,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         area: area,
         list: list,
         detail: detail,
+        command: command,
         logs: logs,
         notice: notice,
         buttons: buttons,
@@ -766,10 +807,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp inspector_button(%{command: command}, :output) when is_binary(command),
-      do: [{:command, "[v Command]"}]
+      do: [{:command, "[v Expand command]"}]
 
     defp inspector_button(%{command: command}, _content) when is_binary(command),
-      do: [{:output, "[l Output]"}]
+      do: [{:output, "[l Show output]"}]
 
     defp inspector_button(_row, _content), do: []
 
