@@ -411,6 +411,51 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   end
 
   test "the first-party proposer is admitted, executed, promoted and exactly undone", ctx do
+    provider = supported_provider(ctx.fixture.id, false)
+
+    assert {:ok, row} =
+             Host.episode(
+               Map.put(ctx.config, :provider, provider),
+               context(ctx.fixture, "frozen")
+             )
+
+    assert row["passed"]
+
+    evidence =
+      JSON.decode!(
+        File.read!(Path.join(ctx.config.root, "1-#{ctx.fixture.id}-frozen/evidence.json"))
+      )
+
+    assert evidence["refinement"]["decision"] == "proposed"
+    assert evidence["promotion"]["undo"]["action"] == "rolled_back"
+    assert length(evidence["refinement"]["composition"]) == 2
+  end
+
+  @tag capture_log: true
+  test "a failed promoted request cannot replace partial original work on an equal score", ctx do
+    config = Map.put(ctx.config, :provider, supported_provider(ctx.fixture.id, true))
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "frozen"))
+    refute row["passed"]
+    assert row["tokens"] == nil
+
+    evidence =
+      Path.join(config.root, "1-#{ctx.fixture.id}-frozen/evidence.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    assert evidence["refinement"]["decision"] == "proposed"
+    assert Enum.all?(evidence["refinement"]["composition"], & &1["verified_success"])
+    refute evidence["promotion"]["final_grade"]["passed"]
+    assert evidence["promotion"]["undo"]["action"] == "rolled_back"
+    assert evidence["original_grade"]["score"] == evidence["selected_grade"]["score"]
+    assert evidence["original"]["answer"] == "baseline"
+    assert evidence["selected"]["session_id"] == evidence["original"]["session_id"]
+    assert evidence["selected"]["answer"] == "baseline"
+    assert Lemieux.sessions(config.supervisor) == []
+    assert Path.wildcard(Path.join(config.root, "*/leases/*")) == []
+  end
+
+  defp supported_provider(task_id, fail_promoted?) do
     profile =
       Host.baseline("test:model", "default") |> update_in(["options", "system"], &(&1 <> " GOOD"))
 
@@ -420,17 +465,20 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
       "targeted_cluster" => nil,
       "mechanism" => "missing_verification",
       "changed_paths" => ["options.system"],
-      "predicted_fixes" => [ctx.fixture.id],
+      "predicted_fixes" => [task_id],
       "predicted_at_risk" => []
     }
 
     # Refinement supplies the same metered provider to every role. Dispatch by
     # the actual request system, exactly as a provider sees it, not test fixtures
     # that bypass the first-party proposer contract.
-    provider = fn _ ->
+    fn _ ->
       Scripted.new([
         fn request ->
           cond do
+            fail_promoted? and promoted_request?(request) ->
+              Scripted.http_error(503, reason: "promoted execution unavailable")
+
             String.contains?(request.system, "harness proposer") ->
               Scripted.tool_call(
                 "profile",
@@ -468,22 +516,11 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
         Scripted.complete("done", usage: usage())
       ])
     end
+  end
 
-    assert {:ok, row} =
-             Host.episode(
-               Map.put(ctx.config, :provider, provider),
-               context(ctx.fixture, "frozen")
-             )
-
-    assert row["passed"]
-
-    evidence =
-      JSON.decode!(
-        File.read!(Path.join(ctx.config.root, "1-#{ctx.fixture.id}-frozen/evidence.json"))
-      )
-
-    assert evidence["refinement"]["decision"] == "proposed"
-    assert evidence["promotion"]["undo"]["action"] == "rolled_back"
-    assert length(evidence["refinement"]["composition"]) == 2
+  defp promoted_request?(request) do
+    Enum.any?(request.entries, fn entry ->
+      entry.type == :session and String.ends_with?(entry.payload["cwd"] || "", "/promoted")
+    end)
   end
 end

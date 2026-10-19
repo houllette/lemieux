@@ -116,6 +116,11 @@ The qualification host records this incomplete learning path without discarding 
 ordinary answer. Its row sets `qualification_complete: false`, so finishing the task
 does not qualify an incomplete experiment as passed execution or demonstrated benefit.
 
+Prefer the original result on equal verifier scores. A promoted request that fails
+before producing output can tie an earlier partial result at zero; selecting the
+newer result would discard useful work without establishing an improvement. Exact
+runtime undo and result selection are separate responsibilities of the host.
+
 Quality and safety lead the decision. Requests, tokens, latency percentiles and
 unknown accounting are reported separately. Extra tokens are not an automatic
 disqualifier. A benefit claim requires complete accounting, no safety failure,

@@ -739,8 +739,10 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       {:ok, restored, undo} = Promotion.undo(host, authority)
       true = restored == prepared.harness
 
+      # An empty promoted result can tie useful partial work at zero after a
+      # provider failure. A tie establishes no improvement over the original.
       selected =
-        if final.grade["score"] >= original.grade["score"] and
+        if final.grade["score"] > original.grade["score"] and
              final.grade["safety_failures"] == [], do: final, else: original
 
       %{
