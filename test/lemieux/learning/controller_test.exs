@@ -281,8 +281,11 @@ defmodule Lemieux.Learning.ControllerTest do
       "budget" => %{"maximum_tokens" => 30, "maximum_time_ms" => 3000, "maximum_cost_usd" => 0.3}
     }
 
-    for tokens <- [20, 30] do
-      assert {:skip, %{"reason" => "whole_experiment_unaffordable"}} =
+    for {tokens, reason} <- [
+          {20, "incomplete_experiment_allocation"},
+          {30, "token_allowance_exhausted"}
+        ] do
+      assert {:skip, %{"reason" => ^reason}} =
                Controller.experiment(
                  controller,
                  "frozen-#{tokens}",
@@ -294,6 +297,103 @@ defmodule Lemieux.Learning.ControllerTest do
 
     assert JobBudget.snapshot(budget).requests == 1
     assert Controller.snapshot(controller)["accounting"]["tokens"] == 80
+  end
+
+  test "unknown provider usage stays a stop reason when admitting a whole experiment" do
+    budget = budget()
+    controller = controller(budget)
+    assert {:ok, _} = Controller.reserve(controller, "failed-provider", :task, estimate())
+    assert :ok = Controller.reconcile(controller, "failed-provider", nil)
+
+    plan = %{
+      "sha256" => String.duplicate("a", 64),
+      "budget" => %{"maximum_tokens" => 30, "maximum_time_ms" => 3000, "maximum_cost_usd" => 0.3}
+    }
+
+    assert {:skip, %{"decision" => "stop", "reason" => "usage_unknown"} = receipt} =
+             Controller.experiment(
+               controller,
+               "frozen",
+               plan,
+               %{requests: 3, tokens: 30, time_ms: 3000, cost_usd: 0.3},
+               fn _ -> flunk("unknown usage must not dispatch or resolve a child") end
+             )
+
+    snapshot = Controller.snapshot(controller)
+    assert snapshot["records"][receipt["id"]] == receipt
+    assert snapshot["accounting"]["tokens"] == nil
+    assert JobBudget.snapshot(budget).requests == 1
+    assert JobBudget.snapshot(budget).active == 0
+  end
+
+  test "untracked parent usage is not reported as an unaffordable experiment" do
+    budget = budget()
+    controller = controller(budget)
+    assert {:ok, lease} = JobBudget.reserve(budget, 0.1, 1)
+    assert :ok = JobBudget.settle(budget, lease, 0.1)
+
+    assert {:skip, %{"decision" => "stop", "reason" => "untracked_parent_usage"}} =
+             Controller.admit(
+               controller,
+               %{"sha256" => String.duplicate("a", 64), "budget" => %{}},
+               %{requests: 3, tokens: 30, time_ms: 3000, cost_usd: 0.3}
+             )
+
+    assert JobBudget.snapshot(budget).requests == 1
+  end
+
+  test "whole-experiment deadlines and outer request limits keep distinct causes" do
+    plan = %{"sha256" => String.duplicate("a", 64), "budget" => %{}}
+    required = %{requests: 3, tokens: 30, time_ms: 3000, cost_usd: 0.3}
+    timed_budget = budget()
+
+    opts = [
+      max_time_ms: 300_000,
+      learning: [max_requests: 3, max_tokens: 40, max_time_ms: 120_000, max_cost_usd: 0.4]
+    ]
+
+    original = controller(timed_budget, opts)
+
+    recorded =
+      original
+      |> Controller.snapshot()
+      |> Map.put("deadline_ms", System.system_time(:millisecond) + 60_000)
+      |> Map.delete("sha256")
+      |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
+
+    GenServer.stop(original)
+    timed = controller(timed_budget, Keyword.put(opts, :recorded, recorded))
+
+    assert {:skip, %{"reason" => "experiment_deadline_exceeded"}} =
+             Controller.admit(timed, plan, %{required | time_ms: 120_000})
+
+    small_budget = budget()
+    limited = controller(small_budget)
+
+    assert {:ok, _} =
+             Controller.reserve(limited, "parent", :task, Map.put(estimate(), :requests, 3))
+
+    assert :ok = Controller.reconcile(limited, "parent", usage())
+
+    assert {:skip, %{"reason" => "outer_allowance_exhausted", "cause" => cause}} =
+             Controller.admit(limited, plan, required)
+
+    assert cause == %{"kind" => "requests", "spent" => 3, "estimate" => 3, "cap" => 5}
+    assert JobBudget.snapshot(small_budget).requests == 3
+  end
+
+  test "an outer ledger with unknown cost preserves that cause without dispatch" do
+    controller = controller(budget(spent_usd: nil))
+
+    assert {:skip, %{"decision" => "stop", "reason" => "usage_unknown", "cause" => cause}} =
+             Controller.admit(
+               controller,
+               %{"sha256" => String.duplicate("a", 64), "budget" => %{}},
+               %{requests: 3, tokens: 30, time_ms: 3000, cost_usd: 0.3}
+             )
+
+    assert cause == %{"kind" => "cost", "spent" => nil, "estimate" => 0.3, "cap" => 1.0}
+    assert Controller.snapshot(controller)["accounting"]["requests"] == 0
   end
 
   test "persistence precedes effects and write failure refuses the effect" do

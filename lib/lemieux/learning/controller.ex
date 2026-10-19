@@ -144,7 +144,13 @@ defmodule Lemieux.Learning.Controller do
   defp guarded_work(work, timeout) when timeout > 0, do: Worker.run(work, timeout)
   defp guarded_work(_work, _expired), do: {:error, :deadline_exhausted}
 
-  @doc "Checks a complete frozen experiment without changing its plan or dispatching work."
+  @doc """
+  Checks a complete frozen experiment without changing its plan or dispatching work.
+
+  Refusals preserve the underlying admission reason and stop/skip decision.
+  Unknown usage needs reconciliation, not a larger allowance. An outer job
+  ledger refusal also retains its data-only `cause` (kind, spent, estimate, cap).
+  """
   @spec admit(server :: GenServer.server(), plan :: map(), required :: map()) ::
           {:ok, map()} | {:skip, map()}
   def admit(server, plan, required),
@@ -397,15 +403,11 @@ defmodule Lemieux.Learning.Controller do
              System.monotonic_time(:millisecond) + allocation["time_ms"] <= state.mono_deadline,
            do: JobBudget.check(state.budget, allocation["cost_usd"], allocation["requests"])
 
-    {receipt, state} =
-      decision(
-        state,
-        "probe",
-        if(result == :ok, do: "admit", else: "skip"),
-        if(result == :ok, do: "frozen_experiment_admitted", else: "whole_experiment_unaffordable")
-      )
+    {action, reason, cause} = admission_outcome(result)
+    {receipt, state} = decision(state, "probe", action, reason)
 
     receipt = Map.put(receipt, "plan_sha256", plan["sha256"])
+    receipt = if cause, do: Map.put(receipt, "cause", cause), else: receipt
     state = %{state | records: Map.put(state.records, receipt["id"], receipt)}
     {:reply, {if(result == :ok, do: :ok, else: :skip), receipt}, persist(state)}
   end
@@ -430,6 +432,27 @@ defmodule Lemieux.Learning.Controller do
 
     {:reply, {:ok, selected, receipt}, persist(state)}
   end
+
+  # Keep refusals distinguishable: collapsing unknown usage into affordability
+  # made hosts recommend more quota when the blocked work needed reconciliation.
+  defp admission_outcome(:ok), do: {"admit", "frozen_experiment_admitted", nil}
+
+  defp admission_outcome({action, reason}) when action in [:skip, :stop],
+    do: {Atom.to_string(action), reason, nil}
+
+  defp admission_outcome({:error, reason}) when is_atom(reason),
+    do: {"skip", Atom.to_string(reason), nil}
+
+  defp admission_outcome({:error, %{spent: nil} = cause}),
+    do: {"stop", "usage_unknown", Contract.json(cause)}
+
+  defp admission_outcome({:error, %{kind: :cost, estimate: nil} = cause}),
+    do: {"skip", "price_unknown", Contract.json(cause)}
+
+  defp admission_outcome({:error, cause}) when is_map(cause),
+    do: {"skip", "outer_allowance_exhausted", Contract.json(cause)}
+
+  defp admission_outcome(false), do: {"skip", "experiment_deadline_exceeded", nil}
 
   defp frozen_allocation(%{"sha256" => sha, "budget" => budget}, required)
        when is_binary(sha) and byte_size(sha) == 64 and is_map(budget) do

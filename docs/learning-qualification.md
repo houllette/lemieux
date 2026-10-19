@@ -95,8 +95,8 @@ The read tool clips individual long lines, so compact JSON can hide the decisive
 fields even when the file was materialized successfully. Generated proposal and
 experience manifests put collection members on separate lines. Proposal evidence
 views additionally represent long strings as `$text` objects with encoding
-`utf8_chunks/v1`, ordered `chunks`, and the projected string's `bytes` and `sha256`. Concatenate the
-chunks without separators to recover the projected string; each chunk is bounded
+`utf8_chunks/v1`, ordered `chunks`, and the projected string's `bytes` and `sha256`.
+Concatenate the chunks without separators to recover the projected string; each chunk is bounded
 by its escaped JSON byte size so it remains readable through the tool. Upstream
 clipping and omissions still apply. Embedders can use
 `Lemieux.JSON.encode_readable!(value, strings: :chunks)` for the same display view.
@@ -118,6 +118,12 @@ refuses further calls with `usage_unknown`, including the session's ordinary ret
 Quota mode does not waive unknown-token accounting. Retain the original result and
 the in-doubt checkpoint; explicit host reconciliation needs trustworthy usage facts.
 Do not replace unknown usage with zero or replay the experiment automatically.
+Whole-experiment admission preserves the same underlying stop/skip reason rather
+than reporting every refusal as unaffordable. Distinguish `usage_unknown`,
+`untracked_parent_usage`, invalid allocations, exhausted allowances and
+`experiment_deadline_exceeded` before choosing recovery. Outer-ledger refusals
+also retain their data-only `cause` with kind, spent, estimate and cap. Admission
+inspection still reserves nothing and authorizes no child dispatch.
 The qualification host records this incomplete learning path without discarding the
 ordinary answer. Its row sets `qualification_complete: false`, so finishing the task
 does not qualify an incomplete experiment as passed execution or demonstrated benefit.

@@ -2,9 +2,11 @@ defmodule Lemieux.Learning.ProposerTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.Contract
+  alias Lemieux.Entry
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
   alias Lemieux.Learning.Discovery.Candidate
+  alias Lemieux.Learning.Discovery.Digest
   alias Lemieux.Learning.Discovery.Evaluation
   alias Lemieux.Learning.Discovery.Plan
   alias Lemieux.Learning.Discovery.State
@@ -119,14 +121,14 @@ defmodule Lemieux.Learning.ProposerTest do
     text = String.duplicate("😀\"\\\n", 300)
 
     entries = [
-      Lemieux.Entry.new(:tool_result, %{"name" => "bash", "output" => text}, seq: 1)
-      |> Lemieux.Entry.encode!()
+      Entry.new(:tool_result, %{"name" => "bash", "output" => text}, seq: 1)
+      |> Entry.encode!()
       |> JSON.decode!()
     ]
 
     bytes = JSON.encode!(entries)
     reference = ArtifactReference.from_bytes("transcript", bytes, scope: ctx.plan.scope)
-    projection = Lemieux.Learning.Discovery.Digest.excerpt(entries, max_bytes: 16_000)
+    projection = Digest.excerpt(entries, max_bytes: 16_000)
     evaluation = %{failed(ctx.plan, seed, "dev-1") | artifacts: [reference]}
     artifacts = %{reference.sha256 => bytes}
 
