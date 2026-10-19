@@ -36,6 +36,7 @@ defmodule Lemieux.Learning.Discovery.Meta do
   alias Lemieux.Contract
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Campaign
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Confirm
@@ -45,7 +46,6 @@ defmodule Lemieux.Learning.Discovery.Meta do
   alias Lemieux.Learning.Discovery.State
   alias Lemieux.Learning.Discovery.Surface
   alias Lemieux.Learning.Proposer
-  alias Lemieux.Providers.Scripted
 
   # Token spend is measured and reported but is not a frontier objective by
   # default: the first live meta campaign kept a proposer that was worse on yield
@@ -75,7 +75,9 @@ defmodule Lemieux.Learning.Discovery.Meta do
   `:provider` or `:allow_live`), `:validation_inner` (the template names held
   as validation cases; at least one), and `:budget`. Optional:
   `:evolver_profile` (the outer proposer; default the seed), `:search`,
-  `:critic_profile`, `:allow_live`, `:sessions_dir`, `:timeout_ms`.
+  `:critic_profile`, `:allow_live`, `:sessions_dir`, `:timeout_ms`,
+  `:experience` (the host-owned retrieval configuration or callback accepted
+  by `Lemieux.Learning.Proposer.propose/3`).
   """
   @type config :: keyword()
 
@@ -203,7 +205,8 @@ defmodule Lemieux.Learning.Discovery.Meta do
       evolver_profile: outer,
       critic_profile: critic_profile(config, outer),
       sessions_dir: Keyword.get(config, :sessions_dir, Path.join(output_dir, "sessions")),
-      timeout_ms: Keyword.get(config, :timeout_ms, :timer.minutes(10))
+      timeout_ms: Keyword.get(config, :timeout_ms, :timer.minutes(10)),
+      experience: Keyword.get(config, :experience)
     }
 
     proposer = fn plan, state, context ->
@@ -810,7 +813,7 @@ defmodule Lemieux.Learning.Discovery.Meta do
   defp live_allowed(config, provider) do
     cond do
       Keyword.get(config, :allow_live, false) == true -> :ok
-      match?({Scripted, _}, resolve(provider)) -> :ok
+      Controller.scripted?(resolve(provider)) -> :ok
       true -> {:error, :live_campaign_requires_allow_live}
     end
   end

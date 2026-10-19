@@ -144,6 +144,39 @@ defmodule Lemieux.Learning.Discovery.State do
   def record_candidate(%__MODULE__{} = state, %Plan{}, %Candidate{}, _facts),
     do: {:error, {:invalid_discovery_state, state.status, :record_candidate}}
 
+  @doc "Accounts an explicit no-op without inventing a candidate or changing the frozen surface."
+  @spec record_noop(state :: t(), plan :: Plan.t(), facts :: map()) ::
+          {:ok, t()} | {:error, term()}
+  def record_noop(%__MODULE__{status: :running} = state, %Plan{} = plan, facts)
+      when is_map(facts) do
+    with :ok <- plan_identity(state, plan), :ok <- noop_facts(facts) do
+      {:ok,
+       state
+       |> account(plan, facts, 0)
+       |> append_event(
+         "no_supported_improvement",
+         Map.take(facts, ~w(reason tokens time_ms cost_usd requests))
+       )
+       |> maybe_exhaust(plan)}
+    end
+  end
+
+  defp noop_facts(facts) do
+    counts =
+      Enum.all?(
+        ~w(tokens time_ms),
+        &(is_nil(facts[&1]) or (is_integer(facts[&1]) and facts[&1] >= 0))
+      )
+
+    cost = facts["cost_usd"]
+    reason = facts["reason"]
+
+    if counts and (is_nil(cost) or (is_number(cost) and cost >= 0)) and
+         is_binary(reason) and byte_size(reason) in 1..512,
+       do: :ok,
+       else: {:error, :invalid_noop_accounting}
+  end
+
   @doc "Records one evaluation exactly once by id and candidate/split/case key."
   @spec record_evaluation(state :: t(), plan :: Plan.t(), evaluation :: Evaluation.t()) ::
           {:ok, t()} | {:error, term()}

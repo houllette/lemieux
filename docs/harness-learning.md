@@ -34,6 +34,7 @@ in these modules. The only local activation is a reviewed overlay file that
 | `Lemieux.Evidence.Run` | 1 | `sha256` | One terminal prompt-level observation and artifact index |
 | `Lemieux.Benchmark.Corpus.Exposure` | 2 | `sha256` | Direct and derived case exposure with transitive source ids |
 | `Lemieux.Learning.Experience.Bundle` | 1 | `sha256` | Authorized, single-scope discovery history |
+| `Lemieux.Learning.Experience.Lesson` | 1 | `id`, `sha256` | Scoped lesson with complete source bytes and exposure ancestry |
 | `Lemieux.Learning.Discovery.Plan` | 1 | `sha256` | Frozen proposer-visible search contract and total budget |
 | `Candidate`, `Evaluation`, `Frontier`, `State` | 1 | `sha256` | Immutable search archive and restart projection |
 | `Lemieux.Experiment.Plan` | 1 | `sha256` | Ordinary preregistered one-factor confirmation plan |
@@ -159,6 +160,98 @@ Usage, cost, cache, retry, sandbox, and artifact facts distinguish `complete`,
 `partial`, `unknown`, and `not_applicable`. Unknown usage or price is never
 encoded as zero. Failed and canceled runs remain observations.
 
+## Evaluating the effective lmx harness
+
+Discovery and confirmation keep a **profile-only** default. Its observations
+say `runtime_qualification.lane: "profile_only"`; a profile plus one overlay
+file does not qualify the ordinary CLI's personal and repository layers.
+
+A host can select `Lemieux.CLI.Runtime.Evaluation` to use the same
+`Runtime.with_workspace/2` and `Runtime.prepare/2` assembly as `lmx run`.
+Both arms receive current CLI options and the same host-supplied provider,
+store, environment, hooks and ceilings. The unmodified control keeps that
+assembled harness. Personal overlay descriptions apply; repository overlay
+descriptions are dropped by normal discovery, with the normal notice. Disabled
+extensions and inactive/declined applications remain visible in the freeze.
+
+```elixir
+alias Lemieux.CLI.Runtime.Evaluation, as: CLI
+
+# options is the parsed CLI configuration; provider and store are fresh host inputs.
+host = [cwd: workspace, provider: provider, store: store,
+        environment: environment, max_requests: 6]
+surface = ["system_suffix", "tool_descriptions.write"]
+{:ok, prepared} = CLI.prepare(options, host, surface: surface)
+
+# The seed is a portable search document. Only its delta is applied to lmx.
+factory = CLI.factory(options, host, parent_profile: seed_profile, surface: surface)
+config = Keyword.merge(campaign_config,
+  runtime_factory: factory,
+  runtime_identity: CLI.identity(prepared)
+)
+```
+
+The frozen surface accepts an appended `system_suffix`, descriptions of
+existing enabled local tools, and explicitly named `generation.max_tokens`,
+`generation.temperature` or `generation.reasoning_effort` fields. It cannot
+add tools, change executors or replace host policy. An edit conflicting with
+a host constraint is refused before dispatch. The profile adapter accepts
+append-only prompt changes, changed descriptions and those generation fields;
+it rejects whole-prompt replacements, catalog/budget edits and description
+removal. This preserves the actual CLI layers instead of replacing them with
+the search profile. The profile's model must match the host's selected model;
+this supplied adapter uses that same model for confirmation. A host supporting
+another confirmation target supplies its own factory and records its model
+normalization explicitly.
+
+`Evaluator.run/3`, `Campaign.run/1`, `Campaign.resume/1` and `Confirm.run/3`
+accept the factory. A campaign freezes its explicit `runtime_identity` in the
+plan, together with one-way identities of the factory code/captured configuration
+and shared session constraints. Resume and confirmation reject changed inputs or a switch to the
+profile-only lane. Recompute the binding from current host inputs when
+resuming; never copy an old identity to conceal changed configuration. A cycle
+using this lane must bind its factory's parent to the cycle's actual seeded
+profile, including the overlay it selected.
+
+Each attempt assembles in the benchmark's actual workspace. Its data-only
+qualification records the resolved prompt, local catalog and visibility,
+applied/declined extensions, disabled selections, overlay assets and
+qualification, generation settings, retry policy, verification configuration,
+environment identity, resume/fork history digest, host configuration and
+runtime code digests. Callback and environment state contributes only a
+one-way digest. No serialized callback, environment credential, provider or
+store is restored from this data. Resuming uses the normal current-host
+assembly and transcript reconstruction; an old catalog cannot restore tools
+that current host constraints withheld.
+
+Observations retain `lane: "effective_lmx"`, the frozen control and effective
+configuration, allowed surface and intentional changes. Request harness
+snapshots carry the qualification reference in `workflow.evaluation`; terminal
+run evidence names the actual request harness snapshot. Request hooks, retry
+budget messages and dynamic MCP discovery can change the actual request: the
+ordinary request snapshots record those facts. A prepared freeze alone does
+not prove a request was authorized or sent.
+
+`CLI.compatible?/2` permits cache reuse only for intact, identical
+qualifications. Supply a non-secret host `provider_identity` map with `"id"`
+and a SHA-256 `"sha256"` binding the serving route/model revision to enable
+reuse. Without that binding, or with opaque process/reference state, reuse is
+refused. Current permission mode and remembered rules are fingerprinted;
+changed code, configuration, closure inputs, layers, generation, retry,
+verification, environment, history or surface invalidate reuse. A host remains
+responsible for external mutable services behind its revision. Different
+workspace paths are different qualifications; copied benchmark workspaces are
+not silently declared equivalent. `expected_control_sha256:` can require an
+exact control before running a pre-isolated workspace.
+
+A comparison qualifies only these recorded host inputs, model, corpus,
+workspace and intentional edit. It does not establish hosted-provider quality,
+transferability, sandbox containment or permission to activate an overlay.
+Providers and environments remain fresh host inputs, frozen sample counts
+remain unchanged, and no factory enables hosted spending implicitly. Use
+isolated evaluation stores and personal-state directories when ordinary capture
+or checkpoints are selected.
+
 ## Artifact-to-event correlation
 
 The golden fixture demonstrates the complete join without embedding content:
@@ -209,6 +302,228 @@ ancestors, and scope before staging. It writes `.complete` last and atomically
 renames the staging tree. History and the root become read-only; only
 `proposal/` remains writable. It never fetches from a host service or from
 Ixway.
+
+## Persistent improvement lessons
+
+`Experience.Lesson` retains what an improvement attempted and why it appeared
+to work, fail or remain uncertain. It is an opt-in evidence contract; ordinary
+`lmx` sessions do not yet capture or activate these lessons automatically.
+Hosts create a lesson from an authorized `Experience.Bundle`, its complete
+artifact bytes keyed by SHA-256, and string-keyed attributes:
+
+```elixir
+alias Lemieux.Learning.Experience.{Lesson, Lessons}
+alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
+
+# bundle and artifact_bytes are already authorized for this exact host scope.
+context = %{
+  "model" => "test:model",
+  "tools_sha256" => Lemieux.Contract.sha256("host tool catalog identity"),
+  "environment_sha256" => Lemieux.Contract.sha256("host environment identity"),
+  "repository" => "my-project"
+}
+
+{:ok, lesson} = Lesson.new(bundle, artifact_bytes, %{
+  "key" => "check-before-editing",
+  "kind" => "procedure",
+  "outcome" => "supported",
+  "qualification" => "behavioral",
+  "applicability" => ["editing a failing parser"],
+  "mechanism" => "Run the failing check before editing to preserve the baseline.",
+  "supporting" => ["observation-id-in-bundle"],
+  "contradicting" => [],
+  "candidate_ids" => [],
+  "binding" => context,
+  "provenance" => %{"actor" => "my-host", "run_id" => "run-1"},
+  "created_at" => "2026-10-17T00:00:00Z",
+  "expires_at" => nil,
+  "supersedes" => []
+})
+
+# Select a private, ignored directory. Nothing is created until append.
+store = LessonFiles.new(".lmx/lessons", bundle.scope)
+:ok = Lessons.append(store, lesson)
+{:ok, history} = Lessons.history(store)
+{:ok, inspected} = Lessons.read(store, lesson.id)
+```
+
+The host supplies real semantic identities for its effective model, tools,
+environment and repository. They are exact applicability constraints, not
+restored credentials, modules, hooks or permissions. `workspace_fact` also
+requires `revision` and `source_sha256` bindings; `procedure` and
+`proposer_lesson` may omit those two to survive source revisions. An optional
+UTC `expires_at` excludes the record at and after that instant. Missing or
+changed current bindings exclude it. Facts are never rebound to new revisions
+by loading a saved record.
+
+Outcomes remain `supported`, `rejected`, `contradicted` or
+`insufficient_evidence`. Qualification remains `unconfirmed` or `behavioral`,
+even if a source evaluation passed: retention and output adoption establish
+neither independent confirmation nor transfer to another task or model.
+Mechanical evaluation/confirmation evidence remains intact in the source
+bundle, with its original qualification. Storage does not activate a lesson;
+`Asset.Registry` still accepts only approved asset proposals.
+
+Every artifact reference must resolve to supplied bytes in the same exact
+scope; unrelated extra bytes are refused. Observation/candidate ids must
+exist, source references must resolve, and a cyclic proof is invalid. The
+lesson conservatively retains the union of all source case ids in its bundle,
+including earlier exposures. `source_lessons` can contain complete
+`Lesson.to_map/1` manifests used to derive the new lesson; their bytes, scope
+and transitive exposures are verified too. No hidden artifact fetching occurs.
+The whole encoding is limited to two MiB, with 512 bundle sources, at most 16
+direct source lessons and eight ancestry levels. Larger histories need a
+smaller explicitly authorized bundle; they are never silently truncated.
+
+Use `Lessons.recall/5` before giving lessons to an improver:
+
+```elixir
+consumer = %{
+  "id" => "exposure-task-2", "consumer_role" => "proposer",
+  "consumer_id" => "improver-1", "model" => "test:model",
+  "at" => "2026-10-17T01:00:00Z"
+}
+
+# The host's callback must durably commit the Exposure under the given scope
+# before returning :ok. An unavailable store returns {:error, reason}.
+{:ok, lessons, exposure} =
+  Lessons.recall(store, context, consumer, &MyHost.commit_exposure/2)
+```
+
+The callback receives a `Benchmark.Corpus.Exposure` whose derived artifact ids
+are the returned lesson ids and whose source case ids include every direct
+and transitive source. Commit those ids through `Corpus.expose_derived/4` and
+persist the resulting corpus (or an equivalent transactional host ledger).
+A later holdout assignment must consult that exposure history. Reuse an
+exposure id only for the same consumer, timestamp, context and lesson set;
+changed bytes under an id are a host-ledger conflict. Failed commits release
+no content. Empty recall commits nothing. `read/2` is privileged host
+inspection, so a host that feeds it directly to a model bypasses this gate.
+Eligibility filtering is deterministic; the retrieval API below adds task
+relevance ranking.
+Recall refuses more than 16 current lessons or eight MiB of complete encoded
+records by default (`max_lessons:` and `max_bytes:`). It releases no partial
+result; the host must explicitly narrow the store/scope or choose a larger
+finite limit.
+
+To revise a logical key, put the old lesson ids in `supersedes` and their full
+manifests in `source_lessons`. Append checks that the old records or
+tombstones exist in the same store and key. Old bytes remain inspectable.
+Concurrent siblings are a reported conflict, never a newest-wins selection;
+resolve it by appending a lesson that explicitly supersedes both. Suppression
+persists even if the replacement expires or is pruned, preventing obsolete
+advice from resurfacing.
+
+`Lessons.prune(store, id, reason, at)` is explicit retention. The local adapter
+atomically publishes a digested tombstone before deleting source/content
+bytes. A repeated identical prune finishes interrupted cleanup; a different
+reason/timestamp is a conflict. Tombstones retain identity, scope, key,
+supersession and exposure ancestry. Re-appending a pruned id is refused.
+Private 0600 records publish atomically from synced temporary files, so
+interrupted writes expose no partial lesson and duplicate appends do not
+overwrite bytes. Symlinked ancestors/records, corrupt content and unavailable
+storage return errors. The host owns the directory; these checks are not an
+isolation boundary against another process that can replace its directories.
+After stopping writers, the host can remove abandoned `.partial-*` files.
+The default history limit is 1000 entries, configurable with `max_entries:`;
+hosts archive or raise that limit explicitly instead of silently dropping
+audit history. Derived lessons embed source-lesson bytes: prune those
+descendants too when retention requires removing the source content. Backups
+and other copies remain the host's retention responsibility.
+
+Embedding hosts implement the `Lessons` behavior with a stateful adapter
+tuple; no database, network client, registry process or scheduler is required.
+The local adapter uses atomic hard links and requires a filesystem supporting
+them. `lmx harness verify lesson FILE` checks a saved complete manifest
+offline, without exposing its contents or contacting a provider.
+
+## Retrieving lessons for later proposals
+
+`Experience.Retrieval` deterministically selects scoped experience without a
+provider call. Freeze the library once for a control arm, or at each task
+boundary for an updating arm. Keep the frozen inventory, query, current
+bindings and replay clock with the receipt to reproduce that selection:
+
+```elixir
+alias Lemieux.Learning.Experience.Retrieval
+
+{:ok, library} = Retrieval.freeze(store, bundle.scope)
+query = %{"task" => "repair a failing parser", "failure_cues" => ["no verification"]}
+options = [now: ~U[2026-10-17 01:00:00Z], max_results: 4]
+{:ok, receipt} = Retrieval.inspect(store, library, query, context, options)
+
+# consumer and commit have the same durable exposure contract as Lessons.recall.
+# Give each distinct consumer/retrieval context its own exposure id.
+{:ok, retrieved} =
+  Retrieval.retrieve(store, library, query, context, consumer, commit, options)
+```
+
+Scope, binding, creation/expiry, supersession and conflicting logical keys
+are checked before ranking. At least one query word must match an
+applicability cue. Unique matching words score four points in applicability,
+two in the mechanism and one in the key; ids break ties. One result slot is
+reserved for the highest-ranked relevant rejected or contradicted lesson.
+Those notes explicitly say `counterexample`; supported records remain
+hypotheses with their original qualification. This lexical policy does not
+establish semantic relevance or confirm a diagnosis.
+
+The digested receipt names selected lesson/source evidence identities, query
+and binding digests, limits, scores and inclusion/exclusion reasons. Defaults
+bound the inventory to 1000 ids, complete source reads to eight MiB, results
+to four, reported decisions to 128, each note's text to 1024 bytes, and
+materialized evidence to 32 KiB. Counts include omitted decisions. Missing
+records or an exhausted source allowance produce an incomplete inspection;
+retrieval refuses to release that partial ranking. Corrupt or foreign records
+fail verification. Pruning still takes effect in a frozen library.
+
+Retrieved notes point to bounded evidence files containing source digests,
+selected observations and explicitly truncated artifact excerpts. A file
+that cannot fit says `not_materialized`. Complete verified plan, candidate
+and evaluation contracts also yield the existing comparative/calibration
+results: no observed fix, an observed regression or fix, and whether the
+proposer's prediction matched it. Provider/runtime failures are identified
+through the existing digest and excluded from edit-effect comparisons.
+Incomplete comparative contracts stay `unassessed`; these observations
+establish no causal diagnosis or activation permission.
+
+To enable this in the first-party proposer, pin
+`Proposer.profile(model, experience: true)` as the plan's evolver identity
+and supply an optional host context:
+
+```elixir
+experience = %{
+  store: store, library: library, query: query, binding: context,
+  consumer: consumer, commit: commit, options: options
+}
+# Pass experience: experience in Proposer.propose/3's context, or in Meta's config.
+```
+
+The host may instead supply `experience: fn proposal_context -> {:ok, config}
+end` to choose a task-specific query, new exposure identity and frozen or
+updated library before each proposal. Returning an error starts no session.
+Capture and library-update policy remain explicit host operations. Existing
+proposer profiles and the provider-free seed path keep their behavior.
+
+Exposure commits before any lesson reaches the sealed workspace. The evolver
+reads `evidence/lessons/index.json` and follows evidence pointers on demand;
+the critic receives the compact index. The candidate's trace and extensions
+retain the retrieval receipt and complete source-case exposure. Retrieval
+adds no reflection session, dependency or allowance; ordinary proposer model
+calls retain their existing host authorization and accounting.
+
+A selected rejected profile cannot be repeated verbatim, or by replaying all
+its recorded changed-field values alongside unrelated edits, without a
+`reconsiderations` manifest entry. It must name the lesson, explain the new
+evidence, and reference genuinely new verified development evaluations by id
+and SHA-256. Old source evaluations, fabricated digests, incomplete/unsafe or
+provider-failed observations do not qualify. The rationale is inspectable;
+this guard does not infer semantic equivalence between differently worded
+edits. It neither evaluates the proposed edit nor changes the mutation
+surface, confirmation lane or active harness.
+
+Embedding adapters can opt into bounded retrieval with `Lessons.inventory/1`
+and `Lessons.fetch/3`; existing adapters remain valid for persistence/recall
+and return an explicit unsupported error for retrieval until implemented.
 
 ## Discovery is not confirmation
 
@@ -630,13 +945,158 @@ and records each one as skipped; `promote` refuses a fixture that still has
 one and names it, unless you pass `--allow-secret-files` for a deliberate
 fake. The rule reads names only, so review a draft before you promote it.
 
-The [capture extension](https://github.com/houllette/lemieux/blob/main/examples/extensions/capture/README.md)
-writes the first draft itself: a `session_end` hook that turns a verification
-command left failing, or a correction from the person, into a feedback record
-and a bounded draft under `.lmx/drafts/` for exactly this review. That
-directory carries a `.gitignore` of `*`, so `git add -A` never stages a
-draft, and the snapshot skips the same secret-shaped files plus `lmx`'s own
-`.lmx/config.json`.
+### Bounded refinement controller
+
+`Lemieux.Learning.Controller` is an explicit host-owned contract for ordinary
+tasks, proposers, critics, probes, composition, reflection and confirmation.
+It starts only when the host mounts it. The default learning allocation is
+zero. The host supplies the existing `Lemieux.JobBudget`, finite token/time
+ceilings and an allocation inside those ceilings; learning creates no extra
+spend allowance. Request and dollar reservations use that same job ledger.
+
+```elixir
+{:ok, job} = Lemieux.JobBudget.start_link(max_requests: 40, max_cost_usd: 2.0)
+{:ok, controller} = Lemieux.Learning.Controller.start_link(
+  job_id: "task-42", job_budget: job, max_tokens: 100_000, max_time_ms: 120_000,
+  learning: [max_requests: 8, max_tokens: 20_000,
+    max_time_ms: 30_000, max_cost_usd: 0.5]
+)
+controlled = Lemieux.Learning.Controller.provider(controller, :task, provider,
+  token_bound: &host_token_upper_bound/1, timeout_ms: 10_000
+)
+```
+
+The token-bound callback is trusted, provider-free host policy and must cover
+all input, output and cache tokens. An absent bound or provider refuses the
+request. Start the controller before token-consuming parent work and route
+every participant through it. Untracked parent requests close token admission.
+Do not also charge the same provider request to a session-owned job ledger;
+the controlled provider already reserves it. Other paid tools may use the
+shared job ledger normally.
+
+Reservations precede dispatch and persistence precedes effects. Each physical
+retry consumes another request. Cancellation kills guarded work and retains
+unknown usage; it never refunds the request. Reconciliation is idempotent,
+and restoring an interrupted reservation marks it unknown rather than running
+it again. Current limits, providers, callbacks and authority come from fresh
+host options. Checkpoints contain data only and must match the job identity.
+For crash durability, the job ledger and controller both need synchronous
+host-owned persistence; an in-memory snapshot alone is not durable recovery.
+
+Dollars use the job ledger's integer precision. Metered unknown pricing
+refuses admission. Explicit `cost_mode: :quota` permits unknown dollars only
+when the outer ledger and learning allocation have no dollar ceiling; tokens,
+requests and time still count. Unknown cost stays `nil`. Admission estimates
+are bounds supplied by the provider/host, rather than a billing guarantee;
+actual overruns are recorded and stop further work. Runtime deadlines use a
+monotonic clock, with a bounded wall-clock deadline retained for restart.
+
+`Controller.consider/2` inspects bounded deterministic signals and records
+healthy, unsupported and duplicate signals as no-op outcomes. Readiness never
+authorizes dispatch. `reconcile/4` may carry a new information digest; repeated
+uninformative attempts stop learning. `Controller.select/3` keeps the original
+harness/output unless supported comparison bounds show an improvement.
+Status, consideration and selection make no provider request. Decision history
+is finite; reaching its limit stops work instead of forgetting idempotency.
+
+The first-party proposer accepts an explicit
+`{"outcome":"no_supported_improvement","reason":"..."}` manifest without
+inventing a profile edit or invoking a critic. Select `Proposer.profile(model,
+abstain: true)` to include that protocol in its instructions. A controller
+signal can abstain before resolving a provider or exposing lesson evidence.
+No-op usage is retained by the search state without adding a candidate;
+ordinary candidate surface validation is unchanged. Cycles retain the seed on
+primary-objective ties, regressions or missing paired development coverage.
+
+For a preregistered experiment, `Controller.admit/3` checks the entire frozen
+allocation and binds its plan digest. `Controller.experiment/5` reserves the
+whole allocation before mounting a child controller; all child requests draw
+from that reserved capacity. Unused dollars/tokens settle to actual usage;
+allocated request slots are conservatively consumed even when unused. Supply
+an explicit full request bound covering both arms, repetitions, tool turns and
+retries. Admission never rewrites the plan to fit the remainder. Exhaustion or
+interruption remains incomplete execution evidence.
+
+`Campaign.run/1` and `resume/1` accept `controller:`, `token_bound:` and a full
+`controller_allocation:` map with `:requests`, `:tokens`, `:time_ms` and
+`:cost_usd`. Allocation must cover the frozen plan's entire maximum. Proposer
+and critic calls share it with probes. `Confirm.run/3` uses that same host
+controller, with its own `controller_allocation:` in the confirmation options;
+both arms keep their preregistered normalization and sample counts. A recovered
+interrupted allocation cannot be dispatched again. Host admission denials and
+interrupted controller work cannot qualify as a candidate's task-quality
+failure. Other hosts can wrap existing provider seams for any controller role,
+including the meta proposer, without adding a provider adapter or bypassing
+the live-run authorization gate.
+
+### Ordinary-session capture
+
+`Lemieux.Extensions.Capture` is selected by the stock `lmx` host when personal
+state is enabled. It makes no model request. It observes verification failures
+and failure-to-recovery episodes, corrections, and repeated tool failures or
+recoveries. An observation is separate from a diagnosis: passing a later check
+never establishes task correctness. Corrections without a verifier stay
+`needs_review` drafts.
+
+Before a prompt's first request, capture checkpoints bounded workspace bytes
+through the active environment and effective read policy, without approval
+prompts. Retries reuse those inputs. A resumed prompt
+with earlier effects cannot replace missing inputs with the repaired workspace.
+Terminal capture reads authoritative transcript entries; records contain entry
+identities and hashes, observations, and terminal evidence references, rather
+than copied conversation bodies. Input files remain private source content.
+
+The defaults allow 256 KiB total, 64 KiB per file, 128 visited paths and 250 ms
+per observation. A guarded worker dies when its caller dies or its deadline
+expires. Environments must implement streaming reads, so the project policy cannot
+trigger an unbounded fallback read. Unsupported streaming disables capture.
+Timeouts, missing artifacts, omitted files, secret-shaped names, symlinks and
+size limits produce unavailable or incomplete inputs. Capture never runs a verifier, and unknown replay eligibility is false.
+Only file bytes are captured; permissions, services and external dependencies
+must be reviewed by the host before replay. A generic transcript store owns its
+read bounds; the stock JSONL store is also checked before reading.
+
+Records live under `~/.lmx/capture/PROJECT_DIGEST/`, with private permissions and
+an ignored directory. The host/project scope uses the workspace path digest,
+not its basename. Retention defaults to 128 records for 30 days; expired and
+excess records are removed on terminal capture. Pending checkpoints are bounded
+and pruned during capture and removed after terminal processing. Storage and
+callback failures emit a generic warning without transcript text and leave
+ordinary completion intact.
+
+```elixir
+{:ok, records} = Lemieux.Extensions.Capture.history(capture_root, workspace)
+:ok = Lemieux.Extensions.Capture.prune(capture_root, workspace, 30, 128)
+:ok = Lemieux.Extensions.Capture.forget(capture_root, workspace)
+```
+
+Disable future capture with personal `"capture": false`,
+`"disabled_extensions": ["capture"]`, `--config none`, or project
+`.lmx/capture.json` containing `{"enabled": false}`. Malformed project policy
+also disables capture. The project file cannot override a host opt-out.
+Opting out creates no capture files; use `forget/2` to delete retained content.
+Capture is omitted for extension-profile runs, child sessions and aside work.
+Embedders explicitly select `{Lemieux.Extensions.Capture, dir: private_root,
+store: transcript_store}`; adding the library starts no capture process.
+
+A host may explicitly call `Capture.materialize/2` into a new directory to
+inspect the original bytes. `Capture.validate_replay/3` additionally takes a
+host-owned isolated validator `(directory, command) -> {:ok, exit_status}`;
+it must reproduce the original defect using the exact recorded command and
+exit status. A passing or mismatched check cannot qualify it. The callback is
+trusted host work, never something a stored record authorizes. A copied
+directory alone is not isolation. No provider call or command is triggered by
+reading or loading a record.
+
+Only after that explicit check can `Capture.case_draft/3` create an ordinary
+`Lemieux.Feedback.CaseDraft`, still marked `draft`. Human review of secrets,
+missing runtime requirements, acceptance criteria and the grader's failure on
+the untouched control remains required before `lmx corpus promote`. A
+correction, unavailable checkpoint or incomplete input cannot take this lane.
+Capture does not automatically turn observations into lessons or activate them.
+The [older capture example](https://github.com/houllette/lemieux/blob/main/examples/extensions/capture/README.md)
+illustrates explicit command hooks; use the first-party extension for
+pre-effect inputs and recovery records.
 
 ### What to watch
 
@@ -702,3 +1162,192 @@ scope-checked derived item and its complete source closure.
 These contracts are complete on the Lemieux side. A hosted deployment is not
 complete until the golden fixture passes in the host and in Ixway and the
 [cross-system acceptance runbook](acceptance.md) passes.
+
+
+## Task-local propose, probe and compose
+
+`Lemieux.Learning.Refinement.run/4` is an opt-in host operation over the
+actual effective harness. It does not start a scheduler or apply a proposed
+change to the user's workspace. A small frozen `Discovery.Plan` bounds the
+candidate count and mutation surface; each candidate names a concrete
+mechanism, exact content and rationale artifacts, and immutable seed parents.
+General or domain hypotheses may be candidates; neither is a required fan-out.
+
+The host supplies an `Agent.Checkpoint` handle, the original output, baseline
+profile, current SHA-256 bindings (`source`, `harness`, `environment`,
+`descriptors`, `policy`, `verification`, `model`, each with `_sha256`),
+`CLI.Runtime.Evaluation.factory/3` and its matching `identity/1`, the shared
+`Learning.Controller`, and an allocation covering the entire experiment.
+Other effective runtimes must supply the same qualification contract. Default
+learning allowance remains zero. A Scripted provider runs offline; hosted
+providers require an explicit host `allow_live: true` and separate spending
+authority. This API never supplies that authority itself.
+
+Implement `Learning.Refinement.Isolation` in the host. `inspect/1` must attest
+clean, current, equivalent inputs and effects limited to `read` and
+`workspace_write`; external, credential and unknown effects refuse replay.
+`acquire/3` returns a fresh `Benchmark.Task`, confined `session:` options and
+the requested unique lease id, plus a freshly assembled `runtime_identity`
+for that actual workspace. Distinct workspace paths keep distinct runtime
+qualifications; the host attests their input equivalence explicitly. `validate/3` checks immutable input identities
+before and after each run, allowing declared output changes. `release/2`
+destroys the environment and its running work. Acquisition must be bounded,
+and release must finish within five seconds. A copied directory or transcript
+fork alone cannot satisfy this contract. Hooks, tools and executable verifiers
+must all use the host's isolation. Guardians release leases and cancel owned
+sessions when calling workers die.
+
+Pass `propose: fn context, controlled_provider -> ... end`, returning
+`{:ok, candidates, artifacts_by_sha256}` or `{:noop, reason}`. The context
+contains the plan, baseline, original output and input bindings. Persist
+candidate/rationale artifacts before returning; use only the supplied metered
+provider for inference. `expose: fn bindings -> :ok end` must durably commit
+source exposure before the proposer receives that context. The existing
+`Learning.Proposer` can be wrapped by this host callback; the lane does not
+invent a second provider adapter.
+
+`assess: fn observation, lease -> assessment end` supplies a targeted `score`
+between zero and one and a `regression` boolean. `verifier: true` also requires
+`verified_success` from an executable task check inside isolation. Without
+that check, success is explicitly `behavioral_unconfirmed`; it establishes
+neither task correctness nor transfer. Assessors must not infer success from
+the agent's final text. They can inspect output artifacts, run independent
+checks and measure the mechanism the proposal targets.
+
+Each arm uses two repetitions by default (two through five are supported),
+fresh equivalent inputs, the host-attested effective control identity for each lease and terminal
+harness/run evidence. All candidate scores must beat all baseline scores
+without regression. Scores and trace digests remain in the receipt so overlap
+and variability are visible. Unsupported edits never run; both sides of a
+conflict are excluded. The remaining composition is validated and executed
+again before selection. A tie, weaker composition or unsupported hypothesis
+keeps the original profile and output. A selected result is a scoped proposal,
+not an activated asset or a cross-task confirmation.
+
+The checkpoint records intent before effects, binds the frozen plan and
+callbacks, and rechecks current isolation even for completed cached results.
+Cancellation or incomplete probes require explicit `Checkpoint` recovery;
+resume never repeats uncertain side effects or refunds unknown spend. Use a
+fresh checkpoint step and controller signal for an independently authorized
+experiment. Hosts own worker cancellation and the durable transcript store.
+
+
+## Automatic guidance under host promotion policy
+
+Reviewed `harness.json` files remain the standalone default. Automatic use is a
+separate, experimental opt-in through `Lemieux.Learning.Promotion`: a host
+explicitly declares the policy, authority source and atomic runtime owner.
+The API neither rewrites reviewed files nor starts a scheduler or a model.
+Migrate by retaining the reviewed base harness, enabling a small task-local
+policy first, and adding confirmed canaries only after the host implements
+current-authority, observation and rollback handling. Existing file-based
+installations need no migration.
+
+The operations have distinct meanings:
+
+| Operation | Requirement | Result |
+| --- | --- | --- |
+| `retain/3` | Current `retain` capability, applicable scoped lesson, verified sources | Idempotently retained experience; qualification stays behavioral/unconfirmed |
+| `promote/4`, task-local | Current `task_local` capability and supported task-local refinement | A bounded adaptation for exactly the named task, until expiry |
+| `promote/4`, canary | Current `canary` capability and separately approved independent confirmation | Deterministic selected traffic, observations and rollback; no automatic broad deployment from behavioral evidence |
+| `review/1` | An immutable asset version | An unapproved proposal; generated code, privilege, evaluator and policy changes stay behind ordinary review and the existing code/release gates |
+
+`Promotion.Policy.new/1` freezes a named `id` and `actor`, complete `scope`,
+`capabilities`, `trust` (`personal` or `repository`), `maximum_bytes` (up to
+16 KiB), `ttl_ms` (up to one day), UTC `expires_at`, and `canary` settings:
+`percent` (1–100), a fixed `salt`, and `minimum_observations` (1–32).
+The SHA-256 identifies those exact bounds. Possession of that document is not
+a grant. The host supplies a fresh zero-arity authority function returning
+`{:ok, context}` on every operation, including cached use and resume:
+
+- `policy`, current `scope`, current `base` (`Lemieux.Harness`), UTC `now`,
+  and nonempty `task_id`;
+- current refinement `bindings` and `runtime_sha256` (the source effective
+  runtime identity), matching the exact tested configuration;
+- `refinements`, the host-approved immutable refinement receipt digests;
+- `confirmations`, the host-approved independent confirmation attestation
+  digests, and optional `description_tools` for personal local-tool text;
+- `lesson_context` for current lesson applicability, and `revoked: true`
+  when the policy has been withdrawn.
+
+These values come from the host's current control plane, not the candidate,
+repository or historical transcript. In particular, a host adds a refinement
+receipt to its approved set only after validating its persisted checkpoint,
+source bindings, candidate/parent artifacts and terminal traces. A digest
+supplied by a repository cannot approve its own evidence. Authority is checked
+inside the transaction and again after runtime preparation before commit.
+Unavailable authority returns no previously granted harness. A changed current
+base is refused; mount the freshly assembled base rather than resurrecting
+serialized callbacks or older permissions.
+
+For persistent guidance, the host first verifies the independent
+`Discovery.Confirm` experiment plan, result and complete traces. It then
+approves an immutable attestation with `kind: "independent_confirmation"`,
+`verdict: "pass"`, exact selected-profile `content_sha256`, current
+`runtime_sha256`, complete `scope`, the evidence-bundle `evidence_sha256`,
+UTC `issued_at`/`expires_at`, and canonical `sha256`. Its digest must be in the
+fresh host-approved `confirmations` set. A composed profile needs confirmation
+of those exact composed bytes. Renaming behavioral evidence, sealing it again
+or copying a passing verdict does not create that authority. Expired or
+withdrawn confirmation invalidates an active grant.
+
+Guidance may append a prompt suffix and change explicitly authorized enabled
+local-tool descriptions. It cannot replace the prompt, tools, model,
+executors, generation settings, verification, credentials or permissions.
+Repository policy cannot change any tool description, preserving trusted
+personal text. Personal text requires the host's explicit tool-name allowlist.
+Task-local assets have task/session scope and bind their task id; canaries have
+project/host scope. Approval uses `Asset.Version`, `Proposal.approve` with the
+named policy actor and immutable policy hash, then `Registry.activate`.
+Effective harness evidence carries the activated asset and policy identities.
+A discovery candidate or frontier object is never activated directly.
+
+Mount a host implementing `Promotion.Host` and call it explicitly:
+
+```elixir
+alias Lemieux.Learning.Promotion
+alias Lemieux.Learning.Promotion.Memory
+
+# The host supplies base_harness, scope, current_authority and refinement.
+{:ok, owner} = Memory.start_link(base: base_harness, scope: scope)
+host = {Memory, owner}
+request = %{mode: :task_local, baseline: portable_baseline, refinement: refinement}
+{:ok, _prepared, approval} = Promotion.promote(host, "adaptation-1", request, current_authority)
+
+# Obtain the harness afresh before every invocation, including session resume.
+{:ok, harness, selection} = Promotion.current(host, current_authority)
+# Pass harness through the ordinary host session API.
+{:ok, prior_harness, rollback} = Promotion.undo(host, current_authority)
+```
+
+The reference `Memory` host swaps registry, effective harness and audit receipt
+in one GenServer state transition. Its optional `prepare:` function receives
+old harness, proposed harness and receipt and must perform a bounded,
+side-effect-free assembly/restart-preparation check. Failure preserves both
+prior pointers and quarantines attempted activation. This adapter is volatile;
+it is suitable for an explicitly owned in-memory runtime and does not promise
+crash-durable history or install an external runtime. A durable/external host
+implements `Promotion.Host`: serialize authority changes and installation,
+persist intent before effects, commit runtime/registry/audit together, restore
+the exact prior version on apply or restart failure, and block use while
+restoration is uncertain. Reconcile intent before serving work after restart;
+never repeat uncertain effects automatically. Durable quarantine and history
+belong to that same transaction.
+
+Only one unresolved adaptation is permitted per scope. Undo or resolve it
+before testing a replacement, so individually supported edits do not become
+an untested stack. A canary selects task ids with the frozen salt and percentage;
+unselected tasks receive the exact base. `observe/3` requires a unique
+observation id, active version id, selected current task id, `passed`,
+`regression`, and an exact `trace_sha256`. Changed duplicate observations are
+refused. Any failed check or regression rolls back and quarantines the content;
+distinct successful tasks can complete the canary. Expiry, policy withdrawal,
+changed bindings or missing confirmation also restore the prior harness on
+`current/2`. There is no background timer: call it before each invocation and
+use a host-owned lifecycle/timer for long-running canaries. An explicit undo
+records the same atomic rollback. A delayed rollback cannot overwrite a newer
+approved registry pointer.
+
+The explicit development host and five-arm protocol are described in
+[Qualifying learning before release](learning-qualification.md). They exercise
+these seams together without enabling default-on learning or durable deployment.

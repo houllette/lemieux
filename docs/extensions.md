@@ -278,6 +278,7 @@ session would apply.
 | `Lemieux.Extensions.A2A` | The peers in `"a2a_peers"` ([A2A](a2a.md)) | `a2a` | when configured | when configured |
 | `Lemieux.Extensions.Delegation` | The repository scout behind `subagents`, and its budgets ([Delegation](subagents.md)) | `delegation` | default | default |
 | Yours, from `--extension`, `--extension-dir` or `"extensions"` | Whatever you built; see [Installing an extension into `lmx`](#installing-an-extension-into-lmx), and [Adding a model route](#adding-a-model-route) for one that offers a route rather than shaping the harness | | flag | flag |
+| `Lemieux.Extensions.Capture` | Bounded pre-effect inputs and ordinary failure/recovery drafts ([Capture](harness-learning.md#ordinary-session-capture)) | `capture` | default | default |
 | `Lemieux.Extensions.Checkpoints` | Records what tools change, for `/undo`, `/rewind` and `/redo` ([Checkpoints](tool-contracts.md#checkpoints)) | `checkpoints` | default | default |
 | `LemieuxSystemOneCompaction` | System One compaction, bundled with the `lmx` release ([Compaction](compaction.md#optional-system-one-projection-before-compaction)) | `systemone_compaction` | when a provider is complete | when a provider is complete |
 
@@ -288,7 +289,7 @@ servers. It is not enabled by the stock CLI/TUI defaults.
 
 "New sessions" means a session `lmx` is equipping a fresh catalog for: a
 resumed session keeps the catalog its transcript recorded. `environment_context`,
-`verify` and `checkpoints` need a personal state directory, so `--config none`
+`capture`, `verify` and `checkpoints` need a personal state directory, so `--config none`
 without `LMX_HOME` leaves them out, and an `--extension-profile` run gets
 none of `environment_context`, `continuation`, `verify` and `budget`.
 `continuation` and `budget` read nothing from the machine, so `--config none`

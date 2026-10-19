@@ -1,5 +1,7 @@
 defmodule Lemieux.RepositoryContext.ElixirTest do
-  use ExUnit.Case, async: true
+  # Capturing :stderr replaces a VM-wide device. A concurrent CLI capture
+  # can contribute its expected warning and make the silence assertion lie.
+  use ExUnit.Case, async: false
   alias Lemieux.RepositoryContext
   alias Lemieux.RepositoryContext.Elixir, as: Indexer
   alias Lemieux.RepositoryContext.Index

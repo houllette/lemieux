@@ -4,9 +4,19 @@ defmodule LemieuxPackageConsumer do
   @spec version() :: String.t()
   def version, do: Lemieux.version()
 
+  alias Lemieux.Benchmark.Corpus.Exposure
+  alias Lemieux.CLI.Options
+  alias Lemieux.CLI.Runtime
+  alias Lemieux.CLI.Runtime.Evaluation, as: CLI
+  alias Lemieux.Contract
   alias Lemieux.Extensions.A2UI
   alias Lemieux.Extensions.A2UI.Diagram
   alias Lemieux.Harness
+  alias Lemieux.Learning.Experience.Bundle
+  alias Lemieux.Learning.Experience.Lesson
+  alias Lemieux.Learning.Experience.Lessons
+  alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
+  alias Lemieux.Learning.Experience.Retrieval
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store
@@ -35,6 +45,8 @@ defmodule LemieuxPackageConsumer do
     {:ok, supervisor} = Lemieux.Supervisor.start_link(name: __MODULE__.Supervisor)
     store = JSONL.new(directory)
     File.mkdir_p!(directory)
+    :ok = verify_lessons(phase, directory)
+    :ok = verify_cli_evaluation(directory)
     {:ok, harness} = Harness.assemble(Harness.new(tools: []), [Audit])
 
     script =
@@ -110,6 +122,107 @@ defmodule LemieuxPackageConsumer do
     :ok
   end
 
+  defp verify_lessons(phase, directory) do
+    # macOS mktemp uses the /var alias. This host resolves its own scratch
+    # root; the adapter still refuses arbitrary symlinked ancestors.
+    directory = File.cd!(directory, &File.cwd!/0)
+    scope = %{"id" => "package-consumer/project"}
+
+    {:ok, bundle} =
+      Bundle.new(%{
+        "id" => "package-experience",
+        "scope" => scope,
+        "plan" => %{"id" => "package-plan", "sha256" => Contract.sha256("plan"), "scope" => scope},
+        "seeds" => [],
+        "candidates" => [],
+        "evaluations" => [],
+        "raw" => [%{"id" => "observation", "scope" => scope, "case_id" => "package-case"}],
+        "derived" => [],
+        "exposures" => [],
+        "artifacts" => []
+      })
+
+    context = %{
+      "model" => "test:model",
+      "repository" => "package-consumer",
+      "tools_sha256" => Contract.sha256("tools"),
+      "environment_sha256" => Contract.sha256("environment")
+    }
+
+    {:ok, lesson} =
+      Lesson.new(bundle, %{}, %{
+        "key" => "package-lesson",
+        "kind" => "proposer_lesson",
+        "outcome" => "rejected",
+        "qualification" => "unconfirmed",
+        "applicability" => ["package fixture"],
+        "mechanism" => "Retain negative evidence without activating it.",
+        "supporting" => ["observation"],
+        "contradicting" => [],
+        "candidate_ids" => [],
+        "binding" => context,
+        "provenance" => %{"actor" => "package-host"},
+        "created_at" => "2026-10-17T00:00:00Z",
+        "expires_at" => nil,
+        "supersedes" => []
+      })
+
+    store = LessonFiles.new(Path.join(directory, "lessons"), scope)
+    if phase == "seed", do: :ok = Lessons.append(store, lesson)
+    {:ok, ^lesson} = Lessons.read(store, lesson.id)
+
+    consumer = %{
+      "id" => "package-release",
+      "consumer_id" => "package-improver",
+      "consumer_role" => "proposer",
+      "at" => "2026-10-17T00:00:00Z"
+    }
+
+    commit = fn ^scope, exposure ->
+      ["package-case"] = exposure.source_case_ids
+      File.write(Path.join(directory, "lesson-exposure.json"), Exposure.encode!(exposure))
+    end
+
+    {:ok, [^lesson], _exposure} =
+      Lessons.recall(store, context, consumer, commit, now: ~U[2026-10-17 00:00:00Z])
+
+    {:ok, library} = Retrieval.freeze(store, scope)
+    query = %{"task" => "package fixture"}
+    options = [now: ~U[2026-10-17 00:00:00Z]]
+    {:ok, receipt} = Retrieval.inspect(store, library, query, context, options)
+
+    retrieval_commit = fn ^scope, exposure ->
+      ["package-case"] = exposure.source_case_ids
+      File.write(Path.join(directory, "retrieval-exposure.json"), Exposure.encode!(exposure))
+    end
+
+    {:ok, result} =
+      Retrieval.retrieve(
+        store,
+        library,
+        query,
+        context,
+        Map.put(consumer, "id", "package-retrieval"),
+        retrieval_commit,
+        options
+      )
+
+    ^receipt = result.receipt
+    [note] = result.notes
+    true = note["id"] == lesson.id
+    "counterexample" = note["use"]
+    true = Map.has_key?(result.evidence, lesson.id <> ".json")
+
+    if phase == "tighten" do
+      :ok = Lessons.prune(store, lesson.id, "package-retention", ~U[2026-10-18 00:00:00Z])
+
+      {:error, :pruned} =
+        Lessons.read(LessonFiles.new(Path.join(directory, "lessons"), scope), lesson.id)
+    end
+
+    :ok
+  end
+
   defp open("seed", _directory, options), do: Lemieux.start_session(options)
 
   defp open(_phase, directory, options),
@@ -153,6 +266,40 @@ defmodule LemieuxPackageConsumer do
       Enum.any?(entries, &(&1.type == :tool_result and &1.payload["output"] =~ "host policy"))
 
     GenServer.stop(session)
+    :ok
+  end
+
+  defp verify_cli_evaluation(directory) do
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        "none",
+        "--bare",
+        "--no-delegate",
+        "--permission-mode",
+        "off",
+        "--model",
+        "test:model"
+      ])
+
+    host = [cwd: directory, provider: Scripted.new([]), store: JSONL.new(directory)]
+    {:ok, ordinary} = Runtime.prepare(options, host)
+    {:ok, control} = CLI.prepare(options, host, surface: ["system_suffix"])
+    true = control.harness == ordinary.harness
+    :ok = CLI.verify(control.qualification)
+
+    {:ok, candidate} =
+      CLI.prepare(options, host,
+        surface: ["system_suffix"],
+        changes: %{"system_suffix" => "Packaged candidate"}
+      )
+
+    true = candidate.harness.system =~ "Packaged candidate"
+
+    false =
+      candidate.qualification["effective"]["sha256"] ==
+        control.qualification["effective"]["sha256"]
+
     :ok
   end
 

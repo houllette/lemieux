@@ -33,17 +33,17 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   alias Lemieux.Benchmark.Corpus.Exposure
   alias Lemieux.Benchmark.Gate
   alias Lemieux.Benchmark.Manifest
-  alias Lemieux.Benchmark.Runtime
-  alias Lemieux.Benchmark.Runtime.Agent, as: AgentRuntime
   alias Lemieux.Contract
   alias Lemieux.Experiment.Decision
   alias Lemieux.Experiment.Plan, as: ExperimentPlan
   alias Lemieux.Extension.Profile
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Confirmation
   alias Lemieux.Learning.Discovery.Evaluator
   alias Lemieux.Learning.Discovery.Plan
-  alias Lemieux.Providers.Scripted
+  alias Lemieux.Learning.Discovery.ProfileDelta
+  alias Lemieux.Learning.RuntimeEvidence
 
   @type prepared :: %{
           dir: Path.t(),
@@ -53,6 +53,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
           control: Candidate.t(),
           variant_profile: map(),
           control_profile: map(),
+          runtime_parent_profile: map(),
           tasks: [Lemieux.Benchmark.Task.t()],
           manifest: Manifest.t(),
           policy: map()
@@ -123,6 +124,9 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   `:minimum_pairs` (2), `:stopping_rule` (a complete rule map overriding the
   e-process default), `:max_cost_usd` (5.0), `:max_cost_per_attempt_usd`
   (0.25), `:max_requests_per_attempt` (24, quota only).
+  Effective-runtime configuration may supply `:runtime_parent_profile` for
+  attributing edits to the factory's original parent. Otherwise `:seed_profile`
+  or the archive's single verified seed supplies it, before any execution.
   """
   @spec prepare(config :: keyword(), candidate_id :: String.t(), opts :: keyword()) ::
           {:ok, prepared()} | {:error, term()}
@@ -139,10 +143,13 @@ defmodule Lemieux.Learning.Discovery.Confirm do
            variant_bytes: variant_bytes,
            control_bytes: control_bytes
          } = arms,
+         {:ok, runtime_identity} <- Evaluator.runtime_identity(config),
+         :ok <- same_runtime(discovery_plan, runtime_identity),
          {:ok, tasks} <-
            holdout_tasks(manifest, discovery_plan, Keyword.get(opts, :holdout_case_ids)),
          {:ok, variant_profile, control_profile, normalization} <-
            arm_profiles(variant_bytes, control_bytes, opts),
+         {:ok, runtime_parent_profile} <- runtime_parent(config, output_dir, discovery_plan),
          policy = policy(variant_profile, tasks, opts),
          {:ok, plan} <-
            Confirmation.to_experiment(
@@ -155,7 +162,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
                tasks,
                normalization,
                policy,
-               opts
+               Keyword.put(opts, :runtime_identity, runtime_identity)
              )
            ),
          {:ok, dir} <- claim_directory(output_dir, candidate.id, opts),
@@ -169,12 +176,39 @@ defmodule Lemieux.Learning.Discovery.Confirm do
          control: control,
          variant_profile: variant_profile,
          control_profile: control_profile,
+         runtime_parent_profile: runtime_parent_profile,
          tasks: tasks,
          manifest: manifest,
          policy: policy
        }}
     end
   end
+
+  # A confirmation may be opened from an archive without the campaign's seed
+  # configuration. Reuse the verified seed bytes for edit attribution; requiring
+  # an implicit live :seed_profile would spend the sample and only then reject it.
+  defp runtime_parent(config, dir, plan) do
+    case config[:runtime_parent_profile] || config[:seed_profile] do
+      nil -> archived_parent(dir, plan.seeds)
+      profile -> {:ok, profile}
+    end
+  end
+
+  defp archived_parent(dir, [%{"content_sha256" => digest}]) do
+    with {:ok, bytes} <- read_artifact(dir, digest),
+         true <- Contract.sha256(bytes) == digest,
+         {:ok, profile} <- decode(bytes),
+         :ok <- Profile.validate(profile) do
+      {:ok, profile}
+    else
+      _invalid -> {:error, :invalid_runtime_parent_profile}
+    end
+  end
+
+  defp archived_parent(_dir, _seeds), do: {:error, :runtime_parent_profile_required}
+
+  defp same_runtime(%Plan{target_interface: identity}, identity), do: :ok
+  defp same_runtime(_plan, _identity), do: {:error, :confirmation_runtime_changed}
 
   @doc """
   Prepares and runs the confirmation, writing `exposure.json`, `report.json`,
@@ -185,8 +219,15 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   def run(config, candidate_id, opts \\ []) when is_list(config) and is_binary(candidate_id) do
     with {:ok, provider} <- fetch(config, :provider),
          :ok <- live_allowed(config, provider),
-         {:ok, prepared} <- prepare(config, candidate_id, opts),
-         {:ok, exposure} <- expose(prepared),
+         {:ok, prepared} <- prepare(config, candidate_id, opts) do
+      controlled_confirmation(config, prepared, opts, fn effective ->
+        run_prepared(prepared, provider, effective)
+      end)
+    end
+  end
+
+  defp run_prepared(prepared, provider, config) do
+    with {:ok, exposure} <- expose(prepared),
          :ok <-
            File.write(Path.join(prepared.dir, "exposure.json"), Exposure.encode!(exposure), [
              :exclusive
@@ -197,6 +238,49 @@ defmodule Lemieux.Learning.Discovery.Confirm do
       File.write!(Path.join(prepared.dir, "decision.json"), JSON.encode!(result["quality"]))
       File.write!(Path.join(prepared.dir, "result.json"), JSON.encode!(result))
       {:ok, result}
+    end
+  end
+
+  defp controlled_confirmation(config, prepared, opts, work) do
+    case Keyword.get(config, :controller) do
+      nil -> work.(config)
+      controller -> allocate_confirmation(controller, config, prepared, opts, work)
+    end
+  end
+
+  defp allocate_confirmation(controller, config, prepared, opts, work) do
+    case Keyword.fetch(opts, :controller_allocation) do
+      {:ok, required} ->
+        plan = %{
+          sha256: prepared.plan.sha256,
+          budget:
+            Map.put(prepared.plan.budget, "maximum_requests", prepared.policy["maximum_requests"])
+        }
+
+        controller
+        |> Controller.experiment("confirmation/" <> prepared.plan.id, plan, required, fn child ->
+          work.(Keyword.put(config, :controller, child))
+        end)
+        |> controller_result()
+
+      :error ->
+        {:error, :controller_allocation_required}
+    end
+  end
+
+  defp controller_result({:ok, result, _receipt}), do: result
+  defp controller_result({:skip, receipt}), do: {:error, {:controller_admission, receipt}}
+
+  defp controlled_provider(config, provider) do
+    case Keyword.get(config, :controller) do
+      nil ->
+        provider
+
+      controller ->
+        Controller.provider(controller, :confirmation, provider,
+          token_bound: config[:token_bound],
+          timeout_ms: Keyword.get(config, :request_timeout_ms, 5000)
+        )
     end
   end
 
@@ -217,11 +301,43 @@ defmodule Lemieux.Learning.Discovery.Confirm do
     allowlists = Evaluator.allowlists(tasks)
 
     cond do
-      Enum.sort(expected) != Enum.sort(actual) -> {:error, :incomplete_confirmation}
-      not Enum.all?(rows, &terminal?/1) -> {:error, :non_terminal_attempt}
-      true -> decide(prepared, tasks, rows, allowlists, policy)
+      Enum.sort(expected) != Enum.sort(actual) ->
+        {:error, :incomplete_confirmation}
+
+      not Enum.all?(rows, &terminal?/1) ->
+        {:error, :non_terminal_attempt}
+
+      true ->
+        with :ok <- runtime_evidence(prepared, rows),
+             do: decide(prepared, tasks, rows, allowlists, policy)
     end
   end
+
+  # A score and a runtime label cannot qualify the assembled CLI. Bind every
+  # arm to the frozen edit and the actual request/terminal transcript before
+  # admitting its quality result. Profile-only archives retain their scope.
+  defp runtime_evidence(
+         %{discovery_plan: %{target_interface: %{"id" => "lemieux.effective-lmx/v1"} = identity}} =
+           prepared,
+         rows
+       ) do
+    Enum.reduce_while(rows, :ok, fn row, :ok ->
+      profile =
+        if row["runtime"] == "control",
+          do: prepared.control_profile,
+          else: prepared.variant_profile
+
+      with {:ok, changes} <- ProfileDelta.changes(prepared.runtime_parent_profile, profile),
+           :ok <- RuntimeEvidence.verify(row["observation"], identity, changes) do
+        {:cont, :ok}
+      else
+        {:error, :invalid_runtime_evidence} = error -> {:halt, error}
+        _invalid -> {:halt, {:error, :invalid_runtime_profile}}
+      end
+    end)
+  end
+
+  defp runtime_evidence(_prepared, _rows), do: :ok
 
   defp decide(prepared, tasks, rows, allowlists, policy) do
     with {:ok, decision} <-
@@ -250,6 +366,15 @@ defmodule Lemieux.Learning.Discovery.Confirm do
            "variant" => prepared.candidate.id,
            "model" => prepared.variant_profile["model"]
          },
+         "runtime_qualifications" =>
+           Enum.map(rows, fn row ->
+             %{
+               "case_id" => row["task_id"],
+               "arm" => row["runtime"],
+               "attempt" => row["attempt"],
+               "qualification" => get_in(row, ["observation", "runtime_qualification"])
+             }
+           end),
          "pairs" => pairs(tasks, rows),
          "per_case" => per_case(rows),
          "experiment_id" => prepared.plan.id,
@@ -262,11 +387,6 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   # ---------------------------------------------------------------------------
 
   defp benchmark(prepared, provider, config) do
-    runtimes = [
-      runtime("control", prepared.control_profile, provider, config, prepared.dir),
-      runtime("variant", prepared.variant_profile, provider, config, prepared.dir)
-    ]
-
     options =
       [
         repetitions: prepared.policy["repetitions"],
@@ -278,7 +398,13 @@ defmodule Lemieux.Learning.Discovery.Confirm do
       |> Keyword.merge(cost_options(prepared.policy))
 
     %Manifest{} = manifest = prepared.manifest
-    Benchmark.run(%Manifest{manifest | tasks: prepared.tasks}, runtimes, options)
+
+    with {:ok, control} <-
+           runtime("control", prepared.control_profile, provider, config, prepared.dir),
+         {:ok, variant} <-
+           runtime("variant", prepared.variant_profile, provider, config, prepared.dir) do
+      Benchmark.run(%Manifest{manifest | tasks: prepared.tasks}, [control, variant], options)
+    end
   end
 
   defp cost_options(%{"usage_mode" => "quota"}), do: []
@@ -290,23 +416,10 @@ defmodule Lemieux.Learning.Discovery.Confirm do
     ]
 
   defp runtime(name, profile, provider, config, dir) do
-    Runtime.new(name, AgentRuntime,
-      agent: Lemieux.Agent.Session,
-      agent_options: fn ->
-        {:ok, options, _profile} =
-          Profile.configure(profile,
-            provider: resolve(provider),
-            sessions_dir: Keyword.get(config, :sessions_dir, Path.join(dir, "sessions"))
-          )
-
-        session =
-          Keyword.merge(
-            Keyword.get(options, :session_options, []),
-            Keyword.get(config, :session, [])
-          )
-
-        Keyword.put(options, :session_options, session)
-      end
+    Evaluator.runtime(name, profile, fn -> controlled_provider(config, resolve(provider)) end,
+      runtime_factory: Keyword.get(config, :runtime_factory),
+      sessions_dir: Keyword.get(config, :sessions_dir, Path.join(dir, "sessions")),
+      session: Keyword.get(config, :session, [])
     )
   end
 
@@ -387,7 +500,11 @@ defmodule Lemieux.Learning.Discovery.Confirm do
           "Candidate #{candidate.id} improves holdout task success over #{control.id}.",
       "control" =>
         Map.merge(
-          %{"digest" => Candidate.content_sha256(control), "candidate_id" => control.id},
+          %{
+            "digest" => Candidate.content_sha256(control),
+            "candidate_id" => control.id,
+            "runtime" => Keyword.fetch!(opts, :runtime_identity)
+          },
           normalization
         ),
       "metric" => %{
@@ -559,7 +676,10 @@ defmodule Lemieux.Learning.Discovery.Confirm do
     end)
   end
 
-  defp terminal?(row), do: is_map(row["observation"]) and is_boolean(row["passed"])
+  defp terminal?(row),
+    do:
+      is_map(row["observation"]) and is_boolean(row["passed"]) and
+        get_in(row, ["observation", "provider_error", "code"]) not in ~w(host_admission_denied host_work_interrupted)
 
   defp resources(rows, policy) do
     variant = Enum.filter(rows, &(&1["runtime"] == "variant"))
@@ -676,7 +796,7 @@ defmodule Lemieux.Learning.Discovery.Confirm do
   defp live_allowed(config, provider) do
     cond do
       Keyword.get(config, :allow_live, false) == true -> :ok
-      match?({Scripted, _}, resolve(provider)) -> :ok
+      Controller.scripted?(resolve(provider)) -> :ok
       true -> {:error, :live_campaign_requires_allow_live}
     end
   end

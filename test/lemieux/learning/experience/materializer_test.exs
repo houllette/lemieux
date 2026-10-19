@@ -4,8 +4,38 @@ defmodule Lemieux.Learning.Experience.MaterializerTest do
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Learning.Experience.Bundle
   alias Lemieux.Learning.Experience.Materializer
+  alias Lemieux.Tools.Read
 
   @moduletag :tmp_dir
+
+  test "generated manifests remain readable without changing source artifact bytes", %{
+    tmp_dir: dir
+  } do
+    {bundle, artifacts} = bundle_fixture()
+
+    {:ok, bundle} =
+      bundle
+      |> Bundle.to_map()
+      |> Map.delete("sha256")
+      |> Map.put("extensions", %{"rows" => for(id <- 1..80, do: %{"id" => id})})
+      |> Bundle.new()
+
+    destination = Path.join(dir, "readable")
+    on_exit(fn -> make_tree_writable(destination) end)
+    assert {:ok, ^destination} = Materializer.materialize(bundle, artifacts, destination)
+
+    context = %{cwd: destination, environment: Lemieux.Environment.local()}
+    assert {:ok, output} = Read.run(%{"path" => "bundle.json"}, context)
+    assert output =~ ~s("id": 80)
+    assert output =~ ~s("frontier")
+    refute output =~ "cut at 2000"
+
+    assert {:ok, ^bundle} =
+             destination |> Path.join("bundle.json") |> File.read!() |> Bundle.decode()
+
+    assert File.read!(Path.join(destination, "candidates/candidate-1/raw/trace.txt")) ==
+             "raw trace"
+  end
 
   test "materializes deterministic read-only history and one writable proposal tree", %{
     tmp_dir: tmp_dir

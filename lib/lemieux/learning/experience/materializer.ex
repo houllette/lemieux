@@ -10,7 +10,6 @@ defmodule Lemieux.Learning.Experience.Materializer do
   connects to a host service.
   """
 
-  alias Lemieux.Contract
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Learning.Experience.Bundle
 
@@ -87,8 +86,8 @@ defmodule Lemieux.Learning.Experience.Materializer do
 
   defp manifest_writes(bundle) do
     base = [
-      {"bundle.json", Bundle.encode!(bundle)},
-      {"plan.json", Contract.encode!(bundle.plan)}
+      {"bundle.json", Lemieux.JSON.encode_readable!(Bundle.to_map(bundle))},
+      {"plan.json", Lemieux.JSON.encode_readable!(bundle.plan)}
     ]
 
     base ++
@@ -98,14 +97,15 @@ defmodule Lemieux.Learning.Experience.Materializer do
       flat_writes("raw", bundle.raw) ++
       derived_writes(bundle.derived) ++
       [
-        {"frontier.json", Contract.encode!(bundle.frontier)},
-        {"exposures.json", Contract.encode!(%{"exposures" => bundle.exposures})}
+        {"frontier.json", Lemieux.JSON.encode_readable!(bundle.frontier)},
+        {"exposures.json", Lemieux.JSON.encode_readable!(%{"exposures" => bundle.exposures})}
       ]
   end
 
   defp item_writes(directory, filename, items) do
     Enum.map(items, fn item ->
-      {Path.join([directory, item["id"], filename <> ".json"]), Contract.encode!(item)}
+      {Path.join([directory, item["id"], filename <> ".json"]),
+       Lemieux.JSON.encode_readable!(item)}
     end)
   end
 
@@ -114,20 +114,20 @@ defmodule Lemieux.Learning.Experience.Materializer do
       candidate_id = item["candidate_id"] || "unassigned"
 
       {Path.join(["candidates", candidate_id, "evaluations", item["id"] <> ".json"]),
-       Contract.encode!(item)}
+       Lemieux.JSON.encode_readable!(item)}
     end)
   end
 
   defp flat_writes(directory, items) do
     Enum.map(items, fn item ->
-      {Path.join([directory, item["id"] <> ".json"]), Contract.encode!(item)}
+      {Path.join([directory, item["id"] <> ".json"]), Lemieux.JSON.encode_readable!(item)}
     end)
   end
 
   defp derived_writes(items) do
     Enum.map(items, fn item ->
       source = Map.get(item, "source", "other")
-      {Path.join(["derived", source, item["id"] <> ".json"]), Contract.encode!(item)}
+      {Path.join(["derived", source, item["id"] <> ".json"]), Lemieux.JSON.encode_readable!(item)}
     end)
   end
 

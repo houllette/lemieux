@@ -154,6 +154,7 @@ defmodule Lemieux.CLI.Runtime do
   alias Lemieux.Environment.Local
   alias Lemieux.Environment.Sandbox
   alias Lemieux.Extensions.ApplyPatch
+  alias Lemieux.Extensions.Capture
   alias Lemieux.Extensions.Checkpoints
   alias Lemieux.Extensions.Hooks, as: HooksExtension
   alias Lemieux.Extensions.MCP, as: MCPExtension
@@ -399,6 +400,7 @@ defmodule Lemieux.CLI.Runtime do
            new?: is_nil(resume),
            recorded: recorded,
            provider: provider,
+           store: store,
            model: model,
            interactive?: interactive?(opts),
            cwd: Keyword.get_lazy(opts, :cwd, &File.cwd!/0),
@@ -420,7 +422,7 @@ defmodule Lemieux.CLI.Runtime do
            ),
          {:ok, harness} <-
            Assembly.apply(equipped, Keyword.values(composition), opts) do
-      harness = struct!(harness, host_constraints(opts))
+      harness = constrain(harness, opts)
       harness = %{harness | disabled_tools: harness.disabled_tools || recorded["disabled_tools"]}
       # Keep ceilings in the recorded assembly and `lmx explain`. A notice is
       # rendered as a warning on every TUI start, even when nothing is wrong.
@@ -619,6 +621,10 @@ defmodule Lemieux.CLI.Runtime do
   # explicit session settings are the host's final say, just as they are at
   # Lemieux.start_session/1. In particular a dependency cannot accidentally
   # erase approval hooks, replace a sandbox or relax a request ceiling.
+  @doc "Reapplies fresh host session constraints after composition or a bounded text edit."
+  @spec constrain(harness :: Harness.t(), opts :: keyword()) :: Harness.t()
+  def constrain(%Harness{} = harness, opts), do: struct!(harness, host_constraints(opts))
+
   defp host_constraints(opts) do
     Keyword.take(
       opts,
@@ -947,6 +953,7 @@ defmodule Lemieux.CLI.Runtime do
        |> Enum.concat(a2ui: if(Keyword.get(opts, :a2ui, false), do: Lemieux.Extensions.A2UI))
        |> Enum.concat(Enum.map(loaded, &{:loaded, &1.spec}))
        |> Enum.concat(checkpoints: checkpoints(options, context))
+       |> Enum.concat(capture: capture(options, context, profile?))
        |> Enum.concat(workflow: Lemieux.Extensions.Workflow)
        |> Enum.concat(
          session_summary:
@@ -960,6 +967,31 @@ defmodule Lemieux.CLI.Runtime do
          if systemone, do: extensions ++ [{:systemone, systemone}], else: extensions
        end)}
     end
+  end
+
+  defp capture(options, context, profile?) do
+    settings = Config.get(options.config, "capture", %{})
+    enabled = settings != false and (not is_map(settings) or Map.get(settings, "enabled", true))
+
+    if enabled and not profile? and is_binary(options.host.state_dir) and
+         Map.has_key?(context, :store) do
+      limits = if is_map(settings), do: Map.delete(settings, "enabled"), else: %{}
+
+      opts = capture_options(limits)
+      {Capture, [dir: Path.join(options.host.state_dir, "capture"), store: context.store] ++ opts}
+    end
+  end
+
+  defp capture_options(limits) do
+    keys =
+      ~w(max_input_bytes max_file_bytes max_files timeout_ms retention_days max_records verification_commands)a
+
+    Enum.flat_map(keys, fn key ->
+      case Map.fetch(limits, Atom.to_string(key)) do
+        {:ok, value} -> [{key, value}]
+        :error -> []
+      end
+    end)
   end
 
   defp web_spec(options, context, disabled, profile?) do

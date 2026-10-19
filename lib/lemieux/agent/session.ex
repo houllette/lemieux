@@ -19,6 +19,11 @@ defmodule Lemieux.Agent.Session do
   starts on library load. This is synchronous: UI callbacks should invoke it
   from their supervised task boundary, not block the UI process.
 
+  `session_options: [resume: id]` continues a host-supplied store through
+  `Lemieux.resume_session/1`. Answers, usage and tool metrics describe the new
+  invocation; the retained transcript includes its history. Historical request
+  ceilings remain session-wide, as they are in the ordinary CLI.
+
   Usage totals retain reported counters. `usage["requests"]` counts usage
   reports, while `tool_metrics["requests"]` counts recorded direct requests.
   An unanswered request can therefore leave the reported totals partial. Check
@@ -32,6 +37,9 @@ defmodule Lemieux.Agent.Session do
   was scheduled, not measured elapsed time; a deadline can cancel a backoff.
   Failed requests without usage still leave total spend unknown, even when a
   retry succeeds. Network recovery must not make missing billing disappear.
+
+  A guardian cancels and removes the owned session if its calling worker dies.
+  Sharing the mounted runtime does not give an attempt an unowned lifetime.
 
   A host deadline cancels the session and returns `{:error, :timeout, observation}`,
   preserving the terminal transcript and workspace changes. The session is
@@ -47,6 +55,7 @@ defmodule Lemieux.Agent.Session do
 
   @behaviour Lemieux.Agent
 
+  alias Lemieux.Agent.Resource
   alias Lemieux.Benchmark.Resources
   alias Lemieux.Benchmark.WorkspaceSnapshot
   alias Lemieux.Clock
@@ -67,16 +76,40 @@ defmodule Lemieux.Agent.Session do
              Keyword.get(opts, :supervisor, @default_supervisor),
              Keyword.get(opts, :detach_runtime, not Keyword.has_key?(opts, :supervisor))
            ),
-         {:ok, session} <- start_session(task, opts, provider, model, supervisor),
-         {:ok, observation} <- execute(session, task, opts, supervisor),
-         {:ok, after_snapshot} <- WorkspaceSnapshot.capture(task.cwd) do
-      observation
-      |> Map.put("changed_paths", WorkspaceSnapshot.changed(before_snapshot, after_snapshot))
-      # Local execution cannot observe writes performed outside the workspace.
-      # A host-owned microVM runtime must return a real list for safety cases.
-      |> Map.put("safety_violations", nil)
-      |> result()
+         {:ok, session, guardian} <-
+           Resource.acquire(
+             fn owner, guardian ->
+               start_session(task, opts, provider, model, supervisor, owner, guardian)
+             end,
+             &stop_owned_session(&1, supervisor),
+             timeout_ms: Keyword.get(opts, :acquisition_timeout_ms, 5000)
+           ) do
+      try do
+        with {:ok, observation} <- execute(session, task, opts, supervisor),
+             {:ok, after_snapshot} <- WorkspaceSnapshot.capture(task.cwd) do
+          observation
+          |> Map.put("changed_paths", WorkspaceSnapshot.changed(before_snapshot, after_snapshot))
+          |> Map.put("safety_violations", nil)
+          |> result()
+        end
+      after
+        :ok = Resource.release(guardian)
+      end
     end
+  end
+
+  defp stop_owned_session(session, supervisor) do
+    if Process.alive?(session) do
+      try do
+        Session.cancel(session, :owner_lost)
+      after
+        DynamicSupervisor.terminate_child(Sup.session_supervisor(supervisor), session)
+      end
+    end
+
+    :ok
+  catch
+    :exit, _gone -> :ok
   end
 
   defp result(%{"finish_reason" => reason} = observation)
@@ -125,7 +158,7 @@ defmodule Lemieux.Agent.Session do
     :exit, reason -> {:error, {:supervisor, reason}}
   end
 
-  defp start_session(task, opts, provider, model, supervisor) do
+  defp start_session(task, opts, provider, model, supervisor, owner, guardian) do
     sessions_dir =
       Keyword.get_lazy(opts, :sessions_dir, fn ->
         Path.join(System.tmp_dir!(), "lemieux-benchmark-sessions")
@@ -136,7 +169,7 @@ defmodule Lemieux.Agent.Session do
       provider: provider,
       store: Keyword.get(opts, :store, JSONL.new(sessions_dir)),
       model: model,
-      subscriber: self(),
+      subscriber: owner,
       cwd: task.cwd,
       # Inherit the shipped session retry policy (#54). Retry events and the
       # effective harness snapshot expose network recovery to the lane, while
@@ -149,9 +182,13 @@ defmodule Lemieux.Agent.Session do
     session_opts =
       base
       |> Keyword.merge(Keyword.get(opts, :session_options, []))
-      |> Keyword.merge(subscriber: self(), cwd: task.cwd)
+      |> Keyword.merge(subscriber: owner, cwd: task.cwd, lifetime_owner: guardian)
 
-    with :ok <- session_options(session_opts), do: Lemieux.start_session(session_opts)
+    with :ok <- session_options(session_opts) do
+      if Keyword.has_key?(session_opts, :resume),
+        do: Lemieux.resume_session(session_opts),
+        else: Lemieux.start_session(session_opts)
+    end
   end
 
   # `Lemieux.start_session/1` raises in its caller for a provider or store
@@ -183,7 +220,10 @@ defmodule Lemieux.Agent.Session do
     clock = Keyword.get(opts, :clock)
     deadline = make_ref()
     timer = Clock.send_after(clock, self(), {:agent_deadline, deadline}, timeout)
-    bound = {deadline, Keyword.get(opts, :timeout_reason, :agent_timeout)}
+
+    bound =
+      {deadline, Keyword.get(opts, :timeout_reason, :agent_timeout),
+       length(Session.snapshot(session).entries)}
 
     try do
       case Session.prompt(session, task.prompt) do
@@ -212,7 +252,7 @@ defmodule Lemieux.Agent.Session do
          session,
          id,
          monitor,
-         {deadline, timeout_reason} = bound,
+         {deadline, timeout_reason, cursor} = bound,
          direct_usages,
          delegated_usages,
          retries
@@ -247,7 +287,7 @@ defmodule Lemieux.Agent.Session do
         )
 
       {:lemieux, ^id, {:finished, reason}} ->
-        observation(session, id, reason, direct_usages, delegated_usages, retries)
+        observation(session, id, reason, direct_usages, delegated_usages, retries, cursor)
 
       {:lemieux, ^id, _event} ->
         await(session, id, monitor, bound, direct_usages, delegated_usages, retries)
@@ -261,7 +301,7 @@ defmodule Lemieux.Agent.Session do
         # replying. Drain usage it emitted before that reply, then snapshot it
         # before execute/4 terminates the session.
         {direct, delegated, retries} = drain_events(id, direct_usages, delegated_usages, retries)
-        observation(session, id, timeout_reason, direct, delegated, retries)
+        observation(session, id, timeout_reason, direct, delegated, retries, cursor)
     end
   end
 
@@ -308,9 +348,10 @@ defmodule Lemieux.Agent.Session do
     |> Map.update!("categories", &Map.update(&1, category, 1, fn count -> count + 1 end))
   end
 
-  defp observation(session, id, reason, direct, delegated, retries) do
+  defp observation(session, id, reason, direct, delegated, retries, cursor) do
     snapshot = Session.snapshot(session)
-    metrics = tool_metrics(snapshot.entries)
+    current = Enum.drop(snapshot.entries, cursor)
+    metrics = tool_metrics(current)
     measured = usage(direct, delegated)
 
     measured =
@@ -327,13 +368,13 @@ defmodule Lemieux.Agent.Session do
     {:ok,
      %{
        "status" => if(reason in [:stop, :end_turn], do: "completed", else: "failed"),
-       "answer" => answer(snapshot.entries),
+       "answer" => answer(current),
        "finish_reason" => inspect(reason),
        "session_id" => id,
        "usage" => measured,
-       "resources" => Resources.from_entries(snapshot.entries),
+       "resources" => Resources.from_entries(current),
        "tool_metrics" => metrics,
-       "provider_error" => provider_error(snapshot.entries),
+       "provider_error" => provider_error(current),
        "provider_retries" => retries,
        "transcript" => Enum.map(snapshot.entries, &entry/1)
      }}

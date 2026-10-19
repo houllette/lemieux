@@ -7,6 +7,94 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Dependencies
+
+- Update ReqLLM to 1.28.0 and its required LLMDB catalog to 2026.10.5 across
+  the library, standalone host, bundled compaction extension and tracked
+  example locks. This includes upstream Codex reasoning/terminal-stream
+  fixes and streamed cache/billing metadata preservation. Embedders with an
+  older provider stack should update `req_llm` and `llm_db` together; see
+  [embedding requirements](docs/embedding.md#1-add-the-dependency).
+
+### Features
+
+- Experimental preregistered five-arm qualification exercises the opt-in CLI
+  learning path with causal lesson inventories, equal outer allowances,
+  independent grading, original-output retention and exact promotion undo.
+  Quality and safety lead the decision; extra token use is secondary evidence.
+  The explicit live runner uses local Codex subscription access without copying
+  refresh credentials. See [qualification](docs/learning-qualification.md).
+  **Migration:** effective-runtime confirmation now requires intact request,
+  terminal and transcript evidence. Rerun qualifications with current runtime
+  identities; a runtime label or score alone is insufficient. Isolation lease
+  options that conflict with host policy fail before dispatch. Acquisition
+  adapters with partial effects provide idempotent `abort/2` cleanup.
+
+- Experimental host promotion policy distinguishes retained experience,
+  task-local guidance and independently confirmed canaries. Named immutable
+  policy approval uses the existing asset registry, preserves overlay trust,
+  rebinds authority on resume, and quarantines regressions with atomic rollback.
+  **Migration:** reviewed standalone overlays keep their current behavior;
+  automatic guidance requires an explicit transactional host and current
+  authority source. The reference in-memory host is volatile. See
+  [automatic guidance](docs/harness-learning.md#automatic-guidance-under-host-promotion-policy).
+
+- Experimental task-local propose/probe/compose evaluates bounded mechanisms
+  through the effective CLI harness, fresh host-confined leases and the shared
+  controller. Repeated contrasts and an executed composition keep the original
+  on ties, regressions or conflict; cancellation cleans owned work and requires
+  explicit recovery. **Migration:** opt in with current identity bindings,
+  checkpoint, isolation adapter and evidence callbacks. Behavioral observations
+  without a verifier remain unconfirmed. See
+  [task-local refinement](docs/harness-learning.md#task-local-propose-probe-and-compose).
+
+- Experimental effective-CLI evaluation reuses normal `lmx` assembly for both
+  arms, freezes resolved behavior and limits edits to an explicit text/generation
+  surface. Request and terminal evidence identify the actual harness; profile-only
+  results keep their own label. **Migration:** opt in with a host runtime factory
+  and frozen runtime identity. Resume and confirmation reject lane changes.
+  See [CLI qualification](docs/harness-learning.md#evaluating-the-effective-lmx-harness).
+
+- Experimental bounded refinement shares a host's existing job allowance across
+  task and learning roles, reserves complete frozen experiments, retains
+  unknown/cancelled usage across recovery, and supports explicit no-op proposer
+  outcomes. Cycles keep the baseline on ties or weaker primary scores; host
+  admission failures remain incomplete evidence. **Migration:** opt in with a
+  controller, explicit learning allocation and provider-free token bounds.
+  Default learning allowance is zero. See
+  [bounded refinement](docs/harness-learning.md#bounded-refinement-controller).
+
+- First-party ordinary-session capture records verification failures, recoveries,
+  corrections and repeated tool failures without calling a model. Private,
+  scoped drafts use bounded pre-effect inputs and require explicit replay
+  validation and human corpus review. **Migration:** personal-state `lmx`
+  sessions enable capture by default; disable with `"capture": false`,
+  `"disabled_extensions": ["capture"]`, `--config none`, or project
+  `.lmx/capture.json` containing `{"enabled": false}`. Embedders opt in.
+  See [ordinary-session capture](docs/harness-learning.md#ordinary-session-capture).
+
+- Experimental lesson retrieval filters current scoped experience before
+  deterministic ranking, retains bounded decision receipts and exposes
+  concise evidence pointers only after durable exposure commit. The proposer
+  can use prior counterexamples across tasks, records comparative/calibration
+  evidence and requires a new-evidence rationale to repeat a known rejected
+  profile or recorded field edit. Frozen and updating libraries support
+  offline controls. **Migration:** opt in with an experience-enabled proposer
+  profile and host retrieval context; existing profiles keep their identity.
+  No automatic capture, model-backed reflection or activation is added. See
+  [Retrieving lessons](docs/harness-learning.md#retrieving-lessons-for-later-proposals).
+- Experimental scoped improvement lessons retain hypotheses, applicability,
+  positive and negative evidence, complete authorized source bytes and
+  transitive case exposure. A host-owned local adapter adds atomic idempotent
+  persistence, explicit supersession/conflict handling and auditable pruning.
+  Recall filters stale identities and expiry, then requires the host to commit
+  exposure before releasing content. `lmx harness verify lesson FILE` inspects
+  integrity offline. **Migration:** this is an additive opt-in API; no existing
+  bundle/overlay changes, automatic capture, activation or model calls. See
+  [Persistent improvement lessons](docs/harness-learning.md#persistent-improvement-lessons).
+
 ## 0.11.0 — 2026-10-13
 
 This release requires restarting `lmx` on every platform. Save an unsent draft,

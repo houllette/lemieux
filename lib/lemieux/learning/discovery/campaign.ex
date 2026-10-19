@@ -28,6 +28,7 @@ defmodule Lemieux.Learning.Discovery.Campaign do
   alias Lemieux.Benchmark.Manifest
   alias Lemieux.Contract
   alias Lemieux.Extension.Profile
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Evaluation
   alias Lemieux.Learning.Discovery.Evaluator
@@ -38,7 +39,6 @@ defmodule Lemieux.Learning.Discovery.Campaign do
   alias Lemieux.Learning.Discovery.State
   alias Lemieux.Learning.Discovery.Surface
   alias Lemieux.Learning.Proposer
-  alias Lemieux.Providers.Scripted
 
   @default_objectives [
     %{"name" => "task_success", "direction" => "maximize"},
@@ -61,6 +61,9 @@ defmodule Lemieux.Learning.Discovery.Campaign do
   `Lemieux.Learning.Discovery.Evaluator.run/3`), `:proposer_provider`,
   `:critic_profile` (`false` disables the critic),
   `:sessions_dir`, `:benchmark`, `:session`, `:timeout_ms`, `:allow_live`.
+  An optional `:runtime_factory` selects a host runtime for both evaluation
+  arms; it requires a data-only `:runtime_identity` with `"id"` and `"sha256"`,
+  frozen in the plan and checked on resume and confirmation.
   """
   @type config :: keyword()
 
@@ -72,14 +75,15 @@ defmodule Lemieux.Learning.Discovery.Campaign do
          :ok <- Profile.validate(seed_profile),
          {:ok, evolver} <- evolver_profile(config),
          {:ok, budget} <- fetch(config, :budget),
-         {:ok, id} <- fetch(config, :id) do
+         {:ok, id} <- fetch(config, :id),
+         {:ok, runtime_identity} <- Evaluator.runtime_identity(config) do
       seed_bytes = Contract.encode!(seed_profile)
       scope = %{"id" => Keyword.get(config, :scope, "local/" <> id)}
 
       attrs = %{
         "id" => id,
         "scope" => scope,
-        "target_interface" => %{"id" => "lemieux.session-profile/v1"},
+        "target_interface" => runtime_identity,
         "mutation_surface" =>
           config |> Keyword.get(:mutation_surface, @default_surface) |> Enum.map(&%{"path" => &1}),
         "seeds" => [
@@ -125,8 +129,15 @@ defmodule Lemieux.Learning.Discovery.Campaign do
          {:ok, manifest_bytes} <- File.read(manifest_path),
          {:ok, manifest} <- Manifest.read(manifest_path),
          {:ok, plan, seed_bytes} <- plan(config, Contract.sha256(manifest_bytes)),
-         :ok <- cases_present(plan, manifest),
-         :ok <- fresh_directory(output_dir),
+         :ok <- cases_present(plan, manifest) do
+      controlled_campaign(config, plan, fn effective ->
+        run_prepared(effective, output_dir, provider, manifest, manifest_bytes, plan, seed_bytes)
+      end)
+    end
+  end
+
+  defp run_prepared(config, output_dir, provider, manifest, manifest_bytes, plan, seed_bytes) do
+    with :ok <- fresh_directory(output_dir),
          {:ok, exposure} <- expose(plan, manifest, config),
          :ok <- write_preamble(output_dir, plan, seed_bytes, exposure) do
       evolver = elem(evolver_profile(config), 1)
@@ -139,6 +150,8 @@ defmodule Lemieux.Learning.Discovery.Campaign do
         sessions_dir: sessions_dir(config, output_dir),
         timeout_ms: Keyword.get(config, :timeout_ms, :timer.minutes(10))
       }
+
+      proposer_context = Map.merge(proposer_context, controller_context(config))
 
       proposer = fn plan, state, context ->
         Proposer.propose(plan, state, Map.merge(context, proposer_context))
@@ -165,6 +178,51 @@ defmodule Lemieux.Learning.Discovery.Campaign do
     end
   end
 
+  defp controlled_campaign(config, plan, work) do
+    case Keyword.get(config, :controller) do
+      nil -> work.(config)
+      controller -> allocate_campaign(controller, config, plan, work)
+    end
+  end
+
+  defp allocate_campaign(controller, config, plan, work) do
+    case Keyword.fetch(config, :controller_allocation) do
+      {:ok, required} ->
+        controller
+        |> Controller.experiment("campaign/" <> plan.id, plan, required, fn child ->
+          work.(Keyword.put(config, :controller, child))
+        end)
+        |> controller_result()
+
+      :error ->
+        {:error, :controller_allocation_required}
+    end
+  end
+
+  defp controller_result({:ok, result, _receipt}), do: result
+  defp controller_result({:skip, receipt}), do: {:error, {:controller_admission, receipt}}
+
+  defp controller_context(config),
+    do:
+      config
+      |> Keyword.take([:controller, :token_bound, :request_timeout_ms, :controller_event])
+      |> Map.new()
+
+  defp controlled_evaluator(config, provider) do
+    case Keyword.get(config, :controller) do
+      nil ->
+        provider
+
+      controller ->
+        fn ->
+          Controller.provider(controller, :probe, resolve(provider),
+            token_bound: config[:token_bound],
+            timeout_ms: Keyword.get(config, :request_timeout_ms, 5000)
+          )
+        end
+    end
+  end
+
   @doc """
   Resumes an interrupted campaign from the archive under `:output_dir`.
 
@@ -183,40 +241,71 @@ defmodule Lemieux.Learning.Discovery.Campaign do
          {:ok, manifest_bytes} <- File.read(manifest_path),
          {:ok, manifest} <- Manifest.read(manifest_path),
          {:ok, plan} <- read_plan(output_dir),
+         {:ok, runtime_identity} <- Evaluator.runtime_identity(config),
+         :ok <- same_runtime(plan, runtime_identity),
          {:ok, evolver} <- evolver_profile(config),
          :ok <- same_campaign(plan, evolver, Contract.sha256(manifest_bytes)),
          {:ok, archive} <- do_read_archive(output_dir, plan) do
-      proposer_context = %{
-        workspace_root: Path.join(output_dir, "proposals"),
-        provider: Keyword.get(config, :proposer_provider, provider),
-        evolver_profile: evolver,
-        critic_profile: critic_profile(config, evolver),
-        sessions_dir: sessions_dir(config, output_dir),
-        timeout_ms: Keyword.get(config, :timeout_ms, :timer.minutes(10))
-      }
-
-      proposer = fn plan, state, context ->
-        Proposer.propose(plan, state, Map.merge(context, proposer_context))
-      end
-
-      evaluator = fn plan, candidate, context ->
-        evaluate(plan, candidate, context, manifest, provider, config, output_dir)
-      end
-
-      result =
-        Shadow.run(plan, proposer, evaluator,
-          mode: :shadow,
-          sandbox: trusted_local(),
-          exposed_corpus: %{"id" => "manifest", "sha256" => Contract.sha256(manifest_bytes)},
-          search: true,
-          artifacts: archive.artifacts,
-          policy: Keyword.get(config, :search, %{}),
-          observer: &persist(output_dir, &1),
-          resume: archive
+      controlled_campaign(config, plan, fn effective ->
+        resume_prepared(
+          effective,
+          output_dir,
+          provider,
+          manifest,
+          manifest_bytes,
+          plan,
+          evolver,
+          archive
         )
-
-      persist_result(output_dir, plan, result)
+      end)
     end
+  end
+
+  defp same_runtime(%Plan{target_interface: identity}, identity), do: :ok
+  defp same_runtime(_plan, _identity), do: {:error, :campaign_runtime_changed}
+
+  defp resume_prepared(
+         config,
+         output_dir,
+         provider,
+         manifest,
+         manifest_bytes,
+         plan,
+         evolver,
+         archive
+       ) do
+    proposer_context = %{
+      workspace_root: Path.join(output_dir, "proposals"),
+      provider: Keyword.get(config, :proposer_provider, provider),
+      evolver_profile: evolver,
+      critic_profile: critic_profile(config, evolver),
+      sessions_dir: sessions_dir(config, output_dir),
+      timeout_ms: Keyword.get(config, :timeout_ms, :timer.minutes(10))
+    }
+
+    proposer_context = Map.merge(proposer_context, controller_context(config))
+
+    proposer = fn plan, state, context ->
+      Proposer.propose(plan, state, Map.merge(context, proposer_context))
+    end
+
+    evaluator = fn plan, candidate, context ->
+      evaluate(plan, candidate, context, manifest, provider, config, output_dir)
+    end
+
+    result =
+      Shadow.run(plan, proposer, evaluator,
+        mode: :shadow,
+        sandbox: trusted_local(),
+        exposed_corpus: %{"id" => "manifest", "sha256" => Contract.sha256(manifest_bytes)},
+        search: true,
+        artifacts: archive.artifacts,
+        policy: Keyword.get(config, :search, %{}),
+        observer: &persist(output_dir, &1),
+        resume: archive
+      )
+
+    persist_result(output_dir, plan, result)
   end
 
   @doc """
@@ -494,7 +583,7 @@ defmodule Lemieux.Learning.Discovery.Campaign do
       Evaluator.run(plan, candidate,
         manifest: manifest,
         profile: profile,
-        provider: provider,
+        provider: controlled_evaluator(config, provider),
         models: Keyword.get(config, :models),
         case_ids: context.case_ids,
         attempts: Map.get(context, :attempts, %{}),
@@ -502,6 +591,7 @@ defmodule Lemieux.Learning.Discovery.Campaign do
         unknown_cost: plan.budget["unknown_cost"] || "reject",
         sessions_dir: sessions_dir(config, output_dir),
         session: Keyword.get(config, :session, []),
+        runtime_factory: Keyword.get(config, :runtime_factory),
         benchmark:
           Keyword.merge(
             [workspace_root: Path.join(output_dir, "workspaces"), max_concurrency: 1],
@@ -644,17 +734,14 @@ defmodule Lemieux.Learning.Discovery.Campaign do
       Keyword.get(config, :allow_live, false) == true ->
         :ok
 
-      scripted?(resolve(provider)) and
-          scripted?(resolve(Keyword.get(config, :proposer_provider, provider))) ->
+      Controller.scripted?(resolve(provider)) and
+          Controller.scripted?(resolve(Keyword.get(config, :proposer_provider, provider))) ->
         :ok
 
       true ->
         {:error, :live_campaign_requires_allow_live}
     end
   end
-
-  defp scripted?({Scripted, _state}), do: true
-  defp scripted?(_provider), do: false
 
   defp resolve(provider) when is_function(provider, 0), do: provider.()
   defp resolve(provider), do: provider

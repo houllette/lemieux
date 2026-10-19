@@ -26,7 +26,10 @@ defmodule Lemieux.Learning.Discovery.Cycle do
   file whole, tool descriptions included. A cycle's verdict is about the
   configured profile and that file. This description once called the seed
   "the harness the host currently runs", which invited reading a verdict as
-  one on `lmx` itself.
+  one on `lmx` itself. A host can instead supply `:runtime_factory` and
+  `:runtime_identity` to evaluate its actual assembled runtime. Its factory
+  must map deltas from the cycle's seeded profile, including the selected
+  overlay; the default lane remains explicitly profile-only.
 
   The recommendation is the whole of the automation's authority. A cycle
   never writes the overlay: `lmx harness export` does, and a person's review
@@ -54,6 +57,7 @@ defmodule Lemieux.Learning.Discovery.Cycle do
   alias Lemieux.Learning.Discovery.Campaign
   alias Lemieux.Learning.Discovery.Candidate
   alias Lemieux.Learning.Discovery.Confirm
+  alias Lemieux.Learning.Discovery.Frontier
   alias Lemieux.Learning.Discovery.Plan
   alias Lemieux.Learning.Discovery.Policy
   alias Lemieux.Learning.Discovery.State
@@ -267,17 +271,47 @@ defmodule Lemieux.Learning.Discovery.Cycle do
     with :ok <- Profile.validate(seed), do: {:ok, seed}
   end
 
-  @doc "Chooses the candidate a cycle confirms: best primary objective, then fewest changed bytes."
+  @doc "Confirms a primary-objective improvement over the qualified paired seed; ties keep the seed."
   @spec selection(plan :: Plan.t(), result :: map()) :: Candidate.t() | nil
   def selection(plan, result) do
     policy = Policy.read(plan)
     objective = policy["success_objective"]
     scores = Map.new(result.frontier.members, &{&1["candidate_id"], &1["scores"]})
 
+    baseline = baseline_score(plan, result, objective)
+
     result.candidates
-    |> Enum.filter(&(Map.has_key?(scores, &1.id) and &1.mutation_kind != "seed"))
+    |> Enum.filter(
+      &(Map.has_key?(scores, &1.id) and &1.mutation_kind != "seed" and
+          improves_baseline?(&1, baseline, scores, objective, result.evaluations))
+    )
     |> Enum.sort_by(&{-(scores[&1.id][objective] || 0.0), &1.content.size_bytes, &1.id})
     |> List.first()
+  end
+
+  defp baseline_score(plan, result, objective) do
+    with seed when not is_nil(seed) <- Enum.find(result.candidates, &(&1.mutation_kind == "seed")),
+         evaluations = Enum.filter(result.evaluations, &(&1.candidate_id == seed.id)),
+         {:ok, %{members: [member]}} <- Frontier.compute(plan, [seed], evaluations),
+         value when is_number(value) <- member["scores"][objective] do
+      {value, paired_cases(evaluations, seed.id)}
+    else
+      _unqualified -> nil
+    end
+  end
+
+  defp improves_baseline?(_candidate, nil, _scores, _objective, _evaluations), do: false
+
+  defp improves_baseline?(candidate, {baseline, cases}, scores, objective, evaluations),
+    do:
+      is_number(scores[candidate.id][objective]) and scores[candidate.id][objective] > baseline and
+        paired_cases(evaluations, candidate.id) == cases
+
+  defp paired_cases(evaluations, id) do
+    evaluations
+    |> Enum.filter(&(&1.candidate_id == id and Policy.development?(&1)))
+    |> Enum.map(&{&1.case_id, &1.observations["model"]})
+    |> Enum.sort()
   end
 
   defp decide(config, campaign_config, cycle_id, dir, overlay, seed, result, started) do

@@ -56,6 +56,7 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
   alias Lemieux.Benchmark.Manifest
   alias Lemieux.Benchmark.Runtime
   alias Lemieux.Benchmark.Runtime.Agent, as: AgentRuntime
+  alias Lemieux.Contract
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
   alias Lemieux.Learning.Discovery.Candidate
@@ -141,6 +142,10 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
     end
   end
 
+  defp controller_interrupted?(observation),
+    do:
+      get_in(observation, ["provider_error", "code"]) in ~w(host_admission_denied host_work_interrupted)
+
   defp incomplete(result) do
     %{
       "case_id" => result["task_id"],
@@ -159,6 +164,11 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
   manifest), `:tool_registry`, `:session` (extra session options such as
   hooks or an environment), `:benchmark` (runner options such as workspace,
   concurrency, cost caps), `:sessions_dir`, plus the `from_report/4` options.
+
+  `:runtime_factory` is an optional host callback `(name, profile, provider, opts)`
+  returning `{:ok, Lemieux.Benchmark.Runtime.t()}`. Without it, observations
+  explicitly label the profile-only lane. Learning has no dependency on a CLI
+  host; the host owns its assembly and runtime qualification.
 
   `:attempts` (`%{case_id => count}`, or a list of such pairs) repeats a case
   that many times, each attempt its own session and its own evaluation with
@@ -231,19 +241,7 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
          profile,
          model
        ) do
-    with {:ok, _agent_options, _profile} <- configure(profile, resolve(provider), opts) do
-      # A zero-arity provider factory is resolved once per attempt, so a
-      # scripted double gets a fresh script for every session while a real
-      # provider is simply reused.
-      runtime =
-        Runtime.new(candidate.id <> "@" <> model, AgentRuntime,
-          agent: Lemieux.Agent.Session,
-          agent_options: fn ->
-            {:ok, agent_options, _profile} = configure(profile, resolve(provider), opts)
-            agent_options
-          end
-        )
-
+    with {:ok, runtime} <- runtime(candidate.id <> "@" <> model, profile, provider, opts) do
       case run_groups(run, runtime) do
         {:ok, results} ->
           from_report(
@@ -256,6 +254,65 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
         {:error, reason} ->
           {:error, {:benchmark, model, reason}}
       end
+    end
+  end
+
+  @doc "Builds the selected host runtime, or the explicitly labelled profile-only default."
+  @spec runtime(name :: String.t(), profile :: map(), provider :: term(), opts :: keyword()) ::
+          {:ok, Runtime.t()} | {:error, term()}
+  def runtime(name, profile, provider, opts) do
+    case Keyword.get(opts, :runtime_factory) do
+      factory when is_function(factory, 4) -> factory.(name, profile, provider, opts)
+      nil -> profile_runtime(name, profile, provider, opts)
+      _invalid -> {:error, :invalid_runtime_factory}
+    end
+  end
+
+  @doc "Freezes a host runtime binding, requiring an explicit identity for a custom factory."
+  @spec runtime_identity(opts :: keyword()) :: {:ok, map()} | {:error, term()}
+  def runtime_identity(opts) do
+    case {Keyword.get(opts, :runtime_factory), Keyword.get(opts, :runtime_identity)} do
+      {nil, nil} ->
+        {:ok, %{"id" => "lemieux.session-profile/v1"}}
+
+      {factory, %{"id" => id, "sha256" => digest} = identity}
+      when is_function(factory, 4) and is_binary(id) and is_binary(digest) and
+             byte_size(digest) == 64 ->
+        {:ok,
+         identity
+         |> Map.put("factory_sha256", factory_digest(factory))
+         |> Map.put("session_sha256", configuration_digest(Keyword.get(opts, :session, [])))}
+
+      _missing ->
+        {:error, :runtime_identity_required}
+    end
+  end
+
+  # A caller's stable label cannot conceal changed captured configuration or
+  # shared constraints when an archive reuses completed evaluations. These are
+  # one-way identities only; no callback or private state enters the plan.
+  defp factory_digest(factory) do
+    {:module, module} = :erlang.fun_info(factory, :module)
+    configuration_digest({module.module_info(:md5), factory})
+  end
+
+  defp configuration_digest(value),
+    do: value |> :erlang.term_to_binary([:deterministic]) |> Contract.sha256()
+
+  defp profile_runtime(name, profile, provider, opts) do
+    with {:ok, _agent_options, _profile} <- configure(profile, resolve(provider), opts) do
+      {:ok,
+       Runtime.new(name, AgentRuntime,
+         agent: Lemieux.Agent.Session,
+         runtime_qualification: %{
+           "lane" => "profile_only",
+           "profile_sha256" => Contract.digest(profile)
+         },
+         agent_options: fn ->
+           {:ok, agent_options, _profile} = configure(profile, resolve(provider), opts)
+           agent_options
+         end
+       )}
     end
   end
 
@@ -623,7 +680,7 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
         "artifacts" => Enum.map(references, &ArtifactReference.to_map/1),
         "within_budget" =>
           observation["finish_reason"] not in @evaluator_stops and
-            not provider_stream_timeout?(result),
+            not provider_stream_timeout?(result) and not controller_interrupted?(observation),
         "terminal" => true,
         "observations" => observations(result, observation)
       }
@@ -800,6 +857,8 @@ defmodule Lemieux.Learning.Discovery.Evaluator do
       # one sample and says so.
       "provider_error" => observation["provider_error"],
       "provider_retries" => observation["provider_retries"],
+      "runtime_qualification" =>
+        observation["runtime_qualification"] || %{"lane" => "unspecified"},
       "retries" => result["retries"] || [],
       "passed" => result["passed"] == true,
       "grader" => grader(result["grader"]),

@@ -80,7 +80,9 @@ defmodule Lemieux.Session.Requests do
 
     if Hooks.registered?(state.hooks, :prepare_next_turn) do
       hooks = state.hooks
-      context = Map.put(Prompts.hook_context(state), :retry, state.retry_note)
+      # Extensions that read inputs here must see the same effective tool policy.
+      context =
+        Prompts.hook_context(state) |> Map.put(:retry, state.retry_note) |> Map.put(:hooks, hooks)
 
       Prompts.start_hook(state, {:prepare_next_turn, request}, fn ->
         Hooks.prepare_next_turn(hooks, request, context)

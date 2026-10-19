@@ -18,15 +18,16 @@ defmodule Lemieux.CLI.Harness do
   alias Lemieux.Learning.Discovery.Plan
   alias Lemieux.Learning.Discovery.State
   alias Lemieux.Learning.Experience.Bundle
+  alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Experience.Materializer
   alias Lemieux.Learning.Overlay
 
-  @types ~w(snapshot run bundle discovery-plan candidate evaluation frontier state exposure experiment-plan)
+  @types ~w(snapshot run bundle lesson discovery-plan candidate evaluation frontier state exposure experiment-plan)
 
   @doc "Runs a harness-learning inspection command."
   @spec run(argv :: [String.t()]) :: :ok | {:error, pos_integer()}
   def run(["verify", type, path]) when type in @types do
-    with {:ok, body} <- File.read(path),
+    with {:ok, body} <- read_contract(type, path),
          :ok <- verify(type, body) do
       IO.puts("verified #{type} #{path}")
       :ok
@@ -135,6 +136,7 @@ defmodule Lemieux.CLI.Harness do
   defp verify("snapshot", body), do: decoded(Snapshot.decode(body))
   defp verify("run", body), do: decoded(Run.decode(body))
   defp verify("bundle", body), do: decoded(Bundle.decode(body))
+  defp verify("lesson", body), do: decoded(Lesson.decode(body))
   defp verify("discovery-plan", body), do: decoded(Plan.decode(body))
   defp verify("experiment-plan", body), do: decoded(ExperimentPlan.decode(body))
   defp verify("candidate", body), do: verify_map(body, &Candidate.verify/1)
@@ -149,6 +151,17 @@ defmodule Lemieux.CLI.Harness do
   defp verify_map(body, verifier) do
     with {:ok, map} <- Contract.decode(body), do: verifier.(map)
   end
+
+  defp read_contract("lesson", path) do
+    case File.open(path, [:read, :binary], &IO.binread(&1, 2 * 1024 * 1024 + 1)) do
+      {:ok, bytes} when is_binary(bytes) -> {:ok, bytes}
+      {:ok, :eof} -> {:ok, ""}
+      {:ok, {:error, reason}} -> {:error, reason}
+      error -> error
+    end
+  end
+
+  defp read_contract(_type, path), do: File.read(path)
 
   defp read_artifacts(bundle, directory) do
     Enum.reduce_while(bundle.artifacts, {:ok, %{}}, fn descriptor, {:ok, found} ->

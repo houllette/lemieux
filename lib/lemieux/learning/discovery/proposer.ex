@@ -14,5 +14,5 @@ defmodule Lemieux.Learning.Discovery.Proposer do
   alias Lemieux.Learning.Discovery.State
 
   @callback propose(plan :: Plan.t(), state :: State.t(), context :: map()) ::
-              {:ok, Candidate.t(), map()} | :done | {:error, term()}
+              {:ok, Candidate.t(), map()} | {:noop, map()} | :done | {:error, term()}
 end

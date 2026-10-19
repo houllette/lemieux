@@ -13,6 +13,24 @@ defmodule Lemieux.Learning.Discovery.EvaluatorTest do
 
   @moduletag :tmp_dir
 
+  test "runtime bindings freeze factory captures and shared host constraints" do
+    identity = %{"id" => "host/v1", "sha256" => String.duplicate("a", 64)}
+    make = fn marker -> fn name, _profile, _provider, _opts -> {:error, {name, marker}} end end
+    factory = make.("first")
+    opts = [runtime_factory: factory, runtime_identity: identity, session: [max_requests: 2]]
+    assert {:ok, original} = Evaluator.runtime_identity(opts)
+    assert {:ok, same} = Evaluator.runtime_identity(opts)
+    assert original == same
+    {:ok, changed} = Evaluator.runtime_identity(Keyword.put(opts, :session, max_requests: 3))
+    refute changed == original
+
+    {:ok, changed} =
+      Evaluator.runtime_identity(Keyword.put(opts, :runtime_factory, make.("second")))
+
+    refute changed == original
+    refute JSON.encode!(original) =~ "#Function"
+  end
+
   describe "from_report/4" do
     test "maps grader verdicts, usage and safety allowlists into eligible evaluations" do
       plan = plan(%{})
@@ -49,6 +67,24 @@ defmodule Lemieux.Learning.Discovery.EvaluatorTest do
       assert val.safety["passed"] == false
       assert val.safety["failures"] == ["changed_path_outside_allowlist:secret.txt"]
       refute Evaluation.eligible?(val)
+    end
+
+    test "controller denials are incomplete execution evidence rather than a candidate failure" do
+      plan = plan(%{})
+      candidate = candidate(plan)
+
+      row =
+        result("dev-1", candidate.id, passed: false)
+        |> put_in(["observation", "provider_error"], %{"code" => "host_admission_denied"})
+
+      assert {:ok, %{evaluations: [evaluation]}} =
+               Evaluator.from_report(plan, candidate, %{"results" => [row]},
+                 sandbox: :not_applicable,
+                 unknown_cost: "allow"
+               )
+
+      refute evaluation.within_budget
+      refute Evaluation.eligible?(evaluation)
     end
 
     test "allowlists honor the gate's directory prefixes" do
@@ -235,6 +271,7 @@ defmodule Lemieux.Learning.Discovery.EvaluatorTest do
       assert evaluation.completeness["cost"] == "not_applicable"
       assert Evaluation.eligible?(evaluation)
       assert evaluation.usage["total_tokens"] == 31
+      assert evaluation.observations["runtime_qualification"]["lane"] == "profile_only"
       assert [reference] = evaluation.artifacts
       assert {:ok, entries} = JSON.decode(Map.fetch!(artifacts, reference.sha256))
 

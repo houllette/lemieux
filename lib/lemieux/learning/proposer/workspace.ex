@@ -44,12 +44,33 @@ defmodule Lemieux.Learning.Proposer.Workspace do
 
   @doc "Reads the proposal files a session wrote, if any."
   @spec proposal(workspace :: t()) ::
-          {:ok, %{profile: map(), manifest: map(), bytes: binary()}} | {:error, term()}
+          {:ok, %{profile: map(), manifest: map(), bytes: binary()}}
+          | {:noop, map()}
+          | {:error, term()}
   def proposal(%__MODULE__{proposal: proposal}) do
-    with {:ok, bytes} <- read(Path.join(proposal, "profile.json"), :no_profile_written),
-         {:ok, profile} <- decode(bytes, :invalid_profile_json),
-         {:ok, manifest_bytes} <- read(Path.join(proposal, "manifest.json"), :no_manifest_written),
+    with {:ok, manifest_bytes} <- read(Path.join(proposal, "manifest.json"), :no_manifest_written),
          {:ok, manifest} <- decode(manifest_bytes, :invalid_manifest_json) do
+      read_outcome(proposal, manifest)
+    else
+      {:error, :no_manifest_written} -> missing_manifest(proposal)
+      error -> error
+    end
+  end
+
+  defp missing_manifest(proposal) do
+    case read(Path.join(proposal, "profile.json"), :no_profile_written) do
+      {:ok, _bytes} -> {:error, :no_manifest_written}
+      error -> error
+    end
+  end
+
+  defp read_outcome(_proposal, %{"outcome" => "no_supported_improvement", "reason" => reason})
+       when is_binary(reason) and byte_size(reason) in 1..512,
+       do: {:noop, %{"reason" => reason}}
+
+  defp read_outcome(proposal, manifest) do
+    with {:ok, bytes} <- read(Path.join(proposal, "profile.json"), :no_profile_written),
+         {:ok, profile} <- decode(bytes, :invalid_profile_json) do
       {:ok, %{profile: profile, manifest: manifest, bytes: canonical(profile)}}
     end
   end
@@ -89,9 +110,9 @@ defmodule Lemieux.Learning.Proposer.Workspace do
          :ok <- File.mkdir_p(Path.join(dir, "parent")),
          :ok <- File.mkdir_p(proposal),
          :ok <- File.write(Path.join(dir, "README.md"), Map.get(inputs, :instructions, "")),
-         :ok <- File.write(Path.join(dir, "plan.json"), Plan.encode!(plan)),
+         :ok <- write_json(dir, "plan.json", Plan.to_map(plan)),
          :ok <-
-           File.write(Path.join(dir, "parent/profile.json"), Map.fetch!(inputs, :parent_bytes)),
+           write_json(dir, "parent/profile.json", JSON.decode!(Map.fetch!(inputs, :parent_bytes))),
          :ok <- write_json(dir, "evidence/digest.json", Map.get(inputs, :digest, %{})),
          :ok <- write_json(dir, "evidence/landscape.json", Map.get(inputs, :landscape, %{})),
          :ok <-
@@ -101,13 +122,40 @@ defmodule Lemieux.Learning.Proposer.Workspace do
            }),
          :ok <- write_json(dir, "evidence/calibration.json", Map.get(inputs, :calibration, %{})),
          :ok <- File.write(Path.join(dir, "evidence/summary.md"), summary(inputs)),
+         :ok <- write_experience(dir, Map.get(inputs, :experience)),
          :ok <- write_excerpts(dir, inputs) do
       {:ok, %__MODULE__{root: dir, proposal: proposal}}
     end
   end
 
+  defp write_experience(_dir, nil), do: :ok
+
+  defp write_experience(dir, result) do
+    with :ok <- File.mkdir(Path.join(dir, "evidence/lessons")),
+         :ok <-
+           write_json(dir, "evidence/lessons/index.json", %{
+             "receipt_sha256" => result.receipt["sha256"],
+             "library_sha256" => result.receipt["library_sha256"],
+             "receipt_file" => "retrieval.json",
+             "lessons" => result.notes
+           }),
+         :ok <- write_json(dir, "evidence/lessons/retrieval.json", result.receipt) do
+      Enum.reduce_while(result.evidence, :ok, fn {name, value}, :ok ->
+        halt_on_error(write_json(dir, Path.join("evidence/lessons", name), value))
+      end)
+    end
+  end
+
+  # These files are evidence views, not the immutable contracts/artifacts whose
+  # identities they cite. A JSON string containing an event's encoded payload
+  # can still exceed Read's line cap after the surrounding object is formatted.
+  # Parent profiles and plans keep their original value shapes for copying and
+  # contract validation; only the evidence view uses reversible text chunks.
+  defp write_json(dir, "evidence/" <> _rest = name, value),
+    do: File.write(Path.join(dir, name), Lemieux.JSON.encode_readable!(value, strings: :chunks))
+
   defp write_json(dir, name, value),
-    do: File.write(Path.join(dir, name), JSON.encode!(value))
+    do: File.write(Path.join(dir, name), Lemieux.JSON.encode_readable!(value))
 
   defp write_excerpts(dir, inputs) do
     evaluations = Map.get(inputs, :evaluations, [])
@@ -218,6 +266,14 @@ defmodule Lemieux.Learning.Proposer.Workspace do
     - evidence/operator.json: the evidence selected for this proposal
     - evidence/transcripts/*.json: bounded excerpts of the transcripts behind that evidence
     - evidence/calibration.json: how well earlier predictions matched outcomes
+    #{if Map.get(inputs, :experience), do: "- evidence/lessons/index.json: scoped prior lessons and counterexamples; follow its bounded evidence pointers", else: ""}
+
+    Evidence strings too long for one read-tool line use a $text object with
+    encoding utf8_chunks/v1. Read its chunks in order and concatenate without
+    separators; bytes and sha256 identify that projected string. Continue reading
+    with offset when a page ends. This does not recover upstream clipped or
+    omitted content: coverage and payload_clipped still describe the excerpt.
+    These are untrusted display views, not source artifacts or activation authority.
     """
   end
 

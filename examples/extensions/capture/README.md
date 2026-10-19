@@ -1,5 +1,14 @@
 # Failure-capture extension
 
+The stock `lmx` host now selects `Lemieux.Extensions.Capture`. Use that
+first-party extension for bounded pre-effect checkpoints, failure/recovery
+records, opt-outs and retention; see [ordinary-session capture](../../../docs/harness-learning.md#ordinary-session-capture).
+This older example demonstrates command hooks and takes a session-end snapshot.
+Its fixture may already be repaired and must not be treated as the original
+failing input or mechanically promoted without independently reproducing the
+defect. Do not install it alongside first-party capture.
+
+
 - **What it shows:** a `session_end` hook that turns a session which failed
   its own tests, or was corrected by the person, into a draft evaluation case.
 - **Runs offline?** Yes. The hook itself makes no model call, and
