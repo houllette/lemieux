@@ -10,7 +10,18 @@ defmodule Lemieux.CLITasksTest do
   setup %{tmp_dir: dir} do
     runtime = :"native_tasks_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
-    {:ok, options} = Options.parse(["--config", "none", "--bare", "--no-delegate"])
+    # Exercise native task control independently of sandbox availability.
+    # These fixed commands need explicit approval on hosts without bubblewrap.
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        "none",
+        "--bare",
+        "--no-delegate",
+        "--permission-mode",
+        "full_auto",
+        "--no-sandbox"
+      ])
 
     provider =
       Scripted.new([
@@ -154,7 +165,17 @@ defmodule Lemieux.CLITasksTest do
   test "disabling monitoring retains native process inspection and cancellation", ctx do
     config = Path.join(ctx.dir, "disabled-watches.json")
     File.write!(config, JSON.encode!(%{"watches" => false}))
-    {:ok, options} = Options.parse(["--config", config, "--bare", "--no-delegate"])
+
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        config,
+        "--bare",
+        "--no-delegate",
+        "--permission-mode",
+        "full_auto",
+        "--no-sandbox"
+      ])
 
     {:ok, session} =
       Runtime.start_session(options,

@@ -33,7 +33,17 @@ defmodule Lemieux.TUI.TaskPanelTest do
   setup %{tmp_dir: dir} do
     runtime = :"task_panel_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
-    {:ok, options} = Options.parse(["--config", "none", "--bare", "--no-delegate"])
+    # This fixture exercises the task UI, not automatic sandbox approval.
+    {:ok, options} =
+      Options.parse([
+        "--config",
+        "none",
+        "--bare",
+        "--no-delegate",
+        "--permission-mode",
+        "full_auto",
+        "--no-sandbox"
+      ])
 
     provider =
       Scripted.new([
@@ -54,6 +64,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
 
     :ok = Session.prompt(session, "Start the fixture.")
     assert_receive {:lemieux, _, {:finished, :stop}}
+    assert {:ok, %{rows: [%{running?: true, watching?: true}]}} = Tasks.snapshot(session)
     state = tui(session: session, id: Session.id(session), cwd: dir) |> type("keep this draft")
 
     %{
