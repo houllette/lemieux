@@ -50,7 +50,7 @@ defmodule Lemieux.CLITasksTest do
     }
   end
 
-  test "an unfinished plan yields after automatic tracking and human continuation runs once",
+  test "an unfinished plan yields after automatic tracking and continuation runs once by default",
        ctx do
     provider =
       Scripted.new([
@@ -82,7 +82,7 @@ defmodule Lemieux.CLITasksTest do
     assert length(Scripted.requests(provider)) == 3
     {:ok, %{rows: [row]}} = Tasks.snapshot(session)
     assert row.watching?
-    assert :ok = Tasks.action(session, row.id, :follow_up)
+    assert row.follow_up?
     File.write!(Path.join(ctx.dir, "finish"), "done")
     assert_receive {:lemieux, ^id, {:finished, :stop}}
     assert length(Scripted.requests(provider)) == 4
@@ -121,7 +121,7 @@ defmodule Lemieux.CLITasksTest do
     assert_receive {:lemieux, _, {:finished, :stop}}
     assert {:ok, %{rows: [row]}} = Tasks.snapshot(ctx.session)
     assert row.running? and row.watching?
-    refute row.follow_up?
+    assert row.follow_up?
     assert row.label == "printf READY; sleep 60"
     assert length(Scripted.requests(ctx.provider)) == 2
     assert :ok = Tasks.action(ctx.session, row.id, :stop)
@@ -131,7 +131,12 @@ defmodule Lemieux.CLITasksTest do
     assert :ok = Tasks.action(ctx.session, row.id, :watch)
     assert :ok = Tasks.action(ctx.session, row.id, :follow_up)
     assert {:ok, %{rows: [following]}} = Tasks.snapshot(ctx.session, row.id)
-    assert following.follow_up?
+    refute following.follow_up?
+    {:ok, manager} = Lemieux.CLI.Watches.resolve(%{supervisor: ctx.runtime, session_id: ctx.id})
+
+    assert {:ok, %{"follow_up" => false}} =
+             Lemieux.Extensions.Watches.register(manager, "background", row.target)
+
     assert :ok = Tasks.action(ctx.session, row.id, :cancel)
     assert {:ok, %{rows: [cancelled]}} = Tasks.snapshot(ctx.session, row.id)
     assert cancelled.status == "cancelled"

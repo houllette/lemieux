@@ -8,8 +8,8 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     `ToolText.call/4` decorates the `:run` heading with Bash syntax spans in
     the current theme, before it reaches the draw loop.
 
-    No `result/3`: the generic outcome — output under the heading, capped to
-    a few rows with the middle elided — is exactly what a command wants.
+    Background launches share a compact group. Their launch receipt is model
+    guidance, while status and output belong in the native Tasks view.
     """
 
     @behaviour Lemieux.TUI.Renderer
@@ -20,7 +20,25 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def call(%{id: id, arguments: arguments}, _exploring?) do
       command = arguments |> ToolText.argument("command") |> ToolText.one_line()
 
-      [ToolText.heading(id, :run, "Ran", command)]
+      if arguments["background"] == true,
+        do: ToolText.background(id, "Ran " <> command),
+        else: [ToolText.heading(id, :run, "Ran", command)]
     end
+
+    @impl Lemieux.TUI.Renderer
+    def result(%{arguments: %{"background" => true}}, %{payload: payload}, _theme) do
+      case payload["structured_content"] do
+        %{"background_tracking_error" => error} when is_binary(error) ->
+          {:output, "Tracking unavailable: #{ToolText.one_line(error)} · Tasks (F6)"}
+
+        %{"task_id" => id, "status" => "running"} when is_binary(id) ->
+          :none
+
+        _other ->
+          {:output, payload["output"] || ""}
+      end
+    end
+
+    def result(_call, %{output: output}, _theme), do: {:output, output}
   end
 end

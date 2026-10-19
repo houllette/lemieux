@@ -48,6 +48,7 @@ defmodule Lemieux.TUI.RendererTest do
                  "read",
                  "subagents",
                  "todo",
+                 "watch",
                  "web_search",
                  "write"
                ]

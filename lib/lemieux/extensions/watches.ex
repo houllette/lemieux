@@ -71,7 +71,11 @@ defmodule Lemieux.Extensions.Watches do
       end
 
     with {:ok, manager} <- Tool.manager(tool, context),
-         {:ok, watch} <- register(manager, "background", %{"task_id" => id}, timeout_ms: timeout) do
+         {:ok, watch} <-
+           register(manager, "background", %{"task_id" => id},
+             timeout_ms: timeout,
+             label: args["command"]
+           ) do
       {:ok,
        %{
          result
@@ -85,13 +89,24 @@ defmodule Lemieux.Extensions.Watches do
          %{
            result
            | model_text:
-               result.model_text <> "\nAutomatic monitoring unavailable: #{inspect(error)}"
+               result.model_text <> "\nAutomatic monitoring unavailable: #{inspect(error)}",
+             structured_content:
+               Map.put(result.structured_content, "background_tracking_error", inspect(error))
          }}
     end
   catch
     :exit, _reason ->
       {:ok,
-       %{result | model_text: result.model_text <> "\nAutomatic monitoring is disconnected."}}
+       %{
+         result
+         | model_text: result.model_text <> "\nAutomatic monitoring is disconnected.",
+           structured_content:
+             Map.put(
+               result.structured_content,
+               "background_tracking_error",
+               "Monitoring is disconnected"
+             )
+       }}
   end
 
   defp track({:ok, _value} = result, %{"task_id" => id, "cancel" => true}, context, tool) do
@@ -109,7 +124,7 @@ defmodule Lemieux.Extensions.Watches do
 
   defp track(result, _args, _context, _tool), do: result
 
-  @doc "Registers a pinned target. Options: timeout_ms (one hour), follow_up (false)."
+  @doc "Registers a pinned target. Options: timeout_ms (one hour), follow_up (the host default)."
   @spec register(
           server :: GenServer.server(),
           source :: String.t(),
@@ -119,6 +134,10 @@ defmodule Lemieux.Extensions.Watches do
           {:ok, map()} | {:error, term()}
   def register(server, source, target, opts \\ []),
     do: GenServer.call(server, {:register, source, target, opts})
+
+  @doc "Returns the currently mounted host's continuation default."
+  @spec defaults(server :: GenServer.server()) :: %{follow_up: boolean()}
+  def defaults(server), do: GenServer.call(server, :defaults)
 
   @doc "Lists bounded session watch records, including delivery and retention state."
   @spec list(server :: GenServer.server()) :: [map()]

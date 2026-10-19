@@ -27,7 +27,7 @@ defmodule Lemieux.CLI.Watches do
          sources: sources,
          auto_background: true,
          equip_tool: enabled?(options, opts, settings, profile?),
-         allow_follow_up: is_map(settings) and Map.get(settings, "follow_up", false)
+         allow_follow_up: follow_up?(settings)
        ]}
     end
   end
@@ -48,11 +48,14 @@ defmodule Lemieux.CLI.Watches do
       enabled:
         settings != false and
           "watches" not in Config.get(options.config, "disabled_extensions", []),
-      allow_follow_up: is_map(settings) and Map.get(settings, "follow_up", false),
+      allow_follow_up: follow_up?(settings),
       sources: if(is_map(settings), do: Map.get(settings, "sources", %{}), else: %{})
     ] ++
       Keyword.take(opts, [:watch_sources, :watch_options])
   end
+
+  defp follow_up?(settings) when is_map(settings), do: Map.get(settings, "follow_up", true)
+  defp follow_up?(_settings), do: true
 
   @doc "Starts the equipped session's monitor automatically and reconnects its durable queue."
   @spec start(session :: pid(), opts :: keyword()) :: :ok | {:error, term()}
@@ -92,7 +95,8 @@ defmodule Lemieux.CLI.Watches do
         sources: sources,
         journal: if(host[:dir], do: Files.new(Path.join([host[:dir], "watches", id]))),
         task_supervisor: Sup.task_supervisor(runtime),
-        authorize: authorize
+        authorize: authorize,
+        default_follow_up: host[:allow_follow_up]
       ] ++ Keyword.get(host, :watch_options, [])
 
     case DynamicSupervisor.start_child(Sup.background_supervisor(runtime), {Server, server_opts}) do
@@ -100,7 +104,11 @@ defmodule Lemieux.CLI.Watches do
         :ok
 
       {:error, {:already_started, pid}} ->
-        Watches.attach(pid, session, authorize: authorize, sources: sources)
+        Watches.attach(pid, session,
+          authorize: authorize,
+          sources: sources,
+          default_follow_up: host[:allow_follow_up]
+        )
 
       {:error, reason} ->
         {:error, {:watch_host, reason}}

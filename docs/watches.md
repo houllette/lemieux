@@ -2,7 +2,10 @@
 
 Open **Tasks** with **F6**, or click the **Tasks** badge on the message box.
 Background Bash commands appear automatically. The view combines local commands
-and registered external runs, with status, deadlines, follow-up mode and logs.
+and registered external runs. **Active** and **History** separate ongoing work
+from completed results. Each activity keeps one row through status changes,
+with its command, elapsed time and output together. Pausing and resuming tracking
+keeps its observation history inside that activity's details.
 There is no task-management slash command to learn, and opening the view does
 not consume a model request. The message draft stays intact.
 
@@ -15,13 +18,14 @@ restarts that work.
 | Control | What it does |
 | --- | --- |
 | Up / Down | Select a task |
+| `1` / `2`, or Active / History | Switch between ongoing work and retained results |
 | Enter / Tab | Focus logs; Tab returns to the task list |
 | Page Up / Page Down, or the mouse wheel | Scroll selected output |
 | End | Follow the newest output again |
 | Cancel command (`c`) | Confirm cancellation of a local command; pending continuation is revoked first |
-| Stop watching (`s`) | Stop observation while the command or external run continues |
-| Watch (`w`) | Start a fresh observation of that existing task |
-| Continue (`f`) | Toggle explicit permission for one automatic follow-up while observation is active |
+| Pause tracking (`s`) | Pause observation while the command or external run continues |
+| Resume tracking (`w`) | Resume observation of a running command or paused external run |
+| Auto-resume (`f`) | Choose automatic continuation or notification only; automatic is the default |
 | Clear logs (`x`) | Confirm clearing retained output after delivery; transcript evidence stays on record |
 | Open run (`o`) | Open the external run's link |
 | Add watch (`a`) | Open native fields for an existing external run |
@@ -44,7 +48,7 @@ isolated writers, labelled by their owner. Inspect output or cancel a command
 directly. The bounded assignment manages completion: it stays open, waits
 without model polling, then receives one batch of command results under its
 remaining request, turn, cost and time limits. Human cancellation revokes that
-continuation. These rows do not offer a separate Continue toggle.
+continuation. These rows do not offer a separate Auto-resume toggle.
 
 The default scout has sandboxed read-only `bash` for inline analysis scripts,
 including `background: true`. A writer factory can explicitly supply the same
@@ -80,21 +84,27 @@ monitoring state in memory and create no personal watch journal. Restricted
 profiles retain their selected model tools. The Tasks view can inspect and
 cancel owned local commands even when monitoring is disabled.
 
-**Notify only** is the default. Completion waits for the session to become idle,
+**Automatic continuation** is the default. Tracking requires no separate
+approval; the command itself still passes the session's normal permission and
+sandbox checks before it starts. Completion waits for the session to become idle,
 records its evidence and sends the normal terminal notification. An unfinished
 plan yields after an automatically tracked background start, so waiting does
 not spend requests nudging the model.
 
-Enable **Continue** on a task, or check **Continue automatically** when adding an
-external watch, to authorize one follow-up. Current prompt hooks, tool approvals,
-sandboxing and remaining request and cost allowances still apply. External logs
+Completion resumes the existing task once. Current prompt hooks, tool approvals,
+sandboxing and remaining turn, request and cost allowances still apply. External logs
 are labelled as data and cannot expand file references into reads. Stopping
 observation or cancelling a command revokes an undelivered continuation.
 Authentication failures and deadline expiry notify without inference.
 
-Ordinary configured sessions also expose the `watch` tool to the model. For
-standing authorization of model-requested continuations, configure
-`"watches":{"follow_up":true}`. Human grants apply to the selected watch;
+Background launches are grouped under **Background tasks** in the chat, with
+one command entry each. Routine watch registration adds no duplicate chat receipt.
+Completion names the command or external run; output stays in F6.
+
+Ordinary configured sessions also expose the `watch` tool to the model. Set
+`"watches":{"follow_up":false}` for notification only by default, or turn off
+**Auto-resume** on an individual task. Explicit session ask/deny rules still
+apply to the watch tool. Human choices apply to the selected watch;
 historical records never restore general permission to continue. The model
 reuses an automatically registered background observation instead of producing
 duplicate completion notifications.

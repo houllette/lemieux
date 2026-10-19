@@ -116,7 +116,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
       })
     end
 
-    defp unavailable(row), do: %{row | running?: false, watching?: false, status: "unavailable"}
+    defp unavailable(row),
+      do:
+        Map.merge(row, %{
+          running?: false,
+          watching?: false,
+          status: "unavailable",
+          status_label: "Unavailable",
+          active?: false,
+          tracking_label: "Session disconnected"
+        })
 
     @doc false
     @spec answer(
@@ -146,7 +155,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               %{data | error: describe(reason)}
           end
 
-        put_in(state.session_view[:tasks], data)
+        reconcile(state, data)
       else
         state
       end
@@ -184,6 +193,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 kind: :tasks,
                 session: state.session,
                 focus: :list,
+                view: :active,
                 offset: 0,
                 follow?: true,
                 confirm: nil,
@@ -256,6 +266,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
         {:noreply,
          put_in(state.modal.focus, if(state.modal.focus == :list, do: :logs, else: :list))}
 
+    def key(%Key{code: code, modifiers: []}, state) when code in ["1", "2"] do
+      {:noreply, choose(state, if(code == "1", do: :active, else: :history))}
+    end
+
     def key(%Key{code: code, modifiers: []}, state) when code in ["up", "down"] do
       by = if code == "up", do: -1, else: 1
       state = if state.modal.focus == :list, do: select(state, by), else: scroll(state, by)
@@ -304,6 +318,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp choose(state, :close), do: Modal.close(state)
     defp choose(state, :add), do: TaskForm.open(state)
     defp choose(state, :refresh), do: refresh(state)
+
+    defp choose(state, view) when view in [:active, :history] do
+      state = put_in(state.modal.view, view)
+      row = List.first(visible_rows(state))
+      data = %{cache(state) | selected: row && row.id, detail: nil, token: nil}
+      state |> put_in([Access.key!(:session_view), :tasks], data) |> refresh()
+    end
+
     defp choose(state, nil), do: state
 
     defp choose(%{modal: %{operation: operation}} = state, _action) when not is_nil(operation),
@@ -324,7 +346,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do: put_in(state.modal.notice, "Only running local commands can be cancelled here.")
 
     defp choose_row(state, :follow_up, row) when not row.watching? or row.delivered?,
-      do: put_in(state.modal.notice, "Continue can be changed while observation is active.")
+      do: put_in(state.modal.notice, "Auto-resume can be changed while tracking is active.")
+
+    defp choose_row(state, :watch, %{source: "background", running?: false}),
+      do: put_in(state.modal.notice, "This activity has finished. Its result is in History.")
 
     defp choose_row(state, action, row) when action in [:cancel, :clear],
       do: put_in(state.modal.confirm, %{action: action, id: row.id})
@@ -389,8 +414,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp select(state, by) do
       data = cache(state)
-      index = Enum.find_index(data.rows, &(&1.id == data.selected)) || 0
-      row = Enum.at(data.rows, min(max(index + by, 0), max(length(data.rows) - 1, 0)))
+      rows = visible_rows(state)
+      index = Enum.find_index(rows, &(&1.id == data.selected)) || 0
+      row = Enum.at(rows, min(max(index + by, 0), max(length(rows) - 1, 0)))
       data = %{data | selected: row && row.id, detail: nil, token: nil}
 
       state
@@ -418,6 +444,31 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp selected(state), do: Enum.find(cache(state).rows, &(&1.id == cache(state).selected))
+
+    defp active?(row), do: Map.get(row, :active?, row.running? or row.watching?)
+
+    defp visible_rows(state),
+      do: Enum.filter(cache(state).rows, &(active?(&1) == (state.modal.view == :active)))
+
+    # Follow a selected activity into history when it finishes, keeping its
+    # output on screen. A refresh must never replace it with a different job.
+    defp reconcile(%{modal: %{kind: :tasks}} = state, data) do
+      old = selected(state)
+      new = Enum.find(data.rows, &(&1.id == data.selected))
+
+      state =
+        if old && new && active?(old) && not active?(new),
+          do: put_in(state.modal.view, :history),
+          else: state
+
+      state = put_in(state.session_view[:tasks], data)
+
+      if Enum.any?(visible_rows(state), &(&1.id == data.selected)),
+        do: state,
+        else: put_in(state.session_view[:tasks], %{data | selected: nil, detail: nil})
+    end
+
+    defp reconcile(state, data), do: put_in(state.session_view[:tasks], data)
 
     defp decision(state, action),
       do: Conversation.command_decision(Choices.command_policy(state), {:tasks, action})
@@ -448,7 +499,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
         inside?(event, geometry.list) ->
           index = geometry.start + event.y - geometry.list.y
-          current = Enum.find_index(cache(state).rows, &(&1.id == cache(state).selected)) || 0
+          current = Enum.find_index(visible_rows(state), &(&1.id == cache(state).selected)) || 0
           {:noreply, select(state, index - current)}
 
         true ->
@@ -474,22 +525,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
       data = cache(state)
 
       rows =
-        data.rows
+        visible_rows(state)
         |> Enum.slice(g.start, g.list.height)
         |> Enum.map(&task_line(&1, data.selected, theme))
 
-      rows =
-        if rows == [],
-          do: [
-            line(
-              if(data.token,
-                do: "Loading tasks…",
-                else:
-                  data.error || "No background tasks. Started commands appear here automatically."
-              )
-            )
-          ],
-          else: rows
+      rows = if rows == [], do: [line(empty_text(state, data))], else: rows
 
       log_rows = log_rows(data.detail, g.logs.width, theme)
 
@@ -497,7 +537,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
       offset = if state.modal.follow?, do: maximum, else: min(state.modal.offset, maximum)
       notice = notice(state)
 
-      Takeover.frame(g.area, " Background tasks · #{length(data.rows)} ") ++
+      Takeover.frame(
+        g.area,
+        " Background tasks · #{if(state.modal.view == :active, do: "Active", else: "History")} #{length(visible_rows(state))} "
+      ) ++
         draw(%Paragraph{text: rows, wrap: false}, g.list) ++
         draw(%Paragraph{text: detail_text(data.detail), wrap: true}, g.detail) ++
         draw(
@@ -519,6 +562,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
         end)
     end
 
+    defp empty_text(_state, %{token: token}) when not is_nil(token), do: "Loading tasks…"
+    defp empty_text(_state, %{error: error}) when is_binary(error), do: error
+    defp empty_text(%{modal: %{view: :history}}, _data), do: "No completed tasks yet."
+    defp empty_text(_state, _data), do: "No active tasks. Commands appear here automatically."
+
     defp task_line(row, selected, theme) do
       selected? = row.id == selected
 
@@ -529,7 +577,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
             style: %Style{fg: theme.voices.you}
           },
           %Span{
-            content: clean("#{row.status} · #{row.label}"),
+            content:
+              clean(
+                "#{Map.get(row, :status_label, row.status)} · #{row.label} · #{Map.get(row, :elapsed, "")}"
+              ),
             style: %Style{
               fg: task_colour(row, theme),
               modifiers: if(selected?, do: [:bold], else: [])
@@ -564,21 +615,34 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp detail_text(row) do
       mode = completion_mode(row)
-      monitoring = observation(row)
+      monitoring = Map.get(row, :tracking_label, observation(row))
 
       [
         clean(row.label),
-        "#{row.source} · #{monitoring} · #{mode}",
+        Enum.reject(
+          [Map.get(row, :status_label, row.status), Map.get(row, :elapsed), mode],
+          &(&1 in [nil, ""])
+        )
+        |> Enum.join(" · "),
+        monitoring,
+        if(row[:finished_at],
+          do: "Finished: #{row.finished_at}",
+          else: if(row[:started_at], do: "Started: #{row.started_at}")
+        ),
         if(row.target["sha"], do: "Commit: #{row.target["sha"]}"),
         if(row.deadline, do: "Deadline #{row.deadline}"),
-        row.summary
+        row.summary,
+        if(length(Map.get(row, :history, [])) > 1,
+          do: "Tracking history: " <> Enum.join(row.history, " → ")
+        )
       ]
       |> Enum.reject(&(&1 in [nil, ""]))
       |> Enum.join("\n")
     end
 
+    defp completion_mode(%{watching?: false, running?: false}), do: nil
     defp completion_mode(%{managed?: true}), do: "completion required by assignment"
-    defp completion_mode(%{follow_up?: true}), do: "continue automatically"
+    defp completion_mode(%{follow_up?: true}), do: "auto-resume on completion"
     defp completion_mode(_row), do: "notify only"
 
     defp observation(%{watching?: true}), do: "watching"
@@ -599,7 +663,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do:
         if(state.modal.focus == :logs,
           do: "↑↓ logs · End follow · Tab task list",
-          else: "↑↓ select · Enter logs · PgUp/PgDn scroll"
+          else: "1 Active · 2 History · ↑↓ select · Enter logs"
         )
 
     defp geometry(state, panes) do
@@ -613,9 +677,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
       }
 
       data = cache(state)
-      count = min(max(length(data.rows), 1), min(6, max(div(inner.height, 3), 1)))
-      selected = Enum.find_index(data.rows, &(&1.id == data.selected)) || 0
-      start = max(min(selected - div(count, 2), length(data.rows) - count), 0)
+      rows = visible_rows(state)
+      count = min(max(length(rows), 1), min(6, max(div(inner.height, 3), 1)))
+      selected = Enum.find_index(rows, &(&1.id == data.selected)) || 0
+      start = max(min(selected - div(count, 2), length(rows) - count), 0)
       list = rect(inner, 0, count)
       detail = rect(inner, count + 1, min(6, max(inner.height - count - 5, 0)))
       logs_y = detail.y + detail.height + 1 - inner.y
@@ -649,7 +714,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do: [{:confirm, "[y Confirm]"}, {:back, "[Esc Back]"}]
 
     defp buttons(state) do
-      row_controls(selected(state), cache(state).monitoring?)
+      active = Enum.count(cache(state).rows, &active?/1)
+      history = length(cache(state).rows) - active
+
+      ([{:active, "[1 Active #{active}]"}, {:history, "[2 History #{history}]"}] ++
+         row_controls(selected(state), cache(state).monitoring?))
       |> maybe(cache(state).sources != [], {:add, "[a Add watch]"})
       |> Kernel.++([{:close, "[Esc Close]"}])
     end
@@ -662,11 +731,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp row_controls(row, monitoring?) do
       []
       |> maybe(row.running?, {:cancel, "[c Cancel command]"})
-      |> maybe(row.watching?, {:stop, "[s Stop watching]"})
-      |> maybe(not row.watching? and monitoring?, {:watch, "[w Watch]"})
+      |> maybe(row.watching?, {:stop, "[s Pause tracking]"})
+      |> maybe(
+        resumable?(row, monitoring?),
+        {:watch, "[w Resume tracking]"}
+      )
       |> maybe(
         row.watching? and not row.delivered?,
-        {:follow_up, "[f Continue: #{if(row.follow_up?, do: "on", else: "off")}]"}
+        {:follow_up, "[f Auto-resume: #{if(row.follow_up?, do: "on", else: "off")}]"}
       )
       |> maybe(
         not row.running? and (row.delivered? or row.watch_id == nil),
@@ -674,6 +746,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
       )
       |> maybe(is_binary(row.url) and row.url != "", {:link, "[o Open run]"})
     end
+
+    defp resumable?(row, monitoring?),
+      do:
+        not row.watching? and monitoring? and
+          (row.running? or (row.source != "background" and row.observation == "stopped"))
 
     defp maybe(list, true, item), do: list ++ [item]
     defp maybe(list, _false, _item), do: list

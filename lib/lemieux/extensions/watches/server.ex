@@ -52,6 +52,7 @@ defmodule Lemieux.Extensions.Watches.Server do
         clock: Keyword.get(opts, :clock),
         now: Keyword.get(opts, :now, fn -> System.system_time(:millisecond) end),
         authorize: Keyword.get(opts, :authorize, fn _watch -> true end),
+        default_follow_up: Keyword.get(opts, :default_follow_up, false) == true,
         max_records: max_records,
         max_concurrency: positive(opts, :max_concurrency, 4),
         poll_ms: positive(opts, :poll_ms, 1000),
@@ -81,6 +82,9 @@ defmodule Lemieux.Extensions.Watches.Server do
 
   def handle_call(:sources, _from, state), do: {:reply, Enum.sort(Map.keys(state.sources)), state}
 
+  def handle_call(:defaults, _from, state),
+    do: {:reply, %{follow_up: state.default_follow_up}, state}
+
   def handle_call({:register, source, target, opts}, _from, state) do
     case existing_background(state, source, target, Keyword.get(opts, :reuse, true)) do
       nil ->
@@ -91,7 +95,7 @@ defmodule Lemieux.Extensions.Watches.Server do
           reuse(
             state,
             watch,
-            opts[:follow_up] == true,
+            Keyword.get(opts, :follow_up, state.default_follow_up) == true,
             Keyword.get(opts, :continuation_origin, "host")
           )
 
@@ -160,7 +164,13 @@ defmodule Lemieux.Extensions.Watches.Server do
     case session_identity(session, state.session_id) do
       :ok ->
         state = replace_sources(state, opts)
-        state = %{state | authorize: Keyword.get(opts, :authorize, state.authorize)}
+
+        state = %{
+          state
+          | authorize: Keyword.get(opts, :authorize, state.authorize),
+            default_follow_up: Keyword.get(opts, :default_follow_up, state.default_follow_up)
+        }
+
         {:reply, :ok, state |> connect(session) |> schedule() |> deliver()}
 
       error ->
@@ -248,13 +258,13 @@ defmodule Lemieux.Extensions.Watches.Server do
 
   defp existing_background(_state, _source, _target, _reuse?), do: nil
 
-  defp reuse(state, %{"delivery" => "pending"} = watch, true, origin) do
-    origin = if watch["continuation_origin"] == "user", do: "user", else: origin
+  defp reuse(state, %{"continuation_origin" => "user"}, _follow_up?, _origin), do: state
 
+  defp reuse(state, %{"delivery" => "pending"} = watch, follow_up?, origin) do
     save(
       state,
       watch["id"],
-      Map.merge(watch, %{"follow_up" => true, "continuation_origin" => origin})
+      Map.merge(watch, %{"follow_up" => follow_up?, "continuation_origin" => origin})
     )
   end
 
@@ -277,13 +287,15 @@ defmodule Lemieux.Extensions.Watches.Server do
         "target" => target,
         "status" => "watching",
         "created_at" => now,
+        "created_order" => next_order(state, now),
         "deadline" => now + timeout,
         "deadline_at" =>
           DateTime.from_unix!(now + timeout, :millisecond) |> DateTime.to_iso8601(),
         "next_poll_at" => now,
         "attempts" => 0,
-        "follow_up" => Keyword.get(opts, :follow_up, false) == true,
+        "follow_up" => Keyword.get(opts, :follow_up, state.default_follow_up) == true,
         "continuation_origin" => Keyword.get(opts, :continuation_origin, "host"),
+        "label" => Record.text(Keyword.get(opts, :label), 240),
         "delivery" => "pending",
         "result" => nil,
         "finished_at" => nil
@@ -299,6 +311,15 @@ defmodule Lemieux.Extensions.Watches.Server do
       {:error, _reason} = error -> {:reply, error, state}
     end
   end
+
+  # ULID randomness cannot order registrations made in the same millisecond.
+  # Persist a logical order so pause/resume selects the newest observation even
+  # after recovery, with a frozen clock, or after the wall clock moves backward.
+  defp next_order(state, now),
+    do:
+      Enum.reduce(state.records, now, fn {_id, %{value: watch}}, order ->
+        max(order, (watch["created_order"] || watch["created_at"]) + 1)
+      end)
 
   defp load(journal, limit, cursor \\ nil, records \\ %{})
   defp load(nil, _limit, _cursor, _records), do: {:ok, %{}}
@@ -598,7 +619,7 @@ defmodule Lemieux.Extensions.Watches.Server do
   defp continuation(:ok, false), do: "notification_only"
 
   defp notify(session, event, authorized?) do
-    Session.deliver_notification(session, event, follow_up: authorized?)
+    Session.deliver_notification(session, event, follow_up: authorized?, preserve_turns: true)
   catch
     :exit, _reason -> {:error, :disconnected}
   end

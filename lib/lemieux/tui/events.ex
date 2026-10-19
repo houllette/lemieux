@@ -649,6 +649,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               Screen.renderers(state),
               Screen.theme(state)
             )
+            |> ToolText.join_background(List.first(state.lines))
           )
     end
 

@@ -74,7 +74,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     @type row ::
             {:tool_heading, String.t() | nil, kind(), String.t(), String.t()}
             | {:tool_heading, String.t() | nil, :run, String.t(), String.t(), [Span.t()]}
-            | {:tool_detail, String.t(), :explore | :ordinary, String.t()}
+            | {:tool_detail, String.t(), :explore | :ordinary | :background, String.t()}
             | {:tool_output, String.t(), :first | :rest, tone(), String.t()}
             | {:tool_question, String.t(), String.t()}
             | {:tool_option, String.t(), pos_integer(), String.t(), String.t() | nil}
@@ -181,6 +181,11 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       output = printable(payload["output"])
 
       if payload["error"] == true do
+        output =
+          if call.name == "watch",
+            do: "Watch #{argument(call.arguments, "action")} failed: " <> output,
+            else: output
+
         {:output, output}
       else
         module = Renderer.module(renderers, call.name)
@@ -402,6 +407,21 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     def exploration(id, text, false),
       do: [heading(nil, :explore, "Explored"), {:tool_detail, id, :explore, text}]
+
+    @doc "A command or external run in the shared background activity group."
+    @spec background(id :: String.t(), text :: String.t()) :: [row()]
+    def background(id, text),
+      do: [heading(nil, :background, "Background tasks:"), {:tool_detail, id, :background, text}]
+
+    @doc "Joins adjacent background announcements, in live and resumed transcripts alike."
+    @spec join_background(rows :: [row()], previous :: term()) :: [row()]
+    def join_background(
+          [{:tool_heading, nil, :background, _, _} | rows],
+          {:tool_detail, _, :background, _}
+        ),
+        do: rows
+
+    def join_background(rows, _previous), do: rows
 
     @doc "A heading row: the coloured verb a call is announced with, and its subject."
     @spec heading(

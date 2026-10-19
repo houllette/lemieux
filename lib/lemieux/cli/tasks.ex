@@ -8,6 +8,7 @@ defmodule Lemieux.CLI.Tasks do
   continuation. External sources expose observation controls only.
   """
   alias Lemieux.Background
+  alias Lemieux.CLI.Tasks.Activity
   alias Lemieux.CLI.Watches, as: Host
   alias Lemieux.Extensions.Watches
   alias Lemieux.Extensions.Watches.Record
@@ -36,7 +37,8 @@ defmodule Lemieux.CLI.Tasks do
        selected: selected && selected.id,
        detail: detail(selected, info, watches),
        sources: if(manager, do: Watches.sources(manager) -- ["background"], else: []),
-       monitoring?: not is_nil(manager)
+       monitoring?: not is_nil(manager),
+       auto_continue?: not is_nil(manager) and Watches.defaults(manager).follow_up
      }}
   end
 
@@ -138,28 +140,36 @@ defmodule Lemieux.CLI.Tasks do
   end
 
   defp rows(tasks, watches) do
+    groups = Activity.group(watches)
+
     commands =
       Enum.map(tasks, fn task ->
-        watch =
+        group =
           Enum.find(
-            Enum.reverse(watches),
-            &(&1["source"] == "background" and &1["target"]["task_id"] == task.id)
+            groups,
+            &(&1.watch["source"] == "background" and &1.watch["target"]["task_id"] == task.id)
           )
 
-        row(watch, task)
+        activity_row(group, task)
       end)
 
     ids = MapSet.new(tasks, & &1.id)
 
     external =
-      watches
+      groups
       |> Enum.reject(
-        &(&1["source"] == "background" and MapSet.member?(ids, &1["target"]["task_id"]))
+        &(&1.watch["source"] == "background" and
+            MapSet.member?(ids, &1.watch["target"]["task_id"]))
       )
-      |> Enum.map(&row(&1, nil))
+      |> Enum.map(&activity_row(&1, nil))
 
-    Enum.sort_by(commands ++ external, &String.slice(&1.id, -26, 26), :desc)
+    Enum.sort_by(commands ++ external, &{&1.active?, &1.sort_time, &1.id}, :desc)
   end
+
+  defp activity_row(nil, task), do: Activity.decorate(row(nil, task), task, [])
+
+  defp activity_row(group, task),
+    do: Activity.decorate(row(group.watch, task), task, group.history)
 
   defp row(watch, nil), do: watch_row(watch)
 
@@ -170,6 +180,7 @@ defmodule Lemieux.CLI.Tasks do
       label: task.command,
       target: %{"task_id" => task.id},
       status: task_status(task),
+      summary: if(task.status == :cancelled, do: nil, else: watch_row(watch).summary),
       running?: task.status == :running,
       bytes: task.output_bytes
     })
@@ -199,7 +210,7 @@ defmodule Lemieux.CLI.Tasks do
     result = watch["result"] || %{}
 
     %{
-      id: watch["id"],
+      id: Activity.id(watch),
       task_id: nil,
       watch_id: watch["id"],
       label: label(watch["source"], watch["target"]),
@@ -273,11 +284,16 @@ defmodule Lemieux.CLI.Tasks do
   defp perform(:cancel, _row, _info, _manager), do: {:error, :external_job_cannot_be_cancelled}
   defp perform(:stop, row, _info, manager), do: stop_watch(manager, row.watch_id)
 
+  defp perform(:watch, %{source: "background", running?: false}, _info, manager)
+       when not is_nil(manager),
+       do: {:error, :already_finished}
+
   defp perform(:watch, row, _info, manager) when not is_nil(manager),
     do:
       normalize(
         Watches.register(manager, row.source, row.target,
           reuse: false,
+          label: row.label,
           continuation_origin: "user"
         )
       )

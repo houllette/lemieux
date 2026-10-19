@@ -188,6 +188,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         "read" => __MODULE__.Read,
         "subagents" => __MODULE__.Subagents,
         "todo" => __MODULE__.Todo,
+        "watch" => __MODULE__.Watch,
         "web_search" => __MODULE__.WebSearch,
         "write" => __MODULE__.Write
       }

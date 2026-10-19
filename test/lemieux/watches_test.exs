@@ -66,6 +66,22 @@ defmodule Lemieux.WatchesTest do
     }
   end
 
+  test "observation order survives same-millisecond registrations and host recovery", ctx do
+    manager = start_supervised!({Server, ctx.server_opts})
+    target = %{"run_id" => "42"}
+    assert {:ok, first} = Watches.register(manager, "fake", target)
+    assert_receive {:observing, _, ^target}
+    assert {:ok, _} = Watches.stop(manager, first["id"])
+    assert {:ok, second} = Watches.register(manager, "fake", target)
+    assert_receive {:observing, _, ^target}
+    assert second["created_at"] == first["created_at"]
+    assert second["created_order"] > first["created_order"]
+    stop_supervised!(Server)
+    manager = start_supervised!({Server, ctx.server_opts})
+    assert {:ok, third} = Watches.register(manager, "fake", target)
+    assert third["created_order"] > second["created_order"]
+  end
+
   test "background watch outcomes distinguish successful and failed command exits", ctx do
     for {exit_status, outcome} <- [{0, "success"}, {7, "failure"}] do
       {:ok, task_id} =

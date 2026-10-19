@@ -92,7 +92,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
 
   test "mouse buttons stop observation and confirm cancellation of the selected command", ctx do
     state = ctx.state |> press("f6") |> loaded()
-    state = state |> click("[s Stop watching]") |> updated()
+    state = state |> click("[s Pause tracking]") |> updated()
     assert hd(TaskPanel.cache(state).rows).running?
     refute hd(TaskPanel.cache(state).rows).watching?
     state = state |> click("[c Cancel command]") |> click("[y Confirm]") |> updated()
@@ -100,7 +100,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
   end
 
   test "native form registration observes an external run without a model turn", ctx do
-    provider = Scripted.new([])
+    provider = Scripted.new([Scripted.complete("The deployment completed.")])
 
     {:ok, session} =
       Runtime.start_session(ctx.options,
@@ -139,7 +139,8 @@ defmodule Lemieux.TUI.TaskPanelTest do
 
     state = state |> TaskPanel.refresh() |> loaded()
     assert TaskPanel.cache(state).detail.logs == "Deployment ready"
-    assert Scripted.requests(provider) == []
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert length(Scripted.requests(provider)) == 1
   end
 
   defp loaded(state) do
@@ -189,7 +190,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     state = state |> press("w") |> updated()
     assert hd(TaskPanel.cache(state).rows).watching?
     state = state |> press("f") |> updated()
-    assert hd(TaskPanel.cache(state).rows).follow_up?
+    refute hd(TaskPanel.cache(state).rows).follow_up?
     state = press(state, "c")
     assert screen(state) =~ "Cancel this command?"
     assert {:ok, %{rows: [%{running?: true}]}} = Tasks.snapshot(ctx.session)
@@ -198,6 +199,30 @@ defmodule Lemieux.TUI.TaskPanelTest do
     refute hd(TaskPanel.cache(state).rows).watching?
     state = state |> press("x") |> press("y") |> updated()
     assert TaskPanel.cache(state).detail.logs == ""
+    assert length(Scripted.requests(ctx.provider)) == 2
+  end
+
+  test "tracking attempts keep one row, and completion moves the selected output into History",
+       ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    original = TaskPanel.cache(state).selected
+    assert screen(state) =~ "Active 1"
+    assert screen(state) =~ "Auto-resume: on"
+    state = state |> press("s") |> updated()
+    assert screen(state) =~ "command still running"
+    state = state |> press("w") |> updated()
+    assert [%{id: ^original, history: [_, _]}] = TaskPanel.cache(state).rows
+    state = state |> press("c") |> press("y") |> updated()
+    assert state.modal.view == :history
+    assert TaskPanel.cache(state).selected == original
+    assert screen(state) =~ "Cancelled"
+    assert screen(state) =~ "History 1"
+    refute screen(state) =~ "Resume tracking"
+    state = state |> press("1") |> loaded()
+    assert state.modal.view == :active
+    assert screen(state) =~ "No active tasks"
+    state = state |> press("2") |> loaded()
+    assert TaskPanel.cache(state).detail.id == original
     assert length(Scripted.requests(ctx.provider)) == 2
   end
 
@@ -296,7 +321,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert [%{status: "unavailable", running?: false, watching?: false}] =
              TaskPanel.cache(state).rows
 
-    assert screen(state) =~ "unavailable"
+    assert screen(state) =~ "Unavailable"
     refute screen(state) =~ "Cancel command"
     assert TaskPanel.cache(state).token == nil
     assert TaskPanel.cache(state).timer == nil

@@ -14,13 +14,22 @@ defmodule Lemieux.Extensions.Watches.Tool do
   @impl true
   def name(_tool), do: "watch"
   @impl true
-  def description(_tool),
+  def metadata(_tool),
+    do: %{effects: %{class: "read", resource_types: ["session_watch"]}}
+
+  @impl true
+  def description(tool),
     do:
       "Monitor existing external work without model polling. register returns immediately; completion is delivered at an idle session boundary. " <>
         "After registering, finish independent work and yield instead of polling. " <>
         "list/show inspect watches, stop only stops monitoring, forget clears retained output after delivery. " <>
         "github targets require repository (owner/repo), run_id and exact sha; background targets require task_id. " <>
-        "No external work is started. Default is notification only; follow_up needs explicit host authorization."
+        "No external work is started. Register directly without asking for separate confirmation; the session's permission rules still apply. " <>
+        if(tool.allow_follow_up,
+          do:
+            "Completion automatically continues the existing task under current permissions and remaining limits; use follow_up=false for notification only.",
+          else: "This host selects notification only."
+        )
 
   @impl true
   def schema(tool) do
@@ -56,11 +65,16 @@ defmodule Lemieux.Extensions.Watches.Tool do
       when not tool.allow_follow_up,
       do:
         {:error,
-         "This host authorizes notifications only. Register without follow_up; the person can enable Continue in the Tasks view."}
+         "This host authorizes notifications only. Register without follow_up; the person can enable Auto-resume in the Tasks view."}
 
   def run(tool, args, context) do
     with {:ok, manager} <- manager(tool, context) do
-      execute(manager, Map.put(args, "continuation_origin", "host")) |> result()
+      args =
+        args
+        |> Map.put_new("follow_up", tool.allow_follow_up)
+        |> Map.put("continuation_origin", "host")
+
+      execute(manager, args) |> result()
     end
   end
 

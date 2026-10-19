@@ -29,11 +29,13 @@ API.
 - The native Tasks view (F6 or its clickable badge) automatically tracks
   background commands, with live output, direct cancellation, observation
   controls and forms for external runs. It preserves the message draft and
-  needs no task-management slash commands.
+  needs no task-management slash commands. Background launches share one chat
+  group; Active and History keep each activity's status and output together.
 - Session watches observe existing GitHub Actions runs, background builds and
   host-configured status readers without model polling. Results persist,
-  queue until the owning session is idle, and admit an explicitly authorized
-  follow-up once under current permissions and remaining allowances. The
+  queue until the owning session is idle, and continue the task automatically
+  under current permissions and remaining allowances. Tracking adds no separate
+  approval; command permission and sandbox boundaries still apply. The
   configured CLI mounts monitoring automatically; embedders retain lifecycle
   and storage control. See [session watches](docs/watches.md).
 

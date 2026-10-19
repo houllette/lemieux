@@ -153,7 +153,10 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
       Enum.reduce(Map.get(payload, "tool_calls", []), {lines, calls}, fn call, {lines, calls} ->
         id = call["id"] || "tool"
-        rows = ToolText.call(call, ToolText.exploration_tail?(lines), view.renderers, view.theme)
+
+        rows =
+          ToolText.call(call, ToolText.exploration_tail?(lines), view.renderers, view.theme)
+          |> ToolText.join_background(List.last(lines))
 
         {lines ++ rows, Map.put(calls, id, call)}
       end)
@@ -175,7 +178,8 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
           do: lines,
           else:
             lines ++
-              ToolText.call(call, ToolText.exploration_tail?(lines), view.renderers, view.theme)
+              (ToolText.call(call, ToolText.exploration_tail?(lines), view.renderers, view.theme)
+               |> ToolText.join_background(List.last(lines)))
 
       lines =
         case ToolText.result(call, payload, view.theme, view.renderers) do

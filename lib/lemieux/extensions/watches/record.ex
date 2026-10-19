@@ -1,6 +1,30 @@
 defmodule Lemieux.Extensions.Watches.Record do
   @moduledoc false
 
+  @spec label(watch :: map()) :: String.t()
+  def label(%{"label" => label}) when is_binary(label) and byte_size(label) > 0,
+    do: label |> String.split("\n") |> hd() |> text(240)
+
+  def label(%{"source" => "github", "target" => target}),
+    do: "#{target["repository"]} · run #{target["run_id"]}"
+
+  def label(%{"source" => "background", "target" => target}),
+    do: "Background command #{String.slice(target["task_id"] || "", -6, 6)}"
+
+  def label(%{"source" => source, "target" => target}),
+    do: "#{source} · run #{target["run_id"] || target["task_id"]}"
+
+  @spec status_name(status :: String.t()) :: String.t()
+  def status_name(status) when status in ~w(success passed completed), do: "Completed"
+  def status_name(status) when status in ~w(failure failed), do: "Failed"
+  def status_name(status) when status in ~w(cancelled canceled), do: "Cancelled"
+  def status_name("watching"), do: "Tracking"
+  def status_name("stopped"), do: "Tracking paused"
+  def status_name("authentication"), do: "Login required"
+  def status_name("timed_out"), do: "Timed out"
+  def status_name("failed · exit " <> code), do: "Failed · exit #{code}"
+  def status_name(status), do: status |> String.replace("_", " ") |> String.capitalize()
+
   def validate_target(target) when is_map(target) do
     if byte_size(JSON.encode!(target)) <= 4096, do: :ok, else: {:error, :target_too_large}
   rescue
@@ -93,13 +117,16 @@ defmodule Lemieux.Extensions.Watches.Record do
     # result. Reusing that JSON as terminal copy hid even successful outcomes
     # among warning rows and clipped journal fields during live qualification.
     result = watch["result"] || %{}
+    outcome = if result["outcome"] in [nil, ""], do: watch["status"], else: result["outcome"]
 
     display =
       [
-        "Watch #{watch["status"]} · #{watch["source"]} · #{result["outcome"] || "unknown"}",
-        result["summary"],
+        "#{label(watch)} · #{status_name(outcome)}" <>
+          if(result["summary"] in [nil, ""],
+            do: "",
+            else: " — #{result["summary"] |> String.replace(~r/\s+/, " ") |> text(300)}"
+          ),
         result["url"],
-        text(result["logs"], 600),
         "Open Tasks (F6) to inspect output."
       ]
       |> Enum.reject(&(&1 in [nil, ""]))

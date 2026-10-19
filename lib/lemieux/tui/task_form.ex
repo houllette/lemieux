@@ -20,7 +20,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             source: 0,
             index: 0,
             values: %{"minutes" => "60"},
-            follow_up?: false,
+            follow_up?: Map.get(TaskPanel.cache(state), :auto_continue?, true),
             input: ExRatatui.textarea_new()
           }
 
