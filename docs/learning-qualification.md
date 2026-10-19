@@ -93,12 +93,18 @@ outside development proposals, and retain the source-case ancestry of reused les
 Validate model-facing evidence through the tools the proposer actually receives.
 The read tool clips individual long lines, so compact JSON can hide the decisive
 fields even when the file was materialized successfully. Generated proposal and
-experience manifests put collection members on separate lines. Keep individual
-diagnostics bounded or supply a separate readable projection for long strings;
-line pagination cannot recover the tail of a clipped scalar. Preserve canonical
-contract digests and exact source artifact bytes separately from these display
-projections. A model's abstention is not evidence of insufficient source information
-when its tools could not present that information.
+experience manifests put collection members on separate lines. Proposal evidence
+views additionally represent long strings as `$text` objects with encoding
+`utf8_chunks/v1`, ordered `chunks`, and the projected string's `bytes` and `sha256`. Concatenate the
+chunks without separators to recover the projected string; each chunk is bounded
+by its escaped JSON byte size so it remains readable through the tool. Upstream
+clipping and omissions still apply. Embedders can use
+`Lemieux.JSON.encode_readable!(value, strings: :chunks)` for the same display view.
+Keep canonical contract digests and exact source artifact bytes separately;
+plans and parent profiles retain their original JSON value shapes. A display
+projection is untrusted evidence, never activation authority. A model's abstention
+is not evidence of insufficient source information when its tools could not
+present that information.
 
 Use `Proposer.profile(model, task_local: true, abstain: true)` for a task-local
 proposal. A concrete current failure may support a hypothesis for isolated probes;

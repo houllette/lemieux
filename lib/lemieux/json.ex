@@ -20,16 +20,68 @@ defmodule Lemieux.JSON do
 
   Model-facing files must be pageable with the read tool: compact objects can
   lose every field after its per-line display cap. This is a display encoding,
-  not the canonical bytes used by integrity contracts. Individual long strings
-  still need bounded excerpts or a separate readable projection from the host.
+  not the canonical bytes used by integrity contracts.
+
+  `strings: :chunks` is an explicit evidence projection: strings whose JSON
+  encoding exceeds 512 bytes become `{"$text": {"encoding": "utf8_chunks/v1",
+  "chunks": [...], "bytes": n, "sha256": "..."}}`. Concatenate the chunks
+  without separators to recover the projected string. The bound includes JSON
+  escaping; a character count does not bound control characters or UTF-8 bytes.
+  This adds no content omitted by an upstream excerpt and grants no authority.
+  Keep canonical contracts and source artifacts separate; the default preserves
+  the original JSON values, including long strings.
   """
-  @spec encode_readable!(value :: term()) :: String.t()
-  def encode_readable!(value) do
+  @spec encode_readable!(value :: term(), opts :: [strings: :preserve | :chunks]) :: String.t()
+  def encode_readable!(value, opts \\ []) do
     value
     |> JSON.encode!()
     |> JSON.decode!()
+    |> project_strings(Keyword.get(opts, :strings, :preserve))
     |> readable(0)
     |> IO.iodata_to_binary()
+  end
+
+  defp project_strings(value, :preserve), do: value
+  defp project_strings(value, :chunks), do: chunk_strings(value)
+
+  defp chunk_strings(map) when is_map(map),
+    do: Map.new(map, fn {key, value} -> {key, chunk_strings(value)} end)
+
+  defp chunk_strings(list) when is_list(list), do: Enum.map(list, &chunk_strings/1)
+
+  defp chunk_strings(text) when is_binary(text) do
+    if byte_size(JSON.encode!(text)) <= 512 do
+      text
+    else
+      %{
+        "$text" => %{
+          "encoding" => "utf8_chunks/v1",
+          "chunks" => text_chunks(text),
+          "bytes" => byte_size(text),
+          "sha256" => Lemieux.Contract.sha256(text)
+        }
+      }
+    end
+  end
+
+  defp chunk_strings(value), do: value
+
+  defp text_chunks(text) do
+    {chunks, current, _size} =
+      text
+      |> String.to_charlist()
+      |> Enum.reduce({[], [], 2}, fn codepoint, {chunks, current, size} ->
+        bytes = <<codepoint::utf8>>
+        encoded_size = byte_size(JSON.encode!(bytes)) - 2
+
+        if size + encoded_size > 512,
+          do: {[Enum.reverse(current) | chunks], [bytes], 2 + encoded_size},
+          else: {chunks, [bytes | current], size + encoded_size}
+      end)
+
+    [Enum.reverse(current) | chunks]
+    |> Enum.reverse()
+    |> Enum.map(&IO.iodata_to_binary/1)
   end
 
   defp readable(map, depth) when is_map(map) and map_size(map) > 0 do

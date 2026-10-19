@@ -114,6 +114,67 @@ defmodule Lemieux.Learning.ProposerTest do
     assert prompt =~ "verification"
   end
 
+  test "primary payloads and operator evidence remain complete through paged reads", ctx do
+    seed = seed_candidate(ctx)
+    text = String.duplicate("😀\"\\\n", 300)
+
+    entries = [
+      Lemieux.Entry.new(:tool_result, %{"name" => "bash", "output" => text}, seq: 1)
+      |> Lemieux.Entry.encode!()
+      |> JSON.decode!()
+    ]
+
+    bytes = JSON.encode!(entries)
+    reference = ArtifactReference.from_bytes("transcript", bytes, scope: ctx.plan.scope)
+    projection = Lemieux.Learning.Discovery.Digest.excerpt(entries, max_bytes: 16_000)
+    evaluation = %{failed(ctx.plan, seed, "dev-1") | artifacts: [reference]}
+    artifacts = %{reference.sha256 => bytes}
+
+    {:ok, workspace} =
+      Workspace.materialize(ctx.context.workspace_root, 1, %{
+        plan: ctx.plan,
+        parent_bytes: ctx.seed_bytes,
+        evaluations: [evaluation],
+        artifacts: artifacts,
+        evidence: %{"evaluation_ids" => [evaluation.id], "original" => projection}
+      })
+
+    context = %{cwd: workspace.root, environment: Lemieux.Environment.local()}
+
+    for path <- ["evidence/operator.json", "evidence/transcripts/#{evaluation.id}.json"] do
+      encoded = File.read!(Path.join(workspace.root, path))
+      lines = String.split(encoded, "\n")
+      assert Enum.all?(lines, &(byte_size(&1) < 2000))
+
+      # Exercise actual offset pagination, including the tail of each payload.
+      shown =
+        1..length(lines)//12
+        |> Enum.map_join(fn offset ->
+          assert {:ok, page} =
+                   Read.run(%{"path" => path, "offset" => offset, "limit" => 12}, context)
+
+          refute page =~ "cut at 2000"
+          page
+        end)
+
+      view = JSON.decode!(encoded)
+      view = if path == "evidence/operator.json", do: view["evidence"]["original"], else: view
+      assert [%{"payload" => %{"$text" => payload}}] = view["events"]
+      expected = hd(projection["events"])["payload"]
+      assert Enum.join(payload["chunks"]) == expected
+      assert payload["sha256"] == Contract.sha256(expected)
+      assert Enum.all?(payload["chunks"], &(shown =~ JSON.encode!(&1)))
+      assert shown =~ payload["sha256"]
+      assert view["coverage"] == projection["coverage"]
+    end
+
+    assert artifacts[reference.sha256] == bytes
+    assert ArtifactReference.verify_bytes(reference, bytes) == :ok
+
+    assert JSON.decode!(File.read!(Path.join(workspace.root, "parent/profile.json"))) ==
+             ctx.seed_profile
+  end
+
   setup %{tmp_dir: tmp_dir} do
     evolver = Proposer.profile("test:model", quota: true)
     seed_profile = seed_profile()
