@@ -16,7 +16,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.CLI.Tasks
     alias Lemieux.Conversation
     alias Lemieux.TUI
-    alias Lemieux.TUI.{Choices, Flash, Modal, RichText, Screen, Takeover, TaskForm, Width}
+
+    alias Lemieux.TUI.{
+      Choices,
+      Flash,
+      Modal,
+      RichText,
+      Screen,
+      Takeover,
+      TaskForm,
+      Transcript,
+      Width
+    }
 
     @doc false
     @spec reset(state :: TUI.t(), info :: map() | :unknown) :: TUI.t()
@@ -155,7 +166,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
               %{data | error: describe(reason)}
           end
 
-        reconcile(state, data)
+        state = reconcile(state, data)
+
+        results =
+          data.rows
+          |> Enum.filter(&is_binary(Map.get(&1, :name)))
+          |> Enum.map(&%{"name" => &1.name, "status" => Map.get(&1, :status_label, &1.status)})
+
+        Transcript.complete_tasks(state, results)
       else
         state
       end
@@ -194,6 +212,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 session: state.session,
                 focus: :list,
                 view: :active,
+                content: :output,
                 offset: 0,
                 follow?: true,
                 confirm: nil,
@@ -301,7 +320,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
           "x" => :clear,
           "a" => :add,
           "o" => :link,
-          "r" => :refresh
+          "r" => :refresh,
+          "v" => :command,
+          "l" => :output
         }[code]
 
       {:noreply, choose(state, action)}
@@ -318,6 +339,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp choose(state, :close), do: Modal.close(state)
     defp choose(state, :add), do: TaskForm.open(state)
     defp choose(state, :refresh), do: refresh(state)
+
+    defp choose(state, content) when content in [:command, :output] do
+      state
+      |> put_in([Access.key!(:modal), :content], content)
+      |> put_in([Access.key!(:modal), :focus], :logs)
+      |> put_in([Access.key!(:modal), :offset], 0)
+      |> put_in([Access.key!(:modal), :follow?], content == :output)
+    end
 
     defp choose(state, view) when view in [:active, :history] do
       state = put_in(state.modal.view, view)
@@ -422,7 +451,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       state
       |> put_in([Access.key!(:session_view), :tasks], data)
       |> put_in([Access.key!(:modal), :offset], 0)
-      |> put_in([Access.key!(:modal), :follow?], true)
+      |> put_in([Access.key!(:modal), :follow?], state.modal.content == :output)
       |> refresh()
     end
 
@@ -431,7 +460,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       maximum =
         max(
-          length(log_rows(cache(state).detail, g.logs.width, Screen.theme(state))) -
+          length(
+            log_rows(cache(state).detail, g.logs.width, Screen.theme(state), state.modal.content)
+          ) -
             max(g.logs.height - 1, 0),
           0
         )
@@ -531,7 +562,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       rows = if rows == [], do: [line(empty_text(state, data))], else: rows
 
-      log_rows = log_rows(data.detail, g.logs.width, theme)
+      log_rows = log_rows(data.detail, g.logs.width, theme, state.modal.content)
 
       maximum = max(length(log_rows) - max(g.logs.height - 1, 0), 0)
       offset = if state.modal.follow?, do: maximum, else: min(state.modal.offset, maximum)
@@ -549,7 +580,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
             scroll: {offset, 0},
             wrap: false,
             block: %Block{
-              title: " Output · #{if(state.modal.follow?, do: "following", else: "paused")} ",
+              title:
+                if(state.modal.content == :command,
+                  do: " Command · full shell source ",
+                  else: " Output · #{if(state.modal.follow?, do: "following", else: "paused")} "
+                ),
               borders: [:top],
               border_style: %Style{fg: theme.text.muted}
             }
@@ -579,7 +614,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           %Span{
             content:
               clean(
-                "#{Map.get(row, :status_label, row.status)} · #{row.label} · #{Map.get(row, :elapsed, "")}"
+                "#{Map.get(row, :status_label, row.status)} · #{Map.get(row, :elapsed, "")} · #{Map.get(row, :name, row.label)} · #{Map.get(row, :description, "")}"
               ),
             style: %Style{
               fg: task_colour(row, theme),
@@ -600,13 +635,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp line(text), do: %Line{spans: [%Span{content: text}]}
     defp clean(text), do: String.replace(text, ~r/[\x00-\x1f\x7f]/u, " ")
-    defp log_text(nil), do: "Select a task to inspect its output."
-    defp log_text(detail), do: detail.logs || ""
+    defp log_text(nil, _content), do: "Select a task to inspect its output."
 
-    defp log_rows(detail, width, theme),
+    defp log_text(detail, :command),
+      do: Map.get(detail, :command) || "No local command is available for this activity."
+
+    defp log_text(detail, _content), do: detail.logs || ""
+
+    defp log_rows(detail, width, theme, content),
       do:
         RichText.lines(
-          Enum.map(String.split(log_text(detail), "\n"), &{:lmx, &1}),
+          Enum.map(String.split(log_text(detail, content), "\n"), &{:lmx, &1}),
           max(width, 1),
           theme
         )
@@ -618,7 +657,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
       monitoring = Map.get(row, :tracking_label, observation(row))
 
       [
-        clean(row.label),
+        clean(Map.get(row, :name, row.label)),
+        Map.get(row, :description),
+        Map.get(row, :owner_label),
         Enum.reject(
           [Map.get(row, :status_label, row.status), Map.get(row, :elapsed), mode],
           &(&1 in [nil, ""])
@@ -718,10 +759,19 @@ if Code.ensure_loaded?(ExRatatui.App) do
       history = length(cache(state).rows) - active
 
       ([{:active, "[1 Active #{active}]"}, {:history, "[2 History #{history}]"}] ++
+         inspector_button(selected(state), state.modal.content) ++
          row_controls(selected(state), cache(state).monitoring?))
       |> maybe(cache(state).sources != [], {:add, "[a Add watch]"})
       |> Kernel.++([{:close, "[Esc Close]"}])
     end
+
+    defp inspector_button(%{command: command}, :output) when is_binary(command),
+      do: [{:command, "[v Command]"}]
+
+    defp inspector_button(%{command: command}, _content) when is_binary(command),
+      do: [{:output, "[l Output]"}]
+
+    defp inspector_button(_row, _content), do: []
 
     defp row_controls(nil, _monitoring?), do: []
 

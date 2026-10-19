@@ -3,6 +3,7 @@ defmodule Lemieux.Background.Task do
 
   use GenServer, restart: :temporary
 
+  alias Lemieux.Background.Label
   alias Lemieux.Clock
   alias Lemieux.Environment
   alias Lemieux.Supervisor, as: Sup
@@ -15,6 +16,8 @@ defmodule Lemieux.Background.Task do
     :session_id,
     :supervisor,
     :command,
+    :name,
+    :description,
     :cwd,
     :environment,
     :env,
@@ -52,10 +55,32 @@ defmodule Lemieux.Background.Task do
 
   @impl GenServer
   def init(opts) do
-    case claim_slot(opts) do
-      :ok -> init_task(opts)
+    with :ok <- claim_slot(opts),
+         {:ok, name} <- claim_name(opts) do
+      init_task(Keyword.put(opts, :name, name))
+    else
       {:error, reason} -> {:stop, reason}
     end
+  end
+
+  # Registry ownership makes simultaneous launches choose distinct names, and
+  # keeps a retained result's name reserved until that task leaves the runtime.
+  defp claim_name(opts) do
+    registry = Sup.background_registry(opts[:supervisor])
+    root = Keyword.get(opts, :root_session_id, opts[:session_id])
+
+    Enum.find_value(0..1023, fn attempt ->
+      name = Label.candidate(opts[:id], attempt)
+
+      case Registry.register(
+             registry,
+             {:background_name, root, name},
+             {opts[:session_id], opts[:id]}
+           ) do
+        {:ok, _} -> {:ok, name}
+        {:error, {:already_registered, _}} -> nil
+      end
+    end) || {:error, :task_name_limit}
   end
 
   # The same bound as discovery and completion batches. Without admission,
@@ -103,6 +128,8 @@ defmodule Lemieux.Background.Task do
       session_id: Keyword.fetch!(opts, :session_id),
       supervisor: Keyword.fetch!(opts, :supervisor),
       command: Keyword.fetch!(opts, :command),
+      name: Keyword.fetch!(opts, :name),
+      description: Label.summary(opts[:description]),
       cwd: Keyword.fetch!(opts, :cwd),
       environment: Keyword.fetch!(opts, :environment),
       env: Keyword.get(opts, :env, []),
@@ -436,6 +463,8 @@ defmodule Lemieux.Background.Task do
       id: state.id,
       session_id: state.session_id,
       command: state.command,
+      name: state.name,
+      description: state.description,
       status: state.status,
       exit_status: state.exit_status,
       output: if(include_output?, do: output(state), else: ""),

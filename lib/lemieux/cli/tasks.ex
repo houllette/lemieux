@@ -12,6 +12,7 @@ defmodule Lemieux.CLI.Tasks do
   alias Lemieux.CLI.Watches, as: Host
   alias Lemieux.Extensions.Watches
   alias Lemieux.Extensions.Watches.Record
+  alias Lemieux.ID.Shorthand
   alias Lemieux.Session
 
   @doc "Reads bounded metadata plus the selected task's logs, without inference."
@@ -126,13 +127,16 @@ defmodule Lemieux.CLI.Tasks do
   defp scope(row, tasks, info) do
     task = Enum.find(tasks, &(&1.id == row.task_id))
     owner = if task, do: task.session_id, else: info.id
-    row = Map.merge(row, %{owner_id: owner, managed?: owner != info.id})
+
+    owner_label =
+      if owner != info.id, do: Map.get(task, :owner_label, "Delegate #{Shorthand.of(owner)}")
+
+    row = Map.merge(row, %{owner_id: owner, owner_label: owner_label, managed?: owner != info.id})
 
     if row.managed?,
       do: %{
         row
-        | label:
-            "#{Map.get(task, :owner_label, "Delegate #{String.slice(owner, -6, 6)}")} · #{row.label}",
+        | label: "#{owner_label} · #{row.label}",
           observation: "managed by agent",
           follow_up?: true
       },
@@ -178,6 +182,9 @@ defmodule Lemieux.CLI.Tasks do
       id: "task:" <> task.id,
       task_id: task.id,
       label: task.command,
+      command: task.command,
+      name: task.name,
+      description: task.description,
       target: %{"task_id" => task.id},
       status: task_status(task),
       summary: if(task.status == :cancelled, do: nil, else: watch_row(watch).summary),
@@ -209,7 +216,7 @@ defmodule Lemieux.CLI.Tasks do
   defp watch_row(watch) do
     result = watch["result"] || %{}
 
-    %{
+    row = %{
       id: Activity.id(watch),
       task_id: nil,
       watch_id: watch["id"],
@@ -227,6 +234,15 @@ defmodule Lemieux.CLI.Tasks do
       url: result["url"],
       bytes: result["logs_bytes"] || 0
     }
+
+    if watch["source"] == "background",
+      do:
+        Map.merge(row, %{
+          name: Record.task_name(watch),
+          description: Record.card(watch)["summary"],
+          label: Record.task_name(watch)
+        }),
+      else: row
   end
 
   defp outcome(value, fallback) when value in [nil, ""], do: fallback

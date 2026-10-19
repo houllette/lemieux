@@ -31,6 +31,10 @@ API.
   controls and forms for external runs. It preserves the message draft and
   needs no task-management slash commands. Background launches share one chat
   group; Active and History keep each activity's status and output together.
+  Hockey-player names and model-written one-line summaries replace raw IDs and
+  shell commands in chat. Styled completion cards distinguish outcome, timing
+  and purpose; nearby completions share one continuation. F6 exposes the complete
+  shell source through its scrollable Command view.
 - Session watches observe existing GitHub Actions runs, background builds and
   host-configured status readers without model polling. Results persist,
   queue until the owning session is idle, and continue the task automatically

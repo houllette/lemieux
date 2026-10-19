@@ -12,7 +12,8 @@ defmodule Lemieux.TUI.BackgroundActivityTest do
             name: "bash",
             arguments: %{
               "command" => "printf 'demo-#{n} started'; sleep 30",
-              "background" => true
+              "background" => true,
+              "summary" => "Background analysis #{n}"
             }
           }
 
@@ -35,7 +36,12 @@ defmodule Lemieux.TUI.BackgroundActivityTest do
             "name" => "bash",
             "output" =>
               "Background task task-#{n} started. Continue independent work and yield instead of polling.",
-            "structured_content" => %{"task_id" => "task-#{n}", "status" => "running"},
+            "structured_content" => %{
+              "task_id" => "task-#{n}",
+              "task_name" => "player-#{n}",
+              "summary" => "Background analysis #{n}",
+              "status" => "running"
+            },
             "error" => false
           }
 
@@ -54,7 +60,14 @@ defmodule Lemieux.TUI.BackgroundActivityTest do
         [assistant(watches)] ++ Enum.map(watch_results, &Entry.new(:tool_result, &1))
 
     state = Enum.reduce(calls, tui(), &info(&2, {:tool_call, &1}))
-    state = Enum.reduce(launch_results, state, &info(&2, {:entry, Entry.new(:tool_result, &1)}))
+
+    state =
+      Enum.reduce(
+        Enum.reverse(launch_results),
+        state,
+        &info(&2, {:entry, Entry.new(:tool_result, &1)})
+      )
+
     state = Enum.reduce(watches, state, &info(&2, {:tool_call, &1}))
     state = Enum.reduce(watch_results, state, &info(&2, {:entry, Entry.new(:tool_result, &1)}))
 
@@ -71,14 +84,22 @@ defmodule Lemieux.TUI.BackgroundActivityTest do
                &match?({:tool_heading, nil, :background, "Background tasks:", ""}, &1)
              ) == 1
 
-      assert Enum.count(rows, &match?({:tool_detail, _, :background, _}, &1)) == 3
+      assert Enum.count(rows, &match?({:tool_task, _, _, _, "running"}, &1)) == 3
+
+      assert for({:tool_task, _, name, _, _} <- rows, do: name) == [
+               "player-1",
+               "player-2",
+               "player-3"
+             ]
 
       text =
         rows
         |> RichText.lines(160)
         |> Enum.map_join("\n", fn line -> Enum.map_join(line.spans, & &1.content) end)
 
-      for n <- 1..3, do: assert(text =~ "└ Ran printf 'demo-#{n} started'; sleep 30")
+      for n <- 1..3, do: assert(text =~ "player-#{n} Running — Background analysis #{n}")
+      refute text =~ "printf"
+      refute text =~ "sleep 30"
       refute text =~ "register"
       refute text =~ "task-"
       refute text =~ "yield instead of polling"
@@ -108,6 +129,79 @@ defmodule Lemieux.TUI.BackgroundActivityTest do
                %{"output" => "READY"},
                Theme.dark()
              )
+  end
+
+  test "completion cards separate the player, outcome and summary with theme-aware emphasis" do
+    card =
+      {:background_result,
+       %{
+         "name" => "wayne-gretzky",
+         "status" => "Completed",
+         "summary" => "Watch a 45-second timer with progress updates",
+         "elapsed" => "45s"
+       }}
+
+    for theme <- [Theme.dark(), Theme.light(), Theme.mono()], width <- [20, 80] do
+      lines = RichText.lines([card], width, theme)
+      assert length(lines) >= 3
+      text = Enum.map_join(lines, " ", fn line -> Enum.map_join(line.spans, & &1.content) end)
+      assert text =~ "wayne-gretzky"
+      assert text =~ "Completed"
+      assert text =~ "45s"
+      assert text =~ "F6 Tasks"
+      refute text =~ "printf"
+      styles = for line <- lines, span <- line.spans, do: span.style
+      assert length(Enum.uniq(styles)) > 1
+    end
+  end
+
+  test "completion updates earlier task status live and after resume" do
+    call = %{
+      id: "launch",
+      name: "bash",
+      arguments: %{"background" => true, "command" => "sleep 45", "summary" => "Observe a timer"}
+    }
+
+    payload = %{
+      "call_id" => "launch",
+      "name" => "bash",
+      "structured_content" => %{
+        "task_id" => "internal",
+        "task_name" => "wayne-gretzky",
+        "summary" => "Observe a timer",
+        "status" => "running"
+      }
+    }
+
+    card = %{
+      "name" => "wayne-gretzky",
+      "status" => "Completed",
+      "summary" => "Observe a timer",
+      "elapsed" => "45s"
+    }
+
+    receipt =
+      Entry.new(:extension_state, %{
+        "namespace" => "lemieux.notification",
+        "value" => %{"id" => "finished", "background_results" => [card], "text" => "Completed"}
+      })
+
+    state =
+      tui()
+      |> info({:tool_call, call})
+      |> info({:entry, Entry.new(:tool_result, payload)})
+      |> info({:entry, receipt})
+
+    resumed =
+      TranscriptPresentation.lines(
+        [assistant([call]), Entry.new(:tool_result, payload), receipt],
+        %{theme: Theme.dark(), renderers: Renderer.builtin(), width: 80}
+      )
+
+    for rows <- [state.lines, resumed] do
+      assert {:tool_task, "launch", "wayne-gretzky", "Observe a timer", "completed"} in rows
+      refute Enum.any?(rows, &match?({:tool_task, _, _, _, "running"}, &1))
+    end
   end
 
   test "a foreground action or answer separates background groups" do

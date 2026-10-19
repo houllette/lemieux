@@ -1563,7 +1563,10 @@ defmodule Lemieux.Session do
   already delivered in this session returns `:duplicate` on resume as well.
   Loading receipts or recording a notification alone starts no model request.
   Bounded hosts set `preserve_turns: true` so a completion continues the same
-  assignment's turn allowance rather than starting a fresh one.
+  task allowance. A batch may supply `receipt_ids`, a nonempty list of at most
+  256 component identities. The single transcript receipt deduplicates each
+  component across recovery; a mixture of seen and new identities returns
+  `{:error, :partial_duplicate}` for the host to reconcile before dispatch.
   """
   @spec deliver_notification(session :: session(), event :: map(), opts :: keyword()) ::
           :ok | :duplicate | {:error, term()}

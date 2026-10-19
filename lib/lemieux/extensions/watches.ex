@@ -22,6 +22,7 @@ defmodule Lemieux.Extensions.Watches do
   """
 
   @behaviour Lemieux.Extension
+  alias Lemieux.Background.Label
   alias Lemieux.Entry
   alias Lemieux.Extensions.Watches.Tool
   alias Lemieux.Harness
@@ -74,13 +75,14 @@ defmodule Lemieux.Extensions.Watches do
          {:ok, watch} <-
            register(manager, "background", %{"task_id" => id},
              timeout_ms: timeout,
-             label: args["command"]
+             label: Label.summary(args["summary"]),
+             task_name: result.structured_content["task_name"]
            ) do
       {:ok,
        %{
          result
          | model_text:
-             "Background task #{id} started and is tracked in the Tasks view. Completion will notify this session. Continue independent work and yield instead of polling.",
+             "Started #{result.structured_content["task_name"]}: #{Label.summary(args["summary"])}. Tracked automatically in Tasks (F6). Refer to this task by its player name in replies, never the raw task_id. Continue independent work and yield instead of polling.",
            structured_content: Map.put(result.structured_content, "background_watch", watch)
        }}
     else

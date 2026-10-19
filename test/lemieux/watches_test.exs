@@ -82,6 +82,99 @@ defmodule Lemieux.WatchesTest do
     assert third["created_order"] > second["created_order"]
   end
 
+  test "nearby background completions produce one batch and recovery deduplicates its components",
+       ctx do
+    owner = self()
+
+    tasks =
+      for n <- 1..2 do
+        assert {:ok, id} =
+                 Lemieux.Background.start(
+                   supervisor: ctx.runtime,
+                   session_id: ctx.id,
+                   owner: ctx.session,
+                   command: "analysis #{n}",
+                   description: "Observe progress #{n}",
+                   cwd: ctx.dir,
+                   environment: Lemieux.Environment.local(),
+                   runner: fn _, _ ->
+                     send(owner, {:batch_worker, self()})
+
+                     receive do
+                       :finish -> {:ok, "DONE", 0}
+                     after
+                       60_000 -> {:error, :held_too_long}
+                     end
+                   end
+                 )
+
+        assert_receive {:batch_worker, worker}
+        {:ok, task} = Lemieux.Background.poll(ctx.runtime, ctx.id, id)
+        {task, worker}
+      end
+
+    server =
+      start(ctx,
+        sources: %{
+          "background" => {Watches.Background, %{supervisor: ctx.runtime, session_id: ctx.id}}
+        },
+        default_follow_up: true
+      )
+
+    watches =
+      for {task, _} <- tasks do
+        {:ok, watch} =
+          Watches.register(server, "background", %{"task_id" => task.id},
+            label: task.description,
+            task_name: task.name
+          )
+
+        watch
+      end
+
+    for {_, worker} <- tasks, do: send(worker, :finish)
+    id = ctx.id
+
+    assert_receive {:lemieux, ^id,
+                    {:entry,
+                     %{
+                       type: :extension_state,
+                       payload: %{
+                         "namespace" => "lemieux.notification",
+                         "value" => %{"background_results" => cards, "receipt_ids" => receipts}
+                       }
+                     }}}
+
+    assert length(cards) == 2
+    assert Enum.sort(receipts) == Enum.sort(Enum.map(watches, & &1["id"]))
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert length(Scripted.requests(ctx.provider)) == 1
+    stop_supervised!(Server)
+    lost = List.last(watches)
+
+    {:ok, _} =
+      Journal.update(
+        Files.new(Path.join(ctx.dir, "watches")),
+        lost["id"],
+        &Map.put(&1, "delivery", "pending")
+      )
+
+    server =
+      start(ctx,
+        sources: %{
+          "background" => {Watches.Background, %{supervisor: ctx.runtime, session_id: ctx.id}}
+        },
+        default_follow_up: true
+      )
+
+    send(server, :deliver_results)
+
+    assert {:ok, %{"delivery" => "delivered", "continuation" => "already_delivered"}} =
+             Watches.get(server, lost["id"])
+
+    assert length(Scripted.requests(ctx.provider)) == 1
+  end
+
   test "background watch outcomes distinguish successful and failed command exits", ctx do
     for {exit_status, outcome} <- [{0, "success"}, {7, "failure"}] do
       {:ok, task_id} =

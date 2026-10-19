@@ -116,6 +116,14 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def notification(%{"display_text" => text}) when is_binary(text), do: {:lmx, text}
     def notification(value), do: {:notice, value["text"]}
 
+    @doc "Native result cards, with readable legacy notification fallback."
+    @spec notification_rows(value :: map()) :: [term()]
+    def notification_rows(%{"background_results" => results}) when is_list(results),
+      do: Enum.map(results, &{:background_result, &1})
+
+    def notification_rows(value),
+      do: value |> notification() |> then(fn {voice, text} -> split_lines(voice, text) end)
+
     # An attempt the stream broke off: its words dimmed and marked, never the
     # answer. The live screen marks it the same way when it happens.
     defp transcript_entry(
@@ -194,6 +202,10 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
           {:replace, rows} ->
             Enum.reject(lines, &(ToolText.call_id(&1) == id)) ++ rows
+
+          {:update, rows} ->
+            {before, rest} = Enum.split_while(lines, &(ToolText.call_id(&1) != id))
+            before ++ rows ++ Enum.drop_while(rest, &(ToolText.call_id(&1) == id))
         end
 
       {lines, Map.delete(calls, id)}
@@ -206,6 +218,18 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp transcript_entry(%{type: type, payload: payload}, {lines, calls}, _view)
          when type in [:subagent_spawn, :subagent_result],
          do: {merged_child(lines, spawned_child(payload)), calls}
+
+    defp transcript_entry(
+           %{
+             type: :extension_state,
+             payload: %{"namespace" => "lemieux.notification", "value" => value}
+           } = entry,
+           {lines, calls},
+           _view
+         ) do
+      {ToolText.complete_tasks(lines, value["background_results"] || []) ++ entry_lines(entry),
+       calls}
+    end
 
     defp transcript_entry(entry, {lines, calls}, _view), do: {lines ++ entry_lines(entry), calls}
 
@@ -236,7 +260,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
            type: :extension_state,
            payload: %{"namespace" => "lemieux.notification", "value" => value}
          }),
-         do: value |> notification() |> then(fn {voice, text} -> split_lines(voice, text) end)
+         do: notification_rows(value)
 
     defp entry_lines(%{type: :user, payload: %{"source" => "notification"}}), do: []
 

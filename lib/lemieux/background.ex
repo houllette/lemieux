@@ -7,6 +7,9 @@ defmodule Lemieux.Background do
   command stream while the agent moves on, and may be inspected with `poll/3`
   or waited on with `await/4`. `Lemieux.Tools.Bash` exposes the same lifecycle
   to a model; hosts can use this module directly without going through a tool.
+  Each retained command has a collision-safe hockey-player `name` and an optional
+  purpose `description`. Inspection and controls accept either its id or name;
+  names never bypass the owning-session check.
 
   Tasks are intentionally runtime state, not transcript state. Their ids and
   observations are recorded when the bash tool returns, but an operating-system
@@ -34,6 +37,8 @@ defmodule Lemieux.Background do
           id: String.t(),
           session_id: String.t(),
           command: String.t(),
+          name: String.t(),
+          description: String.t(),
           status: :running | :exited | :timed_out | :failed | :cancelled,
           exit_status: non_neg_integer() | nil,
           output: String.t(),
@@ -212,7 +217,7 @@ defmodule Lemieux.Background do
   defp call(supervisor, session_id, task_id, message, timeout \\ 5_000) do
     case Registry.lookup(Sup.background_registry(supervisor), {session_id, task_id}) do
       [{pid, _value}] -> safe_call(pid, message, timeout)
-      [] -> {:error, :not_found}
+      [] -> named_call(supervisor, session_id, task_id, message, timeout)
     end
   rescue
     ArgumentError -> {:error, :not_found}
@@ -222,5 +227,14 @@ defmodule Lemieux.Background do
     GenServer.call(pid, message, timeout)
   catch
     :exit, _reason -> {:error, :not_found}
+  end
+
+  defp named_call(supervisor, session_id, name, message, timeout) do
+    case Registry.select(Sup.background_registry(supervisor), [
+           {{{:background_name, :_, name}, :"$1", {session_id, :_}}, [], [:"$1"]}
+         ]) do
+      [pid] -> safe_call(pid, message, timeout)
+      _not_owned -> {:error, :not_found}
+    end
   end
 end

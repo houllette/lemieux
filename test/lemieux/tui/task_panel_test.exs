@@ -168,7 +168,11 @@ defmodule Lemieux.TUI.TaskPanelTest do
              _other -> false
            end)
 
+    refute screen(state) =~ "printf READY; sleep 60"
+    state = press(state, "v")
     assert screen(state) =~ "printf READY; sleep 60"
+    assert screen(state) =~ "Command · full shell source"
+    state = press(state, "l")
     assert screen(state) =~ "Cancel command"
     assert typed(state) == "keep this draft"
     state = press(state, "f6")

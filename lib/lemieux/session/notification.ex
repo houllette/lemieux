@@ -8,16 +8,33 @@ defmodule Lemieux.Session.Notification do
   def validate(%{"id" => id, "text" => text} = event)
       when is_binary(id) and byte_size(id) in 1..200 and is_binary(text) and
              byte_size(text) in 1..24_000,
-      do: Document.validate("lemieux.notification", event)
+      do:
+        if(valid_receipts?(event["receipt_ids"]),
+          do: Document.validate("lemieux.notification", event),
+          else: {:error, :invalid_notification}
+        )
 
   def validate(_event), do: {:error, :invalid_notification}
+
+  defp valid_receipts?(nil), do: true
+
+  defp valid_receipts?(ids) when is_list(ids) and length(ids) in 1..256,
+    do:
+      Enum.all?(ids, &(is_binary(&1) and byte_size(&1) in 1..200)) and
+        length(Enum.uniq(ids)) == length(ids)
+
+  defp valid_receipts?(_ids), do: false
 
   # The receipt is written before inference. After a crash between the receipt
   # and dispatch we prefer a visible result without an answer to spending twice.
   # Historical receipts never restore permission to continue.
   def deliver(state, event, opts) do
+    receipts = event["receipt_ids"] || [event["id"]]
+
     cond do
       delivered?(state, event["id"]) -> {:reply, :duplicate, state}
+      Enum.all?(receipts, &delivered?(state, &1)) -> {:reply, :duplicate, state}
+      Enum.any?(receipts, &delivered?(state, &1)) -> {:reply, {:error, :partial_duplicate}, state}
       Core.busy?(state) -> {:reply, {:error, :busy}, state}
       true -> accept(state, event, opts)
     end
@@ -29,7 +46,8 @@ defmodule Lemieux.Session.Notification do
         type: :extension_state,
         payload: %{"namespace" => "lemieux.notification", "value" => value}
       } ->
-        value["id"] == id and value["session_id"] == state.id
+        value["session_id"] == state.id and
+          (value["id"] == id or id in (value["receipt_ids"] || []))
 
       _entry ->
         false

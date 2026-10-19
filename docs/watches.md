@@ -6,6 +6,11 @@ and registered external runs. **Active** and **History** separate ongoing work
 from completed results. Each activity keeps one row through status changes,
 with its command, elapsed time and output together. Pausing and resuming tracking
 keeps its observation history inside that activity's details.
+Background commands receive collision-safe hockey-player names. The model supplies
+a one-line purpose summary when launching a task; chat shows the name and summary
+instead of shell source or internal task IDs. F6 retains the full command.
+Task controls accept the player name as well as the internal ID, while keeping
+the same session ownership checks.
 There is no task-management slash command to learn, and opening the view does
 not consume a model request. The message draft stays intact.
 
@@ -22,6 +27,7 @@ restarts that work.
 | Enter / Tab | Focus logs; Tab returns to the task list |
 | Page Up / Page Down, or the mouse wheel | Scroll selected output |
 | End | Follow the newest output again |
+| Command (`v`) / Output (`l`) | Inspect the full, scrollable shell source or return to live output |
 | Cancel command (`c`) | Confirm cancellation of a local command; pending continuation is revoked first |
 | Pause tracking (`s`) | Pause observation while the command or external run continues |
 | Resume tracking (`w`) | Resume observation of a running command or paused external run |
@@ -91,7 +97,11 @@ records its evidence and sends the normal terminal notification. An unfinished
 plan yields after an automatically tracked background start, so waiting does
 not spend requests nudging the model.
 
-Completion resumes the existing task once. Current prompt hooks, tool approvals,
+Nearby command completions are collected into one result update and one
+continuation. Each named result has its own outcome, elapsed time and summary,
+with full command and logs available through F6. A durable batch receipt covers
+each component, including recovery after only some journal acknowledgements were saved.
+Current prompt hooks, tool approvals,
 sandboxing and remaining turn, request and cost allowances still apply. External logs
 are labelled as data and cannot expand file references into reads. Stopping
 observation or cancelling a command revokes an undelivered continuation.

@@ -192,7 +192,11 @@ defmodule Lemieux.Tools.Bash do
     Set background to start a server, a watcher or a long script without
     blocking. The result gives a task_id; call bash with that task_id to poll
     it, add wait_ms to await completion for a bounded time, or set cancel to
-    stop it.
+    stop it. For every background launch supply summary: a short, plain-language
+    phrase of 6–12 words describing purpose and expected duration or progress.
+    Omit shell syntax and redundant wording such as "in the background". The person
+    sees that summary in chat; the full command stays in Tasks. Results provide a
+    unique hockey-player task_name. Use that name in replies, never the raw id.
     """
   end
 
@@ -205,6 +209,11 @@ defmodule Lemieux.Tools.Bash do
       "type" => "object",
       "properties" => %{
         "command" => %{"type" => "string", "description" => "The shell command to run."},
+        "summary" => %{
+          "type" => "string",
+          "description" =>
+            "For background commands: one brief plain-language action phrase (6–12 words); include duration or progress when useful. Omit shell code and redundant background wording."
+        },
         "background" => %{
           "type" => "boolean",
           "description" => "Start command in the background and return a task id."
@@ -212,7 +221,7 @@ defmodule Lemieux.Tools.Bash do
         "task_id" => %{
           "type" => "string",
           "description" =>
-            "A background task id to poll, await or cancel instead of starting a command."
+            "A background task's player task_name or internal task_id to poll, await or cancel instead of starting a command."
         },
         "cancel" => %{
           "type" => "boolean",
@@ -455,6 +464,7 @@ defmodule Lemieux.Tools.Bash do
       root_session_id: Map.get(context, :root_session_id, context.session_id),
       owner: context.session,
       command: command,
+      description: args["summary"],
       cwd: context.cwd,
       environment: Environment.from_context(context),
       timeout_ms: background_timeout(args),
@@ -465,13 +475,20 @@ defmodule Lemieux.Tools.Bash do
 
     case Background.start(opts) do
       {:ok, task_id} ->
+        {:ok, task} = Background.poll(context.supervisor, context.session_id, task_id)
+
         text =
-          "Background task #{task_id} started. " <>
-            "Call bash with task_id to poll it, or add wait_ms to await completion."
+          "Started #{task.name}: #{task.description}. Refer to this task by its player name in replies; task_id is only for tool arguments. " <>
+            "Internal task_id: #{task_id}. Call bash with task_id to poll it, or add wait_ms to await completion."
 
         {:ok,
          Result.new(text,
-           structured_content: %{"task_id" => task_id, "status" => "running"}
+           structured_content: %{
+             "task_id" => task_id,
+             "task_name" => task.name,
+             "summary" => task.description,
+             "status" => "running"
+           }
          )}
 
       {:error, reason} ->

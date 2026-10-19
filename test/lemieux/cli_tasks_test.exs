@@ -123,6 +123,14 @@ defmodule Lemieux.CLITasksTest do
     assert row.running? and row.watching?
     assert row.follow_up?
     assert row.label == "printf READY; sleep 60"
+    assert is_binary(row.name)
+    {:ok, manager} = Lemieux.CLI.Watches.resolve(%{supervisor: ctx.runtime, session_id: ctx.id})
+
+    assert {:ok, canonical} =
+             Lemieux.Extensions.Watches.register(manager, "background", %{"task_id" => row.name})
+
+    assert canonical["target"] == row.target
+    assert length(Lemieux.Extensions.Watches.list(manager)) == 1
     assert length(Scripted.requests(ctx.provider)) == 2
     assert :ok = Tasks.action(ctx.session, row.id, :stop)
     assert {:ok, %{rows: [stopped]}} = Tasks.snapshot(ctx.session, row.id)

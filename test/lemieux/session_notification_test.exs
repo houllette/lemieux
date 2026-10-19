@@ -48,6 +48,52 @@ defmodule Lemieux.SessionNotificationTest do
     assert length(Scripted.requests(provider)) == 1
   end
 
+  test "one batch receipt deduplicates each component after recovery and rejects partial replay",
+       ctx do
+    provider = Scripted.new([Scripted.complete("Both tasks completed.")])
+
+    opts = [
+      supervisor: ctx.runtime,
+      store: ctx.store,
+      provider: provider,
+      model: "test:model",
+      subscriber: self()
+    ]
+
+    {:ok, session} = Lemieux.start_session(opts)
+    id = Session.id(session)
+    event = %{"id" => "batch", "receipt_ids" => ["one", "two"], "text" => "Both finished"}
+    assert :ok = Session.deliver_notification(session, event, follow_up: true)
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    DynamicSupervisor.terminate_child(Lemieux.Supervisor.session_supervisor(ctx.runtime), session)
+    {:ok, session} = Lemieux.resume_session([resume: id] ++ opts)
+
+    for part <- ["one", "two"],
+        do:
+          assert(
+            :duplicate ==
+              Session.deliver_notification(session, %{"id" => part, "text" => "Already in batch"},
+                follow_up: true
+              )
+          )
+
+    assert :duplicate =
+             Session.deliver_notification(
+               session,
+               %{event | "id" => "remaining", "receipt_ids" => ["two"]},
+               follow_up: true
+             )
+
+    assert {:error, :partial_duplicate} =
+             Session.deliver_notification(
+               session,
+               %{event | "id" => "mixed", "receipt_ids" => ["one", "new"]},
+               follow_up: true
+             )
+
+    assert length(Scripted.requests(provider)) == 1
+  end
+
   test "follow-ups use current prompt policy and remaining allowance", ctx do
     provider = Scripted.new([Scripted.complete("must not run")])
 

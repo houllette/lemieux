@@ -14,6 +14,8 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     @behaviour Lemieux.TUI.Renderer
 
+    alias Lemieux.Background.Label
+    alias Lemieux.ID.Shorthand
     alias Lemieux.TUI.ToolText
 
     @impl Lemieux.TUI.Renderer
@@ -21,18 +23,31 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       command = arguments |> ToolText.argument("command") |> ToolText.one_line()
 
       if arguments["background"] == true,
-        do: ToolText.background(id, "Ran " <> command),
+        do: [
+          ToolText.heading(nil, :background, "Background tasks:"),
+          ToolText.task(id, nil, Label.summary(arguments["summary"]), "queued")
+        ],
         else: [ToolText.heading(id, :run, "Ran", command)]
     end
 
     @impl Lemieux.TUI.Renderer
-    def result(%{arguments: %{"background" => true}}, %{payload: payload}, _theme) do
+    def result(%{id: id, arguments: %{"background" => true} = args}, %{payload: payload}, _theme) do
       case payload["structured_content"] do
         %{"background_tracking_error" => error} when is_binary(error) ->
           {:output, "Tracking unavailable: #{ToolText.one_line(error)} · Tasks (F6)"}
 
-        %{"task_id" => id, "status" => "running"} when is_binary(id) ->
-          :none
+        %{"task_id" => task_id, "status" => "running"} = facts when is_binary(task_id) ->
+          name = facts["task_name"] || Shorthand.of(task_id)
+
+          {:update,
+           [
+             ToolText.task(
+               id,
+               name,
+               Label.summary(facts["summary"] || args["summary"]),
+               "running"
+             )
+           ]}
 
         _other ->
           {:output, payload["output"] || ""}

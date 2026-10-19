@@ -75,6 +75,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
             {:tool_heading, String.t() | nil, kind(), String.t(), String.t()}
             | {:tool_heading, String.t() | nil, :run, String.t(), String.t(), [Span.t()]}
             | {:tool_detail, String.t(), :explore | :ordinary | :background, String.t()}
+            | {:tool_task, String.t(), String.t() | nil, String.t(), String.t()}
             | {:tool_output, String.t(), :first | :rest, tone(), String.t()}
             | {:tool_question, String.t(), String.t()}
             | {:tool_option, String.t(), pos_integer(), String.t(), String.t() | nil}
@@ -348,6 +349,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def call_id({:tool_heading, id, _kind, _verb, _subject}), do: id
     def call_id({:tool_heading, id, :run, _verb, _subject, _spans}), do: id
     def call_id({:tool_detail, id, _kind, _text}), do: id
+    def call_id({:tool_task, id, _name, _summary, _status}), do: id
     def call_id({:tool_output, id, _position, _tone, _text}), do: id
     def call_id({:tool_question, id, _text}), do: id
     def call_id({:tool_option, id, _index, _label, _description}), do: id
@@ -378,6 +380,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp announcement?({:tool_heading, id, _kind, _verb, _subject}, id), do: true
     defp announcement?({:tool_heading, id, :run, _verb, _subject, _spans}, id), do: true
     defp announcement?({:tool_detail, id, _kind, _text}, id), do: true
+    defp announcement?({:tool_task, id, _name, _summary, _status}, id), do: true
     defp announcement?({:tool_question, id, _text}, id), do: true
     defp announcement?({:tool_option, id, _index, _label, _description}, id), do: true
     defp announcement?({:todo_item, id, _status, _title}, id), do: true
@@ -413,11 +416,40 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def background(id, text),
       do: [heading(nil, :background, "Background tasks:"), {:tool_detail, id, :background, text}]
 
+    @doc "A compact task announcement; commands stay in the Tasks inspector."
+    @spec task(
+            id :: String.t(),
+            name :: String.t() | nil,
+            summary :: String.t(),
+            status :: String.t()
+          ) :: row()
+    def task(id, name, summary, status), do: {:tool_task, id, name, summary, status}
+
+    @doc "Applies completion statuses to earlier task announcements without moving them."
+    @spec complete_tasks(rows :: [term()], results :: [map()]) :: [term()]
+    def complete_tasks(rows, results) do
+      statuses = Map.new(results, &{&1["name"], String.downcase(&1["status"])})
+
+      Enum.map(rows, fn
+        {:tool_task, id, name, summary, status} ->
+          {:tool_task, id, name, summary, Map.get(statuses, name, status)}
+
+        row ->
+          row
+      end)
+    end
+
     @doc "Joins adjacent background announcements, in live and resumed transcripts alike."
     @spec join_background(rows :: [row()], previous :: term()) :: [row()]
     def join_background(
           [{:tool_heading, nil, :background, _, _} | rows],
           {:tool_detail, _, :background, _}
+        ),
+        do: rows
+
+    def join_background(
+          [{:tool_heading, nil, :background, _, _} | rows],
+          {:tool_task, _, _, _, _}
         ),
         do: rows
 
@@ -463,6 +495,11 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     def row?({:tool_detail, id, kind, text})
         when is_binary(id) and is_atom(kind) and is_binary(text),
+        do: true
+
+    def row?({:tool_task, id, name, summary, status})
+        when is_binary(id) and (is_binary(name) or is_nil(name)) and is_binary(summary) and
+               is_binary(status),
         do: true
 
     def row?({:tool_output, id, position, tone, text})

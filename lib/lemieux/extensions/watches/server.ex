@@ -53,6 +53,7 @@ defmodule Lemieux.Extensions.Watches.Server do
         now: Keyword.get(opts, :now, fn -> System.system_time(:millisecond) end),
         authorize: Keyword.get(opts, :authorize, fn _watch -> true end),
         default_follow_up: Keyword.get(opts, :default_follow_up, false) == true,
+        delivery_timer: nil,
         max_records: max_records,
         max_concurrency: positive(opts, :max_concurrency, 4),
         poll_ms: positive(opts, :poll_ms, 1000),
@@ -179,6 +180,9 @@ defmodule Lemieux.Extensions.Watches.Server do
   end
 
   @impl true
+  def handle_info(:deliver_results, state),
+    do: {:noreply, flush_deliveries(%{state | delivery_timer: nil})}
+
   def handle_info(:tick, state) do
     Clock.send_after(state.clock, self(), :tick, state.tick_ms)
     {:noreply, state |> expire() |> schedule() |> deliver() |> cleanup()}
@@ -249,6 +253,8 @@ defmodule Lemieux.Extensions.Watches.Server do
   end
 
   defp existing_background(state, "background", target, true) do
+    target = canonical_background(state, target)
+
     Enum.find_value(state.records, fn {_id, %{value: watch}} ->
       if watch["source"] == "background" and watch["target"] == target and
            watch["status"] in ["watching", "completed"],
@@ -257,6 +263,13 @@ defmodule Lemieux.Extensions.Watches.Server do
   end
 
   defp existing_background(_state, _source, _target, _reuse?), do: nil
+
+  defp canonical_background(state, target) do
+    with {:ok, adapter} <- Map.fetch(state.sources, "background"),
+         {:ok, target} <- validate(adapter, target),
+         do: target,
+         else: (_error -> target)
+  end
 
   defp reuse(state, %{"continuation_origin" => "user"}, _follow_up?, _origin), do: state
 
@@ -296,6 +309,7 @@ defmodule Lemieux.Extensions.Watches.Server do
         "follow_up" => Keyword.get(opts, :follow_up, state.default_follow_up) == true,
         "continuation_origin" => Keyword.get(opts, :continuation_origin, "host"),
         "label" => Record.text(Keyword.get(opts, :label), 240),
+        "task_name" => Record.text(Keyword.get(opts, :task_name), 100),
         "delivery" => "pending",
         "result" => nil,
         "finished_at" => nil
@@ -583,13 +597,64 @@ defmodule Lemieux.Extensions.Watches.Server do
   defp deliver(%{session: nil} = state), do: state
 
   defp deliver(state) do
-    Enum.reduce(state.records, state, fn {id, record}, state ->
-      watch = record.value
+    {background, other} = Enum.split_with(pending_results(state), &batch_candidate?(state, &1))
 
-      if watch["status"] != "watching" and watch["delivery"] == "pending",
-        do: deliver_one(state, id, watch),
-        else: state
-    end)
+    state =
+      Enum.reduce(other, state, fn watch, state -> deliver_one(state, watch["id"], watch) end)
+
+    if background == [] or state.delivery_timer,
+      do: state,
+      else: %{state | delivery_timer: Process.send_after(self(), :deliver_results, 100)}
+  end
+
+  defp batch_candidate?(state, watch),
+    do:
+      watch["source"] == "background" and watch["status"] == "completed" and watch["follow_up"] and
+        state.authorize.(watch) == true
+
+  defp pending_results(state),
+    do:
+      state.records
+      |> Map.values()
+      |> Enum.map(& &1.value)
+      |> Enum.filter(&(&1["status"] != "watching" and &1["delivery"] == "pending"))
+
+  # One receipt contains every component identity before inference begins.
+  # Recovery may see only a subset of journal updates; those identities still
+  # deduplicate against the same atomic transcript receipt.
+  defp flush_deliveries(%{session: nil} = state), do: state
+
+  defp flush_deliveries(state) do
+    {background, other} = Enum.split_with(pending_results(state), &batch_candidate?(state, &1))
+
+    state =
+      Enum.reduce(other, state, fn watch, state -> deliver_one(state, watch["id"], watch) end)
+
+    background |> Enum.chunk_every(8) |> Enum.reduce(state, &deliver_batch/2)
+  end
+
+  defp deliver_batch([watch], state), do: deliver_one(state, watch["id"], watch)
+
+  defp deliver_batch(watches, state) do
+    case notify(state.session, Record.batch(watches), true) do
+      result when result in [:ok, :duplicate] ->
+        Enum.reduce(watches, state, fn watch, state ->
+          save(
+            state,
+            watch["id"],
+            Map.merge(watch, %{
+              "delivery" => "delivered",
+              "continuation" => continuation(result, true)
+            })
+          )
+        end)
+
+      {:error, :partial_duplicate} ->
+        Enum.reduce(watches, state, fn watch, state -> deliver_one(state, watch["id"], watch) end)
+
+      _retry ->
+        state
+    end
   end
 
   defp deliver_one(state, id, watch) do

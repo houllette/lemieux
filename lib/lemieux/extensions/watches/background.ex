@@ -10,6 +10,14 @@ defmodule Lemieux.Extensions.Watches.Background do
   @behaviour Lemieux.Extensions.Watches.Source
 
   @impl true
+  def validate(%{supervisor: supervisor, session_id: session_id}, %{"task_id" => id})
+      when is_binary(id) and byte_size(id) in 1..200 do
+    case Lemieux.Background.poll(supervisor, session_id, id) do
+      {:ok, task} -> {:ok, %{"task_id" => task.id}}
+      {:error, :not_found} -> {:ok, %{"task_id" => id}}
+    end
+  end
+
   def validate(_state, %{"task_id" => id}) when is_binary(id) and byte_size(id) in 1..200,
     do: {:ok, %{"task_id" => id}}
 
@@ -27,7 +35,10 @@ defmodule Lemieux.Extensions.Watches.Background do
            "outcome" => outcome(task),
            "summary" => "Command exit status: #{inspect(task.exit_status)}",
            "logs" => task.output,
-           "run_id" => task.id
+           "run_id" => task.id,
+           "task_name" => task.name,
+           "description" => task.description,
+           "duration_ms" => task.duration_ms
          }}
 
       {:error, :not_found} ->

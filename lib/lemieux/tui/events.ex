@@ -469,8 +469,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
             }},
            effects
          ) do
-      {voice, text} = TranscriptPresentation.notification(value)
-      state = state |> Transcript.say(voice, text) |> Notify.result()
+      state = Transcript.complete_tasks(state, value["background_results"] || [])
+
+      state =
+        state
+        |> Transcript.append_rows(TranscriptPresentation.notification_rows(value))
+        |> Notify.result()
+
       {state, effects}
     end
 
@@ -625,6 +630,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
           {:replace, rows} ->
             state |> remove_call_rows(id) |> Transcript.append_rows(rows)
+
+          {:update, rows} ->
+            Transcript.update_call(state, id, rows)
         end
 
       %{state | tools: forget(state.tools, id)}

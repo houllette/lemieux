@@ -2,8 +2,10 @@ defmodule Lemieux.BackgroundTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.Background
+  alias Lemieux.Background.Label
   alias Lemieux.Clock.Manual
   alias Lemieux.Environment
+  alias Lemieux.ID.Shorthand
   alias LemieuxTest.CommandGate
 
   @moduletag :tmp_dir
@@ -13,6 +15,43 @@ defmodule Lemieux.BackgroundTest do
     start_supervised!({Lemieux.Supervisor, name: runtime})
 
     %{runtime: runtime, tmp_dir: tmp_dir}
+  end
+
+  test "task names are hockey players, collision-safe within the root, with compact summaries",
+       context do
+    registry = Lemieux.Supervisor.background_registry(context.runtime)
+    first = Label.candidate("named-task", 0)
+    {:ok, _} = Registry.register(registry, {:background_name, "root", first}, nil)
+    owner = self()
+
+    opts = [
+      supervisor: context.runtime,
+      session_id: "root",
+      owner: owner,
+      id: "named-task",
+      command: "full shell code",
+      description: "Watch progress\nfor 45 seconds",
+      cwd: context.tmp_dir,
+      environment: Environment.local(),
+      runner: fn _, _ ->
+        send(owner, :named_started)
+        {:ok, "done", 0}
+      end
+    ]
+
+    assert {:ok, id} = Background.start(opts)
+    assert_receive :named_started
+    assert {:ok, task} = Background.await(context.runtime, "root", id)
+    assert task.name != first
+    assert Shorthand.shorthand?(task.name)
+    assert task.description == "Watch progress for 45 seconds"
+    assert task.command == "full shell code"
+    assert {:ok, %{id: ^id}} = Background.poll(context.runtime, "root", task.name)
+    assert {:error, :not_found} = Background.poll(context.runtime, "another-owner", task.name)
+    assert {:ok, another} = Background.start(Keyword.put(opts, :id, "another-task"))
+    assert_receive :named_started
+    assert {:ok, other} = Background.await(context.runtime, "root", another)
+    assert task.name != other.name
   end
 
   # The option used to default to `Environment.local/0`, which made forgetting
