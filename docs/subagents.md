@@ -227,9 +227,12 @@ validates the final answer. Waiting uses no model polling or progress-judge
 requests. The original request, turn, cost and elapsed-time limits remain.
 Cancellation stops the commands and revokes the continuation.
 
-The parent's native **Tasks** view includes delegate commands with their
-owner, status and output. A person can inspect or cancel them there; the
-assignment owns completion. See [background tasks](watches.md).
+The parent's native **Tasks** tray shows each delegate's brief, activity,
+result and own token/context usage, with commands nested beneath it. A person
+can inspect, steer or cancel a live delegate, or cancel an individual command.
+Steering applies at the next model request and retains the assignment's scope,
+budget and current host permissions. The assignment owns completion.
+See [background tasks](watches.md).
 
 ## Give the model one bounded tool
 

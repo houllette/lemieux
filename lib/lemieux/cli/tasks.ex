@@ -1,6 +1,6 @@
 defmodule Lemieux.CLI.Tasks do
   @moduledoc """
-  Human control of the current session's background commands and external watches.
+  Human control of the current session's agents, commands and external runs.
 
   Reads and actions run outside the drawing process. Every action resolves its
   target again from the owning session; an old row or another session's task
@@ -9,6 +9,7 @@ defmodule Lemieux.CLI.Tasks do
   """
   alias Lemieux.Background
   alias Lemieux.CLI.Tasks.Activity
+  alias Lemieux.CLI.Tasks.Agents
   alias Lemieux.CLI.Watches, as: Host
   alias Lemieux.Extensions.Watches
   alias Lemieux.Extensions.Watches.Record
@@ -28,8 +29,10 @@ defmodule Lemieux.CLI.Tasks do
     manager = manager(info)
     watches = if manager, do: Watches.list(manager), else: []
     tasks = Background.list_tree(info.supervisor, info.id) ++ writer_tasks(info)
+    agents = Agents.rows(info.session)
     rows = rows(tasks, watches)
     rows = Enum.map(rows, &scope(&1, tasks, info))
+    rows = hierarchy(agents, rows)
     selected = Enum.find(rows, &(&1.id == selected)) || List.first(rows)
 
     {:ok,
@@ -57,6 +60,23 @@ defmodule Lemieux.CLI.Tasks do
     end
   catch
     :exit, _reason -> {:error, :session_disconnected}
+  end
+
+  @doc "Steers a currently owned agent through its existing capability and host policy."
+  @spec steer(session :: pid(), id :: String.t(), instruction :: String.t()) ::
+          :ok | {:error, term()}
+  def steer(session, id, instruction) when is_binary(instruction) do
+    with {:ok, info} <- runtime_info(session),
+         {:ok, view} <- snapshot_info(info, id),
+         %{id: ^id, kind: :agent} = row <- Enum.find(view.rows, &(&1.id == id)) do
+      Agents.steer(session, row, instruction)
+    else
+      nil -> {:error, :task_unavailable}
+      %{} -> {:error, :not_an_agent}
+      error -> error
+    end
+  catch
+    :exit, _gone -> {:error, :session_disconnected}
   end
 
   @doc "Registers an existing external run from a native form; never starts external work."
@@ -87,7 +107,7 @@ defmodule Lemieux.CLI.Tasks do
     case Session.info(session) do
       %{supervisor: supervisor, id: id} = info
       when is_atom(supervisor) and not is_nil(supervisor) and is_binary(id) ->
-        {:ok, info}
+        {:ok, Map.put(info, :session, session)}
 
       _info ->
         {:error, :native_tasks_unavailable}
@@ -131,7 +151,17 @@ defmodule Lemieux.CLI.Tasks do
     owner_label =
       if owner != info.id, do: Map.get(task, :owner_label, "Delegate #{Shorthand.of(owner)}")
 
-    row = Map.merge(row, %{owner_id: owner, owner_label: owner_label, managed?: owner != info.id})
+    kind = if row.source == "background", do: :command, else: :external
+
+    row =
+      Map.merge(row, %{
+        owner_id: owner,
+        owner_label: owner_label,
+        managed?: owner != info.id,
+        kind: kind,
+        type_label: if(kind == :command, do: "Command", else: "External run"),
+        parent_id: nil
+      })
 
     if row.managed?,
       do: %{
@@ -141,6 +171,25 @@ defmodule Lemieux.CLI.Tasks do
           follow_up?: true
       },
       else: row
+  end
+
+  defp hierarchy(agents, commands) do
+    parents = Map.new(agents, &{&1.agent_id, &1.id})
+    names = Map.new(agents, &{&1.id, &1.name})
+
+    commands =
+      Enum.map(commands, fn row ->
+        parent_id = parents[row.owner_id]
+        row = Map.put(row, :parent_id, parent_id)
+        if parent_id, do: %{row | owner_label: "Agent #{names[parent_id]}"}, else: row
+      end)
+
+    {nested, roots} = Enum.split_with(commands, &(not is_nil(&1.parent_id)))
+    children = Enum.group_by(nested, & &1.parent_id)
+
+    (agents ++ roots)
+    |> Enum.sort_by(&{&1.active?, &1.sort_time, &1.id}, :desc)
+    |> Enum.flat_map(&[&1 | Map.get(children, &1.id, [])])
   end
 
   defp rows(tasks, watches) do
@@ -272,6 +321,7 @@ defmodule Lemieux.CLI.Tasks do
   end
 
   defp detail(nil, _info, _watches), do: nil
+  defp detail(%{kind: :agent} = row, info, _watches), do: Agents.detail(info.session, row)
 
   defp detail(%{task_id: id} = row, info, _watches) when is_binary(id) do
     case Background.poll(info.supervisor, row.owner_id, id) do
@@ -287,6 +337,12 @@ defmodule Lemieux.CLI.Tasks do
     watch = Enum.find(watches, &(&1["id"] == row.watch_id))
     Map.put(row, :logs, Record.text(get_in(watch, ["result", "logs"]), 8000))
   end
+
+  defp perform(:cancel, %{kind: :agent} = row, info, _manager),
+    do: Agents.cancel(info.session, row)
+
+  defp perform(_action, %{kind: :agent}, _info, _manager),
+    do: {:error, :unsupported_agent_action}
 
   defp perform(action, %{managed?: true}, _info, _manager)
        when action in [:stop, :watch, :follow_up, :clear],

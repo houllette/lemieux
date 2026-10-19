@@ -152,7 +152,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec mouse(event :: Mouse.t(), state :: TUI.t()) :: {:noreply, TUI.t()}
     def mouse(%Mouse{kind: "down", button: "left", x: x, y: y}, state) do
-      area = Takeover.area(Screen.panes(state), state.terminal.height)
+      area = Takeover.tray(Screen.panes(state), 12)
       index = y - area.y - 2 + visible_start(state.modal.form, area)
       form = state.modal.form
       count = length(fields(form))
@@ -173,7 +173,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec render(state :: TUI.t(), panes :: map()) :: [{term(), Rect.t()}]
     def render(state, panes) do
-      area = Takeover.area(panes, state.terminal.height)
+      area = Takeover.tray(panes, 12)
       form = state.modal.form
       fields = fields(form)
 

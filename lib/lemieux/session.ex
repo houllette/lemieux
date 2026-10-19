@@ -1283,6 +1283,11 @@ defmodule Lemieux.Session do
   @spec delegation_context(session :: session()) :: map()
   def delegation_context(session), do: GenServer.call(session, :delegation_context)
 
+  @doc false
+  @spec work_context(session :: session(), namespaces :: [String.t()]) :: map()
+  def work_context(session, namespaces \\ []),
+    do: GenServer.call(session, {:work_context, namespaces})
+
   @doc """
   Registers a host-owned asynchronous work owner.
 

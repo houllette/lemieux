@@ -20,6 +20,12 @@ API.
 
 ### Features
 
+- F6 unifies agents, commands and external runs in a tray that grows upward
+  above the composer while keeping the primary transcript visible. Agent rows
+  expose their brief, activity and result; commands nest beneath their owner.
+  Native delegate steering and explicit writer-batch cancellation retain the
+  host's current permissions and each assignment's remaining allowance.
+
 - Background commands remain part of bounded delegate, isolated-writer and
   session-adapter assignments through completion, under their remaining limits.
   The native Tasks view exposes their output and cancellation. Read-only

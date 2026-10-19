@@ -409,6 +409,24 @@ defmodule Lemieux.Session.Calls do
     {:reply, context, state}
   end
 
+  def call({:work_context, namespaces}, _from, state) do
+    # Hosts need recent work identities, not a copy of every request and file
+    # in the conversation. Live owners are discovery, never control tokens.
+    entries =
+      state.reversed_entries
+      |> Stream.filter(&work_entry?(&1, namespaces))
+      |> Enum.take(512)
+      |> Enum.reverse()
+
+    {:reply,
+     %{
+       id: state.id,
+       supervisor: state.supervisor,
+       owners: state.subagent_groups,
+       entries: entries
+     }, state}
+  end
+
   def call({:append_subagent_entry, type, payload}, _from, state) do
     state = Core.append(state, {type, payload, nil})
     state = Accounting.checkpoint_job(state)
@@ -722,6 +740,14 @@ defmodule Lemieux.Session.Calls do
 
   def cast({:publish_subagent_event, event}, state),
     do: {:noreply, Core.emit(state, event)}
+
+  defp work_entry?(%{type: type}, _namespaces) when type in [:subagent_spawn, :subagent_result],
+    do: true
+
+  defp work_entry?(%{type: :extension_state, payload: %{"namespace" => namespace}}, namespaces),
+    do: String.starts_with?(namespace, namespaces)
+
+  defp work_entry?(_entry, _namespaces), do: false
 
   # What is left of the host's deadline, never less than nothing.
   defp time_left(%{deadline_at: nil}), do: nil

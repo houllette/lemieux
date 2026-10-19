@@ -166,7 +166,10 @@ shared. Trusted Elixir callbacks remain host authority.
 A writer that yields with background commands keeps its workspace lease until
 those commands finish and it produces its final report. One batched completion
 resumes the same session under its remaining allowance and deadline. Parent
-**Tasks** shows live writer commands and permits inspection and cancellation.
+**Tasks** shows each writer's assignment and result, with live commands nested
+beneath it. The tray permits command inspection and cancellation, and explicitly
+offers cancellation of the whole writer batch under the current host policy.
+Reviewable reports are checked against their recorded digest before display.
 Cancellation stops the commands and revokes their continuation; cleanup and
 patch export retain their existing custody rules. The bounded
 `Lemieux.Agent.Session` adapter follows the same completion lifecycle.

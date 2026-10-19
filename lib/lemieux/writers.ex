@@ -117,6 +117,23 @@ defmodule Lemieux.Writers do
   def cancel(ref, authority),
     do: GenServer.call(ref.pid, {:cancel, ref.token, authority}, :infinity)
 
+  @doc """
+  Stops this live parent's batch using its configured dispatch principal.
+  Hosts must authorize access to the parent handle. The current cancellation
+  policy is checked again; this grants no integration authority and cannot
+  control a prior parent's batch after resume.
+  """
+  @spec cancel_current(parent :: Session.session()) :: :ok | {:error, term()}
+  def cancel_current(parent) do
+    with {:ok, ref} <- current(parent),
+         do:
+           GenServer.call(
+             ref.pid,
+             {:cancel_current, ref.token, GenServer.whereis(parent)},
+             :infinity
+           )
+  end
+
   @doc "Integrates only explicitly accepted artifact digests, with fresh authorization and checks."
   @spec integrate(ref :: Ref.t(), digests :: [String.t()], authority :: term()) ::
           {:ok, map()} | {:error, term()}
@@ -238,6 +255,16 @@ defmodule Lemieux.Writers do
       error -> {:reply, error, state}
     end
   end
+
+  def handle_call(
+        {:cancel_current, token, parent},
+        from,
+        %{token: token, parent: parent} = state
+      ),
+      do: handle_call({:cancel, token, state.opts[:authority]}, from, state)
+
+  def handle_call({:cancel_current, _token, _parent}, _from, state),
+    do: {:reply, {:error, :unauthorized}, state}
 
   def handle_call({:close, token, authority}, _from, %{token: token} = state) do
     case authorized(state, :close, authority) do
@@ -727,7 +754,7 @@ defmodule Lemieux.Writers do
       status: state.status,
       budget: budget,
       integration: state.integration_result,
-      writers: Enum.map(state.opts[:plans], &state.writers[&1.id])
+      writers: Enum.map(state.opts[:plans], &Map.put(state.writers[&1.id], :task, &1.task))
     }
   end
 
@@ -752,6 +779,7 @@ defmodule Lemieux.Writers do
 
             %{
               "id" => writer.id,
+              "task" => plan.task,
               "status" => Atom.to_string(writer.status),
               "paths" => plan.paths,
               "tools" => plan.tools,

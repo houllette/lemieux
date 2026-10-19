@@ -25,6 +25,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       Screen,
       Takeover,
       TaskForm,
+      TaskSteer,
       Transcript,
       Width
     }
@@ -172,7 +173,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
         results =
           data.rows
-          |> Enum.filter(&is_binary(Map.get(&1, :name)))
+          |> Enum.filter(&(Map.get(&1, :kind) == :command and is_binary(Map.get(&1, :name))))
           |> Enum.map(&%{"name" => &1.name, "status" => Map.get(&1, :status_label, &1.status)})
 
         Transcript.complete_tasks(state, results)
@@ -190,7 +191,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         ) do
       notice =
         case result do
-          :ok -> "Updated."
+          :ok -> Map.get(state.modal, :operation_notice, "Updated.")
           {:error, reason} -> describe(reason)
         end
 
@@ -226,7 +227,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 confirm: nil,
                 form: nil,
                 notice: nil,
-                operation: nil
+                operation: nil,
+                operation_notice: "Updated."
               }
           }
 
@@ -242,7 +244,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             ExRatatui.Widgets.Block.Title.t()
           ]
     def title(state, width) when width >= 28 do
-      running = Enum.count(cache(state).rows, &(&1.running? or &1.watching?))
+      running = Enum.count(cache(state).rows, &active?/1)
       label = if running > 0, do: " Tasks #{running} running · F6 ", else: " Tasks · F6 "
 
       if decision(state, :open) == :allow,
@@ -270,6 +272,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @spec key(event :: Key.t(), state :: TUI.t()) :: {:noreply, TUI.t()}
     def key(%Key{code: "c", modifiers: ["ctrl"]}, state), do: {:noreply, Modal.close(state)}
     def key(%Key{code: "f6"}, state), do: {:noreply, Modal.close(state)}
+
+    def key(event, %{modal: %{form: %{kind: :steer}}} = state), do: TaskSteer.key(event, state)
 
     def key(event, %{modal: %{form: form}} = state) when not is_nil(form),
       do: TaskForm.key(event, state)
@@ -329,7 +333,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
           "a" => :add,
           "o" => :link,
           "r" => :refresh,
-          "v" => :command,
+          "v" => :inspect,
+          "t" => :steer,
           "l" => :output
         }[code]
 
@@ -348,7 +353,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp choose(state, :add), do: TaskForm.open(state)
     defp choose(state, :refresh), do: refresh(state)
 
-    defp choose(state, content) when content in [:command, :output] do
+    defp choose(state, :inspect) do
+      content =
+        if selected(state) && selected(state)[:kind] == :agent, do: :instructions, else: :command
+
+      choose(state, content)
+    end
+
+    defp choose(state, content) when content in [:command, :instructions, :output] do
       state
       |> put_in([Access.key!(:modal), :content], content)
       |> put_in([Access.key!(:modal), :focus], :logs)
@@ -370,6 +382,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp choose(state, action), do: choose_row(state, action, selected(state))
     defp choose_row(state, _action, nil), do: state
 
+    defp choose_row(state, :steer, %{kind: :agent, steerable?: true} = row),
+      do: TaskSteer.open(state, row)
+
+    defp choose_row(state, :steer, _row),
+      do: put_in(state.modal.notice, "This task does not accept steering.")
+
+    defp choose_row(state, action, %{kind: :agent})
+         when action in [:stop, :watch, :follow_up, :clear],
+         do:
+           put_in(
+             state.modal.notice,
+             "Agent assignments expose instructions, output, steering and cancellation."
+           )
+
     defp choose_row(state, action, %{managed?: true})
          when action in [:watch, :stop, :follow_up, :clear],
          do:
@@ -388,9 +414,23 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do: put_in(state.modal.notice, "This activity has finished. Its result is in History.")
 
     defp choose_row(state, action, row) when action in [:cancel, :clear],
-      do: put_in(state.modal.confirm, %{action: action, id: row.id})
+      do:
+        put_in(state.modal.confirm, %{
+          action: action,
+          id: row.id,
+          prompt:
+            if(action == :cancel,
+              do: cancel_prompt(row),
+              else: "Clear retained logs? Transcript evidence is kept."
+            )
+        })
 
     defp choose_row(state, action, row), do: act(state, action, row.id)
+
+    defp cancel_prompt(%{agent_type: :writer}), do: "Cancel all writers in this batch?"
+
+    defp cancel_prompt(row),
+      do: "#{Map.get(row, :cancel_label, "Cancel command")} #{Map.get(row, :name, "")}?"
 
     defp act(state, action, id) do
       case decision(state, action) do
@@ -430,9 +470,33 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    defp operation(state, work) do
+    @doc false
+    @spec steer(state :: TUI.t(), id :: String.t(), instruction :: String.t()) :: TUI.t()
+    def steer(%{modal: %{operation: operation}} = state, _id, _instruction)
+        when not is_nil(operation), do: state
+
+    def steer(state, id, instruction) do
+      case decision(state, :steer) do
+        :allow ->
+          operation(
+            state,
+            fn -> Tasks.steer(state.session, id, instruction) end,
+            "Steering queued for the next model request."
+          )
+
+        {:deny, reason} ->
+          put_in(state.modal.notice, reason)
+      end
+    end
+
+    defp operation(state, work, notice \\ "Updated.") do
       token = make_ref()
-      state = put_in(state.modal.operation, token)
+
+      state =
+        state
+        |> put_in([Access.key!(:modal), :operation], token)
+        |> put_in([Access.key!(:modal), :operation_notice], notice)
+
       request(state, token, :action, work)
     end
 
@@ -524,6 +588,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     @doc false
     @spec paste(event :: term(), state :: TUI.t()) :: {:noreply, TUI.t()}
+    def paste(event, %{modal: %{form: %{kind: :steer}}} = state),
+      do: TaskSteer.paste(event, state)
+
     def paste(event, %{modal: %{form: form}} = state) when not is_nil(form),
       do: TaskForm.paste(event, state)
 
@@ -531,6 +598,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     @doc false
     @spec mouse(event :: Mouse.t(), state :: TUI.t()) :: {:noreply, TUI.t()}
+    def mouse(event, %{modal: %{form: %{kind: :steer}}} = state),
+      do: TaskSteer.mouse(event, state)
+
     def mouse(event, %{modal: %{form: form}} = state) when not is_nil(form),
       do: TaskForm.mouse(event, state)
 
@@ -556,6 +626,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
         inside?(event, geometry.logs) ->
           {:noreply, put_in(state.modal.focus, :logs)}
 
+        not inside?(event, geometry.area) ->
+          {:noreply, Modal.close(state)}
+
         true ->
           {:noreply, state}
       end
@@ -570,6 +643,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     @doc false
     @spec render(state :: TUI.t(), panes :: map()) :: [{term(), Rect.t()}]
+    def render(%{modal: %{form: %{kind: :steer}}} = state, panes),
+      do: TaskSteer.render(state, panes)
+
     def render(%{modal: %{form: form}} = state, panes) when not is_nil(form),
       do: TaskForm.render(state, panes)
 
@@ -585,7 +661,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       rows = if rows == [], do: [line(empty_text(state, data))], else: rows
 
-      log_rows = log_rows(data.detail, g.logs.width, theme, state.modal.content)
+      log_rows = g.log_rows
 
       maximum = max(length(log_rows) - max(g.logs.height - 1, 0), 0)
       offset = if state.modal.follow?, do: maximum, else: min(state.modal.offset, maximum)
@@ -593,16 +669,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       Takeover.frame(
         g.area,
-        " Background tasks · #{if(state.modal.view == :active, do: "Active", else: "History")} #{length(visible_rows(state))} "
+        " Tasks · #{if(state.modal.view == :active, do: "Active", else: "History")} #{length(visible_rows(state))} · F6 "
       ) ++
         draw(%Paragraph{text: rows, wrap: false}, g.list) ++
-        draw(%Paragraph{text: detail_text(data.detail), wrap: true}, g.detail) ++
+        draw(%Paragraph{text: g.detail_rows, wrap: false}, g.detail) ++
         draw(
           %Paragraph{
-            text: log_rows(data.detail, g.command.width, theme, :command) |> Enum.take(2),
+            text: g.preview_rows,
             wrap: false,
             block: %Block{
-              title: " Command · v expand ",
+              title: " #{inspect_label(data.detail)} · v expand ",
               borders: [:top],
               border_style: %Style{fg: theme.text.muted}
             }
@@ -616,8 +692,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
             wrap: false,
             block: %Block{
               title:
-                if(state.modal.content == :command,
-                  do: " Command · full shell source ",
+                if(state.modal.content in [:command, :instructions],
+                  do:
+                    " #{inspect_label(data.detail)} · #{if(state.modal.content == :command, do: "full shell source", else: "full brief")} ",
                   else: " Output · #{if(state.modal.follow?, do: "following", else: "paused")} "
                 ),
               borders: [:top],
@@ -635,7 +712,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp empty_text(_state, %{token: token}) when not is_nil(token), do: "Loading tasks…"
     defp empty_text(_state, %{error: error}) when is_binary(error), do: error
     defp empty_text(%{modal: %{view: :history}}, _data), do: "No completed tasks yet."
-    defp empty_text(_state, _data), do: "No active tasks. Commands appear here automatically."
+
+    defp empty_text(_state, _data),
+      do: "No active tasks. Agents, commands and runs appear here automatically."
 
     defp task_line(row, selected, theme) do
       selected? = row.id == selected
@@ -649,7 +728,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           %Span{
             content:
               clean(
-                "#{Map.get(row, :status_label, row.status)} · #{Map.get(row, :elapsed, "")} · #{Map.get(row, :name, row.label)} · #{Map.get(row, :description, "")}"
+                "#{if(row[:parent_id], do: "↳ ", else: "")}#{Map.get(row, :type_label, "Command")} · #{Map.get(row, :status_label, row.status)} · #{Map.get(row, :elapsed, "")} · #{Map.get(row, :name, row.label)} · #{Map.get(row, :description, "")}"
               ),
             style: %Style{
               fg: task_colour(row, theme),
@@ -675,7 +754,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp log_text(detail, :command),
       do: Map.get(detail, :command) || "No local command is available for this activity."
 
+    defp log_text(detail, :instructions),
+      do: detail[:instructions] || "No agent brief is available."
+
     defp log_text(%{logs: nil}, _content), do: "Loading output…"
+    defp log_text(%{logs: "", running?: true}, _content), do: "Waiting for output…"
+    defp log_text(%{logs: ""}, _content), do: "No output."
     defp log_text(detail, _content), do: detail.logs || ""
 
     defp log_rows(detail, width, theme, content),
@@ -693,7 +777,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
       monitoring = Map.get(row, :tracking_label, observation(row))
 
       [
-        clean(Map.get(row, :name, row.label)),
         Map.get(row, :description),
         Map.get(row, :owner_label),
         Enum.reject(
@@ -702,10 +785,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         )
         |> Enum.join(" · "),
         monitoring,
-        if(row[:finished_at],
-          do: "Finished: #{row.finished_at}",
-          else: if(row[:started_at], do: "Started: #{row.started_at}")
-        ),
+        row[:statistics],
         if(row.target["sha"], do: "Commit: #{row.target["sha"]}"),
         if(row.deadline, do: "Deadline #{row.deadline}"),
         row.summary,
@@ -717,6 +797,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       |> Enum.join("\n")
     end
 
+    defp completion_mode(%{kind: :agent} = row), do: row[:role]
     defp completion_mode(%{watching?: false, running?: false}), do: nil
     defp completion_mode(%{managed?: true}), do: "completion required by assignment"
     defp completion_mode(%{follow_up?: true}), do: "auto-resume on completion"
@@ -727,9 +808,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp observation(%{observation: "completed"}), do: "observation complete"
     defp observation(row), do: "observation #{row.observation}"
 
-    defp notice(%{modal: %{confirm: %{action: action}}}),
-      do:
-        "#{if(action == :cancel, do: "Cancel this command?", else: "Clear retained logs? Transcript evidence is kept.")}  Y confirm · Esc back"
+    defp notice(%{modal: %{confirm: %{prompt: prompt}}}), do: "#{prompt}  Y confirm · Esc back"
 
     defp notice(%{modal: %{operation: operation}}) when not is_nil(operation),
       do: "Updating task…"
@@ -740,11 +819,43 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do:
         if(state.modal.focus == :logs,
           do: "↑↓ scroll · Home start · End latest · Tab task list",
-          else: "1 Active · 2 History · ↑↓ select · v expand command · Enter output"
+          else: "↑↓ select · Enter output · v details · Tab focus"
         )
 
     defp geometry(state, panes) do
-      area = Takeover.area(panes, state.terminal.height)
+      data = cache(state)
+      theme = Screen.theme(state)
+      width = max(panes.input.width - 2, 1)
+
+      details =
+        RichText.lines(
+          Enum.map(String.split(detail_text(data.detail), "\n"), &{:lmx, &1}),
+          width,
+          theme
+        )
+
+      log_lines = log_rows(data.detail, width, theme, state.modal.content)
+
+      preview = preview_rows(data.detail, state.modal.content, width, theme)
+
+      buttons = buttons(state)
+      footer = button_height(buttons, width)
+      empty? = visible_rows(state) == [] and is_nil(data.detail)
+      list_height = min(max(length(visible_rows(state)), 1), 6)
+      detail_height = if empty?, do: 0, else: min(length(details), 4)
+      command_height = if preview == [], do: 0, else: length(preview) + 1
+
+      log_height = log_height(empty?, log_lines, state.modal.content)
+
+      notice_height = if empty?, do: 0, else: 1
+      gap = if empty?, do: 0, else: 1
+
+      area =
+        Takeover.tray(
+          panes,
+          2 + list_height + gap + detail_height + command_height + log_height + notice_height +
+            footer
+        )
 
       inner = %Rect{
         x: area.x + min(1, area.width),
@@ -753,21 +864,21 @@ if Code.ensure_loaded?(ExRatatui.App) do
         height: max(area.height - 2, 0)
       }
 
-      data = cache(state)
       rows = visible_rows(state)
-      count = min(max(length(rows), 1), min(6, max(div(inner.height, 3), 1)))
+      footer = min(footer, inner.height)
+      notice_y = max(inner.height - footer - notice_height, 0)
+      count = min(list_height, max(notice_y - if(empty?, do: 0, else: 2), 0))
       selected = Enum.find_index(rows, &(&1.id == data.selected)) || 0
       start = max(min(selected - div(count, 2), length(rows) - count), 0)
       list = rect(inner, 0, count)
-      detail = rect(inner, count + 1, min(6, max(div(inner.height, 4), 0)))
-      logs_y = detail.y + detail.height + 1 - inner.y
-      remaining = max(inner.height - logs_y - 4, 0)
-      preview? = state.modal.content == :output and is_binary(get_in(data, [:detail, :command]))
-      command_height = if preview? and remaining >= 6, do: 3, else: 0
+      detail = rect(inner, count + 1, min(detail_height, max(notice_y - count - 4, 0)))
+      logs_y = min(detail.y + detail.height - inner.y, notice_y)
+      remaining = max(notice_y - logs_y, 0)
+      command_height = min(command_height, max(remaining - 2, 0))
       command = rect(inner, logs_y, command_height)
       logs = rect(inner, logs_y + command_height, remaining - command_height)
-      notice = rect(inner, max(inner.height - 4, 0), 1)
-      buttons = buttons(state) |> place_buttons(inner, max(inner.height - 3, 0))
+      notice = rect(inner, notice_y, notice_height)
+      buttons = place_buttons(buttons, inner, max(inner.height - footer, 0))
 
       %{
         area: area,
@@ -777,8 +888,47 @@ if Code.ensure_loaded?(ExRatatui.App) do
         logs: logs,
         notice: notice,
         buttons: buttons,
-        start: start
+        start: start,
+        log_rows: log_lines,
+        detail_rows: details,
+        preview_rows: preview
       }
+    end
+
+    defp preview_rows(detail, :output, width, theme) do
+      if inspectable?(detail) do
+        content = if detail[:kind] == :agent, do: :instructions, else: :command
+        detail |> log_rows(width, theme, content) |> Enum.take(2)
+      else
+        []
+      end
+    end
+
+    defp preview_rows(_detail, _content, _width, _theme), do: []
+    defp log_height(true, _lines, _content), do: 0
+    defp log_height(false, lines, :output), do: min(length(lines), 6) + 1
+    defp log_height(false, lines, _content), do: min(length(lines), 14) + 1
+
+    @doc false
+    @spec area(state :: TUI.t(), panes :: map()) :: Rect.t()
+    def area(%{modal: %{form: %{kind: :steer}}} = _state, panes), do: Takeover.tray(panes, 8)
+    def area(%{modal: %{form: form}}, panes) when not is_nil(form), do: Takeover.tray(panes, 12)
+    def area(state, panes), do: geometry(state, panes).area
+
+    defp inspectable?(%{kind: :agent}), do: true
+    defp inspectable?(%{command: command}), do: is_binary(command)
+    defp inspectable?(_row), do: false
+    defp inspect_label(%{kind: :agent}), do: "Instructions"
+    defp inspect_label(_row), do: "Command"
+
+    defp button_height(buttons, width) do
+      {_x, rows} =
+        Enum.reduce(buttons, {0, 1}, fn {_action, label}, {x, rows} ->
+          length = min(Width.of(label), width)
+          if x + length > width, do: {length + 1, rows + 1}, else: {x + length + 1, rows}
+        end)
+
+      rows
     end
 
     defp rect(inner, top, height),
@@ -812,9 +962,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp inspector_button(%{command: command}, _content) when is_binary(command),
       do: [{:output, "[l Show output]"}]
 
+    defp inspector_button(%{kind: :agent}, :output), do: [{:inspect, "[v Instructions]"}]
+    defp inspector_button(%{kind: :agent}, _content), do: [{:output, "[l Show output]"}]
     defp inspector_button(_row, _content), do: []
 
     defp row_controls(nil, _monitoring?), do: []
+
+    defp row_controls(%{kind: :agent} = row, _monitoring?),
+      do:
+        []
+        |> maybe(row[:steerable?], {:steer, "[t Steer agent]"})
+        |> maybe(row.running?, {:cancel, "[c #{row.cancel_label}]"})
 
     defp row_controls(%{managed?: true} = row, _monitoring?),
       do: maybe([], row.running?, {:cancel, "[c Cancel command]"})

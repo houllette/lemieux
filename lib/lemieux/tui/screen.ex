@@ -49,9 +49,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp widgets(state, frame, completion_widgets) do
       frame = drawable(frame)
       {panes, problem} = arranged(state, frame)
+      transcript_area = task_transcript_area(state, panes)
 
       base =
-        [{transcript(state, panes.transcript, problem), panes.transcript}] ++
+        [{transcript(state, transcript_area, problem), transcript_area}] ++
           status(state, panes.status) ++
           input_widgets(state, panes.input) ++
           queued_widgets(state, panes) ++
@@ -80,6 +81,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
           overlay(state, overlay, frame)
       end
     end
+
+    defp task_transcript_area(%{modal: %{kind: :tasks}} = state, panes) do
+      area = TaskPanel.area(state, panes)
+
+      %{
+        panes.transcript
+        | height: max(min(panes.transcript.height, area.y - panes.transcript.y), 0)
+      }
+    end
+
+    defp task_transcript_area(_state, panes), do: panes.transcript
 
     defp boot_widgets(%TUI{resume: %{startup_status: :loading}} = state, panes),
       do: Boot.render(state, panes.transcript)

@@ -124,6 +124,11 @@ defmodule Lemieux.Subagent.Group do
   def group_ref(group), do: GenServer.call(group, :group_ref)
 
   @doc false
+  @spec current(group :: GenServer.server(), parent :: pid()) ::
+          {:ok, Lemieux.Subagent.Group.Ref.t()} | {:error, :not_owner}
+  def current(group, parent), do: GenServer.call(group, {:current, parent})
+
+  @doc false
   @spec child_refs(group :: GenServer.server(), token :: reference()) ::
           {:ok, [Lemieux.Subagent.Ref.t()]} | {:error, :unauthorized}
   def child_refs(group, token), do: GenServer.call(group, {:child_refs, token})
@@ -145,10 +150,15 @@ defmodule Lemieux.Subagent.Group do
     do: GenServer.call(group, {:await_child, token, child_id}, timeout)
 
   @doc false
-  @spec inspect_child(group :: GenServer.server(), token :: reference(), child_id :: String.t()) ::
+  @spec inspect_child(
+          group :: GenServer.server(),
+          token :: reference(),
+          child_id :: String.t(),
+          include_entries? :: boolean()
+        ) ::
           {:ok, Snapshot.t()} | {:error, term()}
-  def inspect_child(group, token, child_id),
-    do: GenServer.call(group, {:inspect_child, token, child_id})
+  def inspect_child(group, token, child_id, include_entries? \\ true),
+    do: GenServer.call(group, {:inspect_child, token, child_id, include_entries?})
 
   @doc false
   @spec steer_child(
@@ -426,6 +436,11 @@ defmodule Lemieux.Subagent.Group do
   @impl GenServer
   def handle_call(:group_ref, _from, state), do: {:reply, build_group_ref(state), state}
 
+  def handle_call({:current, parent}, _from, %{parent: parent} = state),
+    do: {:reply, {:ok, build_group_ref(state)}, state}
+
+  def handle_call({:current, _parent}, _from, state), do: {:reply, {:error, :not_owner}, state}
+
   def handle_call({:child_refs, token}, _from, state) do
     case allowed(state, token, :child_refs, nil) do
       :ok -> {:reply, {:ok, Enum.map(state.order, &child_ref(state, &1))}, state}
@@ -460,10 +475,10 @@ defmodule Lemieux.Subagent.Group do
     end
   end
 
-  def handle_call({:inspect_child, token, child_id}, _from, state) do
+  def handle_call({:inspect_child, token, child_id, include_entries?}, _from, state) do
     with :ok <- allowed(state, token, :inspect, child_id),
          {:ok, child} <- Map.fetch(state.children, child_id) do
-      {:reply, {:ok, snapshot(state, child)}, state}
+      {:reply, {:ok, snapshot(state, child, include_entries?)}, state}
     else
       {:error, _reason} = error -> {:reply, error, state}
       :error -> {:reply, {:error, :not_found}, state}
@@ -1227,9 +1242,13 @@ defmodule Lemieux.Subagent.Group do
     %{state | child_waiters: child_waiters}
   end
 
-  defp snapshot(state, child) do
+  defp snapshot(state, child, include_entries?) do
     session =
-      if child.session && Process.alive?(child.session), do: Session.snapshot(child.session)
+      if child.session && Process.alive?(child.session) do
+        if include_entries?,
+          do: Session.snapshot(child.session),
+          else: Session.info(child.session)
+      end
 
     %Snapshot{
       id: child.id,
@@ -1367,7 +1386,7 @@ defmodule Lemieux.Subagent.Group do
       "user_prompt" => SubagentTask.prompt(request.task)
     }
 
-    case session && Enum.find(session.entries, &(&1.type == :request)) do
+    case session && Enum.find(Map.get(session, :entries, []), &(&1.type == :request)) do
       nil -> input
       entry -> Map.put(input, "request", entry.payload)
     end

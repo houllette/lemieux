@@ -9,6 +9,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
   alias Lemieux.Store.JSONL
   alias Lemieux.TUI
   alias Lemieux.TUI.TaskPanel
+  alias Lemieux.TUI.Transcript
   @moduletag :tmp_dir
 
   defmodule Source do
@@ -164,7 +165,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert state.modal.kind == :tasks
 
     assert Enum.any?(TaskPanel.render(state, TUI.Screen.panes(state)), fn
-             {%ExRatatui.Widgets.Block{title: title}, _rect} -> title =~ "Background tasks"
+             {%ExRatatui.Widgets.Block{title: title}, _rect} -> title =~ "Tasks"
              _other -> false
            end)
 
@@ -197,7 +198,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     state = state |> press("f") |> updated()
     refute hd(TaskPanel.cache(state).rows).follow_up?
     state = press(state, "c")
-    assert screen(state) =~ "Cancel this command?"
+    assert screen(state) =~ "Cancel command"
     assert {:ok, %{rows: [%{running?: true}]}} = Tasks.snapshot(ctx.session)
     state = state |> press("y") |> updated()
     assert hd(TaskPanel.cache(state).rows).status == "cancelled"
@@ -346,6 +347,74 @@ defmodule Lemieux.TUI.TaskPanelTest do
     text = ExRatatui.CellSession.take_cells(cells).cells |> Enum.map_join(& &1.symbol)
     :ok = ExRatatui.CellSession.close(cells)
     text
+  end
+
+  test "the task tray grows above the composer and leaves the transcript visible", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    state = %{state | terminal: %{state.terminal | width: 120, height: 50}}
+    panes = TUI.Screen.panes(state)
+    small = TaskPanel.area(state, panes)
+    assert small.y + small.height == panes.input.y
+    assert small.y > panes.transcript.y + 5
+    assert small.height < 25
+    assert small.x == panes.input.x and small.width == panes.input.width
+    detail = TaskPanel.cache(state).detail
+    long = %{detail | logs: Enum.map_join(1..80, "\n", &"log #{&1}")}
+    rows = Enum.map(1..5, &%{detail | id: "task:#{&1}"})
+
+    expanded =
+      state
+      |> put_in([Access.key!(:session_view), :tasks, :rows], rows)
+      |> put_in([Access.key!(:session_view), :tasks, :detail], long)
+
+    large = TaskPanel.area(expanded, panes)
+    assert large.height > small.height
+    assert large.y + large.height == panes.input.y
+    assert large.y > panes.transcript.y
+    assert typed(expanded) == "keep this draft"
+
+    empty =
+      state
+      |> put_in([Access.key!(:session_view), :tasks, :rows], [])
+      |> put_in([Access.key!(:session_view), :tasks, :detail], nil)
+      |> put_in([Access.key!(:session_view), :tasks, :selected], nil)
+
+    assert TaskPanel.area(empty, panes).height <= 6
+    assert :ok = Tasks.action(ctx.session, detail.id, :cancel)
+  end
+
+  test "native frames retain the latest transcript above the tray and leave composer cells intact",
+       ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    state = %{state | terminal: %{state.terminal | width: 100, height: 40}}
+    state = Transcript.say(state, :lmx, "PRIMARY_TRANSCRIPT_IS_VISIBLE")
+    panes = TUI.Screen.panes(state)
+    area = TaskPanel.area(state, panes)
+    cells = ExRatatui.CellSession.new(100, 40)
+    on_exit(fn -> ExRatatui.CellSession.close(cells) end)
+
+    :ok = ExRatatui.CellSession.draw(cells, TUI.render(state, %Frame{width: 100, height: 40}))
+    open = ExRatatui.CellSession.take_cells(cells).cells
+    above = open |> Enum.filter(&(&1.row < area.y)) |> Enum.map_join(& &1.symbol)
+    assert above =~ "PRIMARY_TRANSCRIPT_IS_VISIBLE"
+    assert Enum.map_join(open, & &1.symbol) =~ "keep this draft"
+
+    :ok =
+      ExRatatui.CellSession.draw(
+        cells,
+        TUI.render(press(state, "f6"), %Frame{width: 100, height: 40})
+      )
+
+    closed = ExRatatui.CellSession.take_cells(cells).cells
+
+    composer = fn snapshot ->
+      snapshot
+      |> Enum.filter(&(&1.row >= panes.input.y and &1.row < panes.input.y + panes.input.height))
+      |> Enum.map(&{&1.row, &1.col, &1.symbol})
+    end
+
+    assert composer.(open) == composer.(closed)
+    assert :ok = Tasks.action(ctx.session, TaskPanel.cache(state).detail.id, :cancel)
   end
 
   test "list, logs and form geometry remain inside small and resized terminals", ctx do

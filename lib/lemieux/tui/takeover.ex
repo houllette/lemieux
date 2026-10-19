@@ -14,6 +14,15 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       %Rect{x: panes.input.x, y: bottom - height, width: panes.input.width, height: height}
     end
 
+    @doc "Grows upward from the composer, keeping part of the transcript visible."
+    @spec tray(panes :: map(), rows :: non_neg_integer()) :: Rect.t()
+    def tray(panes, rows) do
+      available = max(min(panes.input.y - panes.transcript.y, panes.transcript.height), 0)
+      keep = if available >= 9, do: max(div(available, 3), 3), else: min(available, 1)
+      height = min(rows, max(available - keep, 0))
+      %Rect{x: panes.input.x, y: panes.input.y - height, width: panes.input.width, height: height}
+    end
+
     @doc "Clears and frames a panel so other content can be drawn over it."
     @spec frame(area :: Rect.t(), title :: String.t()) :: [{term(), Rect.t()}]
     def frame(area, title) do

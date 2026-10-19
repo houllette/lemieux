@@ -1,8 +1,11 @@
 # Background tasks and external runs
 
 Open **Tasks** with **F6**, or click the **Tasks** badge on the message box.
-Background Bash commands appear automatically. The view combines local commands
-and registered external runs. **Active** and **History** separate ongoing work
+Background Bash commands appear automatically. The view combines **Agent**
+assignments, local **Command** processes and registered **External run** watches.
+It grows upward from the message box to fit its content, leaving the composer
+and part of the primary transcript visible. Longer lists and output scroll
+inside the tray. **Active** and **History** separate ongoing work
 from completed results. Each activity keeps one row through status changes,
 with its command, elapsed time and output together. Pausing and resuming tracking
 keeps its observation history inside that activity's details.
@@ -28,7 +31,9 @@ restarts that work.
 | Enter / Tab | Focus logs; Tab returns to the task list |
 | Page Up / Page Down, or the mouse wheel | Scroll selected output |
 | End | Follow the newest output again |
-| Expand command (`v`) / Show output (`l`) | Inspect the full, scrollable shell source or return to live output |
+| Expand command / Instructions (`v`), Show output (`l`) | Inspect the complete shell source or agent brief, then return to live output |
+| Steer agent (`t`) | Write an instruction in a separate editor; Ctrl-Enter queues it for the next model request |
+| Cancel agent / Cancel writer batch (`c`) | Stop a delegate, or all writers in the selected batch, under the current host policy |
 | Cancel command (`c`) | Confirm cancellation of a local command; pending continuation is revoked first |
 | Pause tracking (`s`) | Pause observation while the command or external run continues |
 | Resume tracking (`w`) | Resume observation of a running command or paused external run |
@@ -50,12 +55,20 @@ process. Use an external durable job for work that must survive closing `lmx`.
 
 ## Delegates and isolated writers
 
-The same Tasks view includes commands owned by read-only delegates and active
-isolated writers, labelled by their owner. Inspect output or cancel a command
-directly. The bounded assignment manages completion: it stays open, waits
+The same Tasks view shows read-only delegates and isolated writers even when
+they have no background commands. Their commands nest beneath the owning agent.
+Select an agent to inspect its brief, activity and result; live delegates also
+show their own token and context usage. Commands show process output rather
+than a separate model context. Delegate steering preserves its original scope,
+permissions and budget. Writer cancellation explicitly applies to the whole
+batch; artifact integration still uses the writer review workflow.
+
+Inspect output or cancel a command directly. The bounded assignment manages completion: it stays open, waits
 without model polling, then receives one batch of command results under its
 remaining request, turn, cost and time limits. Human cancellation revokes that
 continuation. These rows do not offer a separate Auto-resume toggle.
+Completed agent results remain in History after resume, while live controls
+require the current owning session and the host's current authorization.
 
 The default scout has sandboxed read-only `bash` for inline analysis scripts,
 including `background: true`. A writer factory can explicitly supply the same

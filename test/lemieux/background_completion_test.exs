@@ -120,7 +120,11 @@ defmodule Lemieux.BackgroundCompletionTest do
        ctx do
     {group, child, worker, provider} = spawn_child(ctx)
     assert length(Scripted.requests(provider)) == 2
-    assert {:ok, %{rows: [row]}} = Tasks.snapshot(ctx.parent)
+
+    assert {:ok, %{rows: [%{kind: :agent} = agent, %{kind: :command} = row]}} =
+             Tasks.snapshot(ctx.parent)
+
+    assert row.parent_id == agent.id
     assert row.managed? and row.running?
     assert row.owner_id == child.id
     assert row.label =~ "Delegate"
@@ -301,12 +305,13 @@ defmodule Lemieux.BackgroundCompletionTest do
 
   test "native cancellation revokes the child's continuation and settles the delegate", ctx do
     {group, _child, _worker, provider} = spawn_child(ctx)
-    {:ok, %{rows: [row]}} = Tasks.snapshot(ctx.parent)
+    {:ok, %{rows: [%{kind: :agent}, %{kind: :command} = row]}} = Tasks.snapshot(ctx.parent)
     assert :ok = Tasks.action(ctx.parent, row.id, :cancel)
     assert {:ok, %{results: [result]}} = Subagent.await(group, 5000)
     assert result.status == :cancelled
     assert length(Scripted.requests(provider)) == 2
-    assert {:ok, %{rows: [%{status: "cancelled"}]}} = Tasks.snapshot(ctx.parent)
+    assert {:ok, %{rows: rows}} = Tasks.snapshot(ctx.parent)
+    assert Enum.all?(rows, &(&1.status == "cancelled"))
   end
 
   test "completion cannot extend a child's request allowance", ctx do

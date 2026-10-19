@@ -103,6 +103,40 @@ defmodule Lemieux.Subagent do
     :exit, reason -> {:error, reason}
   end
 
+  @doc """
+  Finds groups still owned by this live parent. Historical identities never
+  grant control of a prior parent's group after resume. Child inspection,
+  steering and cancellation still pass the group's current host authorization.
+  Hosts must authorize access to the parent session handle before calling.
+  """
+  @spec current(parent :: Session.session()) :: {:ok, [GroupRef.t()]} | {:error, term()}
+  def current(parent) do
+    with parent when is_pid(parent) <- GenServer.whereis(parent),
+         context <- Session.work_context(parent) do
+      refs =
+        Enum.flat_map(context.owners, &owned_group(&1, context.supervisor, parent))
+
+      {:ok, refs}
+    else
+      _gone -> {:error, :not_running}
+    end
+  catch
+    :exit, _gone -> {:error, :not_running}
+  end
+
+  defp owned_group({id, pid}, supervisor, parent) do
+    case Registry.lookup(Sup.registry(supervisor), {:subagent_group, id}) do
+      [{^pid, _}] ->
+        case Group.current(pid, parent) do
+          {:ok, ref} -> [ref]
+          _gone -> []
+        end
+
+      _other ->
+        []
+    end
+  end
+
   @doc "Lists child refs in the same order the group request used."
   @spec children(group_ref :: GroupRef.t()) :: {:ok, [Ref.t()]} | {:error, term()}
   def children(%GroupRef{} = ref) do
@@ -143,19 +177,34 @@ defmodule Lemieux.Subagent do
     end
   end
 
-  @doc "Returns a bounded live snapshot of one child."
-  @spec inspect(ref :: Ref.t()) :: {:ok, Lemieux.Subagent.Snapshot.t()} | {:error, term()}
-  def inspect(%Ref{} = ref) do
-    case group(ref) do
-      {:ok, group} ->
-        live_call(group, fn -> Group.inspect_child(group, ref.control_token, ref.id) end, fn ->
-          durable_snapshot(ref)
-        end)
+  @doc "Returns a bounded child snapshot. Live lists may set `include_entries: false` to fetch metadata without copying the transcript."
+  @spec inspect(ref :: Ref.t(), opts :: keyword()) ::
+          {:ok, Lemieux.Subagent.Snapshot.t()} | {:error, term()}
+  def inspect(%Ref{} = ref, opts \\ []) do
+    include_entries? = Keyword.get(opts, :include_entries, true) != false
 
-      {:error, :not_running} ->
-        durable_snapshot(ref)
-    end
+    result =
+      case group(ref) do
+        {:ok, group} ->
+          live_call(
+            group,
+            fn -> Group.inspect_child(group, ref.control_token, ref.id, include_entries?) end,
+            fn ->
+              durable_snapshot(ref)
+            end
+          )
+
+        {:error, :not_running} ->
+          durable_snapshot(ref)
+      end
+
+    omit_entries(result, include_entries?)
   end
+
+  defp omit_entries({:ok, %Snapshot{session: session} = snapshot}, false) when is_map(session),
+    do: {:ok, %{snapshot | session: Map.delete(session, :entries)}}
+
+  defp omit_entries(result, _include_entries?), do: result
 
   @doc "Durably steers one running child without changing its authority."
   @spec steer(ref :: Ref.t(), instruction :: String.t()) :: :ok | {:error, term()}
