@@ -34,7 +34,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def result(%{id: id, arguments: %{"background" => true} = args}, %{payload: payload}, _theme) do
       case payload["structured_content"] do
         %{"background_tracking_error" => error} when is_binary(error) ->
-          {:output, "Tracking unavailable: #{ToolText.one_line(error)} · Tasks (F6)"}
+          {:output, "Tracking unavailable: #{ToolText.one_line(error)}"}
 
         %{"task_id" => task_id, "status" => "running"} = facts when is_binary(task_id) ->
           name = facts["task_name"] || Shorthand.of(task_id)

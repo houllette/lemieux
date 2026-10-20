@@ -223,6 +223,10 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
       end)
     end
 
+    @doc false
+    @spec literal(text :: String.t(), width :: pos_integer(), style :: Style.t()) :: [Line.t()]
+    def literal(text, width, style), do: preserve([{text, style}], width)
+
     defp task_result(result, width, theme) do
       success? = result["status"] == "Completed"
       colour = if success?, do: theme.children.ok, else: theme.children.fail
@@ -236,11 +240,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
       ]
 
       wrap(heading, width) ++
-        wrap([{"  " <> result["summary"], %Style{fg: theme.text.plain}}], width) ++
-        wrap(
-          [{"  F6 Tasks · command and output", %Style{fg: theme.text.muted, modifiers: [:dim]}}],
-          width
-        )
+        wrap([{"  " <> result["summary"], %Style{fg: theme.text.plain}}], width)
     end
 
     defp styled({:model, text}, theme), do: parse_inline(text, %Style{}, theme)

@@ -26,7 +26,8 @@ defmodule Lemieux.TUI.WatchTest do
     refute event["display_text"] =~ "VALIDATION_FAILED: missing manifest"
     assert event["text"] =~ "VALIDATION_FAILED: missing manifest"
     assert event["display_text"] =~ "Validate the build output"
-    assert event["display_text"] =~ "F6 Tasks"
+    refute event["display_text"] =~ "F6"
+    refute event["display_text"] =~ "command and output"
     refute event["display_text"] =~ "{"
 
     receipt =

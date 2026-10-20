@@ -9,6 +9,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
   alias Lemieux.Store.JSONL
   alias Lemieux.TUI
   alias Lemieux.TUI.TaskPanel
+  alias Lemieux.TUI.Theme
   alias Lemieux.TUI.Transcript
   @moduletag :tmp_dir
 
@@ -160,8 +161,9 @@ defmodule Lemieux.TUI.TaskPanelTest do
     loaded(state)
   end
 
-  test "F6 and the composer badge open native tasks without altering the draft", ctx do
-    state = ctx.state |> press("f6") |> loaded()
+  test "Shift+Up and the composer badge open native tasks without altering the draft", ctx do
+    state = ctx.state |> press("up", ["shift"]) |> loaded()
+    state = %{state | terminal: %{state.terminal | width: 120, height: 45}}
     assert state.modal.kind == :tasks
 
     assert Enum.any?(TaskPanel.render(state, TUI.Screen.panes(state)), fn
@@ -169,7 +171,18 @@ defmodule Lemieux.TUI.TaskPanelTest do
              _other -> false
            end)
 
-    assert screen(state) =~ "printf READY; sleep 60"
+    assert Enum.any?(TaskPanel.render(state, TUI.Screen.panes(state)), fn
+             {%ExRatatui.Widgets.Paragraph{
+                block: %ExRatatui.Widgets.Block{title: " Command · v expand "},
+                text: lines
+              }, _} ->
+               Enum.map_join(lines, fn line -> Enum.map_join(line.spans, & &1.content) end) =~
+                 "printf READY; sleep 60"
+
+             _ ->
+               false
+           end)
+
     assert screen(state) =~ "v Expand command"
     state = press(state, "v")
     assert screen(state) =~ "printf READY; sleep 60"
@@ -177,7 +190,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     state = press(state, "l")
     assert screen(state) =~ "Cancel command"
     assert typed(state) == "keep this draft"
-    state = press(state, "f6")
+    state = press(state, "up", ["shift"])
     assert state.modal == nil
     area = TUI.Screen.panes(state).input
     event = %Mouse{kind: "down", button: "left", x: area.x + area.width - 4, y: area.y}
@@ -185,6 +198,57 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert state.modal.kind == :tasks
     loaded(state)
     assert length(Scripted.requests(ctx.provider)) == 2
+  end
+
+  test "empty Active and History frames stay identical throughout periodic refreshes", ctx do
+    provider = Scripted.new([])
+
+    {:ok, session} =
+      Runtime.start_session(ctx.options,
+        supervisor: ctx.runtime,
+        provider: provider,
+        cwd: ctx.dir,
+        store: JSONL.new(Path.join(ctx.dir, "empty-sessions"))
+      )
+
+    state = tui(session: session, id: Session.id(session)) |> press("f6")
+    assert screen(state) =~ "Loading tasks"
+    state = loaded(state)
+
+    for view <- ["1", "2"] do
+      selected = state |> press(view) |> loaded()
+      assert TaskPanel.cache(selected).rows == []
+      before = painted_cells(selected)
+      refute Enum.map_join(before, & &1.symbol) =~ "Loading tasks"
+
+      for _ <- 1..3, reduce: selected do
+        previous ->
+          refreshing = TaskPanel.refresh(previous)
+          refute is_nil(TaskPanel.cache(refreshing).token)
+          assert painted_cells(refreshing) == before
+          settled = loaded(refreshing)
+          assert painted_cells(settled) == before
+          settled
+      end
+    end
+
+    assert Scripted.requests(provider) == []
+    {:ok, %{rows: [fixture]}} = Tasks.snapshot(ctx.session)
+    assert :ok = Tasks.action(ctx.session, fixture.id, :cancel)
+  end
+
+  test "a rebound Tasks shortcut toggles the tray and releases Shift+Up to transcript scrolling",
+       ctx do
+    keys = %{"shift-up" => "scroll_up", "f7" => "tasks"}
+    state = tui(session: ctx.session, id: Session.id(ctx.session), keys: keys)
+    state = state |> type("keep custom draft") |> press("f7") |> loaded()
+    assert state.modal.kind == :tasks
+    state = press(state, "f7")
+    assert state.modal == nil
+    assert typed(state) == "keep custom draft"
+    refute Enum.map_join(TaskPanel.title(state, 80), & &1.content) =~ "Shift+Up"
+    {:ok, %{rows: [fixture]}} = Tasks.snapshot(ctx.session)
+    assert :ok = Tasks.action(ctx.session, fixture.id, :cancel)
   end
 
   test "human stop, resume and cancellation controls do not invoke the model", ctx do
@@ -335,18 +399,86 @@ defmodule Lemieux.TUI.TaskPanelTest do
     refute painted(state) =~ "SOURCE_END"
     state = press(state, "end")
     assert painted(state) =~ "SOURCE_END"
+    state = press(state, "v")
+    assert state.modal.content == :output
+    assert state.modal.follow?
+    assert screen(state) =~ "v Expand command"
+    state = press(state, "v")
+    assert state.modal.content == :command
+    state = click(state, "[v Show output]")
+    assert state.modal.content == :output
     state = press(state, "l")
     assert painted(state) =~ "Output"
     refute painted(state) =~ "SOURCE_END"
     assert :ok = Tasks.action(ctx.session, TaskPanel.cache(state).detail.id, :cancel)
   end
 
-  defp painted(state) do
+  defp painted(state), do: state |> painted_cells() |> Enum.map_join(& &1.symbol)
+
+  test "Tab focus has distinct section borders and labels in every theme", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+
+    section = fn current, label ->
+      Enum.find_value(TaskPanel.render(current, TUI.Screen.panes(current)), fn
+        {%ExRatatui.Widgets.Paragraph{block: %ExRatatui.Widgets.Block{} = block}, _} ->
+          if String.starts_with?(block.title, " #{label}"), do: block
+
+        _ ->
+          nil
+      end)
+    end
+
+    for theme <- [Theme.dark(), Theme.light(), Theme.mono()] do
+      themed = put_in(state.appearance.theme, theme)
+      list = section.(themed, "Task list")
+      output = section.(themed, "Output")
+      assert list.title =~ "focused"
+      refute output.title =~ "focused"
+      refute list.border_style == output.border_style
+      switched = press(themed, "tab")
+      assert section.(switched, "Output").title =~ "focused"
+      refute section.(switched, "Task list").title =~ "focused"
+      assert section.(switched, "Output").border_style == list.border_style
+      assert press(switched, "tab").modal.focus == :list
+    end
+
+    assert :ok = Tasks.action(ctx.session, TaskPanel.cache(state).detail.id, :cancel)
+  end
+
+  test "expanded details adapt between commands and agents without blanking cached output", ctx do
+    state = ctx.state |> press("f6") |> loaded() |> press("v") |> press("tab")
+    command = TaskPanel.cache(state).detail
+
+    agent =
+      Map.merge(command, %{
+        id: "agent:fixture",
+        kind: :agent,
+        command: nil,
+        instructions: "Inspect the repository",
+        name: "fixture-agent",
+        cancel_label: "Cancel agent",
+        steerable?: false
+      })
+
+    state = put_in(state.session_view.tasks.rows, [command, agent])
+    state = put_in(state.session_view.tasks.details[agent.id], agent)
+    selected = press(state, "down")
+    assert selected.modal.content == :instructions
+    assert screen(selected) =~ "Inspect the repository"
+    refute screen(selected) =~ "No local command"
+    returned = press(selected, "up")
+    assert returned.modal.content == :command
+    assert screen(returned) =~ command.command
+    state = loaded(returned)
+    assert :ok = Tasks.action(ctx.session, TaskPanel.cache(state).detail.id, :cancel)
+  end
+
+  defp painted_cells(state) do
     cells = ExRatatui.CellSession.new(80, 24)
     :ok = ExRatatui.CellSession.draw(cells, TUI.render(state, %Frame{width: 80, height: 24}))
-    text = ExRatatui.CellSession.take_cells(cells).cells |> Enum.map_join(& &1.symbol)
+    snapshot = ExRatatui.CellSession.take_cells(cells).cells
     :ok = ExRatatui.CellSession.close(cells)
-    text
+    snapshot
   end
 
   test "the task tray grows above the composer and leaves the transcript visible", ctx do
@@ -372,6 +504,14 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert large.y + large.height == panes.input.y
     assert large.y > panes.transcript.y
     assert typed(expanded) == "keep this draft"
+
+    assert Enum.any?(TaskPanel.render(expanded, panes), fn
+             {%ExRatatui.Widgets.Paragraph{block: %ExRatatui.Widgets.Block{title: title}}, rect} ->
+               String.starts_with?(title, " Output") and rect.height >= 6
+
+             _ ->
+               false
+           end)
 
     empty =
       state

@@ -419,7 +419,7 @@ limits must be positive. The defaults and retention behavior are described in
 
 `watches` defaults to automatic background observation and completion continuation
 under the session's existing permissions and remaining allowances.
-F6 or the clickable Tasks badge opens native status, log and process controls.
+Shift-Up or the clickable Tasks badge opens native status, log and process controls.
 Hermetic sessions use volatile observation without a personal journal.
 Set it to `false` to disable observation and external registration, or
 `{"follow_up":false}` to default to notifications without continuation.

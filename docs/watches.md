@@ -1,6 +1,6 @@
 # Background tasks and external runs
 
-Open **Tasks** with **F6**, or click the **Tasks** badge on the message box.
+Open **Tasks** with **Shift+Up**, or click the **Tasks** badge on the message box.
 Background Bash commands appear automatically. The view combines **Agent**
 assignments, local **Command** processes and registered **External run** watches.
 It grows upward from the message box to fit its content, leaving the composer
@@ -11,12 +11,15 @@ with its command, elapsed time and output together. Pausing and resuming trackin
 keeps its observation history inside that activity's details.
 Background commands receive collision-safe hockey-player names. The model supplies
 a one-line purpose summary when launching a task; chat shows the name and summary
-instead of shell source or internal task IDs. F6 shows a command preview above
-live output; **Expand command** opens the complete, scrollable shell source.
+instead of shell source or internal task IDs. The tray shows a command preview
+above live output; **Expand command** opens the complete, scrollable shell source.
 Task controls accept the player name as well as the internal ID, while keeping
 the same session ownership checks.
 There is no task-management slash command to learn, and opening the view does
-not consume a model request. The message draft stays intact.
+not consume a model request. The message draft stays intact. Empty views keep
+their last known state during refreshes. The shortcut hint stays on the composer
+badge; completion cards contain the outcome, duration and purpose. F6 remains
+an alternate binding for terminals that cannot report Shift+Up.
 
 Use [durable jobs](jobs.md) when the assignment itself must run independently.
 The task view observes existing work; adding an external watch never starts or
@@ -28,10 +31,10 @@ restarts that work.
 | --- | --- |
 | Up / Down | Select a task |
 | `1` / `2`, or Active / History | Switch between ongoing work and retained results |
-| Enter / Tab | Focus logs; Tab returns to the task list |
+| Enter / Tab | Focus output; Tab switches between the list and inspector, with a highlighted border and explicit focus label |
 | Page Up / Page Down, or the mouse wheel | Scroll selected output |
 | End | Follow the newest output again |
-| Expand command / Instructions (`v`), Show output (`l`) | Inspect the complete shell source or agent brief, then return to live output |
+| Expand command / Instructions (`v`) | Toggle between full shell source or agent instructions and output; press `v` again to return (`l` also shows output) |
 | Steer agent (`t`) | Write an instruction in a separate editor; Ctrl-Enter queues it for the next model request |
 | Cancel agent / Cancel writer batch (`c`) | Stop a delegate, or all writers in the selected batch, under the current host policy |
 | Cancel command (`c`) | Confirm cancellation of a local command; pending continuation is revoked first |
@@ -41,13 +44,19 @@ restarts that work.
 | Clear logs (`x`) | Confirm clearing retained output after delivery; transcript evidence stays on record |
 | Open run (`o`) | Open the external run's link |
 | Add watch (`a`) | Open native fields for an existing external run |
-| F6 / Esc | Close the view and return to the draft |
+| Shift+Up / Esc | Close the view and return to the draft |
 
 The visible controls also accept mouse clicks. Destructive actions require a
 confirmation. External sources expose observation controls; they do not expose
 remote cancellation. The selected command's live preview retains the newest
 32 KB, so a chatty command continues showing progress. Commands retain bounded
 output internally, and external results retain at most 8 KB of logs.
+
+The inspector separates the task name and colored status, purpose, muted
+metadata, source preview and output. Completed output is labelled **Result**.
+Command source keeps literal whitespace; agent answers retain paragraph breaks,
+headings and inline emphasis. Warning, error and success log lines have distinct
+styles. Focus labels and bold borders also work in the monochrome theme.
 
 Local commands belong to their runtime and session. Closing that runtime ends
 those processes; reopening a transcript cannot recreate an operating-system
@@ -100,8 +109,8 @@ model.
 
 Results already collected by a successful model tool call are acknowledged in
 the transcript. They stay available in Tasks history and do not produce another
-completion card or answer. Opening F6 alone does not acknowledge a result to the
-model, so unattended completions still resume the existing task.
+completion card or answer. Opening the tray alone does not acknowledge a result
+to the model, so unattended completions still resume the existing task.
 
 Turn dividers show **tokens this turn**: cumulative usage across that turn's
 model requests, including context sent again on each request. The context meter
@@ -124,7 +133,7 @@ not spend requests nudging the model.
 
 Nearby command completions are collected into one result update and one
 continuation. Each named result has its own outcome, elapsed time and summary,
-with full command and logs available through F6. A durable batch receipt covers
+with full command and logs available in the tray. A durable batch receipt covers
 each component, including recovery after only some journal acknowledgements were saved.
 Current prompt hooks, tool approvals,
 sandboxing and remaining turn, request and cost allowances still apply. External logs
@@ -134,7 +143,7 @@ Authentication failures and deadline expiry notify without inference.
 
 Background launches are grouped under **Background tasks** in the chat, with
 one command entry each. Routine watch registration adds no duplicate chat receipt.
-Completion names the command or external run; output stays in F6.
+Completion names the command or external run; output stays in the tray.
 
 Ordinary configured sessions also expose the `watch` tool to the model. Set
 `"watches":{"follow_up":false}` for notification only by default, or turn off

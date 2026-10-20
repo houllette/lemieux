@@ -86,6 +86,7 @@ defmodule Lemieux.TasksUnifiedTest do
     assert {:ok, %{session: %{entries: [_ | _]}}} = Subagent.inspect(ref)
     assert row.description == "Investigate the repository layout"
     assert detail.instructions =~ "Investigate the repository layout"
+    assert detail.logs == "Waiting for agent activity…"
     assert length(Scripted.requests(provider)) == 1
     send(worker, :finish)
     assert {:ok, %{results: [%{status: :ok}]}} = Subagent.await(group, 5000)
@@ -99,6 +100,7 @@ defmodule Lemieux.TasksUnifiedTest do
     state = tui(session: ctx.parent, id: Session.id(ctx.parent)) |> press("f6") |> loaded()
     state = state |> press("2") |> loaded()
     assert TaskPanel.cache(state).detail.logs =~ "Found the result"
+    assert screen(state) =~ "Result · Tab to focus"
     state = press(state, "up")
     assert TaskPanel.cache(state).detail.logs =~ "Found the result"
     loaded(state)
@@ -153,6 +155,9 @@ defmodule Lemieux.TasksUnifiedTest do
     refute screen(state) =~ "Pause tracking"
     state = press(state, "v")
     assert screen(state) =~ "Instructions · full brief"
+    state = press(state, "v")
+    assert state.modal.content == :output
+    assert screen(state) =~ "v Instructions"
 
     state =
       press(state, "t") |> type("Also inspect tests") |> press("enter", ["ctrl"]) |> updated()

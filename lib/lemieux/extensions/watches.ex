@@ -82,7 +82,7 @@ defmodule Lemieux.Extensions.Watches do
        %{
          result
          | model_text:
-             "Started #{result.structured_content["task_name"]}: #{Label.summary(args["summary"])}. Tracked automatically in Tasks (F6). Refer to this task by its player name in replies, never the raw task_id. Continue independent work and yield instead of polling.",
+             "Started #{result.structured_content["task_name"]}: #{Label.summary(args["summary"])}. Tracked automatically in Tasks. Refer to this task by its player name in replies, never the raw task_id. Continue independent work and yield instead of polling.",
            structured_content: Map.put(result.structured_content, "background_watch", watch)
        }}
     else

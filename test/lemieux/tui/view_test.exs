@@ -195,7 +195,7 @@ defmodule Lemieux.TUI.ViewTest do
     test "a key the map does not mention keeps its default" do
       state = sized(tui(keys: %{"ctrl-j" => "submit"}, lines: said(100)))
 
-      assert press(state, "up", ["shift"]).scroll == 3
+      assert press(state, "up", ["ctrl", "shift"]).scroll == 3
       assert {:noreply, armed} = TUI.handle_event(key("c", ["ctrl"]), state)
       assert armed.exit_armed
     end

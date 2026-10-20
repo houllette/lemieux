@@ -429,15 +429,15 @@ defmodule Lemieux.TUI.InputTest do
       assert press(state, "page_down").scroll == 0
     end
 
-    test "mouse wheel and shift-arrows scroll by a few rows" do
+    test "mouse wheel and Ctrl+Shift arrows scroll by a few rows" do
       state = scrolling(100)
 
       assert {:noreply, wheeled} =
                TUI.handle_event(%Mouse{kind: "scroll_up"}, state)
 
       assert wheeled.scroll == 3
-      assert press(wheeled, "down", ["shift"]).scroll == 0
-      assert press(state, "up", ["shift"]).scroll == 3
+      assert press(wheeled, "down", ["ctrl", "shift"]).scroll == 0
+      assert press(state, "up", ["ctrl", "shift"]).scroll == 3
     end
 
     test "a wheel burst defers intermediate paints and flushes before another action" do

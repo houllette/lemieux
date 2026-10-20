@@ -312,7 +312,13 @@ defmodule Lemieux.CLI.Tasks.Agents do
   defp trace(%{result: %Result{} = result}), do: result.answer
 
   defp trace(%{session: %{entries: entries}}) do
-    entries |> Enum.take(-24) |> Enum.map_join("\n\n", &entry_text/1) |> Record.text(32_000)
+    case entries
+         |> Enum.take(-24)
+         |> Enum.map(&entry_text/1)
+         |> Enum.reject(&(String.trim(&1) == "")) do
+      [] -> "Waiting for agent activity…"
+      sections -> sections |> Enum.join("\n\n") |> Record.text(32_000)
+    end
   end
 
   defp trace(_snapshot), do: "Waiting for agent activity…"

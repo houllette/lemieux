@@ -35,7 +35,9 @@ defmodule Lemieux.TUI.KeysTest do
       assert Keys.action(key("enter")) == :submit
       assert Keys.action(key("up")) == :previous
       assert Keys.action(key("down")) == :next
-      assert Keys.action(key("up", ["shift"])) == :scroll_up
+      assert Keys.action(key("up", ["shift"])) == :tasks
+      assert Keys.action(key("up", ["ctrl", "shift"])) == :scroll_up
+      assert Keys.action(key("down", ["ctrl", "shift"])) == :scroll_down
       assert Keys.action(key("down", ["shift"])) == :scroll_down
       assert Keys.action(key("page_up")) == :page_up
       assert Keys.action(key("page_down")) == :page_down
@@ -54,7 +56,7 @@ defmodule Lemieux.TUI.KeysTest do
 
     test "name a modifier set exactly" do
       assert Keys.action(key("up", ["ctrl"])) == :forward
-      assert Keys.action(key("up", ["ctrl", "shift"])) == :forward
+      assert Keys.action(key("up", ["alt", "shift"])) == :forward
     end
 
     test "ignore the modifiers the grammar cannot name" do
@@ -73,7 +75,9 @@ defmodule Lemieux.TUI.KeysTest do
                "down" => "next",
                "alt-up" => "previous",
                "alt-down" => "next",
-               "shift-up" => "scroll_up",
+               "shift-up" => "tasks",
+               "ctrl-shift-up" => "scroll_up",
+               "ctrl-shift-down" => "scroll_down",
                "shift-down" => "scroll_down",
                "page_up" => "page_up",
                "page_down" => "page_down",

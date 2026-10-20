@@ -263,10 +263,10 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 | Ctrl-R | Search input history across sessions; Enter or Tab takes an entry, Esc restores the draft |
 | Ctrl-G | Edit the draft in `$VISUAL` or `$EDITOR` (`vi` when neither is set); not on native Windows yet |
 | Ctrl-V | Attach the image on the clipboard as an `@path` reference |
-| F6, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls |
+| Shift-Up, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls |
 | Ctrl-O | Page through the full output of recent tool calls (less-style keys, ←/→ between outputs, q or Esc to close) |
 | Page Up / Page Down | Scroll the transcript a page |
-| Shift-Up / Shift-Down | Scroll the transcript three rows |
+| Ctrl-Shift-Up / Ctrl-Shift-Down | Scroll the transcript three rows |
 | Esc | Clear the input, the selection and the completion menu, and close the notice box |
 | Ctrl-C | Cancel the running turn; when idle, press it twice to quit |
 | Shift-Tab | Cycle the permission mode (ask → accept edits → auto → read only; never full auto) when permissions are on; when they are off it says how to turn them on. In the Ixway model picker it cycles through Ixway and qualified route tabs, and in the slash menu through the tabs for where skills came from |
@@ -301,7 +301,8 @@ terminal's setting is the one that counts.
 **Terminal.app keeps Page Up and Page Down** for its own scrollback. Use
 Shift-Page Up / Shift-Page Down (Shift-Fn-Up / Shift-Fn-Down on a laptop) or
 the mouse wheel to scroll the conversation. Terminal.app also sends
-Shift-Up / Shift-Down as plain arrows, which browse history there.
+Shift-Up / Shift-Down as plain arrows, which browse history there. Use the
+clickable Tasks badge or F6 to open Tasks when Shift-Up is not reported.
 
 ### Steering and the queue
 

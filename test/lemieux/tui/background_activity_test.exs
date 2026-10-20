@@ -143,12 +143,13 @@ defmodule Lemieux.TUI.BackgroundActivityTest do
 
     for theme <- [Theme.dark(), Theme.light(), Theme.mono()], width <- [20, 80] do
       lines = RichText.lines([card], width, theme)
-      assert length(lines) >= 3
+      assert length(lines) >= 2
       text = Enum.map_join(lines, " ", fn line -> Enum.map_join(line.spans, & &1.content) end)
       assert text =~ "wayne-gretzky"
       assert text =~ "Completed"
       assert text =~ "45s"
-      assert text =~ "F6 Tasks"
+      refute text =~ "F6"
+      refute text =~ "command and output"
       refute text =~ "printf"
       styles = for line <- lines, span <- line.spans, do: span.style
       assert length(Enum.uniq(styles)) > 1
@@ -216,7 +217,7 @@ defmodule Lemieux.TUI.BackgroundActivityTest do
   test "a launched command still exposes an automatic tracking failure" do
     call = %{id: "launch", name: "bash", arguments: %{"command" => "build", "background" => true}}
 
-    assert {:output, "Tracking unavailable: disconnected · Tasks (F6)"} =
+    assert {:output, "Tracking unavailable: disconnected"} =
              ToolText.result(
                call,
                %{

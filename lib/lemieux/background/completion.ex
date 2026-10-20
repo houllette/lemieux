@@ -174,7 +174,7 @@ defmodule Lemieux.Background.Completion do
               Base.encode16(:crypto.hash(:sha256, Enum.join(ids, ":")), case: :lower),
           "background_task_ids" => ids,
           "text" => text(tasks),
-          "display_text" => "Background commands finished. Open Tasks (F6) for output."
+          "display_text" => "Background commands finished."
         }
 
         case Session.deliver_notification(state.session, event,

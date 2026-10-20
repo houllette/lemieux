@@ -20,8 +20,8 @@ API.
 
 ### Features
 
-- F6 unifies agents, commands and external runs in a tray that grows upward
-  above the composer while keeping the primary transcript visible. Agent rows
+- The native Tasks tray unifies agents, commands and external runs. It grows
+  upward above the composer while keeping the primary transcript visible. Agent rows
   expose their brief, activity and result; commands nest beneath their owner.
   Native delegate steering and explicit writer-batch cancellation retain the
   host's current permissions and each assignment's remaining allowance.
@@ -32,15 +32,15 @@ API.
   delegates gain sandboxed inline analysis scripts with no writable roots or
   network; general shell authority remains host-controlled.
 
-- The native Tasks view (F6 or its clickable badge) automatically tracks
+- The native Tasks view (Shift-Up or its clickable badge) automatically tracks
   background commands, with live output, direct cancellation, observation
   controls and forms for external runs. It preserves the message draft and
   needs no task-management slash commands. Background launches share one chat
   group; Active and History keep each activity's status and output together.
   Hockey-player names and model-written one-line summaries replace raw IDs and
   shell commands in chat. Styled completion cards distinguish outcome, timing
-  and purpose; nearby completions share one continuation. F6 exposes the complete
-  shell source through its scrollable Command view.
+  and purpose; nearby completions share one continuation. The tray exposes the
+  complete shell source through its scrollable Command view.
 - Session watches observe existing GitHub Actions runs, background builds and
   host-configured status readers without model polling. Results persist,
   queue until the owning session is idle, and continue the task automatically
@@ -126,9 +126,18 @@ API.
 
 ### Fixes
 
+- Empty Tasks views retain their state during refreshes instead of flashing a
+  loading message. Completion cards omit repeated shortcut hints. Shift-Up
+  toggles the tray, Ctrl-Shift arrows scroll the transcript, and F6 remains an
+  alternate binding.
+- The Tasks inspector separates identity, status, purpose and metadata, with
+  semantic colors, readable source and output, and explicit section focus.
+  `v` toggles details back to output; expanded views adapt when moving between
+  agents and commands. Completed output is labelled Result.
+
 - Collected background results no longer produce duplicate completion cards or
-  another agent answer. F6 shows the command preview, expands the full source,
-  and keeps task details stable during rapid selection changes.
+  another agent answer. The tray shows the command preview, expands the full
+  source, and keeps task details stable during rapid selection changes.
 - Conversation forecasts ignore auxiliary title and guidance request sizes when
   calibrating token usage, avoiding premature automatic compaction after a short
   conversation.

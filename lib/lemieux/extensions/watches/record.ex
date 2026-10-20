@@ -148,8 +148,7 @@ defmodule Lemieux.Extensions.Watches.Record do
             do: "",
             else: " — #{result["summary"] |> String.replace(~r/\s+/, " ") |> text(300)}"
           ),
-        result["url"],
-        "Open Tasks (F6) to inspect output."
+        result["url"]
       ]
       |> Enum.reject(&(&1 in [nil, ""]))
       |> Enum.join("\n")
@@ -169,7 +168,7 @@ defmodule Lemieux.Extensions.Watches.Record do
         |> Map.put("background_results", if(watch["status"] == "stopped", do: [], else: [card]))
         |> Map.put(
           "display_text",
-          "#{card["name"]} · #{card["status"]}\n#{card["summary"]}\nF6 Tasks · command and output"
+          "#{card["name"]} · #{card["status"]}\n#{card["summary"]}"
         )
       else
         event

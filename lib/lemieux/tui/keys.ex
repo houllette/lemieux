@@ -30,7 +30,7 @@ defmodule Lemieux.TUI.Keys do
       open, otherwise through input history. In a multiline draft, plain Up
       and Down move the caret; Alt+Up and Alt+Down still browse history.
     * `:scroll_up` and `:scroll_down` — scroll the transcript a few rows.
-      `shift-up` and `shift-down`.
+      `ctrl-shift-up` and `ctrl-shift-down`.
     * `:page_up` and `:page_down` — scroll the transcript a screenful less
       two rows. `page_up` and `page_down`.
     * `:complete` — take the highlighted completion, or the follow-up hint
@@ -64,6 +64,8 @@ defmodule Lemieux.TUI.Keys do
       those tabs instead.
     * `:toggle_notifications` — turn the finished/waiting notifications off
       or back on for the sitting. `alt-n`.
+    * `:tasks` — toggle the native Tasks tray above the composer.
+      `shift-up`; `f6` remains an alternate binding.
 
   `:forward` is not an action: it is the answer for every key the table does
   not claim, and it hands the key to the input box. The editing vocabulary —
@@ -217,7 +219,9 @@ defmodule Lemieux.TUI.Keys do
     {[], "down"} => :next,
     {["alt"], "up"} => :previous,
     {["alt"], "down"} => :next,
-    {["shift"], "up"} => :scroll_up,
+    {["shift"], "up"} => :tasks,
+    {["ctrl", "shift"], "up"} => :scroll_up,
+    {["ctrl", "shift"], "down"} => :scroll_down,
     {["shift"], "down"} => :scroll_down,
     {[], "page_up"} => :page_up,
     {[], "page_down"} => :page_down,
