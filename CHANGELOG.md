@@ -155,6 +155,9 @@ API.
 
 ### Fixes
 
+- Directory-scoped search helpers retain the session workspace and enter the
+  requested directory inside its command environment, so container searches
+  cannot silently inspect an empty host-side tree.
 - Fully accounted turn-limit stops in isolated refinement count as failed probes
   instead of interrupting the experiment. Partial files cannot qualify a stopped
   candidate; missing usage and provider failures still require recovery.

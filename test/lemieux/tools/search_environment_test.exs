@@ -5,6 +5,7 @@ defmodule Lemieux.Tools.SearchEnvironmentTest do
   alias Lemieux.Tool.Result
   alias Lemieux.Tools.Glob
   alias Lemieux.Tools.Grep
+  alias Lemieux.Tools.Search.Command
 
   @moduletag :tmp_dir
 
@@ -30,6 +31,12 @@ defmodule Lemieux.Tools.SearchEnvironmentTest do
         if state.fallback do
           {:ok, [{:exit_status, 127}]}
         else
+          # Simulate the shell's /app namespace as well as mapping callback cwd.
+          command =
+            command
+            |> String.replace("'/app/", Command.quote_argument(state.root <> "/") <> "'")
+            |> String.replace("'/app'", Command.quote_argument(state.root))
+
           Local.run(nil, command, Keyword.put(opts, :cwd, Path.join(state.root, relative)))
         end
       end
@@ -69,7 +76,8 @@ defmodule Lemieux.Tools.SearchEnvironmentTest do
              Grep.run(%{"pattern" => "def", "path" => "/app/src"}, ctx)
 
     assert grep =~ "/app/src/example.ex:1:def example"
-    assert_receive {:search_command, "/app/src", _}
+    assert_receive {:search_command, "/host-workspace", command}
+    assert command =~ "cd -- '/app/src' && "
   end
 
   test "absolute environment files work in grep", %{root: root} do
@@ -82,7 +90,7 @@ defmodule Lemieux.Tools.SearchEnvironmentTest do
     assert text =~ "/app/src/example.ex:1:"
   end
 
-  test "helper commands use the environment directory without prefixing the host cwd", %{
+  test "helper commands retain the workspace and enter the environment directory", %{
     root: root
   } do
     # Git's file-listing fallback works even on machines without rg.
@@ -93,7 +101,9 @@ defmodule Lemieux.Tools.SearchEnvironmentTest do
              Glob.run(%{"pattern" => "*.ex", "path" => "/app/src"}, ctx)
 
     assert text =~ "/app/src/example.ex"
-    assert_receive {:search_command, "/app/src", _}
+    assert_receive {:search_command, "/host-workspace", command}
+    assert command =~ "cd -- '/app/src' && "
+    refute command =~ "/host-workspace"
 
     if System.find_executable("rg") do
       assert {:ok, %Result{model_text: text, metadata: %{"backend" => "rg"}}} =

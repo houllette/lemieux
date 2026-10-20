@@ -34,6 +34,8 @@ mount. File tools and shell commands share the logical `/app` workspace.
 The imported public prompt lists frozen verification paths and permits regression
 tests in separate new files. The same declared constraint applies to every arm;
 private test paths and contents stay outside that prompt.
+Directory-scoped search helpers keep the owned workspace mount and change
+directory inside the command environment, including absolute logical paths.
 Qualify each image/grader with an untouched baseline and a known reference repair
 before hosted work. This adapter runs pytest already installed in the image and
 does not install packages or enable network access. Adapted benchmark runtimes
