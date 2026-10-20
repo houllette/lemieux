@@ -50,6 +50,7 @@ if live and status != "",
   do: raise("Commit product-path qualification code before live execution")
 
 root = Path.expand(opts[:output] || "tmp/learning-stream-#{Lemieux.ID.generate()}")
+:ok = File.mkdir_p(Path.dirname(root))
 :ok = File.mkdir(root)
 :ok = File.chmod(root, 0o700)
 

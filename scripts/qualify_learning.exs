@@ -33,6 +33,7 @@ variants = opts[:variants] || 2
 repetitions = opts[:repetitions] || 2
 true = variants in 1..5 and repetitions in 2..10
 root = Path.expand(opts[:output] || "tmp/learning-qualification-#{Lemieux.ID.generate()}")
+:ok = File.mkdir_p(Path.dirname(root))
 :ok = File.mkdir(root)
 :ok = File.chmod(root, 0o700)
 Logger.configure(level: :warning)
