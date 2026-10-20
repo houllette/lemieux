@@ -24,6 +24,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     defp boundary?(_row, nil), do: false
     defp boundary?(_row, {:space, _text}), do: false
+    defp boundary?({:background_result, _}, _previous), do: true
 
     defp boundary?({:tool_heading, id, _kind, _verb, _subject}, previous),
       do: is_nil(id) or ToolText.call_id(previous) != id
@@ -39,6 +40,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     defp boundary?(row, previous), do: Blocks.model_row?(row) and tool_group?(previous)
 
     defp tool_group?({:subagent_child, _child}), do: true
+    defp tool_group?({:background_result, _}), do: true
     defp tool_group?({:subagent_summary, _status, _text}), do: true
     defp tool_group?({:summary, _text}), do: true
     defp tool_group?({:compact_result, _text}), do: true

@@ -34,9 +34,14 @@ defmodule Lemieux.Jobs do
   remains uncertainty, including after cancellation. A report links the job,
   transcript, effect receipts, checks, failures and inclusive accounting; a
   model stopping is separate from its changes passing verification.
+
+  Owned background commands hold a normal model stop open until their results
+  are consumed. Completion resumes the same attempt under its existing ledger
+  and deadline; cancellation stops the commands and revokes the continuation.
   """
   use GenServer, restart: :temporary
   @behaviour Lemieux.Execution
+  alias Lemieux.Background.Completion
   alias Lemieux.Contract
   alias Lemieux.Extensions.Verify
   alias Lemieux.JobBudget
@@ -453,6 +458,9 @@ defmodule Lemieux.Jobs do
 
   def handle_info(:dispatch, state), do: {:noreply, dispatch(state)}
 
+  def handle_info({:background_cancelled, session_id}, state),
+    do: handle_info({:lemieux, session_id, {:finished, :cancelled}}, state)
+
   def handle_info({:lemieux, session_id, event}, state) do
     case state.sessions[session_id] do
       nil ->
@@ -685,9 +693,13 @@ defmodule Lemieux.Jobs do
 
   defp session_event(state, id, session_id, {:finished, reason}) do
     if state.active[id] && is_pid(state.active[id].session) &&
-         Session.id(state.active[id].session) == session_id,
-       do: stop_job(state, id, terminal_status(reason), reason),
-       else: state
+         Session.id(state.active[id].session) == session_id do
+      if reason == :stop and Completion.settle(state.active[id].session) == :waiting,
+        do: state,
+        else: stop_job(state, id, terminal_status(reason), reason)
+    else
+      state
+    end
   end
 
   defp session_event(state, id, _session_id, {kind, _call})
@@ -745,6 +757,7 @@ defmodule Lemieux.Jobs do
   defp stop_session(state, session_id, status) do
     case Lemieux.session(state.runtime, session_id) do
       {:ok, session} ->
+        Completion.cancel(state.runtime, session_id)
         if status not in ["completed", "interrupted"], do: Session.cancel(session, :job_stopped)
         DynamicSupervisor.terminate_child(Sup.session_supervisor(state.runtime), session)
 

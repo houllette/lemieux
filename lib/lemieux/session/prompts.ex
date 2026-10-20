@@ -64,15 +64,52 @@ defmodule Lemieux.Session.Prompts do
     end
   end
 
-  defp accept_prompt(state, text, attachments) do
+  # External evidence must never expand @references from a job's log into
+  # workspace reads. It still meets the current user_prompt policy.
+  def start_notification_hook(state, event, opts \\ []) do
+    text = event["text"]
+    turns = if Keyword.get(opts, :preserve_turns, false), do: state.turns_taken, else: 0
+    state = Input.begin(state, :extension_injected, text)
+
+    if Hooks.registered?(state.hooks, :user_prompt) do
+      hooks = state.hooks
+      context = hook_context(state)
+
+      start_hook(state, {:notification, event["id"], text, turns}, fn ->
+        Hooks.user_prompt(hooks, text, context)
+      end)
+    else
+      accept_notification(state, event["id"], text, turns)
+    end
+  end
+
+  defp accept_notification(state, _id, _text, turns) when turns >= state.max_turns,
+    do:
+      ToolWave.stop(
+        state,
+        :max_turns,
+        Messages.render(state.messages, :turn_budget_spent, [state.max_turns])
+      )
+
+  defp accept_notification(state, id, text, turns),
+    do:
+      accept_prompt(
+        state,
+        text,
+        [],
+        %{"source" => "notification", "notification_id" => id},
+        turns
+      )
+
+  defp accept_prompt(state, text, attachments, extra \\ %{}, turns \\ 0) do
     state
     |> begin_run()
-    |> Core.append({:user, user_payload(text, attachments), nil})
+    |> Core.append({:user, Map.merge(user_payload(text, attachments), extra), nil})
     # A new prompt is new information, so whatever the last prompt kept
     # asking for is no longer evidence about this one — a person who says
     # "try it again now" deserves to have it tried again.
     |> Map.merge(%{
-      turns_taken: 0,
+      turns_taken: turns,
       retry_attempt: 0,
       retry_note: nil,
       stop_hook_active: false
@@ -275,6 +312,12 @@ defmodule Lemieux.Session.Prompts do
   def finish_hook(state, {:follow_up, original}, {:ok, text}),
     do: expand(Input.transformed(state, original, text), :follow_up, text)
 
+  def finish_hook(state, {:notification, id, original, turns}, {:ok, text}),
+    do: accept_notification(Input.transformed(state, original, text), id, text, turns)
+
+  def finish_hook(state, {:notification, _id, _text, _turns}, {:deny, reason}),
+    do: finish_hook(state, {:follow_up, ""}, {:deny, reason})
+
   def finish_hook(state, {:follow_up, _original}, {:deny, reason}) do
     state
     |> Input.clear()
@@ -371,6 +414,9 @@ defmodule Lemieux.Session.Prompts do
     |> Core.append({:error, %{"reason" => "follow-up hook failed"}, nil})
     |> Recovery.maybe_follow_up()
   end
+
+  def hook_crashed(state, {:notification, _id, _text, _turns}, reason),
+    do: hook_crashed(state, {:follow_up, ""}, reason)
 
   def hook_crashed(state, {:prepare_next_turn, _request}, reason) do
     Requests.request_hook_failed(state, {:crashed, reason})

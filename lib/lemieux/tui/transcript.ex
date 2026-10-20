@@ -7,6 +7,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Selection
+    alias Lemieux.TUI.ToolText
     alias Lemieux.TUI.TranscriptSpacing
     alias Lemieux.TUI.Window
 
@@ -100,6 +101,29 @@ if Code.ensure_loaded?(ExRatatui.App) do
       lines = TranscriptSpacing.separate(lines, List.first(state.lines))
       added = Enum.reduce(lines, 0, fn line, total -> total + rows(state, line) end)
       %{state | lines: Enum.reverse(lines, state.lines)} |> held(added)
+    end
+
+    @doc false
+    @spec complete_tasks(state :: map(), results :: [map()]) :: map()
+    def complete_tasks(state, results) do
+      updated = ToolText.complete_tasks(state.lines, results)
+
+      Enum.zip(state.lines, updated)
+      |> Enum.reduce(state, fn
+        {same, same}, state -> state
+        {old, new}, state -> update_call(state, ToolText.call_id(old), [new])
+      end)
+    end
+
+    @doc false
+    @spec update_call(state :: map(), id :: String.t(), replacement :: list()) :: map()
+    def update_call(state, id, replacement) do
+      {newer, rest} = Enum.split_while(state.lines, &(ToolText.call_id(&1) != id))
+      {removed, older} = Enum.split_while(rest, &(ToolText.call_id(&1) == id))
+
+      if removed == [],
+        do: append_rows(state, replacement),
+        else: splice(state, newer, removed, Enum.reverse(replacement), older)
     end
 
     @doc false

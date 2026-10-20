@@ -116,6 +116,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
              "Lemieux.Extensions.Workflow",
+             "Lemieux.Extensions.Watches",
              "Lemieux.CLI.SessionSummary",
              "Lemieux.CLI.RuntimeTest.Audit"
            ]
@@ -319,7 +320,7 @@ defmodule Lemieux.CLI.RuntimeTest do
 
       assert Session.snapshot(resumed).tools == ~w(read grep glob write edit bash todo ping)
 
-      assert %Lemieux.Tool.Override{tool: Tools.Bash} =
+      assert %Lemieux.Tool.Override{tool: %Lemieux.Tool.Override{tool: Tools.Bash}} =
                Enum.find(Session.tools(resumed), &(Lemieux.Tool.name(&1) == "bash"))
 
       :ok = Session.prompt(resumed, "go")
@@ -428,6 +429,7 @@ defmodule Lemieux.CLI.RuntimeTest do
              "Lemieux.Extensions.Budget",
              "Lemieux.Extensions.Delegation",
              "Lemieux.Extensions.Workflow",
+             "Lemieux.Extensions.Watches",
              "Lemieux.CLI.SessionSummary"
            ]
 

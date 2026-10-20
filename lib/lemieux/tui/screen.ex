@@ -32,6 +32,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Selection
     alias Lemieux.TUI.Status
+    alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Theme
     alias Lemieux.TUI.Width
     alias Lemieux.TUI.Window
@@ -48,9 +49,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp widgets(state, frame, completion_widgets) do
       frame = drawable(frame)
       {panes, problem} = arranged(state, frame)
+      transcript_area = task_transcript_area(state, panes)
 
       base =
-        [{transcript(state, panes.transcript, problem), panes.transcript}] ++
+        [{transcript(state, transcript_area, problem), transcript_area}] ++
           status(state, panes.status) ++
           input_widgets(state, panes.input) ++
           queued_widgets(state, panes) ++
@@ -79,6 +81,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
           overlay(state, overlay, frame)
       end
     end
+
+    defp task_transcript_area(%{modal: %{kind: :tasks}} = state, panes) do
+      area = TaskPanel.area(state, panes)
+
+      %{
+        panes.transcript
+        | height: max(min(panes.transcript.height, area.y - panes.transcript.y), 0)
+      }
+    end
+
+    defp task_transcript_area(_state, panes), do: panes.transcript
 
     defp boot_widgets(%TUI{resume: %{startup_status: :loading}} = state, panes),
       do: Boot.render(state, panes.transcript)
@@ -712,15 +725,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp selected(%TUI{selection: selection}, view),
       do: Selection.highlight(selection, view, @selection_style)
 
-    defp input_widgets(state, area), do: [{input(state), area} | placeholder_widgets(state, area)]
+    defp input_widgets(state, area),
+      do: [{input(state, area.width), area} | placeholder_widgets(state, area)]
 
-    defp input(state) do
+    defp input(state, width) do
       %Textarea{
         state: state.input,
         wrap_mode: :word_or_glyph,
         cursor_style: cursor_style(state),
         block: %Block{
           title: title(state.conversation),
+          titles: TaskPanel.title(state, width),
           borders: [:all],
           border_type: :rounded
         }

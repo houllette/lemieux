@@ -110,7 +110,14 @@ defmodule Lemieux.Environment do
   @callback delete_file(state :: term(), cwd :: Path.t(), path :: Path.t()) ::
               :ok | {:error, term()}
 
-  @optional_callbacks list_dir: 3, stream_file: 3, credentials: 1, delete_file: 3
+  @doc "Host capability for a command environment that enforces read-only scripts; never a local fallback."
+  @callback read_only_commands(state :: term()) :: {:ok, t()} | {:error, String.t()}
+
+  @optional_callbacks list_dir: 3,
+                      stream_file: 3,
+                      credentials: 1,
+                      delete_file: 3,
+                      read_only_commands: 1
 
   @doc """
   The module behind an environment, for records: `{module, state}` names the

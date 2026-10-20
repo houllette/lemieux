@@ -195,7 +195,7 @@ defmodule Lemieux.TUI.ViewTest do
     test "a key the map does not mention keeps its default" do
       state = sized(tui(keys: %{"ctrl-j" => "submit"}, lines: said(100)))
 
-      assert press(state, "up", ["shift"]).scroll == 3
+      assert press(state, "up", ["ctrl", "shift"]).scroll == 3
       assert {:noreply, armed} = TUI.handle_event(key("c", ["ctrl"]), state)
       assert armed.exit_armed
     end
@@ -614,7 +614,7 @@ defmodule Lemieux.TUI.ViewTest do
 
       rendered = screen(state)
 
-      assert rendered =~ "── 12s · 2 reqs · 1.5k total tokens"
+      assert rendered =~ "── 12s · 2 reqs · 1.5k tokens this turn"
       assert rendered =~ "1.2k in · 100/20 cache · 220 out"
       assert unwrapped(state) =~ "2 tool calls ─"
       assert rendered =~ "$0.0130"
@@ -646,7 +646,7 @@ defmodule Lemieux.TUI.ViewTest do
         |> info({:finished, :stop})
 
       assert {:summary, summary} = Elixir.List.first(state.lines)
-      assert summary =~ "1 req · 1.3k total tokens"
+      assert summary =~ "1 req · 1.3k tokens this turn"
       assert summary =~ "1 tool call"
       refute summary =~ "$0.0200"
       assert Lemieux.Conversation.status(state.conversation) =~ "$0.0200 delegated"

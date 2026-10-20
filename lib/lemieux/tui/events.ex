@@ -68,6 +68,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp sync_event(state, {:tools_changed, _old, names}), do: Choices.elixir_mode(state, names)
 
+    defp sync_event(state, {:entry, %{type: :user, payload: %{"source" => "notification"}}}),
+      do: Turn.start_processing(state)
+
     defp sync_event(state, {:tool_access_changed, _action, _names, local_names}) do
       state
       |> Choices.elixir_mode(local_names)
@@ -322,6 +325,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {state, without(effects, :say)}
     end
 
+    defp present_event(state, {:tool_access_changed, _action, _names, _tools}, effects),
+      do: {state, without(effects, :say)}
+
     defp present_event(state, {:tool_delta, delta}, effects) when is_map(delta) do
       id = Map.get(delta, :call_id) || Map.get(delta, "call_id") || "tool"
       text = Map.get(delta, :text) || Map.get(delta, "text") || ""
@@ -456,6 +462,25 @@ if Code.ensure_loaded?(ExRatatui.App) do
            :run_evidence_failed,
            "this turn's run record could not be written: #{inspect(reason)}"
          ), effects}
+
+    defp present_event(
+           state,
+           {:entry,
+            %{
+              type: :extension_state,
+              payload: %{"namespace" => "lemieux.notification", "value" => value}
+            }},
+           effects
+         ) do
+      state = Transcript.complete_tasks(state, value["background_results"] || [])
+
+      state =
+        state
+        |> Transcript.append_rows(TranscriptPresentation.notification_rows(value))
+        |> Notify.result()
+
+      {state, effects}
+    end
 
     defp present_event(state, {:entry, %{type: :extension_state} = entry}, effects),
       do: {PlanPanel.observe(state, entry), effects}
@@ -608,6 +633,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
           {:replace, rows} ->
             state |> remove_call_rows(id) |> Transcript.append_rows(rows)
+
+          {:update, rows} ->
+            Transcript.update_call(state, id, rows)
         end
 
       %{state | tools: forget(state.tools, id)}
@@ -632,6 +660,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               Screen.renderers(state),
               Screen.theme(state)
             )
+            |> ToolText.join_background(List.first(state.lines))
           )
     end
 

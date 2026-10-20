@@ -227,6 +227,7 @@ defmodule Lemieux.Session do
   alias Lemieux.Session.Document
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Mailbox
+  alias Lemieux.Session.Notification
   alias Lemieux.Session.Prompts
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Tool
@@ -320,6 +321,7 @@ defmodule Lemieux.Session do
 
   @typedoc "A tool currently available to this session and whether the model may call it."
   @type tool_status :: %{
+          optional(:description) => String.t(),
           name: String.t(),
           source: :local | {:mcp, String.t()},
           allowed?: boolean(),
@@ -375,6 +377,7 @@ defmodule Lemieux.Session do
           context: Context.t(),
           context_window_known?: boolean(),
           ready?: boolean(),
+          supervisor: atom(),
           mcp: [mcp_server_status()]
         }
 
@@ -1157,6 +1160,10 @@ defmodule Lemieux.Session do
       working and `{:error, :timeout}` is returned; `cancel/1` stops it.
     * `:on_event` — a one-argument function called in the caller's process
       with every event, in order, as it arrives.
+    * `:background` — `true` holds a bounded assignment open after an
+      acknowledgement of background work, waits without model polling and
+      supplies one completion batch under current policy and remaining limits.
+      Defaults to `false`; delegates and isolated writers enable this lifecycle.
 
   `{:error, :busy}` and the hook refusals are `prompt/2`'s. A session that goes
   down before the prompt finishes — or was already gone — answers
@@ -1276,6 +1283,11 @@ defmodule Lemieux.Session do
   @doc false
   @spec delegation_context(session :: session()) :: map()
   def delegation_context(session), do: GenServer.call(session, :delegation_context)
+
+  @doc false
+  @spec work_context(session :: session(), namespaces :: [String.t()]) :: map()
+  def work_context(session, namespaces \\ []),
+    do: GenServer.call(session, {:work_context, namespaces})
 
   @doc """
   Registers a host-owned asynchronous work owner.
@@ -1543,6 +1555,34 @@ defmodule Lemieux.Session do
   def extension_command(session, namespace, name, args \\ "") do
     {runtime, context} = GenServer.call(session, :contribution_context)
     ContributionRuntime.command(runtime, namespace, name, args, context)
+  end
+
+  @doc """
+  Records a bounded host notification at an idle boundary, once per event id.
+
+  `event` contains string `"id"` and `"text"` fields and optional JSON evidence.
+  A busy session returns `{:error, :busy}`; the host retains and retries the
+  result. With `follow_up: true`, the host explicitly authorizes one ordinary
+  follow-up, through current prompt hooks, permissions and remaining budgets.
+  The durable receipt precedes dispatch: recovery never duplicates inference,
+  even if a crash prevented an acknowledged follow-up from starting. An event
+  already delivered in this session returns `:duplicate` on resume as well.
+  Loading receipts or recording a notification alone starts no model request.
+  Bounded hosts set `preserve_turns: true` so a completion continues the same
+  task allowance. A batch may supply `receipt_ids`, a nonempty list of at most
+  256 component identities. The single transcript receipt deduplicates each
+  component across recovery; a mixture of seen and new identities returns
+  `{:error, :partial_duplicate}` for the host to reconcile before dispatch.
+  A successful tool result may acknowledge already collected event identities
+  through `metadata["notification_receipt_ids"]`. Those durable acknowledgements
+  also return `:duplicate`, atomically with delivery admission. Inspecting a
+  result through a host UI alone does not acknowledge it to the model.
+  """
+  @spec deliver_notification(session :: session(), event :: map(), opts :: keyword()) ::
+          :ok | :duplicate | {:error, term()}
+  def deliver_notification(session, event, opts \\ []) do
+    with :ok <- Notification.validate(event),
+         do: GenServer.call(session, {:deliver_notification, event, opts})
   end
 
   @impl GenServer

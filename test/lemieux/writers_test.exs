@@ -3,6 +3,7 @@ defmodule Lemieux.WritersTest do
   import ExUnit.CaptureLog
 
   alias Lemieux.Checkpoint.Git
+  alias Lemieux.CLI.Tasks
   alias Lemieux.Clock.Manual
   alias Lemieux.Jobs.Journal
   alias Lemieux.Providers.Scripted
@@ -13,6 +14,103 @@ defmodule Lemieux.WritersTest do
   alias Lemieux.Writers.Worktree
 
   @moduletag :tmp_dir
+
+  defmodule BackgroundRead do
+    @behaviour Lemieux.Tool.Configured
+    alias Lemieux.Background
+    alias Lemieux.Tool.Result
+    defstruct [:observer]
+    @impl true
+    def name(_), do: "analyze"
+    @impl true
+    def description(_), do: "Read-only gated analysis"
+    @impl true
+    def schema(_), do: %{"type" => "object", "properties" => %{}}
+    @impl true
+    def read_only?(_), do: true
+    @impl true
+    def run(tool, _, context) do
+      {:ok, id} =
+        Background.start(
+          supervisor: context.supervisor,
+          session_id: context.session_id,
+          root_session_id: context.root_session_id,
+          owner: context.session,
+          command: "analyze fixture",
+          cwd: context.cwd,
+          environment: context.environment,
+          runner: fn _, _ ->
+            send(tool.observer, {:background_read, self()})
+
+            receive do
+              :finish -> {:ok, "ANALYSIS_READY", 0}
+            after
+              60_000 -> {:error, :fixture_held_too_long}
+            end
+          end
+        )
+
+      {:ok,
+       Result.new("Started",
+         structured_content: %{"task_id" => id, "status" => "running"}
+       )}
+    end
+  end
+
+  test "writers keep their lease open until background analysis and the final patch finish",
+       ctx do
+    observer = self()
+
+    provider =
+      Scripted.new([
+        Scripted.tool_call("analyze", "analyze", %{}),
+        Scripted.complete(report("Waiting for analysis")),
+        Scripted.tool_call("write", "write", %{"path" => "one.txt", "content" => "one\n"}),
+        Scripted.complete(report("Analysis completed; created one.txt"))
+      ])
+
+    plan =
+      Plan.new(
+        id: "one",
+        task: "Analyze then write",
+        paths: ["one.txt"],
+        tools: ["analyze", "write"]
+      )
+
+    factory = fn _, _ ->
+      {:ok,
+       [
+         provider: provider,
+         model: "test:model",
+         tools: [%BackgroundRead{observer: observer}, Lemieux.Tools.Write]
+       ]}
+    end
+
+    {:ok, group} = Writers.start(ctx.parent, [plan], options(factory, ctx))
+    assert_receive {:background_read, worker}
+    # Read the live coordinator and its native command before releasing the gate.
+    assert {:ok, %{writers: [%{status: :running}]}} = Writers.snapshot(group)
+
+    assert {:ok, %{rows: [%{kind: :agent, agent_type: :writer} = agent, %{kind: :command} = row]}} =
+             Tasks.snapshot(ctx.parent)
+
+    assert row.parent_id == agent.id
+    assert row.managed? and row.running?
+    send(worker, :finish)
+
+    assert {:ok, %{status: :ready, writers: [%{status: :completed} = writer]}} =
+             Writers.await(group)
+
+    assert File.read!(writer.artifact.report_path) =~ "Analysis completed"
+    assert {:ok, %{detail: detail}} = Tasks.snapshot(ctx.parent, agent.id)
+    assert detail.logs == "Analysis completed; created one.txt"
+    File.write!(writer.artifact.report_path, "changed after export")
+    assert {:ok, %{detail: changed}} = Tasks.snapshot(ctx.parent, agent.id)
+    assert changed.logs =~ "digest no longer matches"
+    assert length(Scripted.requests(provider)) == 4
+    refute File.exists?(Path.join(ctx.root, "one.txt"))
+    assert :ok = Writers.close(group, :owner)
+  end
 
   defmodule ObservingJournal do
     @behaviour Journal
@@ -993,6 +1091,7 @@ defmodule Lemieux.WritersTest do
   test "cancellation during preparation kills the factory and releases only its owned worktree",
        ctx do
     observer = self()
+    permission = start_supervised!({Agent, fn -> :allow end})
     plan = Plan.new(id: "one", task: "work", paths: ["one.txt"], tools: ["write"])
 
     factory = fn _plan, workspace ->
@@ -1003,12 +1102,31 @@ defmodule Lemieux.WritersTest do
       end
     end
 
-    {:ok, group} = Writers.start(ctx.parent, [plan], options(factory, ctx))
+    opts =
+      Keyword.put(options(factory, ctx), :authorize, fn action, _context, principal ->
+        cond do
+          principal != :owner -> {:error, :unauthorized}
+          action == :cancel and Agent.get(permission, & &1) == :deny -> {:error, :revoked}
+          true -> :ok
+        end
+      end)
+
+    {:ok, group} = Writers.start(ctx.parent, [plan], opts)
     assert_receive {:factory_waiting, worker, cwd}
     monitor = Process.monitor(worker)
     assert File.exists?(cwd)
     assert {:error, :unauthorized} = Writers.cancel(group, :stranger)
-    assert :ok = Writers.cancel(group, :owner)
+
+    assert {:ok, %{rows: [%{kind: :agent, agent_type: :writer} = row]}} =
+             Tasks.snapshot(ctx.parent)
+
+    assert row.cancel_label == "Cancel writer batch"
+    Agent.update(permission, fn _ -> :deny end)
+    assert {:error, :revoked} = Tasks.action(ctx.parent, row.id, :cancel)
+    assert Process.alive?(worker)
+    assert File.exists?(cwd)
+    Agent.update(permission, fn _ -> :allow end)
+    assert :ok = Tasks.action(ctx.parent, row.id, :cancel)
     assert_receive {:DOWN, ^monitor, :process, ^worker, _}
     assert {:ok, %{status: :cancelled, budget: %{requests: 0}}} = Writers.await(group)
     refute File.exists?(cwd)

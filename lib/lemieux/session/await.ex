@@ -17,6 +17,7 @@ defmodule Lemieux.Session.Await do
   the caller's mailbox.
   """
 
+  alias Lemieux.Background.Completion
   alias Lemieux.Entry
   alias Lemieux.Session
   alias Lemieux.Usage
@@ -59,7 +60,14 @@ defmodule Lemieux.Session.Await do
     try do
       with :ok <- call(fn -> Session.subscribe(session, relay) end),
            :ok <- call(fn -> Session.prompt(session, text) end) do
-        collect(tag, monitor, on_event, timeout, %{events: [], entries: [], error: nil, id: nil})
+        collect(tag, monitor, on_event, timeout, %{
+          events: [],
+          entries: [],
+          error: nil,
+          id: nil,
+          session: session,
+          background?: Keyword.get(opts, :background, false) == true
+        })
       end
     after
       Process.demonitor(monitor, [:flush])
@@ -95,12 +103,24 @@ defmodule Lemieux.Session.Await do
         acc = note(%{acc | id: id}, event)
 
         case event do
-          {:finished, stop_reason} -> {:ok, result(acc, stop_reason)}
-          _other -> collect(tag, monitor, on_event, timeout, acc)
+          {:finished, :stop} when acc.background? ->
+            case Completion.settle(acc.session) do
+              :waiting -> collect(tag, monitor, on_event, timeout, acc)
+              :done -> {:ok, result(acc, :stop)}
+            end
+
+          {:finished, stop_reason} ->
+            {:ok, result(acc, stop_reason)}
+
+          _other ->
+            collect(tag, monitor, on_event, timeout, acc)
         end
 
       {:DOWN, ^monitor, :process, _pid, reason} ->
         {:error, {:session_down, reason}}
+
+      {:background_cancelled, id} when id == acc.id and acc.background? ->
+        {:ok, result(acc, :cancelled)}
     after
       timeout -> {:error, :timeout}
     end

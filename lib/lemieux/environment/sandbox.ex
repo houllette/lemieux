@@ -18,7 +18,7 @@ defmodule Lemieux.Environment.Sandbox do
     * **Linux** — `bwrap` (bubblewrap) with the root filesystem read-only
       (`Lemieux.Environment.Sandbox.Bubblewrap`).
 
-  Both enforce the same policy:
+  Both enforce the same default policy:
 
     * **Writes** are allowed only under the session's working directory, the
       temporary directories, the common tool caches (`~/.cache`,
@@ -43,6 +43,13 @@ defmodule Lemieux.Environment.Sandbox do
       `~/.npmrc` stay readable, because `mix deps.get` and `npm install`
       read them. Everything else stays readable too, because a coding agent
       that cannot read the compiler it runs is not one.
+
+  `read_only: true` narrows this policy for analysis commands: no writable
+  workspace, cache or shared temporary roots, no network or Unix socket
+  clients, and no signalling other processes. File mutations also return
+  `:erofs`. Linux additionally requires Python 3 to install the inherited
+  syscall filter; unsupported hosts fail closed. This mode backs
+  `Lemieux.Tools.ReadOnlyBash`, including its background processes.
 
   ## What it is not
 
@@ -81,7 +88,8 @@ defmodule Lemieux.Environment.Sandbox do
           localhost: boolean(),
           writable: [Path.t()],
           hidden: [Path.t()],
-          shell: Path.t()
+          shell: Path.t(),
+          read_only: boolean()
         }
 
   @enforce_keys [:backend, :executable, :inner, :shell]
@@ -92,6 +100,7 @@ defmodule Lemieux.Environment.Sandbox do
     :shell,
     network: false,
     localhost: true,
+    read_only: false,
     writable: [],
     hidden: []
   ]
@@ -137,6 +146,10 @@ defmodule Lemieux.Environment.Sandbox do
     * `:localhost` — allow loopback when network is off (default `true`).
     * `:writable` — extra paths commands may write to.
     * `:hidden` — extra paths commands may not read; replaces nothing, adds.
+    * `:read_only` — `true` removes all writable roots, including the workspace,
+      caches and shared temporary directories, and disables network and IPC
+      access. Used for inline delegated analysis scripts. Linux also requires
+      Python 3 to install its inherited socket/ptrace/io_uring filter.
     * `:inner` — the environment files and commands go through (default
       `Lemieux.Environment.Local`). Pass `Lemieux.Environment.Local.new/1`'s
       result to keep a credential policy.
@@ -153,11 +166,17 @@ defmodule Lemieux.Environment.Sandbox do
         executable: executable,
         inner: Keyword.get(opts, :inner, Local),
         shell: sandbox_shell(),
+        read_only: Keyword.get(opts, :read_only, false) == true,
         network: Keyword.get(opts, :network, false) == true,
         localhost: Keyword.get(opts, :localhost, true) != false,
         writable: existing(Keyword.get(opts, :writable, []) ++ default_writable()),
         hidden: existing(Keyword.get(opts, :hidden, []) ++ default_hidden())
       }
+
+      sandbox =
+        if sandbox.read_only,
+          do: %{sandbox | writable: [], network: false, localhost: false},
+          else: sandbox
 
       if Keyword.get(opts, :probe, true), do: probe(sandbox), else: {:ok, {__MODULE__, sandbox}}
     end
@@ -285,6 +304,8 @@ defmodule Lemieux.Environment.Sandbox do
   end
 
   @impl Environment
+  def write_file(%__MODULE__{read_only: true}, _cwd, _path, _contents), do: {:error, :erofs}
+
   def write_file(%__MODULE__{inner: inner} = sandbox, cwd, path, contents) do
     with :ok <- visible(sandbox, cwd, path),
          do: Environment.write_file(inner, cwd, path, contents)
@@ -294,6 +315,8 @@ defmodule Lemieux.Environment.Sandbox do
   def credentials(%__MODULE__{inner: inner}), do: Environment.credentials(inner)
 
   @impl Environment
+  def delete_file(%__MODULE__{read_only: true}, _cwd, _path), do: {:error, :erofs}
+
   def delete_file(%__MODULE__{inner: inner} = sandbox, cwd, path) do
     with :ok <- visible(sandbox, cwd, path), do: Environment.delete_file(inner, cwd, path)
   end

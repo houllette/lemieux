@@ -159,7 +159,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Setup
     alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.Submission
+    alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Theme
+    alias Lemieux.TUI.ToolsPanel
     alias Lemieux.TUI.Turn
     alias Lemieux.TUI.Types
     alias Lemieux.TUI.Updates
@@ -767,6 +769,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def handle_event(%ExRatatui.Event.Key{code: code} = event, state) when is_binary(code),
       do: Composer.key(event, state)
 
+    def handle_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tasks}} = state),
+      do: TaskPanel.mouse(event, state)
+
+    def handle_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tools}} = state),
+      do: ToolsPanel.mouse(event, state)
+
     def handle_event(%ExRatatui.Event.Mouse{} = event, state), do: Pointer.mouse(event, state)
 
     # Pasted text goes in whole. Re-dispatched as keystrokes it would be
@@ -879,6 +887,15 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def handle_info(message, state)
         when is_tuple(message) and elem(message, 0) in @replies,
         do: {:noreply, Replies.handle(message, state)}
+
+    def handle_info({:tasks_result, session, token, kind, result}, state),
+      do: {:noreply, TaskPanel.answer(state, session, token, kind, result)}
+
+    def handle_info({:tasks_tick, session, token}, state),
+      do: {:noreply, TaskPanel.tick(state, session, token)}
+
+    def handle_info({:tools_panel_result, session, token, result}, state),
+      do: {:noreply, ToolsPanel.answer(state, session, token, result)}
 
     def handle_info(:repaint_done, state), do: {:noreply, put_in(state.terminal.repaint, 0)}
 

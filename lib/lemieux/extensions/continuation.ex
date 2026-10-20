@@ -33,6 +33,9 @@ defmodule Lemieux.Extensions.Continuation do
       question;
     * fewer than `:max_continuations` (default 5) messages have sent it back
       during this prompt;
+    * this prompt has no registered watch waiting for an idle delivery
+      boundary. Such a watch owns the next wake-up; nudging its open plan
+      would spend a request without new information;
     * the model called a tool since the last time it was sent back.
 
   The last rule is the model's way to say no. The message tells it that a
@@ -132,6 +135,7 @@ defmodule Lemieux.Extensions.Continuation do
   alias Lemieux.Attribution
   alias Lemieux.Entry
   alias Lemieux.Extensions.Planning
+  alias Lemieux.Extensions.Watches
   alias Lemieux.Extensions.Workflow
   alias Lemieux.Harness
   alias Lemieux.Session
@@ -283,6 +287,9 @@ defmodule Lemieux.Extensions.Continuation do
     used = count(run, @marker)
 
     cond do
+      Watches.waiting?(run) ->
+        :allow
+
       not planned?(run) ->
         check_requirements(config, run)
 
@@ -300,9 +307,10 @@ defmodule Lemieux.Extensions.Continuation do
   defp check_requirements(%__MODULE__{completion_check: false}, _run), do: :allow
 
   defp check_requirements(_config, run) do
-    if count(run, @check_marker) == 0 and Enum.any?(run, &match?(%Entry{type: :tool_result}, &1)),
-      do: {:deny, check_message()},
-      else: :allow
+    if not Watches.waiting?(run) and count(run, @check_marker) == 0 and
+         Enum.any?(run, &match?(%Entry{type: :tool_result}, &1)),
+       do: {:deny, check_message()},
+       else: :allow
   end
 
   defp open_tasks(plan) do

@@ -6,7 +6,8 @@ defmodule Lemieux.Extensions.Delegation do
   `lmx` supplies it by default — `Lemieux.CLI.Options` says why. The
   definition is ordinary host data: the child inherits the parent's model
   (or runs on `:scout_model`) and working tree, gets only the read-only
-  `read`, `grep` and `glob`, fixed limits, and no way to broaden itself. `Lemieux.Subagent.Delegate` says why the tool is something a host
+  `read`, `grep`, `glob` and sandboxed analysis through `ReadOnlyBash`, fixed
+  limits, and no way to broaden itself. `Lemieux.Subagent.Delegate` says why the tool is something a host
   passes rather than something the session assembles, and why it is never
   restored from a transcript — which is also why this extension leaves a
   catalog that already carries `subagents` or `delegate` alone: on a resume the host may
@@ -50,7 +51,8 @@ defmodule Lemieux.Extensions.Delegation do
   `agents/`). Each becomes one more definition on the same `subagents` tool,
   under the same budgets, with its own prompt and description. Every one
   stays certified read-only: the tools it asked for that read (`Read`,
-  `Grep`, `Glob`) are granted, and the rest are named in a notice rather
+  `Grep`, `Glob`, or `Bash` mapped to `Lemieux.Tools.ReadOnlyBash`) are granted,
+  and the rest are named in a notice rather
   than granted or silently dropped. A definition that names a model in
   Lemieux's `provider:model` form runs on it and is bounded in requests,
   since whether that model's route can be priced is not known here;
@@ -84,7 +86,7 @@ defmodule Lemieux.Extensions.Delegation do
   # read-only. Searching used to mean walking the tree a directory at a time
   # with `read`, while the parent beside it had `rg` through `bash`; the scout
   # lost to reading directly partly because it was the one with worse tools.
-  @read_tools [Tools.Read, Tools.Grep, Tools.Glob]
+  @read_tools [Tools.Read, Tools.Grep, Tools.Glob, Tools.ReadOnlyBash]
 
   @type state :: %{
           model: String.t(),
@@ -278,11 +280,13 @@ defmodule Lemieux.Extensions.Delegation do
       [
         id: "repository-scout",
         description:
-          "Search the working tree (grep, glob) and read it; return source-cited findings",
+          "Search the working tree (grep, glob), read files and run sandboxed read-only analysis scripts; return source-cited findings",
         system_prompt:
           "Search the repository with grep and glob, then read what matters. Cite exact paths " <>
             "and line numbers, report uncertainty, and say what you searched. Do not propose " <>
-            "or make writes.",
+            "or make writes. Use read-only bash for inline analysis that needs computation; " <>
+            "supply a purpose summary for a long background script, do independent reading, " <>
+            "then yield for its result instead of polling.",
         model: model,
         tools: @read_tools
       ] ++ scout_budget(priced?)

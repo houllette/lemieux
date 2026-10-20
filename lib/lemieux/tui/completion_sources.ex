@@ -63,8 +63,7 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
     defp argument_completions(state, "/theme " <> _rest = value),
       do: value_completions(Theme.names(state.themes), value, "/theme ")
 
-    defp argument_completions(state, "/tools " <> _rest = value),
-      do: tool_completions(state, state.tool_statuses, value)
+    defp argument_completions(_state, "/tools " <> _rest), do: []
 
     defp argument_completions(_state, "/mcp " <> _rest), do: []
 
@@ -97,15 +96,6 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
     defp accent_completions(state, value, prefix),
       do: value_completions(["default" | state.accent_names], value, prefix)
 
-    defp tool_completions(state, statuses, "/tools enable " <> _rest = value),
-      do: tool_name_completions(statuses, value, "/tools enable ", state.command_policy)
-
-    defp tool_completions(state, statuses, "/tools disable " <> _rest = value),
-      do: tool_name_completions(statuses, value, "/tools disable ", state.command_policy)
-
-    defp tool_completions(state, _statuses, value),
-      do: tool_action_completions(value, state.command_policy)
-
     defp command_completions(state, value) do
       %{tab: tab, definitions: definitions, prefix: prefix} = command_menu(state, value)
       by_name = Map.new(definitions, &{&1.name, &1})
@@ -122,7 +112,7 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
         # Bare /copy has an immediate action; its source option is optional.
         accepts_arguments? =
           Map.fetch!(by_name, command.name).accepts_arguments? and
-            command.name not in ~w(mcp copy)
+            command.name not in ~w(mcp copy tools)
 
         suffix = if accepts_arguments?, do: " ", else: ""
 
@@ -486,78 +476,6 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
 
     defp joined("", name), do: name
     defp joined(directory, name), do: directory <> "/" <> name
-
-    defp tool_action_completions(value, command_policy) do
-      query = value |> String.replace_prefix("/tools ", "") |> String.trim() |> String.downcase()
-
-      [
-        {"list", :tools_status},
-        {"enable", {:enable_tools, ["NAME"]}},
-        {"disable", {:disable_tools, ["NAME"]}}
-      ]
-      |> Enum.filter(fn {_label, action} ->
-        Conversation.command_decision(command_policy, action) == :allow
-      end)
-      |> Enum.map(&elem(&1, 0))
-      |> Enum.filter(&String.contains?(&1, query))
-      |> Enum.map(fn
-        action when action in ["enable", "disable"] ->
-          %{
-            label: action,
-            value: "/tools #{action} ",
-            opens_arguments?: true
-          }
-
-        action ->
-          %{label: action, value: "/tools #{action}"}
-      end)
-    end
-
-    defp tool_name_completions(statuses, value, prefix, command_policy) do
-      rest = String.replace_prefix(value, prefix, "")
-      parts = String.split(rest, ~r/\s+/, trim: true)
-
-      {selected, query} =
-        if String.ends_with?(rest, " ") do
-          {parts, ""}
-        else
-          {Enum.drop(parts, -1), List.last(parts) || ""}
-        end
-
-      selected_names = selected
-      selected = MapSet.new(selected_names)
-      enabled? = prefix == "/tools disable "
-
-      value_prefix =
-        case selected_names do
-          [] -> prefix
-          names -> prefix <> Enum.join(names, " ") <> " "
-        end
-
-      statuses
-      |> Enum.filter(
-        &tool_completion?(
-          &1,
-          enabled?,
-          selected,
-          selected_names,
-          command_policy
-        )
-      )
-      |> Enum.map(& &1.name)
-      |> ranked(String.downcase(query))
-      |> Enum.map(&%{label: &1, value: value_prefix <> &1})
-    end
-
-    defp tool_completion?(status, enabled?, selected, selected_names, command_policy) do
-      allowed? = enabled? or Map.get(status, :allowed?, true)
-      action = if enabled?, do: :disable_tools, else: :enable_tools
-      command = {action, selected_names ++ [status.name]}
-
-      status.enabled? == enabled? and allowed? and
-        not MapSet.member?(selected, status.name) and
-        Conversation.command_decision(command_policy, command) == :allow
-    end
 
     defp skill_description(%Skill{argument_hint: nil, description: description}), do: description
 

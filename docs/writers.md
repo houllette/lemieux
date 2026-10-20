@@ -152,13 +152,27 @@ preparation, approvals and integration and is clamped to the parent's
 remaining deadline. A clock may be supplied for deterministic host tests.
 
 The stock adapter allows file readers, `write`, `edit` and
-`apply_patch`, and grants no shell. Command-based search also requires an
+`apply_patch`. A host factory may also supply `Lemieux.Tools.ReadOnlyBash`
+for inline analysis with no writable roots or network, including background
+analysis. This explicit read-only capability does not require a general
+command grant. General shell tools and command-based search still require an
 environment granting commands. Another workspace adapter may grant commands
 only with a host-provided environment that enforces the intended scope.
 A worktree separates files, not security; Git metadata and objects are
 shared. Trusted Elixir callbacks remain host authority.
 
 ## Results and review
+
+A writer that yields with background commands keeps its workspace lease until
+those commands finish and it produces its final report. One batched completion
+resumes the same session under its remaining allowance and deadline. Parent
+**Tasks** shows each writer's assignment and result, with live commands nested
+beneath it. The tray permits command inspection and cancellation, and explicitly
+offers cancellation of the whole writer batch under the current host policy.
+Reviewable reports are checked against their recorded digest before display.
+Cancellation stops the commands and revokes their continuation; cleanup and
+patch export retain their existing custody rules. The bounded
+`Lemieux.Agent.Session` adapter follows the same completion lifecycle.
 
 Each writer returns only a JSON object: `summary` is a string, and
 `critical_findings` and `uncertainties` are arrays. Prose or code fences around

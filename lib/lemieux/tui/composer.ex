@@ -34,6 +34,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.Submission
+    alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Transcript
 
     # The textarea paints its own cursor cell, so the app's timer changes the
@@ -138,6 +139,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
       :ok = ExRatatui.textarea_insert_str(state.input, "\n")
       {:noreply, edited(state)}
     end
+
+    defp act(:tasks, _event, state), do: {:noreply, TaskPanel.open(state)}
 
     defp act(:pager, _event, state), do: {:noreply, Pager.open(state)}
     defp act(:history_search, _event, state), do: {:noreply, HistorySearch.open(state)}

@@ -20,6 +20,42 @@ API.
 
 ### Features
 
+- `/tools` opens a filterable native tray with colored availability states,
+  tool descriptions and keyboard/mouse toggles. Navigation and switch receipts
+  stay out of the transcript; host restrictions and idle-only mutation remain.
+- Tool-selection guidance reflects dedicated search/file tools, automatic
+  background completion, native read-only analysis, isolated writers and
+  configured MCP discovery limits. Cross-tool recommendations honor availability.
+
+- The native Tasks tray unifies agents, commands and external runs. It grows
+  upward above the composer while keeping the primary transcript visible. Agent rows
+  expose their brief, activity and result; commands nest beneath their owner.
+  Native delegate steering and explicit writer-batch cancellation retain the
+  host's current permissions and each assignment's remaining allowance.
+
+- Background commands remain part of bounded delegate, isolated-writer and
+  session-adapter assignments through completion, under their remaining limits.
+  The native Tasks view exposes their output and cancellation. Read-only
+  delegates gain sandboxed inline analysis scripts with no writable roots or
+  network; general shell authority remains host-controlled.
+
+- The native Tasks view (Shift-Up or its clickable badge) automatically tracks
+  background commands, with live output, direct cancellation, observation
+  controls and forms for external runs. It preserves the message draft and
+  needs no task-management slash commands. Background launches share one chat
+  group; Active and History keep each activity's status and output together.
+  Hockey-player names and model-written one-line summaries replace raw IDs and
+  shell commands in chat. Styled completion cards distinguish outcome, timing
+  and purpose; nearby completions share one continuation. The tray exposes the
+  complete shell source through its scrollable Command view.
+- Session watches observe existing GitHub Actions runs, background builds and
+  host-configured status readers without model polling. Results persist,
+  queue until the owning session is idle, and continue the task automatically
+  under current permissions and remaining allowances. Tracking adds no separate
+  approval; command permission and sandbox boundaries still apply. The
+  configured CLI mounts monitoring automatically; embedders retain lifecycle
+  and storage control. See [session watches](docs/watches.md).
+
 - Experimental preregistered five-arm qualification exercises the opt-in CLI
   learning path with causal lesson inventories, equal outer allowances,
   independent grading, original-output retention and exact promotion undo.
@@ -94,6 +130,26 @@ API.
   integrity offline. **Migration:** this is an additive opt-in API; no existing
   bundle/overlay changes, automatic capture, activation or model calls. See
   [Persistent improvement lessons](docs/harness-learning.md#persistent-improvement-lessons).
+
+### Fixes
+
+- Empty Tasks views retain their state during refreshes instead of flashing a
+  loading message. Completion cards omit repeated shortcut hints. Shift-Up
+  toggles the tray, Ctrl-Shift arrows scroll the transcript, and F6 remains an
+  alternate binding.
+- The Tasks inspector separates identity, status, purpose and metadata, with
+  semantic colors, readable source and output, and explicit section focus.
+  `v` toggles details back to output; expanded views adapt when moving between
+  agents and commands. Completed output is labelled Result.
+
+- Collected background results no longer produce duplicate completion cards or
+  another agent answer. The tray shows the command preview, expands the full
+  source, and keeps task details stable during rapid selection changes.
+- Conversation forecasts ignore auxiliary title and guidance request sizes when
+  calibrating token usage, avoiding premature automatic compaction after a short
+  conversation.
+- Turn dividers label cumulative request usage as "tokens this turn" to
+  distinguish it from the latest request's context size.
 
 ## 0.11.0 — 2026-10-13
 

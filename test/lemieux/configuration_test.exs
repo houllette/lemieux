@@ -275,7 +275,10 @@ defmodule Lemieux.ConfigurationTest do
 
       assert [request] = Scripted.requests(provider)
       assert request.model == "test:asked-for"
-      assert Enum.filter(request.tools, &(&1 in Tools.default())) == Tools.default()
+
+      assert request.tools
+             |> Enum.map(&without_tracking/1)
+             |> Enum.filter(&(&1 in Tools.default())) == Tools.default()
     end
 
     test "gets no way to run Elixir unless it was asked for", context do
@@ -302,8 +305,13 @@ defmodule Lemieux.ConfigurationTest do
     end
 
     test "--no-delegate leaves lmx's catalog without the scout", context do
-      assert configured(context, ["--no-delegate"]) == @lmx_catalog
-      refute "subagents" in Enum.map(configured(context, ["--no-delegate"]), &Lemieux.Tool.name/1)
+      tools = configured(context, ["--no-delegate"])
+      assert Enum.map(tools, &without_tracking/1) == @lmx_catalog
+
+      assert %Lemieux.Tool.Override{tool: Tools.Bash, digest: "lemieux-native-background-v2"} =
+               Enum.find(tools, &(Lemieux.Tool.name(&1) == "bash"))
+
+      refute "subagents" in Enum.map(tools, &Lemieux.Tool.name/1)
     end
 
     # The mode narrows what the parent may run, not who it may ask. A scout
@@ -371,7 +379,12 @@ defmodule Lemieux.ConfigurationTest do
       assert Map.keys(delegate.definitions) == ["repository-scout"]
 
       assert delegate.definitions["repository-scout"].tools ==
-               [Lemieux.Tools.Read, Lemieux.Tools.Grep, Lemieux.Tools.Glob]
+               [
+                 Lemieux.Tools.Read,
+                 Lemieux.Tools.Grep,
+                 Lemieux.Tools.Glob,
+                 Lemieux.Tools.ReadOnlyBash
+               ]
 
       assert delegate.definitions["repository-scout"].model == "test:model"
     end
@@ -440,4 +453,12 @@ defmodule Lemieux.ConfigurationTest do
 
   defp observed(request, {:params, key}), do: Keyword.fetch!(request.params, key)
   defp observed(request, field), do: Map.fetch!(request, field)
+
+  defp without_tracking(%Lemieux.Tool.Override{
+         tool: tool,
+         digest: "lemieux-native-background-v2"
+       }),
+       do: tool
+
+  defp without_tracking(tool), do: tool
 end

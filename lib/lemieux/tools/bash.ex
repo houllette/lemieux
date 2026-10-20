@@ -179,8 +179,9 @@ defmodule Lemieux.Tools.Bash do
     Run a shell command in the working directory and return its combined
     stdout and stderr.
 
-    Use this for anything a shell can do: searching, listing files, running
-    tests, git. A non-zero exit is reported in the output rather than being an
+    Use this for tests, builds, git and shell scripts. When available, prefer
+    read for files, glob for paths and grep for content searches. A non-zero
+    exit is reported in the output rather than being an
     error — read it and decide what to do. Long output is truncated in the
     middle, and long-running commands are killed after a timeout.
 
@@ -190,9 +191,16 @@ defmodule Lemieux.Tools.Bash do
     flags such as -m or --yes instead of waiting for one.
 
     Set background to start a server, a watcher or a long script without
-    blocking. The result gives a task_id; call bash with that task_id to poll
-    it, add wait_ms to await completion for a bounded time, or set cancel to
-    stop it.
+    blocking. When the launch reports automatic tracking, continue independent
+    work, then yield: completion is delivered without polling or another watch
+    registration. Otherwise use task_id with wait_ms for a bounded wait; use
+    task_id with cancel to stop it. Inspect a task when its current output is
+    needed for a decision, rather than repeatedly checking whether it finished.
+    For every background launch supply summary: a short, plain-language
+    phrase of 6–12 words describing purpose and expected duration or progress.
+    Omit shell syntax and redundant wording such as "in the background". The person
+    sees that summary in chat; the full command stays in Tasks. Results provide a
+    unique hockey-player task_name. Use that name in replies, never the raw id.
     """
   end
 
@@ -205,6 +213,11 @@ defmodule Lemieux.Tools.Bash do
       "type" => "object",
       "properties" => %{
         "command" => %{"type" => "string", "description" => "The shell command to run."},
+        "summary" => %{
+          "type" => "string",
+          "description" =>
+            "For background commands: one brief plain-language action phrase (6–12 words); include duration or progress when useful. Omit shell code and redundant background wording."
+        },
         "background" => %{
           "type" => "boolean",
           "description" => "Start command in the background and return a task id."
@@ -212,7 +225,7 @@ defmodule Lemieux.Tools.Bash do
         "task_id" => %{
           "type" => "string",
           "description" =>
-            "A background task id to poll, await or cancel instead of starting a command."
+            "A background task's player task_name or internal task_id to poll, await or cancel instead of starting a command."
         },
         "cancel" => %{
           "type" => "boolean",
@@ -435,7 +448,7 @@ defmodule Lemieux.Tools.Bash do
   defp timed_out(timeout, true),
     do:
       "[timed out after #{timeout}ms and was killed: that is the longest one call may run in " <>
-        "this session, so start a longer command with background and poll it]"
+        "this session, so start longer work with background; follow its tracking instructions]"
 
   defp background_timeout(%{"background_timeout_ms" => ms})
        when is_integer(ms) and ms > 0,
@@ -452,8 +465,10 @@ defmodule Lemieux.Tools.Bash do
     opts = [
       supervisor: context.supervisor,
       session_id: context.session_id,
+      root_session_id: Map.get(context, :root_session_id, context.session_id),
       owner: context.session,
       command: command,
+      description: args["summary"],
       cwd: context.cwd,
       environment: Environment.from_context(context),
       timeout_ms: background_timeout(args),
@@ -464,13 +479,20 @@ defmodule Lemieux.Tools.Bash do
 
     case Background.start(opts) do
       {:ok, task_id} ->
+        {:ok, task} = Background.poll(context.supervisor, context.session_id, task_id)
+
         text =
-          "Background task #{task_id} started. " <>
-            "Call bash with task_id to poll it, or add wait_ms to await completion."
+          "Started #{task.name}: #{task.description}. Refer to this task by its player name in replies; task_id is only for tool arguments. " <>
+            "Internal task_id: #{task_id}. Call bash with task_id to poll it, or add wait_ms to await completion."
 
         {:ok,
          Result.new(text,
-           structured_content: %{"task_id" => task_id, "status" => "running"}
+           structured_content: %{
+             "task_id" => task_id,
+             "task_name" => task.name,
+             "summary" => task.description,
+             "status" => "running"
+           }
          )}
 
       {:error, reason} ->
@@ -526,7 +548,7 @@ defmodule Lemieux.Tools.Bash do
       |> Enum.reject(&is_nil/1)
       |> Enum.join("\n")
 
-    Result.new(text, structured_content: json_snapshot(snapshot))
+    Result.new(text, structured_content: Map.put(json_snapshot(snapshot), "task_id", snapshot.id))
   end
 
   defp background_status(%{status: :exited, exit_status: status}), do: "exited (#{status})"

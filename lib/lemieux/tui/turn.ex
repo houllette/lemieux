@@ -169,7 +169,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp processing_tokens(%{measured?: false}), do: "tokens unmeasured"
 
     defp processing_tokens(usage) do
-      "#{compact_number(usage.tokens)} total tokens " <>
+      "#{compact_number(usage.tokens)} tokens this turn " <>
         "(#{compact_number(usage.input)} in · " <>
         "#{compact_number(usage.cache_read)}/#{compact_number(usage.cache_write)} cache · " <>
         "#{compact_number(usage.output)} out)"

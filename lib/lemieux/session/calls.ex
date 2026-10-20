@@ -19,6 +19,7 @@ defmodule Lemieux.Session.Calls do
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.MCPServers
+  alias Lemieux.Session.Notification
   alias Lemieux.Session.Prompts
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Setup
@@ -68,6 +69,9 @@ defmodule Lemieux.Session.Calls do
   end
 
   def call(:id, _from, state), do: {:reply, state.id, state}
+
+  def call({:deliver_notification, event, opts}, _from, state),
+    do: Notification.deliver(state, event, opts)
 
   def call({:subscribe, subscriber}, _from, state) do
     {:reply, :ok, %{state | subscribers: Subscribers.add(state.subscribers, subscriber)}}
@@ -312,6 +316,7 @@ defmodule Lemieux.Session.Calls do
       context: context,
       context_window_known?: is_integer(state.context_window),
       ready?: state.mcp_ready?,
+      supervisor: state.supervisor,
       mcp: MCPServers.mcp_server_statuses(state)
     }
 
@@ -402,6 +407,24 @@ defmodule Lemieux.Session.Calls do
     }
 
     {:reply, context, state}
+  end
+
+  def call({:work_context, namespaces}, _from, state) do
+    # Hosts need recent work identities, not a copy of every request and file
+    # in the conversation. Live owners are discovery, never control tokens.
+    entries =
+      state.reversed_entries
+      |> Stream.filter(&work_entry?(&1, namespaces))
+      |> Enum.take(512)
+      |> Enum.reverse()
+
+    {:reply,
+     %{
+       id: state.id,
+       supervisor: state.supervisor,
+       owners: state.subagent_groups,
+       entries: entries
+     }, state}
   end
 
   def call({:append_subagent_entry, type, payload}, _from, state) do
@@ -717,6 +740,14 @@ defmodule Lemieux.Session.Calls do
 
   def cast({:publish_subagent_event, event}, state),
     do: {:noreply, Core.emit(state, event)}
+
+  defp work_entry?(%{type: type}, _namespaces) when type in [:subagent_spawn, :subagent_result],
+    do: true
+
+  defp work_entry?(%{type: :extension_state, payload: %{"namespace" => namespace}}, namespaces),
+    do: String.starts_with?(namespace, namespaces)
+
+  defp work_entry?(_entry, _namespaces), do: false
 
   # What is left of the host's deadline, never less than nothing.
   defp time_left(%{deadline_at: nil}), do: nil

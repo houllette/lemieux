@@ -113,6 +113,8 @@ defmodule Lemieux.Prompt do
     available.
   - Read each tool's description before using it. Its result may report a
     failed operation without meaning that the tool itself failed.
+  - Prefer an available tool specialized for the action. Skills never grant
+    tools or override session permissions.
   - When several reads or searches do not depend on one another, make those
     calls together in one response instead of one at a time.
 

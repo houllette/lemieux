@@ -192,7 +192,8 @@ defmodule Lemieux.Messages do
   def tools_changed(names) when is_list(names) do
     "The available tools changed. For subsequent work, use only these tools: " <>
       Enum.join(names, ", ") <>
-      ". Do not call tools from earlier turns unless they are listed here."
+      ". Do not call tools from earlier turns unless they are listed here. " <>
+      "The current request catalog determines which authorized tools are exposed now."
   end
 
   @impl true

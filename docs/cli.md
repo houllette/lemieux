@@ -263,9 +263,10 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 | Ctrl-R | Search input history across sessions; Enter or Tab takes an entry, Esc restores the draft |
 | Ctrl-G | Edit the draft in `$VISUAL` or `$EDITOR` (`vi` when neither is set); not on native Windows yet |
 | Ctrl-V | Attach the image on the clipboard as an `@path` reference |
+| Shift-Up, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls |
 | Ctrl-O | Page through the full output of recent tool calls (less-style keys, ←/→ between outputs, q or Esc to close) |
 | Page Up / Page Down | Scroll the transcript a page |
-| Shift-Up / Shift-Down | Scroll the transcript three rows |
+| Ctrl-Shift-Up / Ctrl-Shift-Down | Scroll the transcript three rows |
 | Esc | Clear the input, the selection and the completion menu, and close the notice box |
 | Ctrl-C | Cancel the running turn; when idle, press it twice to quit |
 | Shift-Tab | Cycle the permission mode (ask → accept edits → auto → read only; never full auto) when permissions are on; when they are off it says how to turn them on. In the Ixway model picker it cycles through Ixway and qualified route tabs, and in the slash menu through the tabs for where skills came from |
@@ -300,7 +301,8 @@ terminal's setting is the one that counts.
 **Terminal.app keeps Page Up and Page Down** for its own scrollback. Use
 Shift-Page Up / Shift-Page Down (Shift-Fn-Up / Shift-Fn-Down on a laptop) or
 the mouse wheel to scroll the conversation. Terminal.app also sends
-Shift-Up / Shift-Down as plain arrows, which browse history there.
+Shift-Up / Shift-Down as plain arrows, which browse history there. Use the
+clickable Tasks badge or F6 to open Tasks when Shift-Up is not reported.
 
 ### Steering and the queue
 
@@ -381,8 +383,7 @@ links to the docs, issues and questions at the end.
 | `/deny [CALL_ID \| all] [REASON]` | Refuse a waiting tool call; the reason is what the model reads |
 | `/verify [on \| off]` | Show or switch the check that runs after a turn that edited files |
 | `/subagents [on \| off]` | Offer or withhold the [repository scout](#delegated-repository-investigation) for this session |
-| `/tools [list]` | List local and MCP tools with their enabled or disabled status |
-| `/tools enable NAME...` / `/tools disable NAME...` | Enable or disable one or more tools at once, while idle |
+| `/tools` | Open the tools tray: filter local and MCP tools, inspect their descriptions, and toggle them while idle |
 | `/mcp` | Open the MCP server panel; `/mcp list`, `add PATH`, `remove NAME` and `reconnect [NAME]` are the text forms |
 | `/prompts` | List the prompts your MCP servers offer; each runs as `/mcp__SERVER__PROMPT [ARGS]` |
 | `/name [TEXT]` | Show or change the session's label on screen, until you quit |
@@ -454,9 +455,17 @@ scrub, path confinement and any sandbox apply as they do to the agent's own
 `bash`. Its output is bounded, shown, and carried once into your next
 message, marked as something you ran.
 
-**`/tools`** lists local and MCP tools while busy; enabling or disabling
-waits for an idle session, takes exact names and applies all of them or
-none. Tool changes are recorded and restored on resume.
+**`/tools`** opens a tray above the composer, keeping the transcript visible.
+Type to filter by tool or MCP server name, use Up/Down to select, and press
+Space/Enter or click the toggle to activate or deactivate a tool. Active,
+inactive and host-unavailable tools have distinct labels and colors. The
+selected tool's description appears below the list. Esc closes the tray;
+Ctrl-R refreshes the catalog. Inspection works while busy; changes wait for
+an idle session and retain the host's authorization limits. Navigation and
+toggle receipts stay out of chat. Tool changes are recorded and restored on
+resume, and the model receives the updated catalog on its next request.
+Explicit `/tools list`, `/tools enable NAME...` and `/tools disable NAME...`
+remain compatible, without a submenu to navigate.
 
 **`/name`, `/color` and `/theme`** last until you quit and are not stored
 with the session. `/name TEXT` relabels the session in the header and

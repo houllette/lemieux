@@ -40,7 +40,8 @@ defmodule Lemieux.Extensions.DelegationTest do
 
     # It searches as well as reads, every tool it holds only reads, and the
     # model deciding whether to delegate is told so.
-    assert Enum.map(tools, &Tool.name/1) == ~w(read grep glob)
+    assert Enum.map(tools, &Tool.name/1) == ~w(read grep glob bash)
+    assert List.last(tools) == Lemieux.Tools.ReadOnlyBash
     assert Enum.all?(tools, &Tool.read_only?/1)
     assert Tool.description(delegate) =~ "repository-scout: Search the working tree (grep, glob)"
 

@@ -77,7 +77,9 @@ defmodule Lemieux.Extensions.Workspace.DiscoveryTest do
 
     assert prompt =~ "review: Review changes"
     refute prompt =~ ".agents/skills/review/SKILL.md"
-    assert prompt =~ "call the `skill` tool with its qualified name before acting"
+    assert prompt =~ "skill and the `skill` tool is available, load it by qualified name"
+    assert prompt =~ "current tool catalog and host policy"
+    assert prompt =~ "Use native agent tools for native delegation"
     refute prompt =~ "DO NOT LOAD THIS BODY AT STARTUP"
 
     assert [tool] = Discovery.host_tools(workspace)

@@ -2,6 +2,10 @@ defmodule Lemieux.Conversation.Command.Tools do
   @moduledoc """
   `/tools [list | enable NAME... | disable NAME...]`: the tool catalog.
 
+  The TUI presents the bare command as a native switch tray. Explicit actions
+  remain available to other hosts and older workflows; they use the same session
+  API and policy as the tray.
+
   Listing is allowed mid-turn; enabling and disabling wait, because they
   change what the next request offers. Both mutations are atomic in the
   session — an unknown name leaves the set unchanged and is reported — and
@@ -22,7 +26,7 @@ defmodule Lemieux.Conversation.Command.Tools do
   def spec do
     %{
       name: "tools",
-      description: "list, enable, or disable tools",
+      description: "manage session tools",
       accepts_arguments?: true,
       action: :tools_status,
       actions: [:tools_status, {:enable_tools, ["NAME"]}, {:disable_tools, ["NAME"]}],

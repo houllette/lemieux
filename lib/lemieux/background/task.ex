@@ -3,6 +3,7 @@ defmodule Lemieux.Background.Task do
 
   use GenServer, restart: :temporary
 
+  alias Lemieux.Background.Label
   alias Lemieux.Clock
   alias Lemieux.Environment
   alias Lemieux.Supervisor, as: Sup
@@ -15,6 +16,8 @@ defmodule Lemieux.Background.Task do
     :session_id,
     :supervisor,
     :command,
+    :name,
+    :description,
     :cwd,
     :environment,
     :env,
@@ -52,6 +55,61 @@ defmodule Lemieux.Background.Task do
 
   @impl GenServer
   def init(opts) do
+    with :ok <- claim_slot(opts),
+         {:ok, name} <- claim_name(opts) do
+      init_task(Keyword.put(opts, :name, name))
+    else
+      {:error, reason} -> {:stop, reason}
+    end
+  end
+
+  # Registry ownership makes simultaneous launches choose distinct names, and
+  # keeps a retained result's name reserved until that task leaves the runtime.
+  defp claim_name(opts) do
+    registry = Sup.background_registry(opts[:supervisor])
+    root = Keyword.get(opts, :root_session_id, opts[:session_id])
+
+    Enum.find_value(0..1023, fn attempt ->
+      name = Label.candidate(opts[:id], attempt)
+
+      case Registry.register(
+             registry,
+             {:background_name, root, name},
+             {opts[:session_id], opts[:id]}
+           ) do
+        {:ok, _} -> {:ok, name}
+        {:error, {:already_registered, _}} -> nil
+      end
+    end) || {:error, :task_name_limit}
+  end
+
+  # The same bound as discovery and completion batches. Without admission,
+  # a host could enumerate 256 commands and accidentally settle while a 257th
+  # kept running. Registry ownership releases the slot even after a crash.
+  defp claim_slot(opts) do
+    Enum.find_value(0..255, fn slot ->
+      case Registry.register(
+             Sup.background_registry(opts[:supervisor]),
+             {:background_slot, Keyword.get(opts, :root_session_id, opts[:session_id]), slot},
+             nil
+           ) do
+        {:ok, _} -> :ok
+        {:error, {:already_registered, _}} -> nil
+      end
+    end) || {:error, :task_limit}
+  end
+
+  defp init_task(opts) do
+    # A live index, separate from transcript lineage: the native task view can
+    # find a root's delegated commands without copying its whole history.
+    {:ok, _} =
+      Registry.register(
+        Sup.background_registry(opts[:supervisor]),
+        {:background_root, Keyword.get(opts, :root_session_id, opts[:session_id]),
+         opts[:session_id], opts[:id]},
+        nil
+      )
+
     owner_ref =
       case Keyword.get(opts, :owner) do
         owner when is_pid(owner) -> Process.monitor(owner)
@@ -70,6 +128,8 @@ defmodule Lemieux.Background.Task do
       session_id: Keyword.fetch!(opts, :session_id),
       supervisor: Keyword.fetch!(opts, :supervisor),
       command: Keyword.fetch!(opts, :command),
+      name: Keyword.fetch!(opts, :name),
+      description: Label.summary(opts[:description]),
       cwd: Keyword.fetch!(opts, :cwd),
       environment: Keyword.fetch!(opts, :environment),
       env: Keyword.get(opts, :env, []),
@@ -106,6 +166,15 @@ defmodule Lemieux.Background.Task do
 
   @impl GenServer
   def handle_call(:poll, _from, state), do: {:reply, {:ok, snapshot(state)}, state}
+
+  def handle_call(:summary, _from, state),
+    do: {:reply, {:ok, state |> snapshot(false)}, state}
+
+  def handle_call(:clear_output, _from, %{status: :running} = state),
+    do: {:reply, {:error, :running}, state}
+
+  def handle_call(:clear_output, _from, state),
+    do: {:reply, :ok, %{state | output_head: "", output_tail: "", output_bytes: 0}}
 
   def handle_call({:subscribe, subscriber}, _from, %{status: status} = state)
       when status in @terminal do
@@ -389,14 +458,16 @@ defmodule Lemieux.Background.Task do
     :exit, _reason -> nil
   end
 
-  defp snapshot(state) do
+  defp snapshot(state, include_output? \\ true) do
     %{
       id: state.id,
       session_id: state.session_id,
       command: state.command,
+      name: state.name,
+      description: state.description,
       status: state.status,
       exit_status: state.exit_status,
-      output: output(state),
+      output: if(include_output?, do: output(state), else: ""),
       output_bytes: state.output_bytes,
       error: state.error,
       started_at: state.started_at,

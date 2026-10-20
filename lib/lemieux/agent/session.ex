@@ -41,6 +41,12 @@ defmodule Lemieux.Agent.Session do
   A guardian cancels and removes the owned session if its calling worker dies.
   Sharing the mounted runtime does not give an attempt an unowned lifetime.
 
+  A normal model stop waits for owned background commands to finish and feeds
+  their bounded results back through the same session before returning. This
+  consumes the assignment's remaining turns and requests; it does not reset
+  its allowance or deadline. Cancellation revokes that continuation and stops
+  the commands. See `Lemieux.Background.Completion`.
+
   A host deadline cancels the session and returns `{:error, :timeout, observation}`,
   preserving the terminal transcript and workspace changes. The session is
   given the same deadline as `:deadline_ms`, unless `:session_options` names
@@ -56,6 +62,7 @@ defmodule Lemieux.Agent.Session do
   @behaviour Lemieux.Agent
 
   alias Lemieux.Agent.Resource
+  alias Lemieux.Background.Completion
   alias Lemieux.Benchmark.Resources
   alias Lemieux.Benchmark.WorkspaceSnapshot
   alias Lemieux.Clock
@@ -100,6 +107,9 @@ defmodule Lemieux.Agent.Session do
 
   defp stop_owned_session(session, supervisor) do
     if Process.alive?(session) do
+      for {id, ^session} when is_binary(id) <- Lemieux.sessions(supervisor),
+          do: Completion.cancel(supervisor, id)
+
       try do
         Session.cancel(session, :owner_lost)
       after
@@ -223,7 +233,7 @@ defmodule Lemieux.Agent.Session do
 
     bound =
       {deadline, Keyword.get(opts, :timeout_reason, :agent_timeout),
-       length(Session.snapshot(session).entries)}
+       length(Session.snapshot(session).entries), supervisor}
 
     try do
       case Session.prompt(session, task.prompt) do
@@ -234,6 +244,7 @@ defmodule Lemieux.Agent.Session do
       Clock.cancel(clock, timer)
       flush_deadline(deadline)
       Process.demonitor(monitor, [:flush])
+      Completion.cancel(supervisor, id)
       DynamicSupervisor.terminate_child(Sup.session_supervisor(supervisor), session)
     end
   end
@@ -252,7 +263,7 @@ defmodule Lemieux.Agent.Session do
          session,
          id,
          monitor,
-         {deadline, timeout_reason, cursor} = bound,
+         {deadline, timeout_reason, cursor, supervisor} = bound,
          direct_usages,
          delegated_usages,
          retries
@@ -286,6 +297,18 @@ defmodule Lemieux.Agent.Session do
           count_retry(retries, retry, true)
         )
 
+      {:lemieux, ^id, {:finished, :stop}} ->
+        case Completion.settle(session) do
+          :waiting ->
+            await(session, id, monitor, bound, direct_usages, delegated_usages, retries)
+
+          :done ->
+            observation(session, id, :stop, direct_usages, delegated_usages, retries, cursor)
+        end
+
+      {:background_cancelled, ^id} ->
+        observation(session, id, :cancelled, direct_usages, delegated_usages, retries, cursor)
+
       {:lemieux, ^id, {:finished, reason}} ->
         observation(session, id, reason, direct_usages, delegated_usages, retries, cursor)
 
@@ -296,6 +319,7 @@ defmodule Lemieux.Agent.Session do
         {:error, {:session_died, reason}}
 
       {:agent_deadline, ^deadline} ->
+        Completion.cancel(supervisor, id)
         :ok = Session.cancel(session, timeout_reason)
         # cancel/2 is synchronous: the session checkpoints partial work before
         # replying. Drain usage it emitted before that reply, then snapshot it

@@ -49,18 +49,21 @@ defmodule Lemieux.Environment.Sandbox.Seatbelt do
   @doc "The Seatbelt profile for `sandbox` with `cwd` as the working directory."
   @spec profile(sandbox :: Sandbox.t(), cwd :: Path.t()) :: String.t()
   def profile(%Sandbox{} = sandbox, cwd) do
-    roots = Enum.uniq([Sandbox.real(cwd) | sandbox.writable])
+    roots = if sandbox.read_only, do: [], else: Enum.uniq([Sandbox.real(cwd) | sandbox.writable])
 
     [
       "(version 1)",
       "(allow default)",
       network(sandbox, roots),
+      if(sandbox.read_only,
+        do: ["(deny signal)", "(allow signal (target self))", "(deny mach*)"]
+      ),
       "(deny file-write*)",
       "(allow file-write*",
       Enum.map(roots, &"  (subpath #{string(&1)})"),
       Enum.map(@devices, &"  (literal #{string(&1)})"),
       ~S|  (regex #"^/dev/fd/")|,
-      ~S|  (regex #"^/dev/tty"))|,
+      if(sandbox.read_only, do: ")", else: ~S|  (regex #"^/dev/tty"))|),
       hidden(sandbox.hidden)
     ]
     |> List.flatten()

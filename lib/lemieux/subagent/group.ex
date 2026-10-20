@@ -62,6 +62,8 @@ defmodule Lemieux.Subagent.Group do
 
   use GenServer, restart: :temporary
 
+  alias Lemieux.Background
+  alias Lemieux.Background.Completion
   alias Lemieux.Clock
   alias Lemieux.OpenTelemetry
   alias Lemieux.Progress
@@ -122,6 +124,11 @@ defmodule Lemieux.Subagent.Group do
   def group_ref(group), do: GenServer.call(group, :group_ref)
 
   @doc false
+  @spec current(group :: GenServer.server(), parent :: pid()) ::
+          {:ok, Lemieux.Subagent.Group.Ref.t()} | {:error, :not_owner}
+  def current(group, parent), do: GenServer.call(group, {:current, parent})
+
+  @doc false
   @spec child_refs(group :: GenServer.server(), token :: reference()) ::
           {:ok, [Lemieux.Subagent.Ref.t()]} | {:error, :unauthorized}
   def child_refs(group, token), do: GenServer.call(group, {:child_refs, token})
@@ -143,10 +150,15 @@ defmodule Lemieux.Subagent.Group do
     do: GenServer.call(group, {:await_child, token, child_id}, timeout)
 
   @doc false
-  @spec inspect_child(group :: GenServer.server(), token :: reference(), child_id :: String.t()) ::
+  @spec inspect_child(
+          group :: GenServer.server(),
+          token :: reference(),
+          child_id :: String.t(),
+          include_entries? :: boolean()
+        ) ::
           {:ok, Snapshot.t()} | {:error, term()}
-  def inspect_child(group, token, child_id),
-    do: GenServer.call(group, {:inspect_child, token, child_id})
+  def inspect_child(group, token, child_id, include_entries? \\ true),
+    do: GenServer.call(group, {:inspect_child, token, child_id, include_entries?})
 
   @doc false
   @spec steer_child(
@@ -424,6 +436,11 @@ defmodule Lemieux.Subagent.Group do
   @impl GenServer
   def handle_call(:group_ref, _from, state), do: {:reply, build_group_ref(state), state}
 
+  def handle_call({:current, parent}, _from, %{parent: parent} = state),
+    do: {:reply, {:ok, build_group_ref(state)}, state}
+
+  def handle_call({:current, _parent}, _from, state), do: {:reply, {:error, :not_owner}, state}
+
   def handle_call({:child_refs, token}, _from, state) do
     case allowed(state, token, :child_refs, nil) do
       :ok -> {:reply, {:ok, Enum.map(state.order, &child_ref(state, &1))}, state}
@@ -458,10 +475,10 @@ defmodule Lemieux.Subagent.Group do
     end
   end
 
-  def handle_call({:inspect_child, token, child_id}, _from, state) do
+  def handle_call({:inspect_child, token, child_id, include_entries?}, _from, state) do
     with :ok <- allowed(state, token, :inspect, child_id),
          {:ok, child} <- Map.fetch(state.children, child_id) do
-      {:reply, {:ok, snapshot(state, child)}, state}
+      {:reply, {:ok, snapshot(state, child, include_entries?)}, state}
     else
       {:error, _reason} = error -> {:reply, error, state}
       :error -> {:reply, {:error, :not_found}, state}
@@ -517,6 +534,11 @@ defmodule Lemieux.Subagent.Group do
     {:noreply, fail_child(state, child_id, {:prompt_failed, reason})}
   end
 
+  def handle_info({:background_cancelled, child_id}, state) do
+    Completion.cancel(state.supervisor, child_id)
+    {:noreply, finish_from_session(state, child_id, :cancelled)}
+  end
+
   def handle_info({:lemieux, child_id, event}, state) do
     state = publish_child_event(state, child_id, event)
 
@@ -536,7 +558,7 @@ defmodule Lemieux.Subagent.Group do
       %{status: :running, cancel_status: nil} = child ->
         if Clock.now_ms(state.clock) >= child.deadline_at,
           do: {:noreply, begin_cancel(state, [child], :timeout, :child_deadline, nil)},
-          else: {:noreply, begin_check(state, child)}
+          else: {:noreply, check_background(state, child)}
 
       _cancelling_terminal_or_unknown ->
         {:noreply, state}
@@ -853,6 +875,7 @@ defmodule Lemieux.Subagent.Group do
     group = self()
 
     Task.Supervisor.start_child(Sup.task_supervisor(state.supervisor), fn ->
+      Completion.cancel(state.supervisor, child.id)
       # The child's own status is the cancellation reason the session records; the
       # caller's reason travels beside it in the envelope, because a session's stop
       # reasons are a closed vocabulary and a host's are not. A stall is the exception:
@@ -940,6 +963,24 @@ defmodule Lemieux.Subagent.Group do
       end
 
     %{child | timer: Clock.send_after(state.clock, self(), {:child_clock, child.id}, delay)}
+  end
+
+  defp check_background(state, child) do
+    if Enum.any?(Background.list(state.supervisor, child.id), &(&1.status == :running)) do
+      child = %{child | checks: child.checks + 1} |> arm_clock(state)
+      state = put_in(state.children[child.id], child)
+
+      publish(state, :child_assessed, %{
+        "child_id" => child.id,
+        "outcome" => "progressing",
+        "by" => "activity",
+        "note" => "Waiting for an owned background command; the hard deadline still applies.",
+        "elapsed_ms" => Clock.now_ms(state.clock) - child.started_at,
+        "checks" => child.checks
+      })
+    else
+      begin_check(state, child)
+    end
   end
 
   defp begin_check(state, child) do
@@ -1051,11 +1092,16 @@ defmodule Lemieux.Subagent.Group do
         state
 
       %{session: session} = child ->
-        entries = Session.snapshot(session).entries
-        # A session that was asked to stop reports `:cancelled` whatever the
-        # reason was, so the status the group asked for wins over the one the
-        # session reports: a child killed by its own deadline is a timeout.
-        complete_child(state, child, child.cancel_status || terminal_status(reason), entries)
+        if reason == :stop and child.cancel_status == nil and
+             Completion.settle(session) == :waiting do
+          state
+        else
+          entries = Session.snapshot(session).entries
+          # A session that was asked to stop reports `:cancelled` whatever the
+          # reason was, so the status the group asked for wins over the one the
+          # session reports: a child killed by its own deadline is a timeout.
+          complete_child(state, child, child.cancel_status || terminal_status(reason), entries)
+        end
 
       nil ->
         state
@@ -1080,6 +1126,7 @@ defmodule Lemieux.Subagent.Group do
   end
 
   defp complete_child(state, child, status, entries, reason \\ nil) do
+    Completion.cancel(state.supervisor, child.id)
     OpenTelemetry.drop_prompt_parent(child.id)
     cancel_timer(state, child.timer)
     if child.monitor, do: Process.demonitor(child.monitor, [:flush])
@@ -1195,9 +1242,13 @@ defmodule Lemieux.Subagent.Group do
     %{state | child_waiters: child_waiters}
   end
 
-  defp snapshot(state, child) do
+  defp snapshot(state, child, include_entries?) do
     session =
-      if child.session && Process.alive?(child.session), do: Session.snapshot(child.session)
+      if child.session && Process.alive?(child.session) do
+        if include_entries?,
+          do: Session.snapshot(child.session),
+          else: Session.info(child.session)
+      end
 
     %Snapshot{
       id: child.id,
@@ -1307,7 +1358,7 @@ defmodule Lemieux.Subagent.Group do
 
     [
       "You are a depth-one delegated investigator. The parent owns the decision and every write.",
-      "Use only the supplied read-only tools. Do not attempt to delegate, modify files, run shell commands, or mutate an external system.",
+      "Use only the supplied read-only tools. Do not attempt to delegate, modify repository files, or mutate an external system. If read-only bash is supplied, run analysis scripts inline within its enforced sandbox. For long scripts use background true, do independent reading, then yield; the host waits for completion without model polling.",
       "Your context is fresh by design. Treat the explicit brief, policy, snapshot, and references as complete; report uncertainty instead of inventing missing parent context.",
       definition.system_prompt,
       "Definition id: #{definition.id}",
@@ -1335,7 +1386,7 @@ defmodule Lemieux.Subagent.Group do
       "user_prompt" => SubagentTask.prompt(request.task)
     }
 
-    case session && Enum.find(session.entries, &(&1.type == :request)) do
+    case session && Enum.find(Map.get(session, :entries, []), &(&1.type == :request)) do
       nil -> input
       entry -> Map.put(input, "request", entry.payload)
     end

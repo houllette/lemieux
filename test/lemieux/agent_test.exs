@@ -250,6 +250,9 @@ defmodule Lemieux.AgentTest do
   test "the reusable session deadline is measured on the clock it is given", context do
     clock = Manual.new()
     supervisor = :"agent_session_clock_#{System.unique_integer([:positive])}"
+    # The assertion outlives the worker. Let the test own the runtime so the
+    # worker's normal exit cannot race the registry query after Task.await/1.
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
     silent = Scripted.new([fn _request -> receive do: (:never -> :ok) end])
 
     run =

@@ -279,6 +279,7 @@ defmodule Lemieux.Conversation do
           | :mcp_prompts
           | {:mcp_prompt, String.t(), String.t()}
           | {:resume_list, :all}
+          | {:tasks, :open | :add | :link | :cancel | :clear | :stop | :watch | :follow_up}
 
   @type t :: %__MODULE__{
           model: String.t() | nil,
@@ -914,6 +915,9 @@ defmodule Lemieux.Conversation do
   # cannot mark the conversation busy itself, because a host policy may still
   # refuse the command between the parse and the call.
   def event(conversation, {:reflection_started, _mode}),
+    do: {%{conversation | busy?: true}, []}
+
+  def event(conversation, {:entry, %{type: :user, payload: %{"source" => "notification"}}}),
     do: {%{conversation | busy?: true}, []}
 
   def event(conversation, {:reflection_result, :ok}), do: {conversation, []}

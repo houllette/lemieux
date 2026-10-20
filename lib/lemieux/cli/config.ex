@@ -136,7 +136,7 @@ defmodule Lemieux.CLI.Config do
              systemone_providers max_turns max_requests max_cost_usd max_total_requests max_total_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
              extension_options scout_model verify continuation input_modalities notifications
-             skills capture)
+             skills capture watches)
   # A misspelling of one of these is refused rather than ignored: ignoring it
   # could send a request somewhere other than where the file meant, or
   # without the credential it meant to supply.
@@ -173,7 +173,7 @@ defmodule Lemieux.CLI.Config do
   @systemone_ixway_fields ~w(base_url model input_per_million output_per_million)
   @shipped_extensions ~w(mcp interactive web elixir workspace delegation a2a systemone_compaction
                          environment_context planning continuation verify budget search
-                         apply_patch checkpoints mcp_discovery capture)
+                         apply_patch checkpoints mcp_discovery capture watches)
 
   @doc "Returns the optional personal configuration path."
   @spec default_path() :: Path.t()
@@ -800,6 +800,7 @@ defmodule Lemieux.CLI.Config do
          :ok <- validate_section(settings, "sandbox", @sandbox_fields),
          :ok <- validate_section(settings, "verify", @verify_fields),
          :ok <- validate_section(settings, "capture", @capture_fields),
+         :ok <- validate_section(settings, "watches", ~w(follow_up sources)),
          :ok <- validate_skills(Map.get(settings, "skills", %{})),
          :ok <- validate_section(settings, "continuation", @continuation_fields),
          :ok <- validate_mcp_servers(Map.get(settings, "mcp_servers", %{})),
@@ -830,6 +831,19 @@ defmodule Lemieux.CLI.Config do
   end
 
   defp valid_section_entry?("permissions", {"mode", mode}), do: mode in @permission_modes
+
+  defp valid_section_entry?("watches", {"follow_up", value}), do: is_boolean(value)
+
+  defp valid_section_entry?("watches", {"sources", value}) when is_map(value) do
+    map_size(value) <= 16 and
+      Enum.all?(value, fn {name, command} ->
+        is_binary(name) and name =~ ~r/\A[a-z][a-z0-9_-]{0,39}\z/ and
+          name not in ["github", "background"] and is_binary(command) and
+          byte_size(command) in 1..4096
+      end)
+  end
+
+  defp valid_section_entry?("watches", {"sources", _value}), do: false
 
   defp valid_section_entry?("permissions", {key, rules}) when key in ~w(allow deny ask),
     do: is_list(rules) and Enum.all?(rules, &(is_binary(&1) and &1 != ""))
@@ -1078,7 +1092,7 @@ defmodule Lemieux.CLI.Config do
   defp valid_field?("hooks", value), do: is_map(value)
   defp valid_field?("permissions", value), do: is_map(value)
 
-  defp valid_field?(key, value) when key in ~w(sandbox verify continuation capture),
+  defp valid_field?(key, value) when key in ~w(sandbox verify continuation capture watches),
     do: is_boolean(value) or is_map(value)
 
   defp valid_field?("mcp_servers", value), do: is_map(value)

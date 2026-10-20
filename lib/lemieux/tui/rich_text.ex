@@ -91,6 +91,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
             | {:context_key, [{context_key(), String.t()}]}
             | Lemieux.TUI.ToolText.row()
             | {:notice_box, reference(), [Notices.item()]}
+            | {:background_result, map()}
 
     # Too narrow for a hanging indent to leave room for words: below this the
     # gutter is drawn inline and the text wraps under it like any other.
@@ -119,6 +120,17 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
         {:notice, text} ->
           notice(text, width, theme)
+
+        {:background_result, result} ->
+          task_result(result, width, theme)
+
+        {:tool_task, _, _, _, _} = row ->
+          hanging(
+            styled(row, theme),
+            {"  └ ", gutter_style(theme)},
+            {"    ", gutter_style(theme)},
+            width
+          )
 
         {:tool_output, _id, _position, _tone, _text} = row ->
           styled(row, theme) |> preserve(width)
@@ -211,6 +223,26 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
       end)
     end
 
+    @doc false
+    @spec literal(text :: String.t(), width :: pos_integer(), style :: Style.t()) :: [Line.t()]
+    def literal(text, width, style), do: preserve([{text, style}], width)
+
+    defp task_result(result, width, theme) do
+      success? = result["status"] == "Completed"
+      colour = if success?, do: theme.children.ok, else: theme.children.fail
+
+      heading = [
+        {if(success?, do: "✓ ", else: "! "), %Style{fg: colour, modifiers: [:bold]}},
+        {result["name"], %Style{fg: theme.children.name, modifiers: [:bold]}},
+        {"  " <> result["status"], %Style{fg: colour, modifiers: [:bold]}},
+        {if(result["elapsed"], do: " · " <> result["elapsed"], else: ""),
+         %Style{fg: theme.text.muted}}
+      ]
+
+      wrap(heading, width) ++
+        wrap([{"  " <> result["summary"], %Style{fg: theme.text.plain}}], width)
+    end
+
     defp styled({:model, text}, theme), do: parse_inline(text, %Style{}, theme)
     defp styled({:space, ""}, _theme), do: [{"", %Style{}}]
     defp styled({:compact_space, _tick}, _theme), do: [{"", %Style{}}]
@@ -274,6 +306,15 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
       gap = if subject == "", do: [], else: [{" ", %Style{}}]
 
       heading ++ gap ++ Enum.map(spans, &{&1.content, &1.style})
+    end
+
+    defp styled({:tool_task, _id, name, summary, status}, theme) do
+      [
+        {if(name, do: name <> "  ", else: ""),
+         %Style{fg: theme.children.name, modifiers: [:bold]}},
+        {String.capitalize(status) <> " — ", %Style{fg: theme.text.muted, modifiers: [:dim]}},
+        {summary, %Style{fg: theme.text.plain}}
+      ]
     end
 
     defp styled({:tool_detail, _id, :explore, text}, theme),

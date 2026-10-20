@@ -593,7 +593,7 @@ defmodule Lemieux.TUI.CommandsTest do
       refute state.elixir_mode?
     end
 
-    test "/tools lists the catalog and changes several tools through the Session API" do
+    test "/tools opens the catalog tray and retains explicit multi-tool changes" do
       statuses = [
         %{name: "read", source: :local, enabled?: true},
         %{name: "github__search", source: {:mcp, "github"}, enabled?: false}
@@ -603,30 +603,38 @@ defmodule Lemieux.TUI.CommandsTest do
 
       listed =
         tui(session: session, tool_statuses: statuses)
-        |> type("/tools list")
+        |> type("/tools")
         |> press("enter")
 
-      assert screen(listed) =~ "read · local · enabled"
-      assert screen(listed) =~ "github__search · MCP github · disabled"
+      assert listed.modal.kind == :tools
+      assert_receive {:tools_panel_result, _, _, _} = reply
+      assert {:noreply, listed} = TUI.handle_info(reply, listed)
+      assert screen(listed) =~ "read"
+      assert screen(listed) =~ "MCP github"
+      refute Enum.any?(listed.lines, &match?({:you, "/tools"}, &1))
 
       tui(session: session, tool_statuses: statuses)
       |> type("/tools disable read github__search")
       |> press("enter")
 
       assert_receive {:set_tool_access, ["read", "github__search"], false}
+      assert_receive {:tools_panel_result, _, _, {:ok, _}}
     end
 
-    test "Enter applies a highlighted tool name in one press" do
+    test "explicit tool changes remain compatible without a transcript echo" do
       statuses = [%{name: "read", source: :local, enabled?: false}]
       session = fake_session(snapshot("01SESSION"), tool_statuses: statuses)
 
       selected =
         tui(session: session, tool_statuses: statuses)
-        |> type("/tools enable re")
+        |> type("/tools enable read")
         |> press("enter")
 
       assert_receive {:set_tool_access, ["read"], true}
+      assert_receive {:tools_panel_result, _, _, {:ok, _}}
       assert typed(selected) == ""
+      assert selected.modal.kind == :tools
+      assert selected.lines == []
     end
   end
 

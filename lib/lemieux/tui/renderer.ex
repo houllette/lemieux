@@ -98,13 +98,19 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
       * `{:replace, rows}` — the rows the call announced are removed and these
         take their place. An edit becomes its diff this way.
+      * `{:update, rows}` — update the announcement at its existing position.
+        Background launches gain their assigned name without splitting a group.
       * `{:output, text}` — `text` is drawn as output under the announcement,
         capped and clipped to the pane by `Lemieux.TUI.ToolText.output_rows/4`.
       * `{:answer, text}` — the person's answer to a question.
       * `:none` — the announcement already said everything worth saying.
     """
     @type outcome ::
-            {:replace, [ToolText.row()]} | {:output, String.t()} | {:answer, String.t()} | :none
+            {:replace, [ToolText.row()]}
+            | {:update, [ToolText.row()]}
+            | {:output, String.t()}
+            | {:answer, String.t()}
+            | :none
 
     @typedoc "Tool name to the module that draws it."
     @type registry :: %{String.t() => module()}
@@ -188,6 +194,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         "read" => __MODULE__.Read,
         "subagents" => __MODULE__.Subagents,
         "todo" => __MODULE__.Todo,
+        "watch" => __MODULE__.Watch,
         "web_search" => __MODULE__.WebSearch,
         "write" => __MODULE__.Write
       }
@@ -275,6 +282,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     """
     @spec check_outcome(outcome :: term(), id :: String.t()) :: :ok | {:error, String.t()}
     def check_outcome({:replace, rows}, id) when is_list(rows), do: check_rows(rows, id)
+    def check_outcome({:update, rows}, id) when is_list(rows), do: check_rows(rows, id)
     def check_outcome({:output, text}, _id) when is_binary(text), do: :ok
     def check_outcome({:answer, text}, _id) when is_binary(text), do: :ok
     def check_outcome(:none, _id), do: :ok

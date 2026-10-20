@@ -39,6 +39,7 @@ defmodule Lemieux.Session.Catalog do
 
       %{
         name: Tool.name(tool),
+        description: Tool.description(tool),
         source: tool_source(tool),
         allowed?: allowed?,
         enabled?: allowed? and not MapSet.member?(state.disabled_tools, Tool.name(tool))

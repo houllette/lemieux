@@ -1106,14 +1106,17 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
       ## Available Agent Skills
 
       The following skills use progressive disclosure. When the task matches a
-      skill, call the `skill` tool with its qualified name before acting. The
+      skill and the `skill` tool is available, load it by qualified name before acting. The
       loaded instructions name the skill's directory and list its files; when
       they refer to one (a reference, an example, a template), load it with
       the same tool, adding "file" with its path relative to that directory.
       The tool reads personal, system and plugin skills without widening
       normal filesystem access. Run a skill's scripts with bash from its
-      directory. Frontmatter tool grants are informational here; host policy
-      still controls tools.
+      directory when bash is available and session policy permits. Frontmatter
+      tool grants are informational; the current tool catalog and host policy
+      remain authoritative. Use native agent tools for native delegation;
+      external orchestration workflows apply when that external system is part
+      of the person's task.
 
       #{listed}
       """

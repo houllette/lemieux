@@ -42,6 +42,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @spec waiting(TUI.t(), String.t()) :: TUI.t()
     def waiting(state, what), do: send_notification(state, "lmx: waiting for #{what}")
 
+    @doc "An external result reached the owning session."
+    @spec result(TUI.t()) :: TUI.t()
+    def result(state), do: send_notification(state, "lmx: external result")
+
     defp send_notification(%TUI{terminal: %{notifications?: false}} = state, _text), do: state
 
     defp send_notification(state, text) do

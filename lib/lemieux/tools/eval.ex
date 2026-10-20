@@ -80,9 +80,12 @@ defmodule Lemieux.Tools.Eval do
     several — filter and summarise in the code rather than returning \
     everything and reading it here.
 
-    The node is not this agent's own: it holds no state between calls beyond \
-    what you write to disk, and it cannot see the conversation. Modules you \
-    define with defmodule persist on it for the session.
+    Choose it for computation or transformations that benefit from Elixir code.
+    When offered, prefer file tools for ordinary reads and edits, and bash for
+    tests, builds or managed background commands.
+
+    The node cannot see the conversation. Variable bindings do not survive calls;
+    files and modules defined with defmodule persist for the session.
     """
   end
 
