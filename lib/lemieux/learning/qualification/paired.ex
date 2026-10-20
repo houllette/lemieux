@@ -1,5 +1,7 @@
 defmodule Lemieux.Learning.Qualification.Paired do
   @moduledoc """
+  **Experimental.** May change in any 0.x release.
+
   Fixed-sample exact inference for independent paired binary stream outcomes.
 
   A stream, including its learning history, is one experimental unit. Related

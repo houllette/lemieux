@@ -295,6 +295,12 @@ try do
             Scripted.tool_call("reproduce", "bash", %{"command" => "python checks.py"},
               usage: usage
             ),
+            Scripted.tool_call("read-source", "read", %{"path" => "src/project/core.py"},
+              usage: usage
+            ),
+            Scripted.tool_call("read-built", "read", %{"path" => ".build/project/core.py"},
+              usage: usage
+            ),
             Scripted.tool_call(
               "source",
               "write",
@@ -453,6 +459,10 @@ try do
         "independent_confirmation" => false
       }
     end
+
+  if not live and fixture_module == Projects do
+    true = Enum.all?(warmup ++ report["rows"], & &1["passed"])
+  end
 
   report =
     report
