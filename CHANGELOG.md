@@ -155,6 +155,9 @@ API.
 
 ### Fixes
 
+- Fully accounted turn-limit stops in isolated refinement count as failed probes
+  instead of interrupting the experiment. Partial files cannot qualify a stopped
+  candidate; missing usage and provider failures still require recovery.
 - Empty Tasks views retain their state during refreshes instead of flashing a
   loading message. Completion cards omit repeated shortcut hints. Shift-Up
   toggles the tray, Ctrl-Shift arrows scroll the transcript, and F6 remains an

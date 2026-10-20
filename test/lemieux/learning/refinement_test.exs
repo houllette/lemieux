@@ -107,7 +107,7 @@ defmodule Lemieux.Learning.RefinementTest do
           "tool_descriptions" => %{}
         }
       },
-      4
+      5
     )
   end
 
@@ -197,7 +197,10 @@ defmodule Lemieux.Learning.RefinementTest do
       provider: Scripted.new([]),
       store: store,
       supervisor: runtime,
-      max_requests: 4,
+      # Exercise the loop's turn stop before the separate request cap. The
+      # effective CLI runtime takes its limits from the host, not the profile.
+      max_turns: 4,
+      max_requests: 5,
       environment: {Confined, nil}
     ]
 
@@ -333,6 +336,101 @@ defmodule Lemieux.Learning.RefinementTest do
   defp options(ctx, suffixes) do
     {candidates, artifacts} = proposals(ctx, suffixes)
     Keyword.put(ctx.opts, :propose, fn _context, _provider -> {:ok, candidates, artifacts} end)
+  end
+
+  defp bounded_provider(loop?, usage \\ %{"input_tokens" => 2, "output_tokens" => 2}) do
+    fn -> Scripted.new(Enum.map(1..4, &bounded_turn(&1, loop?, usage))) end
+  end
+
+  defp bounded_turn(turn, loop?, usage) do
+    fn request ->
+      content = if String.contains?(request.system, "GOOD"), do: "fixed", else: "baseline"
+
+      if turn == 1 or loop?.(request.system),
+        do:
+          Scripted.tool_call("w#{turn}", "write", %{"path" => "result.txt", "content" => content},
+            usage: usage
+          ),
+        else: Scripted.complete("done", usage: usage)
+    end
+  end
+
+  test "accounted turn-limited controls are scored failures that refinement can improve", ctx do
+    owner = self()
+
+    assess = fn observation, lease ->
+      assessment = ctx.opts[:assess].(observation, lease)
+
+      if observation["finish_reason"] == ":max_turns",
+        do: send(owner, {:bounded_observation, observation, lease.runtime_identity, assessment})
+
+      assessment
+    end
+
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:verifier, true)
+      |> Keyword.put(:assess, assess)
+      |> Keyword.put(:provider, bounded_provider(&(not String.contains?(&1, "GOOD"))))
+
+    assert {:ok, receipt} = Refinement.run(ctx.handle, "bounded-control", ctx.plan, opts)
+    assert receipt["decision"] == "proposed"
+    assert length(receipt["control"]) == 2
+
+    assert Enum.all?(receipt["control"], fn record ->
+             record["score"] == 0 and record["verified_success"] == false and
+               record["stop_reason"] == "max_turns"
+           end)
+
+    assert Enum.all?(receipt["composition"], &(&1["verified_success"] == true))
+    assert is_integer(Controller.snapshot(ctx.controller)["accounting"]["tokens"])
+    assert :ok = Refinement.verify(receipt)
+
+    assert_receive {:bounded_observation, observation, identity, assessment}
+
+    for reason <- [":agent_timeout", ":benchmark_timeout", ":cancelled", ":error"] do
+      assert {:error, :incomplete_probe_evidence} =
+               Refinement.Evidence.record(
+                 Map.put(observation, "finish_reason", reason),
+                 assessment,
+                 true,
+                 identity
+               )
+    end
+
+    failed = put_in(observation, ["provider_error", "category"], "timeout")
+
+    assert {:error, :incomplete_probe_evidence} =
+             Refinement.Evidence.record(failed, assessment, true, identity)
+  end
+
+  test "a turn-limited candidate cannot pass even when its files pass the verifier", ctx do
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:verifier, true)
+      |> Keyword.put(:provider, bounded_provider(&String.contains?(&1, "GOOD")))
+
+    assert {:ok, receipt} = Refinement.run(ctx.handle, "bounded-candidate", ctx.plan, opts)
+    assert receipt["decision"] == "baseline"
+    assert receipt["composition"] == []
+    assert [candidate] = receipt["candidates"]
+    assert length(candidate["evaluations"]) == 2
+
+    assert Enum.all?(candidate["evaluations"], fn record ->
+             record["score"] == 0 and record["regression"] and
+               record["verified_success"] == false and record["stop_reason"] == "max_turns"
+           end)
+  end
+
+  test "a turn-limited probe with missing usage still requires recovery", ctx do
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:provider, bounded_provider(fn _ -> true end, nil))
+
+    assert {:error, {:requires_recovery, "unaccounted-bound"}} =
+             Refinement.run(ctx.handle, "unaccounted-bound", ctx.plan, opts)
+
+    assert Controller.snapshot(ctx.controller)["accounting"]["tokens"] == nil
   end
 
   test "a matched contrast retains a real improvement and records an independent regression",

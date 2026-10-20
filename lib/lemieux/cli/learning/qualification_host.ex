@@ -586,7 +586,16 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
               else: {:error, :disabled}
           end,
           propose: fn _, provider ->
-            propose(config, plan, bytes, evolver, provider, experience, dir, original)
+            propose(
+              config,
+              plan,
+              bytes,
+              evolver,
+              provider,
+              experience,
+              dir,
+              {fixture.task.prompt, original}
+            )
           end,
           signal: %{
             "id" => fixture.id,
@@ -641,7 +650,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp refinement_outcome({:suspended, _checkpoint} = suspended),
     do: refinement_outcome({:error, suspended})
 
-  defp propose(config, plan, bytes, evolver, provider, experience, dir, original) do
+  defp propose(config, plan, bytes, evolver, provider, experience, dir, {task_request, original}) do
     if enabled?(config) do
       {:ok, retained} = Agent.start_link(fn -> %{hd(plan.seeds)["content_sha256"] => bytes} end)
 
@@ -668,6 +677,10 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           },
           evidence: %{
             "operator" => "task_local",
+            # A bounded transcript excerpt may omit the first user entry. Keep
+            # the public task request explicit; private grading stays outside
+            # the proposer, retry and selection paths.
+            "task_request" => task_request,
             "failed_case_ids" =>
               if(original.grade["passed"], do: [], else: plan.development_case_ids),
             "original_observation" => %{

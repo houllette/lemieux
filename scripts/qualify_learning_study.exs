@@ -151,6 +151,8 @@ runtime = %{
   "workspace_evidence" => "bounded_actual_changed_file_bytes_before_lease_release",
   "offline_smoke" => opts[:offline_smoke] == true,
   "probe_selection" => "visible_verification_failed",
+  "probe_terminal_rule" => "verified_accounted_max_turns_is_scored_failure",
+  "proposal_task_request" => "explicit_public_prompt_without_private_grading",
   "retry" => %{
     "maximum_attempts" => div(allowance["requests"], requests),
     "stopping" => "first_public_verification_success"

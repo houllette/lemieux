@@ -281,6 +281,12 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     excerpt = excerpt_path |> File.read!() |> JSON.decode!()
     assert excerpt["case_id"] == "later"
     assert excerpt["entry_count"] > 0
+
+    [operator_path] =
+      Path.wildcard(Path.join(config.root, "1-later-updating/proposals/*/evidence/operator.json"))
+
+    operator = operator_path |> File.read!() |> JSON.decode!()
+    assert operator["evidence"]["task_request"] == later.task.prompt
     assert {:ok, frozen} = Host.episode(config, context(later, "frozen"))
     refute frozen["passed"]
     assert frozen["exposed_case_ids"] == []

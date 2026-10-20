@@ -86,6 +86,12 @@ their contrast evidence become source-backed proposer lessons. All task, propose
 probe, promoted and unsuccessful work is metered. Pre-dispatch acquisition failures
 retain a diagnostic category, and the study freezes a 30-second acquisition limit.
 Incomplete checkpoints still require explicit recovery and are never replayed.
+A terminal `max_turns` probe with verified runtime evidence and complete usage is
+scored as a failed probe, allowing refinement to learn from an exhausted control.
+It cannot become a successful candidate even when its partial files pass public
+checks. Provider failures, missing usage and evaluator timeouts remain incomplete.
+The proposer receives the public task request explicitly alongside bounded
+transcript evidence; private grading is never included.
 Study workspaces hide arm and attempt labels behind opaque paths. Actual changed
 file bytes are retained before lease release, including shell-generated files;
 bounded or unreadable omissions refuse complete qualification. Private workspace
