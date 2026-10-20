@@ -6,6 +6,7 @@ are the conservative statistical clusters. No network or third-party package.
 """
 
 import copy
+import inspect
 import json
 import pathlib
 import sys
@@ -237,6 +238,54 @@ FAMILIES = {
 }
 
 
+def fresh_input(family, item, partition, variant):
+    """Fresh parameters preserve the family; they never create a new cluster."""
+    item = copy.deepcopy(item)
+    prefix = f"{partition}-{variant + 1}-"
+    offset = (variant + 1) * 17 + sum(ord(char) for char in partition)
+    if family == "graph":
+        item["nodes"] = [prefix + node for node in item["nodes"]]
+        item["edges"] = [[prefix + child, prefix + parent] for child, parent in item["edges"]]
+    elif family == "journal":
+        for event in item:
+            if len(event) > 1:
+                event[1] = prefix + event[1]
+    elif family == "cache":
+        for event in item["events"]:
+            event[0] += offset
+            event[2] = prefix + event[2]
+    elif family == "merge":
+        def rename(value):
+            if isinstance(value, dict):
+                return {(key if key == "$delete" else prefix + key): rename(data) for key, data in value.items()}
+            return value
+        item = [rename(layer) for layer in item]
+    elif family == "reconcile":
+        for event in item:
+            event["id"] = prefix + event["id"]
+            if type(event["version"]) is int and event["version"] >= 0:
+                event["version"] += offset
+    elif family == "intervals":
+        item = [[start * offset, end * offset, weight] for start, end, weight in item]
+    elif family == "allocation":
+        if type(item["total"]) is int and item["total"] > 0:
+            item["total"] += offset
+    elif family == "patch":
+        def rename(value):
+            if isinstance(value, dict):
+                return {(prefix + key if key else key): rename(data) for key, data in value.items()}
+            return value
+        item["document"] = rename(item["document"])
+        for operation in item["operations"]:
+            if operation["path"].startswith("/"):
+                keys = [key.replace("~1", "/").replace("~0", "~") for key in operation["path"][1:].split("/")]
+                keys = [prefix + key if key else key for key in keys]
+                operation["path"] = "/" + "/".join(key.replace("~", "~0").replace("/", "~1") for key in keys)
+            if "value" in operation:
+                operation["value"] = rename(operation["value"])
+    return item
+
+
 def materialize(root, partition, variants):
     fixtures = []
     for family, (reference, contract, examples) in FAMILIES.items():
@@ -261,9 +310,8 @@ def materialize(root, partition, variants):
             # Public verification and private confirmation use distinct inputs.
             # A separate partition changes task identity and ordering, never the
             # declared independence count or the source of the expected results.
-            offset = (variant + (1 if partition == "confirmation" else 0)) % 2
-            public = examples[offset::2][:2]
-            private = [item for i, item in enumerate(examples) if i % 2 != offset] + examples[offset::2][2:]
+            public = [fresh_input(family, item, "public-" + partition, variant) for item in examples]
+            private = [fresh_input(family, item, "private-" + partition, variant) for item in examples]
             public_cases = [[item, reference(copy.deepcopy(item))] for item in public]
             private_cases = [[item, reference(copy.deepcopy(item))] for item in private]
             files["checks.py"] = "import json,subprocess,sys\ncases=json.loads(" + repr(json.dumps(public_cases)) + ")\nactual=json.loads(subprocess.check_output([sys.executable,'main.py',json.dumps([x for x,_ in cases])]))\nassert actual==[y for _,y in cases], (actual,cases)\nprint('public checks passed')\n"
@@ -279,6 +327,7 @@ def materialize(root, partition, variants):
                 "cases": private_cases, "probe_cases": public_cases,
                 "immutable": {name: data for name, data in files.items() if name not in mutable},
                 "reference_guidance": "Batch-read ISSUE.md, docs/contract.md, docs/development.md, src/project/core.py and src/project/policy.py. Implement in source; rebuild the generated runtime with python tools/build.py; execute public checks; verify edge cases from the written contract and inspect both source and built runtime. Do not treat the old generated copy as authoritative.",
+                "offline_oracle": "import copy\n" + inspect.getsource(reference) + f"\nsolve = {reference.__name__}\n",
             })
     return fixtures
 

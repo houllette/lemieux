@@ -4,6 +4,8 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   alias Lemieux.CLI.Learning.QualificationHost, as: Host
   alias Lemieux.Contract
   alias Lemieux.Environment.Local
+  alias Lemieux.Learning.Experience.Lessons
+  alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
   alias Lemieux.Providers.Scripted
   @moduletag :tmp_dir
 
@@ -148,6 +150,25 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
     assert {:error, {:episode_inputs_unavailable, {:error, :enotdir}}} =
              Host.episode(config, context(ctx.fixture, "frozen"))
+  end
+
+  test "study workspaces hide arm and attempt names from model-visible paths", ctx do
+    config =
+      ctx.config
+      |> Map.put(:opaque_paths, true)
+      |> Map.put(:capture_workspace, true)
+      |> Map.put(:provider, fn _ -> task_provider(true) end)
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "disabled"))
+    assert row["passed"]
+    assert row["workspace_evidence_complete"]
+    old = "1-#{ctx.fixture.id}-disabled"
+    assert File.exists?(Path.join([config.root, Contract.sha256(old), "evidence.json"]))
+    refute File.exists?(Path.join(config.root, old))
+    assert [artifact] = Path.wildcard(Path.join([config.root, "workspaces", "*.json"]))
+    workspace = artifact |> File.read!() |> JSON.decode!()
+    assert workspace["changed_paths"] == ["solution.py"]
+    assert hd(workspace["entries"])["base64"] == Base.encode64("fixed")
   end
 
   @tag capture_log: true
@@ -429,6 +450,27 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     assert evidence["refinement"]["decision"] == "proposed"
     assert evidence["promotion"]["undo"]["action"] == "rolled_back"
     assert length(evidence["refinement"]["composition"]) == 2
+    assert row["candidate_count"] == 1
+    assert row["promotion_count"] == 1
+    assert row["rollback_count"] == 1
+
+    store = LessonFiles.new(Path.join(ctx.config.root, "library-frozen-1"), ctx.config.scope)
+    assert {:ok, ids} = Lessons.inventory(store)
+
+    lessons =
+      Enum.map(ids, fn id ->
+        {:ok, lesson} = Lessons.read(store, id)
+        lesson
+      end)
+
+    retained = Enum.find(lessons, &(&1.kind == "proposer_lesson"))
+    assert retained.outcome == "supported"
+    assert retained.qualification == "behavioral"
+    assert retained.source_case_ids == [ctx.fixture.id]
+
+    assert Enum.any?(retained.artifacts, fn {_sha, bytes} ->
+             bytes |> Base.decode64!() |> String.contains?("GOOD")
+           end)
   end
 
   @tag capture_log: true

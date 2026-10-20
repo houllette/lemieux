@@ -16,10 +16,44 @@ runtime, build tooling, public checks and private checks. Both source and genera
 runtime must pass. These are synthetic developer-visible diagnostics, not real
 GitHub issues or independent confirmation. Additional variants remain in their
 original family; eight families cannot be relabeled as eighty independent cases.
+Public checks cover the contract categories using different parameters from
+private checks. The initial calibration's smaller checker is retained as prior
+development evidence; it is not pooled with the strengthened corpus.
+
+`--manifest PATH` imports pinned external repositories instead of generated cases.
+The private JSON manifest has `schema_version: 1`, `metadata` (including `id`,
+`exposure: developer_exposed | unexposed`, and upstream revision/provenance), and
+`tasks`. Each task supplies `id`, `cluster`, `phase: seed | learning | confirmation`,
+`source`, `source_sha256`, an immutable local `image: sha256:...`, `prompt`,
+`public_pytest_args`, `immutable_paths`, `private_tests` and
+`private_tests_sha256`. Source and private test digests use
+`Lemieux.CLI.Learning.Leases.source_digest/1`. Remove Git history and credentials
+before freezing sources. Private tests must be outside the source tree and never
+enter model containers; separate grader containers receive a read-only `/tests`
+mount. File tools and shell commands share the logical `/app` workspace.
+Qualify each image/grader with an untouched baseline and a known reference repair
+before hosted work. This adapter runs pytest already installed in the image and
+does not install packages or enable network access. Adapted benchmark runtimes
+must be reported separately from official leaderboard results.
+
+`--stage confirmation --manifest PATH` requires an unexposed corpus attestation
+and adequate prospective power. Exposed repository tasks remain development
+evidence. The runner cannot prove the curator's independence or absence of
+training contamination from an exposure label.
 
 Plans with an `analysis` field use protocol version 3; version 2 plans and their
 historical analysis remain verifiable. Each independent stream owns its library
 per arm and repetition. Only earlier tasks in that stream can become experience.
+The generated development study first collects one fixed seed task per family
+through ordinary capture, with no search or seed selection. Registration freezes
+that recipe and every target before paid work; the target plan then pins actual
+retained seed bytes. Every learning arm/repetition receives the same initial seed
+inventory for its stream. Retrieval accumulates observations without probing;
+frozen refinement keeps the seed inventory; updating refinement also retains
+later observations and supported profiles. Seed usage is reported separately and
+included in the updating arm's request-ratio acceptance check. An external
+manifest can declare `phase: seed` tasks; an empty external seed inventory is
+explicitly reported and exercises no prior retrieval.
 Only confirmation-phase outcomes enter the primary endpoint, which is completion
 of every confirmation task and repetition in the stream. All episode success,
 usage and latency are also reported. Stream independence is a study-design
@@ -52,6 +86,15 @@ their contrast evidence become source-backed proposer lessons. All task, propose
 probe, promoted and unsuccessful work is metered. Pre-dispatch acquisition failures
 retain a diagnostic category, and the study freezes a 30-second acquisition limit.
 Incomplete checkpoints still require explicit recovery and are never replayed.
+Study workspaces hide arm and attempt labels behind opaque paths. Actual changed
+file bytes are retained before lease release, including shell-generated files;
+bounded or unreadable omissions refuse complete qualification. Private workspace
+artifacts remain outside model containers and are indexed by digest in the report.
+The request envelope scales with `--task-requests` (8–24): at least eight task
+allocations plus sixteen proposer calls, with six task allocations plus sixteen
+reserved for refinement. Every arm receives that same outer envelope; retry
+attempts can use it fully. The default twelve-call task allowance retains a
+160-call outer cap. A twenty-four-call task uses 208 outer slots.
 
 For example, after explicit hosted authorization:
 
@@ -61,6 +104,17 @@ mix run scripts/qualify_learning_study.exs --allow-live --stage calibration \
 mix run scripts/qualify_learning_study.exs --allow-live --stage development \
   --model openai_codex:gpt-6-luna --effort low --output tmp/study-development-luna
 ```
+
+An inexpensive offline study rehearsal uses reference repairs through Scripted:
+
+```sh
+mix run scripts/qualify_learning_study.exs --stage development --offline-smoke \
+  --output tmp/study-offline-rehearsal
+```
+
+The offline subset cannot select a hosted provider. Reference implementations
+stay in the host and are never supplied to a hosted provider or copied into live
+task inputs. Its passing outcomes establish mechanics only.
 
 The following describes the earlier version 2 pilot runner and its frozen rules.
 

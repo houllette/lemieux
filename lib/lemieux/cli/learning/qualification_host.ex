@@ -12,6 +12,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.CLI.Learning.Installation
   alias Lemieux.CLI.Learning.Leases
   alias Lemieux.CLI.Learning.RefinementLesson
+  alias Lemieux.CLI.Learning.WorkspaceEvidence
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime.Evaluation
   alias Lemieux.Contract
@@ -55,11 +56,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   def episode(config, context) do
     fixture = Map.fetch!(config.fixtures, context["task"]["id"])
 
-    dir =
-      Path.join(
-        config.root,
-        "#{context["repetition"]}-#{context["task"]["id"]}-#{context["arm"]}"
-      )
+    dir = Path.join(config.root, episode_name(config, context))
 
     with :ok <- File.mkdir(dir),
          {:ok, source} <- Leases.source_digest(fixture.task.cwd),
@@ -167,8 +164,9 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         scope
       )
 
-    for lesson <- config[:initial_lessons] || [], do: :ok = Lessons.append(store, lesson)
-    initial_ids = Enum.map(config[:initial_lessons] || [], & &1.id)
+    seeds = initial_lessons(config, context)
+    for lesson <- seeds, do: :ok = Lessons.append(store, lesson)
+    initial_ids = Enum.map(seeds, & &1.id)
     {:ok, inventory} = Retrieval.freeze(store, scope)
     allowed_ids = Enum.sort(initial_ids ++ context["prior_lesson_ids"])
     true = Enum.all?(allowed_ids, &(&1 in inventory["lesson_ids"]))
@@ -323,12 +321,15 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
        "arm" => context["arm"],
        "task_id" => fixture.id,
        "repetition" => context["repetition"],
-       "passed" => selected_grade["passed"],
+       "passed" => selected_grade["passed"] and result.selected.grade["passed"],
+       "private_confirmation_passed" => selected_grade["passed"],
        "visible_verification_passed" => result.selected.grade["passed"],
        "candidate_count" => candidate_count(result),
        "promotion_count" => promotion_count(result),
        "rollback_count" => promotion_count(result),
-       "qualification_complete" => is_nil(result[:learning_failure]),
+       "qualification_complete" =>
+         is_nil(result[:learning_failure]) and workspace_complete?(evidence),
+       "workspace_evidence_complete" => workspace_complete?(evidence),
        "requests" => if(metered, do: map_size(metered), else: accounting["requests"]),
        "tokens" => accounting["tokens"],
        "allocated_requests" => accounting["requests"],
@@ -405,10 +406,10 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp attempt(config, fixture, lease_config, controller, name, harness) do
     {:ok, lease, guardian} =
       Resource.acquire(
-        fn _ -> Leases.acquire(lease_config, name, lease_config.bindings) end,
+        fn _ -> Leases.acquire(lease_config, lease_name(config, name), lease_config.bindings) end,
         &Leases.release(lease_config, &1),
         timeout_ms: acquisition_timeout(config),
-        abort: fn -> Leases.abort(lease_config, name) end
+        abort: fn -> Leases.abort(lease_config, lease_name(config, name)) end
       )
 
     try do
@@ -496,7 +497,12 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         max_tokens: 8192
       )
 
-    allocation = %{requests: 112, tokens: 1_500_000, time_ms: 1_500_000, cost_usd: nil}
+    allocation = %{
+      requests: refinement_requests(config),
+      tokens: 1_500_000,
+      time_ms: 1_500_000,
+      cost_usd: nil
+    }
 
     {:ok, plan, bytes} =
       Campaign.plan(
@@ -858,6 +864,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   end
 
   defp grade(config, fixture, cwd) do
+    workspace = retain_workspace(config, fixture, cwd, %{})
+
     grade =
       fixture_grade(
         config,
@@ -865,9 +873,28 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         cwd
       )
 
+    grade = Map.merge(grade, workspace)
     Agent.update(config.grades, &[grade | &1])
     grade
   end
+
+  defp retain_workspace(%{capture_workspace: true} = config, fixture, cwd, grade) do
+    evidence = WorkspaceEvidence.capture(fixture.task.cwd, cwd)
+    path = Path.join([config.root, "workspaces", Contract.sha256(cwd) <> ".json"])
+    :ok = File.mkdir_p(Path.dirname(path))
+    :ok = Installation.write(path, evidence)
+
+    Map.merge(grade, %{
+      "workspace_evidence_sha256" => evidence["sha256"],
+      "workspace_evidence_complete" => evidence["complete"]
+    })
+  end
+
+  defp retain_workspace(_config, _fixture, _cwd, grade), do: grade
+
+  defp workspace_complete?(evidence),
+    do:
+      Enum.all?(evidence["all_attempt_grades"], &Map.get(&1, "workspace_evidence_complete", true))
 
   defp confirmation_grade(config, %{probe_cases: _} = fixture, cwd),
     do: fixture_grade(config, fixture, cwd)
@@ -875,7 +902,21 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp confirmation_grade(_config, _fixture, _cwd), do: nil
 
   defp task_requests(config), do: config[:task_requests] || 16
+
+  defp episode_name(config, context) do
+    name = "#{context["repetition"]}-#{context["task"]["id"]}-#{context["arm"]}"
+    if config[:opaque_paths], do: Contract.sha256(name), else: name
+  end
+
+  defp lease_name(config, name),
+    do: if(config[:opaque_paths], do: Contract.sha256(name), else: name)
+
+  defp initial_lessons(%{seed_libraries: libraries}, context),
+    do: Map.get(libraries, context["stream_id"], [])
+
+  defp initial_lessons(config, _context), do: config[:initial_lessons] || []
   defp acquisition_timeout(config), do: config[:acquisition_timeout_ms] || 5000
+  defp refinement_requests(config), do: config[:refinement_requests] || 112
   defp candidate_count(%{refinement: nil}), do: 0
   defp candidate_count(%{refinement: receipt}), do: length(receipt["candidates"] || [])
   defp promotion_count(%{promotion: nil}), do: 0

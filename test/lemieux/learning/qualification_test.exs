@@ -242,7 +242,7 @@ defmodule Lemieux.Learning.QualificationTest do
     for ctx <- contexts do
       assert ctx["stream_id"] in ~w(stream-1 stream-2)
 
-      if ctx["arm"] == "updating" and ctx["task"]["phase"] == "confirmation" do
+      if ctx["arm"] in ~w(updating retrieval) and ctx["task"]["phase"] == "confirmation" do
         [number, _phase] = String.split(ctx["task"]["id"], "-")
         assert ctx["available_case_ids"] == ["warmup", "#{number}-learning"]
       else
@@ -286,5 +286,38 @@ defmodule Lemieux.Learning.QualificationTest do
     assert report["benefit"] == "supported_in_this_scope"
     refute report["updating_vs_frozen"]["confirmatory"]
     assert report["comparisons_to_retry"]["updating"]["confirmatory"]
+
+    without_mechanism =
+      Enum.map(
+        report["rows"],
+        &Map.merge(&1, %{"candidate_count" => 0, "promotion_count" => 0, "rollback_count" => 0})
+      )
+
+    assert {:ok, no_mechanism} = Q.report(plan, without_mechanism)
+    assert no_mechanism["benefit"] == "inconclusive"
+  end
+
+  test "independent confirmation refuses an underpowered plan before any dispatch" do
+    {:ok, development} = stream_plan(8)
+
+    attrs =
+      Map.take(
+        development,
+        ~w(id model effort runtime seed_case_ids initial_library_sha256 repetitions allowance alpha claim tasks analysis)
+      )
+
+    assert {:error, :invalid_qualification_plan} =
+             Q.plan(Map.put(attrs, "claim", "independent_confirmation"))
+
+    {:ok, powered} = stream_plan(80)
+
+    attrs =
+      Map.take(
+        powered,
+        ~w(id model effort runtime seed_case_ids initial_library_sha256 repetitions allowance alpha claim tasks analysis)
+      )
+
+    assert {:ok, confirmation} = Q.plan(Map.put(attrs, "claim", "independent_confirmation"))
+    assert :ok = Q.verify(confirmation)
   end
 end

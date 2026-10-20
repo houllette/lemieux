@@ -2,11 +2,18 @@ defmodule Lemieux.CLI.Learning.Container do
   @moduledoc false
   @behaviour Lemieux.Environment
   alias Lemieux.Agent.Resource
+  alias Lemieux.Contract
   alias Lemieux.Environment.Local
   alias Lemieux.Environment.Sandbox
 
-  @spec new(image :: String.t()) :: {:ok, Lemieux.Environment.t()} | {:error, term()}
-  def new(image) do
+  @spec new(image :: String.t(), opts :: keyword()) ::
+          {:ok, Lemieux.Environment.t()} | {:error, term()}
+  def new(image, opts \\ []) do
+    workdir = Keyword.get(opts, :workdir, "/workspace")
+    true = workdir in ["/workspace", "/app"]
+    mounts = Keyword.get(opts, :verification_mounts, [])
+    true = Enum.all?(mounts, fn {source, target} -> File.dir?(source) and target == "/tests" end)
+
     case System.cmd("docker", ["image", "inspect", image, "--format", "{{.Id}}"],
            stderr_to_stdout: true
          ) do
@@ -16,7 +23,12 @@ defmodule Lemieux.CLI.Learning.Container do
 
         {:ok,
          {__MODULE__,
-          %{image: String.trim(id), user: String.trim(uid) <> ":" <> String.trim(gid)}}}
+          %{
+            image: String.trim(id),
+            user: String.trim(uid) <> ":" <> String.trim(gid),
+            workdir: workdir,
+            verification_mounts: mounts
+          }}}
 
       _unavailable ->
         {:error, :qualification_image_unavailable}
@@ -24,17 +36,31 @@ defmodule Lemieux.CLI.Learning.Container do
   end
 
   @impl true
-  def read_file(_state, cwd, path), do: Local.read_file(nil, cwd, path)
+  def read_file(state, cwd, path), do: Local.read_file(nil, cwd, mapped(state, cwd, path))
   @impl true
-  def stream_file(_state, cwd, path), do: Local.stream_file(nil, cwd, path)
+  def stream_file(state, cwd, path), do: Local.stream_file(nil, cwd, mapped(state, cwd, path))
   @impl true
-  def list_dir(_state, cwd, path), do: Local.list_dir(nil, cwd, path)
+  def list_dir(state, cwd, path), do: Local.list_dir(nil, cwd, mapped(state, cwd, path))
   @impl true
-  def write_file(_state, cwd, path, bytes), do: Local.write_file(nil, cwd, path, bytes)
+  def write_file(state, cwd, path, bytes),
+    do: Local.write_file(nil, cwd, mapped(state, cwd, path), bytes)
+
   @impl true
-  def delete_file(_state, cwd, path), do: Local.delete_file(nil, cwd, path)
+  def delete_file(state, cwd, path), do: Local.delete_file(nil, cwd, mapped(state, cwd, path))
   @impl true
   def credentials(_state), do: {:scrub, []}
+
+  # Logical container paths must refer to the same workspace as file tools.
+  # Local still performs symlink-aware confinement after this translation.
+  defp mapped(state, cwd, path) when is_binary(path) do
+    workdir = Map.get(state, :workdir, "/workspace")
+
+    if path == workdir or String.starts_with?(path, workdir <> "/"),
+      do: Path.join(cwd, String.replace_prefix(path, workdir, "")),
+      else: path
+  end
+
+  defp mapped(_state, _cwd, path), do: path
 
   # Each command gets a fresh unprivileged container with only its workspace
   # mounted. No host home, socket, token, grader, other arm or network is visible.
@@ -50,38 +76,51 @@ defmodule Lemieux.CLI.Learning.Container do
     name = "lmx-qual-" <> String.downcase(Lemieux.ID.generate())
     cwd = Path.expand(Keyword.fetch!(opts, :cwd))
 
-    args = [
-      "create",
-      "--name",
-      name,
-      "--user",
-      state.user,
-      "--label",
-      "lemieux.learning.qualification=true",
-      "--network",
-      "none",
-      "--read-only",
-      "--cap-drop",
-      "ALL",
-      "--security-opt",
-      "no-new-privileges",
-      "--pids-limit",
-      "128",
-      "--memory",
-      "512m",
-      "--cpus",
-      "1",
-      "--tmpfs",
-      "/tmp:rw,nosuid,size=64m",
-      "--volume",
-      cwd <> ":/workspace:rw",
-      "--workdir",
-      "/workspace",
-      state.image,
-      "sh",
-      "-c",
-      "ulimit -f 4096; " <> command
-    ]
+    workdir = Map.get(state, :workdir, "/workspace")
+
+    mounts =
+      Enum.flat_map(Map.get(state, :verification_mounts, []), fn {source, target} ->
+        ["--volume", Path.expand(source) <> ":" <> target <> ":ro"]
+      end)
+
+    args =
+      [
+        "create",
+        "--name",
+        name,
+        "--user",
+        state.user,
+        "--label",
+        "lemieux.learning.qualification=true",
+        "--label",
+        "lemieux.learning.workspace=" <> Contract.sha256(cwd),
+        "--network",
+        "none",
+        "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--pids-limit",
+        "128",
+        "--memory",
+        "512m",
+        "--cpus",
+        "1",
+        "--tmpfs",
+        "/tmp:rw,nosuid,size=64m",
+        "--volume",
+        cwd <> ":" <> workdir <> ":rw",
+        "--workdir",
+        workdir
+      ] ++
+        mounts ++
+        [
+          state.image,
+          "sh",
+          "-c",
+          "ulimit -f 4096; " <> command
+        ]
 
     {:ok, id, guardian} =
       Resource.acquire(

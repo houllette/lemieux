@@ -8,7 +8,8 @@ defmodule Lemieux.CLI.Learning.Projects do
   @spec materialize(root :: Path.t(), partition :: String.t(), variants :: pos_integer()) :: [
           map()
         ]
-  def materialize(root, partition, variants) when partition in ~w(development confirmation) do
+  def materialize(root, partition, variants)
+      when partition in ~w(seed development confirmation) do
     generator = Application.app_dir(:lemieux, "priv/qualification/projects.py")
 
     {bytes, 0} =
@@ -26,6 +27,7 @@ defmodule Lemieux.CLI.Learning.Projects do
         immutable: fixture["immutable"],
         verification_command: "python checks.py",
         reference_guidance: fixture["reference_guidance"],
+        offline_oracle: fixture["offline_oracle"],
         task: %Task{
           id: fixture["id"],
           cwd: fixture["cwd"],

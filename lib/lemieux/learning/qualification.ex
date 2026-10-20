@@ -10,8 +10,15 @@ defmodule Lemieux.Learning.Qualification do
   No provider, scheduler or process is created here. Updating experience is
   causal and isolated by arm and repetition; frozen arms never inherit it.
 
-  Safety, accounting and complete execution are mechanical gates. Quality uses
-  paired cluster means and a conservative fixed-sample Hoeffding interval.
+  Safety, accounting and complete execution are mechanical gates. Version 2
+  retains its paired-cluster Hoeffding rule so historical plans cannot be
+  reinterpreted after seeing their outcomes. Version 3 explicitly registers
+  independent streams, a confirmation-only binary endpoint, two primary exact
+  paired comparisons, practical effect/regression/resource thresholds and power.
+  A stream owns its causal learning history; related tasks and repetitions do
+  not become independent observations. Underpowered independent confirmation
+  plans refuse before execution. See `Lemieux.Learning.Qualification.Paired` for
+  the estimand, test assumptions and power model.
   Tokens, cost and latency are reported as secondary evidence; greater usage
   does not disqualify an accurate result. A small or ceiling-limited experiment
   is inconclusive, even when every task passes. Re-running exposed cases cannot
@@ -39,7 +46,7 @@ defmodule Lemieux.Learning.Qualification do
          true <- digest?(attrs["initial_library_sha256"]),
          true <- ids?(attrs["seed_case_ids"]),
          true <- tasks?(attrs["tasks"], attrs["analysis"]),
-         true <- analysis?(attrs["analysis"]),
+         true <- registered_analysis?(attrs),
          true <- Enum.all?(attrs["tasks"], &(&1["id"] not in attrs["seed_case_ids"])),
          true <- allowance?(attrs["allowance"]),
          true <- powered_confirmation?(attrs) do
@@ -209,7 +216,7 @@ defmodule Lemieux.Learning.Qualification do
   defp supported?(comparison),
     do: comparison["regressions"] == 0 and hd(comparison["interval"]) > 0
 
-  defp benefit_for(%{"analysis" => analysis}, true, true, comparisons, retry, summaries) do
+  defp benefit_for(%{"analysis" => analysis} = plan, true, true, comparisons, retry, summaries) do
     supported =
       Enum.all?([comparisons["updating"], retry["updating"]], fn comparison ->
         comparison["effect"] >= analysis["minimum_effect"] and
@@ -219,7 +226,7 @@ defmodule Lemieux.Learning.Qualification do
 
     resources =
       Enum.all?(~w(disabled retry), fn arm ->
-        summaries["updating"]["requests"] <=
+        summaries["updating"]["requests"] + seed_requests(plan) <=
           max(1, summaries[arm]["requests"]) * analysis["maximum_request_ratio"] and
           summaries["updating"]["latency_ms"]["p95"] <=
             max(1, summaries[arm]["latency_ms"]["p95"]) * analysis["maximum_latency_ratio"]
@@ -254,6 +261,8 @@ defmodule Lemieux.Learning.Qualification do
 
   defp analysis_report(_legacy), do: nil
 
+  defp seed_requests(plan), do: get_in(plan, ["runtime", "seed_usage", "requests"]) || 0
+
   defp powered_confirmation?(
          %{"analysis" => analysis, "claim" => "independent_confirmation"} = attrs
        ) do
@@ -287,7 +296,8 @@ defmodule Lemieux.Learning.Qualification do
              ))
       end)
 
-    available = if arm == "updating", do: Enum.map(previous, & &1["task_id"]), else: []
+    updates? = updates_experience?(plan, arm)
+    available = if updates?, do: Enum.map(previous, & &1["task_id"]), else: []
 
     context = %{
       "plan_sha256" => plan["sha256"],
@@ -298,7 +308,7 @@ defmodule Lemieux.Learning.Qualification do
       "initial_library_sha256" => plan["initial_library_sha256"],
       "available_case_ids" => plan["seed_case_ids"] ++ available,
       "prior_lesson_ids" =>
-        if(arm == "updating", do: Enum.flat_map(previous, & &1["created_lesson_ids"]), else: [])
+        if(updates?, do: Enum.flat_map(previous, & &1["created_lesson_ids"]), else: [])
     }
 
     if plan["analysis"], do: Map.put(context, "stream_id", task["cluster"]), else: context
@@ -373,6 +383,12 @@ defmodule Lemieux.Learning.Qualification do
     |> Map.put("endpoint", "all_confirmation_tasks_and_repetitions_passed_per_stream")
   end
 
+  defp updates_experience?(%{"schema_version" => 3}, arm) when arm in ~w(updating retrieval),
+    do: true
+
+  defp updates_experience?(_plan, "updating"), do: true
+  defp updates_experience?(_plan, _arm), do: false
+
   defp legacy_comparison(plan, rows, arm, control_arm) do
     index = Map.new(rows, &{{&1["repetition"], &1["task_id"], &1["arm"]}, &1})
 
@@ -435,7 +451,7 @@ defmodule Lemieux.Learning.Qualification do
   end
 
   defp tasks?(tasks, analysis)
-       when is_list(tasks) and is_map(analysis) and length(tasks) in 2..1000 do
+       when is_list(tasks) and is_map(analysis) and length(tasks) in 1..1000 do
     ids?(Enum.map(tasks, & &1["id"])) and
       Enum.all?(tasks, fn task ->
         Enum.sort(Map.keys(task)) == ~w(cluster id phase source_sha256) and text?(task["cluster"]) and
@@ -452,7 +468,10 @@ defmodule Lemieux.Learning.Qualification do
 
   defp tasks?(_invalid, _analysis), do: false
 
-  defp analysis?(nil), do: true
+  defp registered_analysis?(%{"analysis" => analysis}),
+    do: is_map(analysis) and analysis?(analysis)
+
+  defp registered_analysis?(_legacy), do: true
 
   defp analysis?(analysis) when is_map(analysis) do
     Enum.sort(Map.keys(analysis)) ==
@@ -470,8 +489,6 @@ defmodule Lemieux.Learning.Qualification do
         &(is_number(analysis[&1]) and analysis[&1] >= 1)
       )
   end
-
-  defp analysis?(_invalid), do: false
 
   defp allowance?(cap),
     do:

@@ -51,6 +51,15 @@ class QualificationProjectsTest(unittest.TestCase):
                     self.assertNotIn("FAMILIES =", workspace)
                     self.assertNotIn("private_cases", workspace)
 
+    def test_parameter_variants_are_fresh_without_inflating_family_count(self):
+        with tempfile.TemporaryDirectory(prefix="lemieux-corpus-fresh-") as directory:
+            fixtures = PROJECTS.materialize(directory, "development", 2)
+            graph = [item for item in fixtures if item["cluster"] == "graph"]
+            first = {json.dumps(x) for x, _ in graph[0]["cases"] if x["nodes"]}
+            second = {json.dumps(x) for x, _ in graph[1]["cases"] if x["nodes"]}
+            self.assertFalse(first.intersection(second))
+            self.assertEqual(graph[0]["cluster"], graph[1]["cluster"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -45,6 +45,6 @@ defmodule Lemieux.CLI.Learning.ProjectsTest do
     File.write!(implementation, "def solve(value):\n    return None\n")
     refute Projects.grade(fixture, fixture.task.cwd, environment)["passed"]
     refute File.exists?(Path.join(fixture.task.cwd, "cases.json"))
-    assert length(fixture.cases) > length(fixture.probe_cases)
+    refute fixture.cases == fixture.probe_cases
   end
 end
