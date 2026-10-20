@@ -5,6 +5,22 @@ defmodule Lmx.CLITest do
 
   alias Lmx.CLI
 
+  test "the release host dispatches provider-free learning controls through the library host" do
+    caller = self()
+
+    assert CLI.run(["learning", "inspect"],
+             configure: fn -> :ok end,
+             native_loader: fn -> :ok end,
+             runner: fn argv ->
+               send(caller, {:learning_command, argv})
+               :ok
+             end
+           ) == 0
+
+    assert_received {:learning_command, ["learning", "inspect"]}
+    assert "learning" in Lemieux.CLI.commands()
+  end
+
   test "loads the native TUI before dispatching any command" do
     caller = self()
 

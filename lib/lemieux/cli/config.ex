@@ -136,7 +136,7 @@ defmodule Lemieux.CLI.Config do
              systemone_providers max_turns max_requests max_cost_usd max_total_requests max_total_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
              extension_options scout_model verify continuation input_modalities notifications
-             skills capture watches)
+             skills capture watches learning)
   # A misspelling of one of these is refused rather than ignored: ignoring it
   # could send a request somewhere other than where the file meant, or
   # without the credential it meant to supply.
@@ -173,7 +173,7 @@ defmodule Lemieux.CLI.Config do
   @systemone_ixway_fields ~w(base_url model input_per_million output_per_million)
   @shipped_extensions ~w(mcp interactive web elixir workspace delegation a2a systemone_compaction
                          environment_context planning continuation verify budget search
-                         apply_patch checkpoints mcp_discovery capture watches)
+                         apply_patch checkpoints mcp_discovery capture watches learning)
 
   @doc "Returns the optional personal configuration path."
   @spec default_path() :: Path.t()
@@ -1071,6 +1071,7 @@ defmodule Lemieux.CLI.Config do
   defp valid_field?("mouse", value), do: is_boolean(value)
   defp valid_field?("project_mcp", value), do: is_boolean(value)
   defp valid_field?("delegate", value), do: is_boolean(value)
+  defp valid_field?("learning", value), do: is_boolean(value)
   # Whether the name is a palette is decided after the field pass, once
   # `"themes"` has been read: see `validate_themes/1`.
   defp valid_field?("theme", value), do: is_binary(value) and value != ""

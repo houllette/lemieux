@@ -86,7 +86,14 @@ defmodule Lemieux.Harness.AdoptionTest do
     # selected was loaded, only what lmx itself ships.
     modules = Enum.map(report["extensions"], & &1["module"])
     assert List.last(modules) == "Lemieux.Harness.AdoptionTest.Opinion"
-    assert modules |> Enum.drop(-1) |> Enum.all?(&String.starts_with?(&1, "Lemieux.Extensions."))
+
+    assert modules
+           |> Enum.drop(-1)
+           |> Enum.all?(fn module ->
+             String.starts_with?(module, "Lemieux.Extensions.") or
+               module == "Lemieux.CLI.Learning.Loop"
+           end)
+
     assert Scripted.requests(provider) == []
     refute output =~ "PRIVATE"
   end
