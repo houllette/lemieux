@@ -41,6 +41,9 @@ output directory and report; do not pool different model or effort scopes.
 Non-subscription routes are refused by this runner. Reports include direct
 frozen/updating comparisons with the equal-budget retry control and updating
 versus frozen experience, as well as the ordinary disabled comparison.
+The runners disable SDK transport retries (`max_retries: 0`) and freeze that
+setting in the plan. Only session/controller retries may create another call,
+so a failed transport cannot silently add attempts below the dispatch counter.
 
 `scripts/qualify_learning_stream.exs` supplements that protocol with the actual
 stock ordinary-use experience lane. It runs paired disabled/default streams in

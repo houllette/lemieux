@@ -86,6 +86,7 @@ plan = %{
   "time_ms_per_task" => 480_000,
   "learning_requests" => 0,
   "inference_route" => if(live, do: "codex_subscription", else: "scripted"),
+  "transport_max_retries" => 0,
   "stopping" => "fixed_complete_sample",
   "decision" => "mechanics_and_nonregression_only_no_benefit_claim",
   "tasks" =>
@@ -154,7 +155,7 @@ try do
 
       provider =
         if live,
-          do: Recording.new(meter, ReqLLM.new(receive_timeout: :infinity)),
+          do: Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0)),
           else:
             Scripted.new([
               Scripted.tool_call("check", "bash", %{"command" => "make test"},

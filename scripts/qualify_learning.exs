@@ -88,6 +88,7 @@ runtime = %{
   "refinement" => %{"repetitions" => 2, "maximum_candidates" => 1, "critic" => false},
   "retry" => %{"maximum_attempts" => 3, "stopping" => "first_verified_success"},
   "inference_route" => if(live, do: "codex_subscription", else: "scripted"),
+  "transport_max_retries" => 0,
   "cost_kind" => "subscription_quota_not_api_billing",
   "billed_api" => false
 }
@@ -126,7 +127,7 @@ try do
 
     provider = fn _role ->
       if live,
-        do: Recording.new(meter, ReqLLM.new(receive_timeout: :infinity)),
+        do: Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0)),
         else:
           Scripted.new([
             fn request ->
