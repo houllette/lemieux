@@ -56,7 +56,10 @@ defmodule Lemieux.CLI.Learning.Fixtures do
 
     inputs = Enum.map(fixture.cases, &elem(&1, 0))
     expected = Enum.map(fixture.cases, &elem(&1, 1))
-    command = "python main.py " <> Sandbox.quote_shell(JSON.encode!(inputs))
+
+    command =
+      Map.get(fixture, :runner, "python main.py") <>
+        " " <> Sandbox.quote_shell(JSON.encode!(inputs))
 
     events =
       case Environment.run(environment, command,

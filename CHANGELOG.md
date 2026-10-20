@@ -20,6 +20,12 @@ API.
 
 ### Features
 
+- Experimental learning qualification adds independent stream isolation,
+  exact paired inference, prospective power and practical acceptance thresholds.
+  A staged repository-workflow study separates public verification feedback from
+  private grading and retains supported refinement profiles for later proposals.
+  Version 2 plans keep their original analysis; version 3 is selected explicitly.
+
 - Ordinary `lmx` sessions retain scoped observations and reuse bounded,
   unconfirmed experience on later tasks, with provider-free `lmx learning`
   inspection, exact context undo and a persistent workspace opt-out. This

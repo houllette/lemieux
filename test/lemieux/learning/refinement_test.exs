@@ -43,6 +43,8 @@ defmodule Lemieux.Learning.RefinementTest do
     def inspect(state), do: {:ok, Agent.get(state, & &1.status)}
     @impl true
     def acquire(state, id, bindings) do
+      if Agent.get(state, &Map.get(&1, :hold_acquisition, false)), do: Process.sleep(60_000)
+
       %{source: source, root: root, owner: owner, options: options, host: host} =
         Agent.get(state, & &1)
 
@@ -538,6 +540,38 @@ defmodule Lemieux.Learning.RefinementTest do
     assert Controller.snapshot(ctx.controller)["accounting"]["tokens"] == nil
     assert JobBudget.snapshot(ctx.budget).requests == 40
     refute_receive {:request_running, _}, 30
+  end
+
+  test "a pre-dispatch acquisition timeout retains its cause and still requires recovery", ctx do
+    owner = self()
+    Agent.update(ctx.isolation, &Map.put(&1, :hold_acquisition, true))
+
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:acquisition_timeout_ms, 25)
+      |> Keyword.put(:on_incomplete, fn cause ->
+        send(owner, {:cause, cause})
+        :ok
+      end)
+
+    assert {:error, {:requires_recovery, "lease-timeout"}} =
+             Refinement.run(ctx.handle, "lease-timeout", ctx.plan, opts)
+
+    assert_receive {:cause,
+                    %{
+                      "cause" => %{
+                        "phase" => "control",
+                        "attempt" => 1,
+                        "reason" => "resource_start_timeout"
+                      }
+                    }}
+
+    refute_receive {:leased, _}, 30
+
+    assert {:error, {:requires_recovery, "lease-timeout"}} =
+             Refinement.run(ctx.handle, "lease-timeout", ctx.plan, opts)
+
+    refute_receive {:cause, _}, 30
   end
 
   test "a zero learning allowance resolves no provider", ctx do

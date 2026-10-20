@@ -1,5 +1,69 @@
 # Qualifying learning before release
 
+The staged runner is `scripts/qualify_learning_study.exs`. Start with
+`--stage calibration`: it compares the ordinary harness with explicitly
+developer-authored workflow guidance on eight repository-shaped development
+families. This diagnoses whether the permitted harness surface can help; the
+reference guidance contains no implementation or private checks. After reviewing
+headroom, use a fresh output directory and `--stage development` for all five arms.
+Both stages default to Scripted. Hosted execution requires explicit authorization
+and `--allow-live`; model/effort/output switches follow the subscription rules below.
+
+The development corpus covers dependency layers, nested transactions, TTL/LRU,
+configuration overlays, event reconciliation, weighted intervals, integer
+apportionment and atomic patches. Each repository has source modules, a generated
+runtime, build tooling, public checks and private checks. Both source and generated
+runtime must pass. These are synthetic developer-visible diagnostics, not real
+GitHub issues or independent confirmation. Additional variants remain in their
+original family; eight families cannot be relabeled as eighty independent cases.
+
+Plans with an `analysis` field use protocol version 3; version 2 plans and their
+historical analysis remain verifiable. Each independent stream owns its library
+per arm and repetition. Only earlier tasks in that stream can become experience.
+Only confirmation-phase outcomes enter the primary endpoint, which is completion
+of every confirmation task and repetition in the stream. All episode success,
+usage and latency are also reported. Stream independence is a study-design
+requirement; grouping labels cannot establish it for overlapping repositories.
+
+The two primary comparisons are updating versus disabled and updating versus
+retry. Exact one-sided paired McNemar tests use alpha/2. The reported exact interval
+is for win probability conditional on a discordant stream, **not** an interval
+for percentage-point improvement. Other contrasts are diagnostic. Practical
+acceptance additionally requires a ten-point observed stream-success improvement,
+at most 10% regressing streams, total requests at most eight times each control,
+p95 latency at most ten times each control, and observed candidate promotion and
+rollback. Safety failures, incomplete execution or unknown usage still refuse a
+benefit claim. This is bounded efficacy evidence, not a universal no-regression
+or release-safety guarantee. See [NIST's paired-test assumptions](https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/mcnemar.htm).
+
+Power is computed before dispatch using the actual rejection and practical
+acceptance rule. With assumed win/loss probabilities 0.25/0.05, 80 independent
+streams give about 90.4% power per primary comparison and an 80.8% lower bound
+for detecting both. Those assumptions are predictions, not measured efficacy.
+An underpowered version 3 `independent_confirmation` plan is refused before
+execution. A small development study remains explicitly underpowered; significance
+does not establish representativeness or justify automatic asset activation.
+
+The study host gives task selection, retries and the proposer only public
+verification feedback. Private grades stay outside those decisions. Retries can
+use the full outer request allowance, stopping on public verification success;
+refinement runs only after failed public verification. Supported profiles and
+their contrast evidence become source-backed proposer lessons. All task, proposer,
+probe, promoted and unsuccessful work is metered. Pre-dispatch acquisition failures
+retain a diagnostic category, and the study freezes a 30-second acquisition limit.
+Incomplete checkpoints still require explicit recovery and are never replayed.
+
+For example, after explicit hosted authorization:
+
+```sh
+mix run scripts/qualify_learning_study.exs --allow-live --stage calibration \
+  --model openai_codex:gpt-6-luna --effort low --output tmp/study-calibration-luna
+mix run scripts/qualify_learning_study.exs --allow-live --stage development \
+  --model openai_codex:gpt-6-luna --effort low --output tmp/study-development-luna
+```
+
+The following describes the earlier version 2 pilot runner and its frozen rules.
+
 The [2026-10-20 hosted pilot](qualification/2026-10-20-default-learning/README.md)
 records separate GPT-6 subscription scopes, stock-path reuse, five-arm outcomes,
 complete usage projections and the remaining qualification work. It preserves

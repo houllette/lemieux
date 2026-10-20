@@ -158,7 +158,8 @@ defmodule Lemieux.Learning.Refinement do
              Plan.to_map(plan),
              opts[:allocation],
              fn child ->
-               lane(plan, config, Keyword.put(opts, :controller, child)) |> lane_result(config)
+               lane(plan, config, Keyword.put(opts, :controller, child))
+               |> lane_result(config, opts)
              end
            ) do
       case result do
@@ -213,13 +214,34 @@ defmodule Lemieux.Learning.Refinement do
     end
   end
 
-  defp lane_result(result, config) do
+  defp lane_result(result, config, opts) do
     case result do
-      {:ok, _} -> result
-      {:noop, reason} -> {:ok, baseline(config, reason)}
-      _uncertain -> :in_doubt
+      {:ok, _} ->
+        result
+
+      {:noop, reason} ->
+        {:ok, baseline(config, reason)}
+
+      uncertain ->
+        if observer = opts[:on_incomplete] do
+          :ok = observer.(%{"stage" => "refinement", "cause" => failure_cause(uncertain)})
+        end
+
+        :in_doubt
     end
   end
+
+  # Retain diagnostic categories without copying provider error bodies or
+  # arbitrary host terms into durable evidence. Checkpoint recovery semantics
+  # stay unchanged: an incomplete effect is never replayed automatically.
+  defp failure_cause({:error, {:probe_failed, name, attempt, reason}}),
+    do: %{"phase" => name, "attempt" => attempt, "reason" => failure_reason(reason)}
+
+  defp failure_cause({:error, reason}), do: %{"reason" => failure_reason(reason)}
+  defp failure_cause(_uncertain), do: %{"reason" => "incomplete_execution"}
+  defp failure_reason(reason) when is_atom(reason), do: Atom.to_string(reason)
+  defp failure_reason({:error, reason}) when is_atom(reason), do: Atom.to_string(reason)
+  defp failure_reason(_reason), do: "incomplete_execution"
 
   defp proposals(plan, config, opts) do
     provider = controlled(opts, :proposer)
@@ -282,8 +304,8 @@ defmodule Lemieux.Learning.Refinement do
 
         {:ok, results(receipt, control, observed, composed, excluded)}
 
-      _uncertain ->
-        :in_doubt
+      uncertain ->
+        uncertain
     end
   end
 
@@ -311,7 +333,7 @@ defmodule Lemieux.Learning.Refinement do
     Enum.reduce_while(1..config.repetitions, {:ok, []}, fn attempt, {:ok, acc} ->
       case probe(profile, name, attempt, config, opts) do
         {:ok, record} -> {:cont, {:ok, acc ++ [record]}}
-        error -> {:halt, error}
+        error -> {:halt, {:error, {:probe_failed, name, attempt, error}}}
       end
     end)
   end

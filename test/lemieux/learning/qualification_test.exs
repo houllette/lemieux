@@ -185,4 +185,106 @@ defmodule Lemieux.Learning.QualificationTest do
     assert {:error, :invalid_qualification_plan} =
              Q.run(substituted, fn _ -> flunk("substituted protocol") end)
   end
+
+  defp stream_plan(count) do
+    attrs =
+      Map.take(
+        plan(),
+        ~w(id model effort runtime seed_case_ids initial_library_sha256 repetitions allowance alpha claim tasks)
+      )
+
+    tasks =
+      for n <- 1..count,
+          phase <- ~w(learning confirmation),
+          do: %{
+            "id" => "#{n}-#{phase}",
+            "cluster" => "stream-#{n}",
+            "phase" => phase,
+            "source_sha256" => Contract.sha256("#{n}-#{phase}")
+          }
+
+    Q.plan(
+      Map.merge(attrs, %{
+        "tasks" => tasks,
+        "analysis" => %{
+          "method" => "exact_paired_stream_success",
+          "minimum_effect" => 0.1,
+          "maximum_regression_rate" => 0.1,
+          "desired_power" => 0.8,
+          "win_probability" => 0.25,
+          "loss_probability" => 0.05,
+          "maximum_request_ratio" => 8,
+          "maximum_latency_ratio" => 10
+        }
+      })
+    )
+  end
+
+  test "independent streams isolate causal libraries and related repetitions remain one unit" do
+    assert {:ok, plan} = stream_plan(2)
+    assert :ok = Q.verify(plan)
+    owner = self()
+
+    assert {:ok, report} =
+             Q.run(plan, fn ctx ->
+               send(owner, {:stream, ctx})
+               {:ok, row(ctx)}
+             end)
+
+    contexts =
+      for _ <- 1..40,
+          do:
+            (
+              assert_receive {:stream, ctx}
+              ctx
+            )
+
+    for ctx <- contexts do
+      assert ctx["stream_id"] in ~w(stream-1 stream-2)
+
+      if ctx["arm"] == "updating" and ctx["task"]["phase"] == "confirmation" do
+        [number, _phase] = String.split(ctx["task"]["id"], "-")
+        assert ctx["available_case_ids"] == ["warmup", "#{number}-learning"]
+      else
+        assert ctx["available_case_ids"] == ["warmup"]
+      end
+    end
+
+    assert report["comparisons"]["updating"]["clusters"] == 2
+    assert report["comparisons"]["updating"]["p_value"] == 1.0
+    refute report["analysis"]["adequately_powered"]
+  end
+
+  test "preregistered paired inference detects a useful effect with a bounded regression" do
+    assert {:ok, plan} = stream_plan(80)
+
+    assert {:ok, report} =
+             Q.run(plan, fn ctx ->
+               [number, _phase] = String.split(ctx["task"]["id"], "-")
+               n = String.to_integer(number)
+
+               passed =
+                 cond do
+                   ctx["task"]["phase"] == "learning" -> false
+                   n <= 10 -> ctx["arm"] == "updating"
+                   n == 11 -> ctx["arm"] != "updating"
+                   true -> true
+                 end
+
+               {:ok,
+                Map.merge(row(ctx), %{
+                  "passed" => passed,
+                  "candidate_count" => 1,
+                  "promotion_count" => 1,
+                  "rollback_count" => 1
+                })}
+             end)
+
+    assert report["analysis"]["adequately_powered"]
+    assert report["comparisons"]["updating"]["regressions"] == 1
+    assert_in_delta report["comparisons"]["updating"]["effect"], 9 / 80, 1.0e-12
+    assert report["benefit"] == "supported_in_this_scope"
+    refute report["updating_vs_frozen"]["confirmatory"]
+    assert report["comparisons_to_retry"]["updating"]["confirmatory"]
+  end
 end

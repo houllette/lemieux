@@ -18,6 +18,7 @@ defmodule Lemieux.Learning.Qualification do
   manufacture independent confirmation or a cross-model claim.
   """
   alias Lemieux.Contract
+  alias Lemieux.Learning.Qualification.Paired
 
   @arms ~w(disabled retrieval retry frozen updating)
   @required ~w(id model effort runtime tasks seed_case_ids initial_library_sha256 repetitions allowance alpha claim)
@@ -27,7 +28,9 @@ defmodule Lemieux.Learning.Qualification do
 
   @spec plan(attrs :: map()) :: {:ok, map()} | {:error, term()}
   def plan(attrs) when is_map(attrs) do
-    with true <- Enum.sort(Map.keys(attrs)) == Enum.sort(@required),
+    required = plan_fields(attrs)
+
+    with true <- Enum.sort(Map.keys(attrs)) == Enum.sort(required),
          true <- text?(attrs["id"]) and text?(attrs["model"]) and text?(attrs["effort"]),
          true <- is_map(attrs["runtime"]) and digest?(attrs["runtime"]["sha256"]),
          true <- attrs["repetitions"] in 2..10,
@@ -35,18 +38,29 @@ defmodule Lemieux.Learning.Qualification do
          true <- attrs["claim"] in ~w(development_qualification independent_confirmation),
          true <- digest?(attrs["initial_library_sha256"]),
          true <- ids?(attrs["seed_case_ids"]),
-         true <- tasks?(attrs["tasks"]),
+         true <- tasks?(attrs["tasks"], attrs["analysis"]),
+         true <- analysis?(attrs["analysis"]),
          true <- Enum.all?(attrs["tasks"], &(&1["id"] not in attrs["seed_case_ids"])),
-         true <- allowance?(attrs["allowance"]) do
+         true <- allowance?(attrs["allowance"]),
+         true <- powered_confirmation?(attrs) do
       {:ok,
        seal(
          Map.merge(attrs, %{
-           "schema_version" => 2,
+           "schema_version" => if(attrs["analysis"], do: 3, else: 2),
            "arms" => @arms,
            "stopping" => "fixed_complete_sample",
            "resource_gate" => "outer_allowance_only",
-           "comparison_family" => "four_disabled_two_retry_updating_vs_frozen",
-           "decision_rule" => "refinement_beats_disabled_and_retry_without_regressions"
+           "comparison_family" =>
+             if(attrs["analysis"],
+               do: "updating_vs_disabled_and_retry_primary_other_contrasts_diagnostic",
+               else: "four_disabled_two_retry_updating_vs_frozen"
+             ),
+           "decision_rule" =>
+             if(attrs["analysis"],
+               do:
+                 "paired_stream_success_with_preregistered_effect_regression_and_resource_limits",
+               else: "refinement_beats_disabled_and_retry_without_regressions"
+             )
          })
        )}
     else
@@ -58,10 +72,13 @@ defmodule Lemieux.Learning.Qualification do
 
   def plan(_invalid), do: {:error, :invalid_qualification_plan}
 
+  defp plan_fields(%{"analysis" => _}), do: ["analysis" | @required]
+  defp plan_fields(_legacy), do: @required
+
   @spec verify(plan :: map()) :: :ok | {:error, term()}
   def verify(plan) do
     with :ok <- Contract.verify_digest(plan, "sha256"),
-         {:ok, ^plan} <- plan(Map.take(plan, @required)) do
+         {:ok, ^plan} <- plan(Map.take(plan, ["analysis" | @required])) do
       :ok
     else
       _invalid -> {:error, :invalid_qualification_plan}
@@ -126,7 +143,10 @@ defmodule Lemieux.Learning.Qualification do
              "tokens" => sum(chosen, "tokens"),
              "cost_usd" => sum(chosen, "cost_usd"),
              "latency_ms" => percentiles(chosen),
-             "safety_failures" => Enum.flat_map(chosen, & &1["safety_failures"])
+             "safety_failures" => Enum.flat_map(chosen, & &1["safety_failures"]),
+             "candidate_count" => Enum.sum(Enum.map(chosen, &Map.get(&1, "candidate_count", 0))),
+             "promotion_count" => Enum.sum(Enum.map(chosen, &Map.get(&1, "promotion_count", 0))),
+             "rollback_count" => Enum.sum(Enum.map(chosen, &Map.get(&1, "rollback_count", 0)))
            }}
         end)
 
@@ -151,7 +171,16 @@ defmodule Lemieux.Learning.Qualification do
          "comparisons_to_retry" => retry_comparisons,
          "updating_vs_frozen" => comparison(plan, rows, "updating", "frozen"),
          "unknown_token_accounting" => Enum.count(rows, &is_nil(&1["tokens"])),
-         "benefit" => benefit(safe and executed, accounted, comparisons, retry_comparisons),
+         "benefit" =>
+           benefit_for(
+             plan,
+             safe and executed,
+             accounted,
+             comparisons,
+             retry_comparisons,
+             summaries
+           ),
+         "analysis" => analysis_report(plan),
          "resource_policy" =>
            "Quality and safety first; usage and latency are secondary, not automatic disqualifiers."
        })}
@@ -180,6 +209,62 @@ defmodule Lemieux.Learning.Qualification do
   defp supported?(comparison),
     do: comparison["regressions"] == 0 and hd(comparison["interval"]) > 0
 
+  defp benefit_for(%{"analysis" => analysis}, true, true, comparisons, retry, summaries) do
+    supported =
+      Enum.all?([comparisons["updating"], retry["updating"]], fn comparison ->
+        comparison["effect"] >= analysis["minimum_effect"] and
+          comparison["regression_rate"] <= analysis["maximum_regression_rate"] and
+          comparison["p_value"] <= comparison["alpha_per_comparison"]
+      end)
+
+    resources =
+      Enum.all?(~w(disabled retry), fn arm ->
+        summaries["updating"]["requests"] <=
+          max(1, summaries[arm]["requests"]) * analysis["maximum_request_ratio"] and
+          summaries["updating"]["latency_ms"]["p95"] <=
+            max(1, summaries[arm]["latency_ms"]["p95"]) * analysis["maximum_latency_ratio"]
+      end)
+
+    mechanism =
+      summaries["updating"]["candidate_count"] > 0 and
+        summaries["updating"]["promotion_count"] > 0 and
+        summaries["updating"]["promotion_count"] == summaries["updating"]["rollback_count"]
+
+    if supported and resources and mechanism, do: "supported_in_this_scope", else: "inconclusive"
+  end
+
+  defp benefit_for(%{"analysis" => _}, _safe, _accounted, _comparisons, _retry, _summaries),
+    do: "inconclusive"
+
+  defp benefit_for(_plan, safe, accounted, comparisons, retry, _summaries),
+    do: benefit(safe, accounted, comparisons, retry)
+
+  defp analysis_report(%{"analysis" => analysis} = plan) do
+    clusters = plan["tasks"] |> Enum.map(& &1["cluster"]) |> Enum.uniq() |> length()
+    power = Paired.power(clusters, analysis, plan["alpha"] / 2)
+
+    Map.merge(analysis, %{
+      "power" => power,
+      "adequately_powered" => power["both_primary_lower_bound"] >= analysis["desired_power"],
+      "primary_estimand" => "fraction_of_independent_streams_completing_all_confirmation_tasks",
+      "secondary_estimand" => "all_episode_task_success_usage_and_latency",
+      "interpretation" => "conditional_on_registered_tasks_models_and_independent_stream_design"
+    })
+  end
+
+  defp analysis_report(_legacy), do: nil
+
+  defp powered_confirmation?(
+         %{"analysis" => analysis, "claim" => "independent_confirmation"} = attrs
+       ) do
+    n = attrs["tasks"] |> Enum.map(& &1["cluster"]) |> Enum.uniq() |> length()
+
+    Paired.power(n, analysis, attrs["alpha"] / 2)["both_primary_lower_bound"] >=
+      analysis["desired_power"]
+  end
+
+  defp powered_confirmation?(_development_or_legacy), do: true
+
   defp schedule(plan),
     do:
       for(
@@ -190,10 +275,21 @@ defmodule Lemieux.Learning.Qualification do
       )
 
   defp context(plan, {repetition, task, arm}, rows) do
-    previous = Enum.filter(rows, &(&1["arm"] == arm and &1["repetition"] == repetition))
+    previous =
+      Enum.filter(rows, fn row ->
+        same = row["arm"] == arm and row["repetition"] == repetition
+
+        same and
+          (not Map.has_key?(plan, "analysis") or
+             Enum.any?(
+               plan["tasks"],
+               &(&1["id"] == row["task_id"] and &1["cluster"] == task["cluster"])
+             ))
+      end)
+
     available = if arm == "updating", do: Enum.map(previous, & &1["task_id"]), else: []
 
-    %{
+    context = %{
       "plan_sha256" => plan["sha256"],
       "arm" => arm,
       "task" => task,
@@ -204,6 +300,8 @@ defmodule Lemieux.Learning.Qualification do
       "prior_lesson_ids" =>
         if(arm == "updating", do: Enum.flat_map(previous, & &1["created_lesson_ids"]), else: [])
     }
+
+    if plan["analysis"], do: Map.put(context, "stream_id", task["cluster"]), else: context
   end
 
   defp complete?(plan, rows) when is_list(rows) do
@@ -250,6 +348,32 @@ defmodule Lemieux.Learning.Qualification do
   defp cost?(value, cap), do: is_number(value) and value >= 0 and value <= cap
 
   defp comparison(plan, rows, arm, control_arm \\ "disabled") do
+    if plan["analysis"],
+      do: stream_comparison(plan, rows, arm, control_arm),
+      else: legacy_comparison(plan, rows, arm, control_arm)
+  end
+
+  defp stream_comparison(plan, rows, arm, control_arm) do
+    tasks = Enum.filter(plan["tasks"], &(&1["phase"] == "confirmation"))
+    index = Map.new(rows, &{{&1["repetition"], &1["task_id"], &1["arm"]}, &1["passed"]})
+
+    pairs =
+      tasks
+      |> Enum.group_by(& &1["cluster"])
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.map(fn {_cluster, tasks} ->
+        {stream_passed?(tasks, index, plan["repetitions"], control_arm),
+         stream_passed?(tasks, index, plan["repetitions"], arm)}
+      end)
+
+    primary = arm == "updating" and control_arm in ~w(disabled retry)
+
+    Paired.compare(pairs, plan["alpha"] / 2)
+    |> Map.put("confirmatory", primary)
+    |> Map.put("endpoint", "all_confirmation_tasks_and_repetitions_passed_per_stream")
+  end
+
+  defp legacy_comparison(plan, rows, arm, control_arm) do
     index = Map.new(rows, &{{&1["repetition"], &1["task_id"], &1["arm"]}, &1})
 
     pairs =
@@ -282,6 +406,12 @@ defmodule Lemieux.Learning.Qualification do
     }
   end
 
+  defp stream_passed?(tasks, index, repetitions, arm) do
+    Enum.all?(1..repetitions, fn r ->
+      Enum.all?(tasks, &Map.fetch!(index, {r, &1["id"], arm}))
+    end)
+  end
+
   defp percentiles(rows) do
     values = rows |> Enum.map(& &1["latency_ms"]) |> Enum.sort()
 
@@ -296,7 +426,7 @@ defmodule Lemieux.Learning.Qualification do
     if Enum.all?(values, &is_number/1), do: Enum.sum(values)
   end
 
-  defp tasks?(tasks) when is_list(tasks) and length(tasks) in 2..100 do
+  defp tasks?(tasks, nil) when is_list(tasks) and length(tasks) in 2..100 do
     ids?(Enum.map(tasks, & &1["id"])) and
       Enum.all?(tasks, fn task ->
         Enum.sort(Map.keys(task)) == ~w(cluster id source_sha256) and text?(task["cluster"]) and
@@ -304,7 +434,44 @@ defmodule Lemieux.Learning.Qualification do
       end)
   end
 
-  defp tasks?(_invalid), do: false
+  defp tasks?(tasks, analysis)
+       when is_list(tasks) and is_map(analysis) and length(tasks) in 2..1000 do
+    ids?(Enum.map(tasks, & &1["id"])) and
+      Enum.all?(tasks, fn task ->
+        Enum.sort(Map.keys(task)) == ~w(cluster id phase source_sha256) and text?(task["cluster"]) and
+          digest?(task["source_sha256"]) and task["phase"] in ~w(learning confirmation)
+      end) and
+      tasks
+      |> Enum.group_by(& &1["cluster"])
+      |> Enum.all?(fn {_cluster, group} ->
+        Enum.any?(group, &(&1["phase"] == "confirmation")) and
+          Enum.map(group, & &1["phase"]) ==
+            Enum.sort_by(Enum.map(group, & &1["phase"]), &(&1 == "confirmation"))
+      end)
+  end
+
+  defp tasks?(_invalid, _analysis), do: false
+
+  defp analysis?(nil), do: true
+
+  defp analysis?(analysis) when is_map(analysis) do
+    Enum.sort(Map.keys(analysis)) ==
+      ~w(desired_power loss_probability maximum_latency_ratio maximum_regression_rate maximum_request_ratio method minimum_effect win_probability) and
+      analysis["method"] == "exact_paired_stream_success" and
+      Enum.all?(
+        ~w(desired_power minimum_effect win_probability loss_probability maximum_regression_rate),
+        fn key ->
+          is_number(analysis[key]) and analysis[key] > 0 and analysis[key] < 1
+        end
+      ) and analysis["win_probability"] + analysis["loss_probability"] < 1 and
+      analysis["win_probability"] > analysis["loss_probability"] and
+      Enum.all?(
+        ~w(maximum_request_ratio maximum_latency_ratio),
+        &(is_number(analysis[&1]) and analysis[&1] >= 1)
+      )
+  end
+
+  defp analysis?(_invalid), do: false
 
   defp allowance?(cap),
     do:

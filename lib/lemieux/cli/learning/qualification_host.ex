@@ -11,6 +11,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.CLI.Learning.Fixtures
   alias Lemieux.CLI.Learning.Installation
   alias Lemieux.CLI.Learning.Leases
+  alias Lemieux.CLI.Learning.RefinementLesson
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime.Evaluation
   alias Lemieux.Contract
@@ -123,7 +124,11 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           # product stream using its actual private store and assembly.
           settings: %{
             "learning" => false,
-            "capture" => %{"verification_commands" => ["python checks.py"]}
+            "capture" => %{
+              "verification_commands" => [
+                Map.get(fixture, :verification_command, "python checks.py")
+              ]
+            }
           }
         }
     }
@@ -135,15 +140,15 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       supervisor: config.supervisor,
       interactive?: config[:interactive] == true,
       environment: config.environment,
-      max_requests: 16,
-      max_turns: 16,
+      max_requests: task_requests(config),
+      max_turns: task_requests(config),
       max_cost_usd: nil,
       reasoning_effort: config.effort,
       params: [max_tokens: 8192]
     ]
 
     {:ok, prepared} = Evaluation.prepare(options, host, surface: @surface)
-    baseline = baseline(config.model, config.effort)
+    baseline = baseline(config.model, config.effort, task_requests(config))
     bindings = bindings(config, fixture, prepared)
     scope = config.scope
 
@@ -154,9 +159,11 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       "repository" => scope["id"]
     }
 
+    stream = if context["stream_id"], do: "-" <> Contract.sha256(context["stream_id"]), else: ""
+
     store =
       LessonFiles.new(
-        Path.join(config.root, "library-#{context["arm"]}-#{context["repetition"]}"),
+        Path.join(config.root, "library-#{context["arm"]}-#{context["repetition"]}#{stream}"),
         scope
       )
 
@@ -250,7 +257,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       context["arm"] == "retry" ->
         retry(config, fixture, leased, controller, details.original)
 
-      context["arm"] in ~w(frozen updating) and enabled?(config) ->
+      context["arm"] in ~w(frozen updating) and enabled?(config) and
+          (config[:probe_when] != :verification_failed or not details.original.grade["passed"]) ->
         refine(
           config,
           fixture,
@@ -288,6 +296,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
 
     sources = if retrieved && retrieved.exposure, do: retrieved.exposure.source_case_ids, else: []
     created = retain(state, store)
+    selected_grade = result.selected[:confirmation_grade] || result.selected.grade
 
     evidence = %{
       "context" => context,
@@ -295,6 +304,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       "original_grade" => original.grade,
       "selected" => result.selected.observation,
       "selected_grade" => result.selected.grade,
+      "confirmation_grade" => selected_grade,
       "refinement" => result.refinement,
       "promotion" => result.promotion,
       "learning_failure" => result[:learning_failure],
@@ -313,7 +323,11 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
        "arm" => context["arm"],
        "task_id" => fixture.id,
        "repetition" => context["repetition"],
-       "passed" => result.selected.grade["passed"],
+       "passed" => selected_grade["passed"],
+       "visible_verification_passed" => result.selected.grade["passed"],
+       "candidate_count" => candidate_count(result),
+       "promotion_count" => promotion_count(result),
+       "rollback_count" => promotion_count(result),
        "qualification_complete" => is_nil(result[:learning_failure]),
        "requests" => if(metered, do: map_size(metered), else: accounting["requests"]),
        "tokens" => accounting["tokens"],
@@ -350,7 +364,16 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           source_lessons: sources
         )
 
-      ids
+      {:ok, refinement_ids} =
+        RefinementLesson.retain(
+          state.result.refinement,
+          fixture.id,
+          store,
+          authority,
+          source_lessons: sources
+        )
+
+      ids ++ refinement_ids
     else
       []
     end
@@ -384,6 +407,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       Resource.acquire(
         fn _ -> Leases.acquire(lease_config, name, lease_config.bindings) end,
         &Leases.release(lease_config, &1),
+        timeout_ms: acquisition_timeout(config),
         abort: fn -> Leases.abort(lease_config, name) end
       )
 
@@ -401,7 +425,11 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
             model: config.model,
             supervisor: config.supervisor,
             store: lease_config.host[:store],
-            session_options: [harness: harness, max_requests: 16, max_cost_usd: nil]
+            session_options: [
+              harness: harness,
+              max_requests: task_requests(config),
+              max_cost_usd: nil
+            ]
           )
         else
           runtime =
@@ -426,6 +454,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       %{
         observation: observation,
         grade: grade(config, fixture, lease.task.cwd),
+        confirmation_grade: confirmation_grade(config, fixture, lease.task.cwd),
         captures: captures,
         cwd: lease.task.cwd
       }
@@ -436,7 +465,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
 
   defp retry(config, fixture, lease, controller, original) do
     best =
-      Enum.reduce_while(1..2, original, fn index, best ->
+      Enum.reduce_while(1..((config[:retry_attempts] || 3) - 1), original, fn index, best ->
         if best.grade["passed"],
           do: {:halt, best},
           else:
@@ -526,6 +555,10 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           provider: fn -> config.provider.(:probe) end,
           token_bound: &token_bound/1,
           request_timeout_ms: 180_000,
+          acquisition_timeout_ms: acquisition_timeout(config),
+          on_incomplete: fn cause ->
+            Installation.write(Path.join(dir, "refinement-cause.json"), cause)
+          end,
           allow_live: config[:allow_live] == true,
           verifier: true,
           assess: fn _, probe ->
@@ -825,10 +858,31 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   end
 
   defp grade(config, fixture, cwd) do
-    grade = Fixtures.grade(fixture, cwd, config.environment)
+    grade =
+      fixture_grade(
+        config,
+        Map.put(fixture, :cases, Map.get(fixture, :probe_cases, fixture.cases)),
+        cwd
+      )
+
     Agent.update(config.grades, &[grade | &1])
     grade
   end
+
+  defp confirmation_grade(config, %{probe_cases: _} = fixture, cwd),
+    do: fixture_grade(config, fixture, cwd)
+
+  defp confirmation_grade(_config, _fixture, _cwd), do: nil
+
+  defp task_requests(config), do: config[:task_requests] || 16
+  defp acquisition_timeout(config), do: config[:acquisition_timeout_ms] || 5000
+  defp candidate_count(%{refinement: nil}), do: 0
+  defp candidate_count(%{refinement: receipt}), do: length(receipt["candidates"] || [])
+  defp promotion_count(%{promotion: nil}), do: 0
+  defp promotion_count(_result), do: 1
+
+  defp fixture_grade(config, fixture, cwd),
+    do: Map.get(config, :fixture_module, Fixtures).grade(fixture, cwd, config.environment)
 
   @spec token_bound(term()) :: pos_integer()
   def token_bound(_request), do: 131_072
@@ -847,8 +901,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
     }
   end
 
-  @spec baseline(model :: String.t(), effort :: String.t()) :: map()
-  def baseline(model, effort),
+  @spec baseline(model :: String.t(), effort :: String.t(), requests :: pos_integer()) :: map()
+  def baseline(model, effort, requests \\ 16),
     do:
       Profile.quota(
         %{
@@ -857,7 +911,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           "tools" => ~w(read write edit bash),
           "options" => %{
             "system" => "Portable baseline",
-            "max_turns" => 16,
+            "max_turns" => requests,
             "max_tokens" => 8192,
             "temperature" => 0.3,
             "max_cost_usd" => nil,
@@ -865,7 +919,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
             "tool_descriptions" => %{}
           }
         },
-        16
+        requests
       )
 
   defp seal(map), do: Map.put(map, "sha256", Contract.digest(map))
