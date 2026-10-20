@@ -5,6 +5,8 @@ defmodule Lemieux.Learning.AssetTest do
   alias Lemieux.Learning.Asset
   alias Lemieux.Learning.Asset.Extension
   alias Lemieux.Tool
+  alias Lemieux.Tool.Override
+  alias Lemieux.Tools.Read
   @moduletag :tmp_dir
 
   defp context do
@@ -46,6 +48,18 @@ defmodule Lemieux.Learning.AssetTest do
     spec =
       {Extension,
        [version: version, root: root, context: %{context | approved_digests: [version.digest]}]}
+
+    personal = SkillTool.new([%{discovered | source: :personal}])
+
+    assert_raise ArgumentError, ~r/already loaded skill/, fn ->
+      Harness.assemble(%{base | host_tools: [personal]}, [spec])
+    end
+
+    custom_loader = Override.new!(Read, name: "skill")
+
+    assert_raise ArgumentError, ~r/host skill loader/, fn ->
+      Harness.assemble(%{base | host_tools: [custom_loader]}, [spec])
+    end
 
     assert {:ok, applied} = Harness.assemble(base, [spec])
     assert applied.system =~ "quoted records"

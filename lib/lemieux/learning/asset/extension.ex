@@ -9,9 +9,15 @@ defmodule Lemieux.Learning.Asset.Extension do
   Nothing in a stored asset can select this module or grant that approval.
   Reassembly without this extension restores the original harness; callers can
   retain its exact base for ordinary registry-driven rollback.
+
+  An approved asset cannot shadow a loaded skill or replace a host's custom
+  skill executor. Check the live catalog again at assembly: it can change
+  after candidate validation, and approving bytes does not approve an executor
+  replacement.
   """
   @behaviour Lemieux.Extension
   import Kernel, except: [apply: 2]
+  alias Lemieux.Extensions.Workspace.Skill
   alias Lemieux.Extensions.Workspace.SkillTool
   alias Lemieux.Harness
   alias Lemieux.Learning.Asset
@@ -48,6 +54,8 @@ defmodule Lemieux.Learning.Asset.Extension do
 
   @impl true
   def apply(harness, %{version: %{content: %{"kind" => "skill"}}} = state) do
+    validate_catalog!(harness.host_tools || [], state.skill)
+
     existing =
       Enum.flat_map(harness.host_tools || [], fn
         %SkillTool{skills: skills} -> Map.values(skills)
@@ -95,6 +103,18 @@ defmodule Lemieux.Learning.Asset.Extension do
     harness
     |> Exposure.after_requests(["glob"], payload["glob_after_requests"])
     |> record(state)
+  end
+
+  defp validate_catalog!(tools, skill) do
+    Enum.each(tools, fn
+      %SkillTool{skills: skills} ->
+        if Map.has_key?(skills, Skill.qualified_name(skill)),
+          do: raise(ArgumentError, "learned asset conflicts with an already loaded skill")
+
+      tool ->
+        if Tool.name(tool) == "skill",
+          do: raise(ArgumentError, "learned asset cannot replace the host skill loader")
+    end)
   end
 
   defp record(harness, state),

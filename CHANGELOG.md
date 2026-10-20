@@ -29,6 +29,7 @@ API.
   trusted personal tool descriptions and allowlisted search disclosure settings.
   Complete bytes, helpers, runtime bindings and current digest approval are
   checked through the real loader. New kinds remain gated from automatic use.
+  Learned procedures cannot shadow loaded skills or replace a host skill loader.
 - Qualified native exports carry portable source/runtime/evidence identities.
   Migration: confirmed export now requires a complete dependency/capability
   manifest and explicit CodeGate/reviewer JSON bound to the source inventory;

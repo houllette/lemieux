@@ -62,6 +62,8 @@ missing tools, changed runtime bindings and oversized descriptions refuse use.
 `Lemieux.Learning.Asset.Extension` requires the current host's explicit digest
 approval, applies through the normal harness seam and records the exact asset
 in `resolved_assets`. Its procedure body remains behind the real skill tool.
+Live assembly refuses collisions with loaded skills and custom host skill
+loaders; approving asset bytes does not approve replacing a host executor.
 Reassembly from the retained base restores the original harness.
 
 These new kinds are **not automatically selected** by the default controller.
