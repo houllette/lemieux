@@ -34,7 +34,11 @@ page holds only what remains.
   seen (V6).
 - **Harness learning.** Confirm that a learned harness overlay generalizes to
   new tasks and models before recommending regular self-improvement
-  cycles (V9).
+  cycles (V9). Ordinary CLI/TUI sessions now reuse scoped, unconfirmed
+  experience with inspect/undo/opt-out controls. Isolated automatic refinement,
+  independently qualified persistent promotion, and automatic selection of
+  new typed assets remain separate gates; task-local retrieval is not their
+  qualification evidence.
 
 ## Acceptance and experiments still to run
 

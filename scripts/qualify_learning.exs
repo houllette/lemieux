@@ -15,7 +15,14 @@ alias Lemieux.Providers.Scripted
 
 {opts, [], []} =
   OptionParser.parse(System.argv(),
-    strict: [allow_live: :boolean, output: :string, variants: :integer, repetitions: :integer]
+    strict: [
+      allow_live: :boolean,
+      output: :string,
+      variants: :integer,
+      repetitions: :integer,
+      model: :string,
+      effort: :string
+    ]
   )
 
 live = opts[:allow_live] == true
@@ -29,8 +36,16 @@ root = Path.expand(opts[:output] || "tmp/learning-qualification-#{Lemieux.ID.gen
 :ok = File.mkdir(root)
 :ok = File.chmod(root, 0o700)
 Logger.configure(level: :warning)
-model = if live, do: "openai_codex:gpt-6.1-sol", else: "test:model"
-effort = if live, do: "medium", else: "default"
+model = opts[:model] || if(live, do: "openai_codex:gpt-6.1-sol", else: "test:model")
+effort = opts[:effort] || if(live, do: "medium", else: "default")
+
+if live and not String.starts_with?(model, "openai_codex:"),
+  do: raise("Live qualification requires the explicitly authorized Codex subscription route")
+
+if not live and (model != "test:model" or effort != "default"),
+  do: raise("Offline qualification uses only test:model with default effort")
+
+if live and effort not in ~w(low medium high xhigh max), do: raise("Unsupported reasoning effort")
 
 {:ok, environment} =
   Container.new("python@sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059")

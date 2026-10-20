@@ -117,7 +117,14 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       options
       | web_search: nil,
         config: %Config{
-          settings: %{"capture" => %{"verification_commands" => ["python checks.py"]}}
+          # These five arms own their frozen lesson/exposure and refinement
+          # pipeline. Do not also run ordinary-use recall inside the disabled
+          # control or a probe. The stock lane is measured by the separate
+          # product stream using its actual private store and assembly.
+          settings: %{
+            "learning" => false,
+            "capture" => %{"verification_commands" => ["python checks.py"]}
+          }
         }
     }
 

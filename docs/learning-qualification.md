@@ -35,6 +35,26 @@ the local Codex sign-in is private and removed on exit; the runner neither copie
 nor consumes its refresh token. The subscription route is quota-funded: any provider
 USD estimate is informational, not a claim of API billing.
 
+Use `--model openai_codex:gpt-6-luna --effort low` to freeze another explicitly
+authorized subscription model/effort pair. Each pair needs a separate fresh
+output directory and report; do not pool different model or effort scopes.
+Non-subscription routes are refused by this runner. Reports include direct
+frozen/updating comparisons with the equal-budget retry control and updating
+versus frozen experience, as well as the ordinary disabled comparison.
+
+`scripts/qualify_learning_stream.exs` supplements that protocol with the actual
+stock ordinary-use experience lane. It runs paired disabled/default streams in
+fixed workspace identities, through shared CLI assembly and the real private
+lesson store, with no learning hook, campaign or prompt injection supplied by
+the evaluator. Each task has 32 request slots and an eight-minute deadline;
+learning creates zero additional requests. The same networkless container and
+independent host grader apply. Its plan is written before dispatch, and every
+episode retains intent, transcript, usage, grading, learning status and digest.
+It reports whether subsequent tasks actually received experience. This is
+development mechanics/non-regression evidence, not an independent benefit claim.
+Use the same model/effort/output switches and explicit `--allow-live` boundary;
+without that flag it uses only Scripted.
+
 The protocol writes a fixed warmup plan before collecting two seed tasks, then
 freezes their actual retained library, target source digests, model, effort, runtime,
 task order, clusters, repetitions, allowance and stopping rule before the target
@@ -137,7 +157,9 @@ Quality and safety lead the decision. Requests, tokens, latency percentiles and
 unknown accounting are reported separately. Extra tokens are not an automatic
 disqualifier. A benefit claim requires complete accounting, no safety failure,
 no paired regression and a positive conservative paired-cluster interval, with a
-Bonferroni correction across four comparisons. Small samples or a perfect baseline
+Bonferroni correction across all seven preregistered contrasts. Refinement must
+beat both the disabled arm and the equal-budget retry arm without regressions.
+Small samples or a perfect baseline
 remain inconclusive. The script labels all results development qualification.
 Independent confirmation still needs fresh, unexposed tasks and any claimed model
 scope; a development rerun cannot satisfy that requirement.

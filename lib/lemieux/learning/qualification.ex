@@ -41,10 +41,12 @@ defmodule Lemieux.Learning.Qualification do
       {:ok,
        seal(
          Map.merge(attrs, %{
-           "schema_version" => 1,
+           "schema_version" => 2,
            "arms" => @arms,
            "stopping" => "fixed_complete_sample",
-           "resource_gate" => "outer_allowance_only"
+           "resource_gate" => "outer_allowance_only",
+           "comparison_family" => "four_disabled_two_retry_updating_vs_frozen",
+           "decision_rule" => "refinement_beats_disabled_and_retry_without_regressions"
          })
        )}
     else
@@ -129,6 +131,7 @@ defmodule Lemieux.Learning.Qualification do
         end)
 
       comparisons = Map.new(@arms -- ["disabled"], &{&1, comparison(plan, rows, &1)})
+      retry_comparisons = Map.new(~w(frozen updating), &{&1, comparison(plan, rows, &1, "retry")})
       safe = Enum.all?(rows, &(&1["safety_failures"] == []))
       accounted = Enum.all?(rows, &is_integer(&1["tokens"]))
       executed = Enum.all?(rows, &(Map.get(&1, "qualification_complete", true) == true))
@@ -145,7 +148,10 @@ defmodule Lemieux.Learning.Qualification do
          "rows" => rows,
          "arms" => summaries,
          "comparisons" => comparisons,
-         "benefit" => benefit(safe and executed, accounted, comparisons),
+         "comparisons_to_retry" => retry_comparisons,
+         "updating_vs_frozen" => comparison(plan, rows, "updating", "frozen"),
+         "unknown_token_accounting" => Enum.count(rows, &is_nil(&1["tokens"])),
+         "benefit" => benefit(safe and executed, accounted, comparisons, retry_comparisons),
          "resource_policy" =>
            "Quality and safety first; usage and latency are secondary, not automatic disqualifiers."
        })}
@@ -161,13 +167,18 @@ defmodule Lemieux.Learning.Qualification do
   defp mechanics(true, false, true), do: "incomplete_accounting"
   defp mechanics(true, true, true), do: "passed"
 
-  defp benefit(true, true, comparisons) do
-    if Enum.any?(comparisons, fn {_arm, c} -> c["regressions"] == 0 and hd(c["interval"]) > 0 end),
+  defp benefit(true, true, comparisons, retry_comparisons) do
+    if Enum.any?(~w(frozen updating), fn arm ->
+         supported?(comparisons[arm]) and supported?(retry_comparisons[arm])
+       end),
        do: "supported_in_this_scope",
        else: "inconclusive"
   end
 
-  defp benefit(_safe, _accounted, _comparisons), do: "inconclusive"
+  defp benefit(_safe, _accounted, _comparisons, _retry_comparisons), do: "inconclusive"
+
+  defp supported?(comparison),
+    do: comparison["regressions"] == 0 and hd(comparison["interval"]) > 0
 
   defp schedule(plan),
     do:
@@ -238,12 +249,12 @@ defmodule Lemieux.Learning.Qualification do
   defp cost?(value, nil), do: dollars?(value)
   defp cost?(value, cap), do: is_number(value) and value >= 0 and value <= cap
 
-  defp comparison(plan, rows, arm) do
+  defp comparison(plan, rows, arm, control_arm \\ "disabled") do
     index = Map.new(rows, &{{&1["repetition"], &1["task_id"], &1["arm"]}, &1})
 
     pairs =
       for r <- 1..plan["repetitions"], task <- plan["tasks"] do
-        control = index[{r, task["id"], "disabled"}]["passed"]
+        control = index[{r, task["id"], control_arm}]["passed"]
         variant = index[{r, task["id"], arm}]["passed"]
         {task["cluster"], if(variant, do: 1, else: 0) - if(control, do: 1, else: 0)}
       end
@@ -255,7 +266,10 @@ defmodule Lemieux.Learning.Qualification do
       |> Enum.map(&(Enum.sum(&1) / length(&1)))
 
     effect = Enum.sum(clustered) / length(clustered)
-    alpha = plan["alpha"] / (length(@arms) - 1)
+    # Four disabled comparisons, two retry controls and updating versus frozen
+    # form one preregistered family. Extra reported contrasts cannot silently
+    # expand the chance of declaring a benefit.
+    alpha = plan["alpha"] / 7
     radius = :math.sqrt(2 * :math.log(2 / alpha) / length(clustered))
 
     %{

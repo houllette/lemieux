@@ -98,6 +98,42 @@ defmodule Lemieux.Learning.QualificationTest do
              end)
   end
 
+  test "refinement must beat equal-budget retries before a benefit claim" do
+    attrs =
+      plan()
+      |> Map.take(
+        ~w(id model effort runtime seed_case_ids initial_library_sha256 repetitions allowance alpha claim tasks)
+      )
+
+    tasks =
+      for n <- 1..40,
+          do: %{
+            "id" => "independent-#{n}",
+            "cluster" => "cluster-#{n}",
+            "source_sha256" => Contract.sha256("#{n}")
+          }
+
+    attrs = Map.put(attrs, "tasks", tasks)
+    assert {:ok, frozen} = Q.plan(attrs)
+
+    assert {:ok, report} =
+             Q.run(frozen, fn ctx ->
+               {:ok, Map.put(row(ctx), "passed", ctx["arm"] != "disabled")}
+             end)
+
+    assert hd(report["comparisons"]["updating"]["interval"]) > 0
+    assert report["comparisons_to_retry"]["updating"]["effect"] == 0
+    assert report["benefit"] == "inconclusive"
+
+    assert {:ok, supported} =
+             Q.run(frozen, fn ctx ->
+               {:ok, Map.put(row(ctx), "passed", ctx["arm"] in ~w(frozen updating))}
+             end)
+
+    assert supported["benefit"] == "supported_in_this_scope"
+    assert_in_delta supported["updating_vs_frozen"]["alpha_per_comparison"], 0.05 / 7, 1.0e-10
+  end
+
   test "intent is checkpointed before execution and checkpoint failure dispatches nothing" do
     assert {:error, _} =
              Q.run(plan(), fn _ -> flunk("uncommitted intent") end,

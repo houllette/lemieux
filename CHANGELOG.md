@@ -20,6 +20,21 @@ API.
 
 ### Features
 
+- Ordinary `lmx` sessions retain scoped observations and reuse bounded,
+  unconfirmed experience on later tasks, with provider-free `lmx learning`
+  inspection, exact context undo and a persistent workspace opt-out. This
+  lane adds no inference requests; isolated refinement and persistent
+  promotion retain their explicit host qualification gates.
+- Experimental typed learning candidates support on-demand procedure files,
+  trusted personal tool descriptions and allowlisted search disclosure settings.
+  Complete bytes, helpers, runtime bindings and current digest approval are
+  checked through the real loader. New kinds remain gated from automatic use.
+- Qualified native exports carry portable source/runtime/evidence identities.
+  Migration: confirmed export now requires a complete dependency/capability
+  manifest and explicit CodeGate/reviewer JSON bound to the source inventory;
+  development exports remain unassessed. See the
+  [qualification guide](docs/harness-learning.md#typed-candidates-and-portable-exports).
+
 - `/tools` opens a filterable native tray with colored availability states,
   tool descriptions and keyboard/mouse toggles. Navigation and switch receipts
   stay out of the transcript; host restrictions and idle-only mutation remain.
