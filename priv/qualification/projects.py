@@ -84,7 +84,7 @@ def merge(value):
     def combine(base, overlay):
         result = copy.deepcopy(base)
         for key, item in overlay.items():
-            if item == {"$delete": True}:
+            if isinstance(item, dict) and len(item) == 1 and item.get("$delete") is True:
                 result.pop(key, None)
             elif isinstance(item, dict) and isinstance(result.get(key), dict):
                 result[key] = combine(result[key], item)
@@ -204,6 +204,7 @@ FAMILIES = {
         [{"a": {"b": 1}}, {"a": None}], [{"a": 1}, 2],
         [{"a": {"b": 1}}, {"a": {"b": {"$delete": True}, "c": 2}}],
         [{"a": 1}, {"a": {"$delete": True, "extra": 2}}],
+        [{"a": 1}, {"a": {"$delete": 1}}],
     ]),
     "reconcile": (reconcile, "Reconcile events by string id and nonnegative integer version (bool is invalid). Largest version wins; last input event wins version ties. A winning deleted:true is a tombstone and suppresses that id, including older later-arriving data. Return live [{id,value}] sorted by id; a missing value is null. Reject invalid versions with null.", [
         [{"id": "a", "version": 2, "value": 9}, {"id": "a", "version": 1, "value": 3}],

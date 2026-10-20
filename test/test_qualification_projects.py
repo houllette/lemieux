@@ -24,6 +24,7 @@ class QualificationProjectsTest(unittest.TestCase):
         self.assertEqual(PROJECTS.journal([["put", "x", 1], ["begin"], ["begin"], ["put", "x", 3], ["commit"], ["rollback"]]), {"x": 1})
         self.assertEqual(PROJECTS.cache({"capacity": 1, "events": [[0, "put", "a", 2, 1], [1, "get", "a"]]}), [None])
         self.assertEqual(PROJECTS.patch({"document": {"a": 1}, "operations": [{"op": "set", "path": "/a", "value": 2}, {"op": "test", "path": "/a", "value": 1}]}), {"ok": False, "document": {"a": 1}})
+        self.assertEqual(PROJECTS.merge([{"a": 1}, {"a": {"$delete": 1}}]), {"a": {"$delete": 1}})
         self.assertIsNone(PROJECTS.allocation({"total": True, "weights": [1]}))
         self.assertEqual(sum(PROJECTS.allocation({"total": 10**25 + 1, "weights": [1, 1, 1]})), 10**25 + 1)
 
