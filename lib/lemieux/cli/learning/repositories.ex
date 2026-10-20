@@ -81,8 +81,19 @@ defmodule Lemieux.CLI.Learning.Repositories do
       verification_command: "python3 -m pytest",
       reference_guidance:
         "Read the repository instructions, identify the active source and test entry points, reproduce the reported behavior, inspect neighboring implementations and run focused plus existing regression tests. Check error paths and boundary values before reporting completion.",
-      task: %Task{id: id, cwd: cwd, prompt: item["prompt"], grader: nil, timeout_ms: 600_000}
+      task: %Task{id: id, cwd: cwd, prompt: task_prompt(item), grader: nil, timeout_ms: 600_000}
     }
+  end
+
+  # Freezing public checks protects grading, but an undisclosed freeze penalized
+  # legitimate regression-test additions in the adapted Bottle study. Declare
+  # the same public contract to every arm; private test paths never enter it.
+  defp task_prompt(item) do
+    paths = item["immutable_paths"] |> Enum.sort() |> Enum.map_join("\n", &("- " <> &1))
+
+    item["prompt"] <>
+      "\nQualification task contract: Keep the following existing verification files byte-for-byte unchanged. You may add regression tests in separate new files.\n" <>
+      paths
   end
 
   @spec grade(fixture :: map(), cwd :: Path.t(), environment :: Environment.t()) :: map()

@@ -31,6 +31,9 @@ The private JSON manifest has `schema_version: 1`, `metadata` (including `id`,
 before freezing sources. Private tests must be outside the source tree and never
 enter model containers; separate grader containers receive a read-only `/tests`
 mount. File tools and shell commands share the logical `/app` workspace.
+The imported public prompt lists frozen verification paths and permits regression
+tests in separate new files. The same declared constraint applies to every arm;
+private test paths and contents stay outside that prompt.
 Qualify each image/grader with an untouched baseline and a known reference repair
 before hosted work. This adapter runs pytest already installed in the image and
 does not install packages or enable network access. Adapted benchmark runtimes
