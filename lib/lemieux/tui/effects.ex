@@ -20,11 +20,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Clipboard
     alias Lemieux.TUI.Composer
     alias Lemieux.TUI.DiffPanel
+    alias Lemieux.TUI.Flash
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.Lifecycle
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.Submission
+    alias Lemieux.TUI.ToolsPanel
     alias Lemieux.TUI.Transcript
     alias Lemieux.TUI.Turn
     alias Lemieux.TUI.Updates
@@ -62,6 +64,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
+    defp apply_command_decision(state, :tools_status, {:deny, message}),
+      do: {:cont, {:noreply, Flash.show(state, message)}}
+
+    defp apply_command_decision(state, {action, _names}, {:deny, message})
+         when action in [:enable_tools, :disable_tools],
+         do: {:cont, {:noreply, Flash.show(state, message)}}
+
     defp apply_command_decision(state, _effect, {:deny, message}),
       do: {:cont, {:noreply, Transcript.say(state, :lmx, message)}}
 
@@ -94,6 +103,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp perform(state, :context_status), do: Transcript.append_rows(state, context_rows(state))
     defp perform(state, :diff), do: DiffPanel.open(state)
+    defp perform(state, :tools_status), do: ToolsPanel.open(state)
+
+    defp perform(state, {action, names}) when action in [:enable_tools, :disable_tools],
+      do: ToolsPanel.change(state, names, action == :enable_tools)
 
     # Only the TUI's default copy projects visualizations; source copying and
     # non-terminal hosts retain the transcript's original Markdown/JSON.

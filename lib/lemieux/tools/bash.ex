@@ -179,8 +179,9 @@ defmodule Lemieux.Tools.Bash do
     Run a shell command in the working directory and return its combined
     stdout and stderr.
 
-    Use this for anything a shell can do: searching, listing files, running
-    tests, git. A non-zero exit is reported in the output rather than being an
+    Use this for tests, builds, git and shell scripts. When available, prefer
+    read for files, glob for paths and grep for content searches. A non-zero
+    exit is reported in the output rather than being an
     error — read it and decide what to do. Long output is truncated in the
     middle, and long-running commands are killed after a timeout.
 
@@ -190,9 +191,12 @@ defmodule Lemieux.Tools.Bash do
     flags such as -m or --yes instead of waiting for one.
 
     Set background to start a server, a watcher or a long script without
-    blocking. The result gives a task_id; call bash with that task_id to poll
-    it, add wait_ms to await completion for a bounded time, or set cancel to
-    stop it. For every background launch supply summary: a short, plain-language
+    blocking. When the launch reports automatic tracking, continue independent
+    work, then yield: completion is delivered without polling or another watch
+    registration. Otherwise use task_id with wait_ms for a bounded wait; use
+    task_id with cancel to stop it. Inspect a task when its current output is
+    needed for a decision, rather than repeatedly checking whether it finished.
+    For every background launch supply summary: a short, plain-language
     phrase of 6–12 words describing purpose and expected duration or progress.
     Omit shell syntax and redundant wording such as "in the background". The person
     sees that summary in chat; the full command stays in Tasks. Results provide a
@@ -444,7 +448,7 @@ defmodule Lemieux.Tools.Bash do
   defp timed_out(timeout, true),
     do:
       "[timed out after #{timeout}ms and was killed: that is the longest one call may run in " <>
-        "this session, so start a longer command with background and poll it]"
+        "this session, so start longer work with background; follow its tracking instructions]"
 
   defp background_timeout(%{"background_timeout_ms" => ms})
        when is_integer(ms) and ms > 0,

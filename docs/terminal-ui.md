@@ -136,6 +136,13 @@ beside transcript text, so text copied with the terminal's own selection comes
 out clean. `/elixir` switches the live session between the host's standard
 tools and the Elixir evaluator without starting a new session.
 
+`/tools` opens a content-sized tray above the composer. Active tools are green,
+inactive tools muted, and host-unavailable tools marked separately. Type to
+filter, select with Up/Down, and use Space/Enter or the clickable toggle. The
+tray shows the selected tool's effective description, including host overrides.
+Esc closes it without adding command echoes or switch receipts to the chat.
+Tool availability changes only while idle and never broadens host permissions.
+
 `/mcp` opens a compact panel showing configured servers, their transport,
 tool counts and state: connecting, connected, needs sign-in, or failed with
 its error. Up and Down select a server, `r` reconnects it (which opens the

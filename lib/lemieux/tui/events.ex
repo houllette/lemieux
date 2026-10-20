@@ -325,6 +325,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {state, without(effects, :say)}
     end
 
+    defp present_event(state, {:tool_access_changed, _action, _names, _tools}, effects),
+      do: {state, without(effects, :say)}
+
     defp present_event(state, {:tool_delta, delta}, effects) when is_map(delta) do
       id = Map.get(delta, :call_id) || Map.get(delta, "call_id") || "tool"
       text = Map.get(delta, :text) || Map.get(delta, "text") || ""

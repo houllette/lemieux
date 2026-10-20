@@ -55,7 +55,9 @@ defmodule Lemieux.Tools.ApplyPatch do
   @impl Lemieux.Tool
   def description do
     """
-    Edit files with a patch. The input is the entire patch:
+    Edit files with a patch, including coordinated changes across files or
+    hunks. Prefer edit for a single literal replacement and write for a new
+    file's complete contents when those tools are available. The input is the entire patch:
 
     *** Begin Patch
     *** Update File: path/to/file.py

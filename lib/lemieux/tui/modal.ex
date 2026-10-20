@@ -46,6 +46,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp module(:pager), do: Pager
     defp module(:tasks), do: Lemieux.TUI.TaskPanel
+    defp module(:tools), do: Lemieux.TUI.ToolsPanel
     defp module(:diff), do: Lemieux.TUI.DiffPanel
     defp module(:history_search), do: HistorySearch
     defp module(:trust), do: Trust

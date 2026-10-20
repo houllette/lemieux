@@ -124,9 +124,11 @@ defmodule Lemieux.Extensions.MCPDiscovery do
   @impl Lemieux.Tool.Configured
   def name(_tool), do: "mcp_discover"
   @impl Lemieux.Tool.Configured
-  def description(_tool),
+  def description(tool),
     do:
-      "Search authorized MCP tools, then enable exact names to receive their schemas on the next request. Enabling replaces your selection."
+      "Find an MCP capability missing from the current request; call already visible tools directly. " <>
+        "Search authorized MCP tools, then enable up to #{tool.max_tools} exact names to receive their schemas on the next request. " <>
+        "Enabling replaces your selection, which expires after #{tool.ttl_ms} ms. It cannot authorize a disabled tool or server."
 
   @impl Lemieux.Tool.Configured
   def schema(_tool),

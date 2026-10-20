@@ -383,8 +383,7 @@ links to the docs, issues and questions at the end.
 | `/deny [CALL_ID \| all] [REASON]` | Refuse a waiting tool call; the reason is what the model reads |
 | `/verify [on \| off]` | Show or switch the check that runs after a turn that edited files |
 | `/subagents [on \| off]` | Offer or withhold the [repository scout](#delegated-repository-investigation) for this session |
-| `/tools [list]` | List local and MCP tools with their enabled or disabled status |
-| `/tools enable NAME...` / `/tools disable NAME...` | Enable or disable one or more tools at once, while idle |
+| `/tools` | Open the tools tray: filter local and MCP tools, inspect their descriptions, and toggle them while idle |
 | `/mcp` | Open the MCP server panel; `/mcp list`, `add PATH`, `remove NAME` and `reconnect [NAME]` are the text forms |
 | `/prompts` | List the prompts your MCP servers offer; each runs as `/mcp__SERVER__PROMPT [ARGS]` |
 | `/name [TEXT]` | Show or change the session's label on screen, until you quit |
@@ -456,9 +455,17 @@ scrub, path confinement and any sandbox apply as they do to the agent's own
 `bash`. Its output is bounded, shown, and carried once into your next
 message, marked as something you ran.
 
-**`/tools`** lists local and MCP tools while busy; enabling or disabling
-waits for an idle session, takes exact names and applies all of them or
-none. Tool changes are recorded and restored on resume.
+**`/tools`** opens a tray above the composer, keeping the transcript visible.
+Type to filter by tool or MCP server name, use Up/Down to select, and press
+Space/Enter or click the toggle to activate or deactivate a tool. Active,
+inactive and host-unavailable tools have distinct labels and colors. The
+selected tool's description appears below the list. Esc closes the tray;
+Ctrl-R refreshes the catalog. Inspection works while busy; changes wait for
+an idle session and retain the host's authorization limits. Navigation and
+toggle receipts stay out of chat. Tool changes are recorded and restored on
+resume, and the model receives the updated catalog on its next request.
+Explicit `/tools list`, `/tools enable NAME...` and `/tools disable NAME...`
+remain compatible, without a submenu to navigate.
 
 **`/name`, `/color` and `/theme`** last until you quit and are not stored
 with the session. `/name TEXT` relabels the session in the header and

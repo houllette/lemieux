@@ -1177,7 +1177,7 @@ defmodule Lemieux.TUI.InputTest do
       assert_receive {:set_tools, ["elixir", "ask_user"]}
     end
 
-    test "tool completion omits names outside the immutable profile cap" do
+    test "tool switching no longer offers argument submenus" do
       state =
         tui(
           tool_statuses: [
@@ -1187,7 +1187,7 @@ defmodule Lemieux.TUI.InputTest do
         )
         |> type("/tools enable ")
 
-      assert suggestions(state).items == ["read"]
+      assert suggestions(state) == nil
     end
 
     test "up and down move the selection and tab completes without submitting" do
@@ -1229,21 +1229,11 @@ defmodule Lemieux.TUI.InputTest do
       assert effort |> press("tab") |> typed() == "/effort high"
     end
 
-    test "tool actions and available tool names are searchable" do
-      actions = tui() |> type("/tools en") |> suggestions()
-      assert actions.items == ["enable"]
-
-      tools =
-        tui(
-          tool_statuses: [
-            %{name: "read", source: :local, enabled?: true},
-            %{name: "github__search", source: {:mcp, "github"}, enabled?: false}
-          ]
-        )
-        |> type("/tools enable sea")
-
-      assert suggestions(tools).items == ["github__search"]
-      assert tools |> press("tab") |> typed() == "/tools enable github__search"
+    test "tools completes directly to its panel command" do
+      state = tui() |> type("/too")
+      assert suggestions(state).items == ["/tools — manage session tools"]
+      assert state |> press("tab") |> typed() == "/tools"
+      assert tui() |> type("/tools en") |> suggestions() == nil
     end
 
     test "resume completions use recent-session labels and exclude the current session" do

@@ -21,6 +21,7 @@ defmodule Lemieux.Tools.ReadOnlyBash do
   def description do
     "Run read-focused shell/Python scripts inline in a read-only OS sandbox. Workspace, caches and temporary files are not writable; network is disabled. " <>
       "Use python3 -c or a pipeline for analysis. Set background true for long scripts: your bounded host waits for completion without model polling. " <>
+      "Supply a brief purpose summary for background work and use its returned player name in replies. Prefer read, grep and glob for ordinary file inspection when available. " <>
       "Do independent reading, then yield. Do not poll or restart background commands."
   end
 

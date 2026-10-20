@@ -20,6 +20,13 @@ API.
 
 ### Features
 
+- `/tools` opens a filterable native tray with colored availability states,
+  tool descriptions and keyboard/mouse toggles. Navigation and switch receipts
+  stay out of the transcript; host restrictions and idle-only mutation remain.
+- Tool-selection guidance reflects dedicated search/file tools, automatic
+  background completion, native read-only analysis, isolated writers and
+  configured MCP discovery limits. Cross-tool recommendations honor availability.
+
 - The native Tasks tray unifies agents, commands and external runs. It grows
   upward above the composer while keeping the primary transcript visible. Agent rows
   expose their brief, activity and result; commands nest beneath their owner.

@@ -321,6 +321,7 @@ defmodule Lemieux.Session do
 
   @typedoc "A tool currently available to this session and whether the model may call it."
   @type tool_status :: %{
+          optional(:description) => String.t(),
           name: String.t(),
           source: :local | {:mcp, String.t()},
           allowed?: boolean(),

@@ -122,7 +122,9 @@ defmodule Lemieux.Writers.Tool do
     Start, observe, review and integrate host-authorized isolated implementation
     sessions. Use only for substantial independent work with stable interfaces
     and disjoint file/test ownership. Work directly for small or tightly coupled
-    changes. Start returns a batch id; await it, review each patch and report
+    changes. Start returns a batch id; do independent work, then await the batch
+    rather than polling its commands. Writers hold their owned background work
+    through completion. Review each patch and report
     (follow next_offset until null), then integrate explicitly accepted digests.
     Failed status is not success; inspect findings before replanning. Cancel
     stops work; close releases a settled coordinator. Never write delegated paths

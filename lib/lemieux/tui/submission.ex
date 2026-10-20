@@ -200,6 +200,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp echo_input(state, typed, effects) do
+      if Enum.any?(effects, &tools_effect?/1),
+        do: state,
+        else: echo_chat_input(state, typed, effects)
+    end
+
+    defp echo_chat_input(state, typed, effects) do
       cond do
         :diff in effects and
             Conversation.command_decision(Choices.command_policy(state), :diff) == :allow ->
@@ -227,6 +233,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
           Transcript.say(state, :you, typed)
       end
     end
+
+    defp tools_effect?(:tools_status), do: true
+    defp tools_effect?({action, _names}) when action in [:enable_tools, :disable_tools], do: true
+    defp tools_effect?(_effect), do: false
 
     # Conversation stays the shared pure parser available to hosts. These
     # two commands normally become already-rendered `:say` effects; the

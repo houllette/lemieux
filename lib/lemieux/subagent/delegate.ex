@@ -195,7 +195,13 @@ defmodule Lemieux.Subagent.Delegate do
     """
     Run one to three read-only investigations at once, each in a fresh child \
     session with its own context, and get back one ordered result once all of \
-    them have settled. You remain the only writer and the only decision-maker.
+    them have settled. You retain decisions and integration authority.
+
+    This is native delegation; no external agent CLI or orchestration skill is
+    required. Each definition lists its own capabilities below. Read-only shell
+    analysis, when supplied, runs in an enforced sandbox and can hold background
+    scripts through completion. These agents investigate; use an available
+    writers tool for host-authorized isolated implementation work.
 
     Use this when the work genuinely splits into separate questions that do \
     not depend on each other's answers, or when the reading is wide enough \

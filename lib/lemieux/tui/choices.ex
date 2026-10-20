@@ -12,6 +12,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.CatalogState
     alias Lemieux.TUI.Composer
     alias Lemieux.TUI.Editor
+    alias Lemieux.TUI.ToolsPanel
     alias Lemieux.TUI.Transcript
 
     # `/elixir` swaps the catalog for a tool the host profile may refuse, and a
@@ -44,7 +45,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec put_tool_statuses(TUI.t(), [Session.tool_status()]) :: TUI.t()
     def put_tool_statuses(state, statuses),
-      do: put_in(state.tool_choices.statuses, statuses)
+      do:
+        state
+        |> put_in([Access.key!(:tool_choices), :statuses], statuses)
+        |> ToolsPanel.sync()
 
     # `/mcp remove` and `/mcp reconnect` take a configured server's name, and
     # nobody types one from memory. Kept in the catalog with the other menu

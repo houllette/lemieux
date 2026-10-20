@@ -280,11 +280,13 @@ defmodule Lemieux.Extensions.Delegation do
       [
         id: "repository-scout",
         description:
-          "Search the working tree (grep, glob) and read it; return source-cited findings",
+          "Search the working tree (grep, glob), read files and run sandboxed read-only analysis scripts; return source-cited findings",
         system_prompt:
           "Search the repository with grep and glob, then read what matters. Cite exact paths " <>
             "and line numbers, report uncertainty, and say what you searched. Do not propose " <>
-            "or make writes.",
+            "or make writes. Use read-only bash for inline analysis that needs computation; " <>
+            "supply a purpose summary for a long background script, do independent reading, " <>
+            "then yield for its result instead of polling.",
         model: model,
         tools: @read_tools
       ] ++ scout_budget(priced?)

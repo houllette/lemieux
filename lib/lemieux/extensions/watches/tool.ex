@@ -22,6 +22,7 @@ defmodule Lemieux.Extensions.Watches.Tool do
     do:
       "Monitor existing external work without model polling. register returns immediately; completion is delivered at an idle session boundary. " <>
         "After registering, finish independent work and yield instead of polling. " <>
+        "Use for work that is already running externally, or background commands whose launch did not report automatic tracking. Do not register an automatically tracked command again. " <>
         "list/show inspect watches, stop only stops monitoring, forget clears retained output after delivery. " <>
         "github targets require repository (owner/repo), run_id and exact sha; background targets require task_id. " <>
         "No external work is started. Register directly without asking for separate confirmation; the session's permission rules still apply. " <>
