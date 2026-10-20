@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "reason": "SDK transport retries were not separately metered; superseded by a new clean preregistration with transport retries disabled",
+  "interrupted_at": "2026-10-20T17:25:55.111156+00:00",
+  "completed_target_episodes": 12,
+  "uncompleted_intents": [
+    "2-paths-2-frozen"
+  ],
+  "in_doubt_usage": "unknown",
+  "auth_loan_removed": true
+}

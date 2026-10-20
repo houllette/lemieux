@@ -1,5 +1,10 @@
 # Qualifying learning before release
 
+The [2026-10-20 hosted pilot](qualification/2026-10-20-default-learning/README.md)
+records separate GPT-6 subscription scopes, stock-path reuse, five-arm outcomes,
+complete usage projections and the remaining qualification work. It preserves
+the superseded pilot and an interrupted intent separately.
+
 Lemieux's learning APIs remain experimental and opt-in. The qualification host in
 `Lemieux.CLI.Learning.QualificationHost` is an explicit development harness; ordinary
 `lmx` starts none of it. It exercises the ordinary CLI assembly, capture, source-backed

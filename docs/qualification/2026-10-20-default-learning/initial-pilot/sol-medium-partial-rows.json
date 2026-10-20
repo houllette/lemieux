@@ -1,0 +1,245 @@
+{
+  "accounting": "provider invocations only; SDK transport retries not separately observed; incomplete episode usage unknown",
+  "claim": "abandoned_development_pilot",
+  "rows": [
+    {
+      "allocated_requests": 7,
+      "arm": "disabled",
+      "cost_usd": null,
+      "created_lesson_ids": [],
+      "evidence_sha256": "728f2a896e6ac0e7a2d28f05a3c05c4e3a6df059c9c6227e703d3872798accff",
+      "exposed_case_ids": [],
+      "latency_ms": 53732,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 7,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "fields-2",
+      "tokens": 28195
+    },
+    {
+      "allocated_requests": 119,
+      "arm": "frozen",
+      "cost_usd": null,
+      "created_lesson_ids": [
+        "lesson_245bb8a0ccba4be4d4494924b6f4ae1460ce75a03adeb27061d1cd5267259971"
+      ],
+      "evidence_sha256": "7c40ef6b7f709cce2b77075dc3e6866a3b81bb72bf15362646ed751a33095817",
+      "exposed_case_ids": [
+        "warmup-fields-1",
+        "warmup-paths-1"
+      ],
+      "latency_ms": 166440,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 27,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "fields-2",
+      "tokens": 135823
+    },
+    {
+      "allocated_requests": 7,
+      "arm": "retrieval",
+      "cost_usd": null,
+      "created_lesson_ids": [
+        "lesson_4000e81d0a447dd4c19f98cb294ea79bef3286237d516aceb9451ab89f9a51b0"
+      ],
+      "evidence_sha256": "035677b1bbe6b5936cf9d53834fda775476e61e932c356acf38d5299a03c906f",
+      "exposed_case_ids": [
+        "warmup-fields-1",
+        "warmup-paths-1"
+      ],
+      "latency_ms": 50123,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 7,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "fields-2",
+      "tokens": 30605
+    },
+    {
+      "allocated_requests": 7,
+      "arm": "retry",
+      "cost_usd": null,
+      "created_lesson_ids": [],
+      "evidence_sha256": "cc22167e50ab790c314c2a6790f0c0fed152dc5ba96236f58832312c02e20e3a",
+      "exposed_case_ids": [],
+      "latency_ms": 49762,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 7,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "fields-2",
+      "tokens": 27309
+    },
+    {
+      "allocated_requests": 7,
+      "arm": "updating",
+      "cost_usd": null,
+      "created_lesson_ids": [],
+      "evidence_sha256": "8721605daa65324e547e097428e395eed2923a5b9535a17c92870a3fb98da3ba",
+      "exposed_case_ids": [
+        "paths-2",
+        "warmup-fields-1",
+        "warmup-paths-1"
+      ],
+      "latency_ms": 105672,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 7,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "fields-2",
+      "tokens": 28165
+    },
+    {
+      "allocated_requests": 8,
+      "arm": "disabled",
+      "cost_usd": null,
+      "created_lesson_ids": [],
+      "evidence_sha256": "8eacddaceba576ba85fb5a65cc352bf4e7a006eccaeb4f57b94508e8c16a536f",
+      "exposed_case_ids": [],
+      "latency_ms": 49783,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 8,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "paths-2",
+      "tokens": 31389
+    },
+    {
+      "allocated_requests": 122,
+      "arm": "frozen",
+      "cost_usd": null,
+      "created_lesson_ids": [
+        "lesson_06aa26c441325863df77ad79c2a6fd10a77f0286fd12543a7fff39bf7e4b186e"
+      ],
+      "evidence_sha256": "a32e5ffaae8bcff7be7c0a35b75aba6f80f4e21dfa79ea4f0bd46b56121f421a",
+      "exposed_case_ids": [
+        "warmup-fields-1",
+        "warmup-paths-1"
+      ],
+      "latency_ms": 168383,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 31,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "paths-2",
+      "tokens": 151721
+    },
+    {
+      "allocated_requests": 6,
+      "arm": "retrieval",
+      "cost_usd": null,
+      "created_lesson_ids": [
+        "lesson_c3d434cb065abb0600b1153f6b46642c65be91242aab49535dbe9664bd0878f9"
+      ],
+      "evidence_sha256": "41effddb6258c380ac2a940d15e5beb8b87ef4d208f70dbb81659fce357112bc",
+      "exposed_case_ids": [
+        "warmup-fields-1",
+        "warmup-paths-1"
+      ],
+      "latency_ms": 35812,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 6,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "paths-2",
+      "tokens": 24683
+    },
+    {
+      "allocated_requests": 8,
+      "arm": "retry",
+      "cost_usd": null,
+      "created_lesson_ids": [],
+      "evidence_sha256": "a927eaf63049494bfa62f9a6dd7c931811fd88173a351ff26c81dd5afaeffc39",
+      "exposed_case_ids": [],
+      "latency_ms": 59804,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 8,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "paths-2",
+      "tokens": 33611
+    },
+    {
+      "allocated_requests": 120,
+      "arm": "updating",
+      "cost_usd": null,
+      "created_lesson_ids": [
+        "lesson_300afc4f8351969893d76d8bbe9d2bb40b544a0126442b17624348ae997c1c90"
+      ],
+      "evidence_sha256": "cc33b8d9c639c88ac3770ba0379584845d2f705d94653d0eaa30743f1100ee72",
+      "exposed_case_ids": [
+        "warmup-fields-1",
+        "warmup-paths-1"
+      ],
+      "latency_ms": 174484,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 31,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "paths-2",
+      "tokens": 151988
+    },
+    {
+      "allocated_requests": 8,
+      "arm": "retrieval",
+      "cost_usd": null,
+      "created_lesson_ids": [
+        "lesson_194ea081cc62c8865bf6b30d493ac29a4d26e02a589ec7495c442481fd94703d"
+      ],
+      "evidence_sha256": "ff41caf45a8fb4baacee6feafd2f8193e83d497ab244d49d6a71616168ce5967",
+      "exposed_case_ids": [
+        "warmup-fields-1",
+        "warmup-paths-1"
+      ],
+      "latency_ms": 47927,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 8,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "paths-2",
+      "tokens": 35365
+    },
+    {
+      "allocated_requests": 10,
+      "arm": "retry",
+      "cost_usd": null,
+      "created_lesson_ids": [],
+      "evidence_sha256": "1732cadea01089e344470142ffd18ec1291716de7b5cc7c02b17fe913ed5ca7e",
+      "exposed_case_ids": [],
+      "latency_ms": 56741,
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 10,
+      "requests_kind": "physical_dispatches",
+      "safety_failures": [],
+      "task_id": "paths-2",
+      "tokens": 42528
+    }
+  ],
+  "schema_version": 1
+}

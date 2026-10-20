@@ -39,6 +39,8 @@ page holds only what remains.
   independently qualified persistent promotion, and automatic selection of
   new typed assets remain separate gates; task-local retrieval is not their
   qualification evidence.
+  The [hosted pilot](qualification/2026-10-20-default-learning/README.md) records
+  stock-path reuse and the unresolved efficacy and recovery work for V2/V9.
 
 ## Acceptance and experiments still to run
 
