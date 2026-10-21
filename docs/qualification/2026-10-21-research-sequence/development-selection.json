@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "selected_at": "2026-10-21T18:53:21.700760+00:00",
+  "application_revision": "8f357fa",
+  "stage": "development",
+  "streams": [
+    "journal",
+    "merge"
+  ],
+  "task_requests": 24,
+  "repetitions": 2,
+  "expected_seed_episodes": 2,
+  "expected_target_episodes": 48,
+  "executor": "openai_codex:gpt-6-luna",
+  "executor_effort": "low",
+  "editor": "openai_codex:gpt-6-sol",
+  "editor_effort": "high",
+  "asset_search": false,
+  "dispatch_prerequisite": "matching complete hosted profile mechanism receipt",
+  "selection_basis": "Historical developer-visible baseline in the 8303aac study passed journal 3/4 and merge 0/4, versus graph 4/4. These two families provide development headroom. A 24-request horizon gives every arm more execution room than that prior 12-request scope.",
+  "exposure": "developer_exposed_synthetic_diagnostics",
+  "independent_streams": 2,
+  "inference": "underpowered_development_only_no_independent_efficacy_claim",
+  "stopping": "freeze exact plan and seed recipe before paid acquisition; complete fixed sample; do not repeat incomplete intents"
+}

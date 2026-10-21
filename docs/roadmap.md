@@ -44,6 +44,11 @@ page holds only what remains.
   The [staged study](qualification/2026-10-20-learning-study/README.md) adds
   calibration, seeded stream comparisons, a pinned repository supplement and
   explicit power requirements. Independent efficacy remains unestablished.
+  The [research sequence](qualification/2026-10-21-research-sequence/README.md)
+  adds whole-record reflection, an experience-withheld improver control and
+  separate quality/efficiency endpoints. Its hosted profile mechanism passed;
+  reviewed skills were applied, while helper execution and setting changes
+  were not demonstrated. These observations do not establish efficacy.
 
 ## Acceptance and experiments still to run
 

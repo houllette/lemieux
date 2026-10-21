@@ -1,0 +1,47 @@
+{
+  "application_revision": "c3817be4cfe9b0d46d0cc047fa68ad38417c7bf5",
+  "asset_search_flake_observations": {
+    "passed_per_seed": 9,
+    "seeds": [
+      101,
+      102,
+      103
+    ]
+  },
+  "command": "ulimit -n 4096; ERL_FLAGS='+S 4' mise exec -- mix precommit.full",
+  "coverage": {
+    "floor_percent": 85,
+    "passed": 5874,
+    "percent": 86.65
+  },
+  "dialyzer_errors": 0,
+  "distributed_passed": 25,
+  "earlier_full_gate": {
+    "fixed": "Added required experimental labels to Support and Endpoints; targeted check and full rerun passed.",
+    "passed": 5873,
+    "result": "one failing experimental API label test"
+  },
+  "earlier_offline_intervention": {
+    "reason": "Scripted profile removed a required pre-write read; retained as a failed intervention. The corrected fresh rehearsal reorders source inspection while keeping the read.",
+    "result": "profile mechanism not demonstrated"
+  },
+  "evidence_boundary": "Full gate began on the uncommitted application tree subsequently committed as c3817be; application source did not change during that gate. Later archive files are documentation/evidence. Existing Temper history includes earlier failures and is not erased.",
+  "examples": "all nine passed",
+  "full_gate_log_sha256": "10ee86b4bddb65c4f5e58b90e352bad79c65433f6545d5076b8e627cbd4cfc0e",
+  "historical_archive": "15 plans and 14 reports verified unchanged",
+  "kind": "research_sequence_validation",
+  "ordinary": {
+    "doctests": 12,
+    "excluded": 47,
+    "passed": 5874,
+    "skipped": 7,
+    "tests": 5862
+  },
+  "package_consumers": "passed",
+  "python_passed": 63,
+  "result": "passed",
+  "schema_version": 1,
+  "standalone_host_passed": 119,
+  "targeted_recovery_passed": 10,
+  "targeted_sequence_passed": 85
+}

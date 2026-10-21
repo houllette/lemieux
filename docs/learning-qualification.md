@@ -2,6 +2,12 @@
 
 ## Whole-record research sequence
 
+The [recorded research sequence](qualification/2026-10-21-research-sequence/README.md)
+preserves implementation corrections, separately scoped hosted canaries and the
+development comparison. The profile canary demonstrated experience reaching an
+executed change; the asset canary exercised reviewed skills but did not
+demonstrate helper execution or setting changes. Neither establishes efficacy.
+
 `--research` selects a separate experimental protocol. It does not change the
 strict ordinary refinement policy or grant persistent activation. Freeze the
 executor and editor separately: for example, GPT-6 Luna/low executes every task

@@ -1,0 +1,39 @@
+{
+  "application_revision": "1899420",
+  "command": "ulimit -n 4096; ERL_FLAGS='+S 4' mise exec -- mix precommit.full",
+  "coverage": {
+    "floor_percent": 85,
+    "passed": 5880,
+    "percent": 86.67
+  },
+  "dialyzer_errors": 0,
+  "distributed_passed": 25,
+  "evidence_boundary": "Application source was committed and unchanged throughout this full gate. Portable evidence files added afterwards are documentation. Hosted efficacy remains separate.",
+  "examples": "all nine passed",
+  "kind": "tracked_launcher_validation",
+  "ordinary": {
+    "doctests": 12,
+    "excluded": 47,
+    "passed": 5880,
+    "skipped": 7,
+    "tests": 5868
+  },
+  "package_consumers": "passed",
+  "private_log_sha256": "7116ad23064a065d81053ba2d5eff494b219867e06df07a9b8a987b7e2fb1f9a",
+  "python_passed": 63,
+  "schema_version": 1,
+  "scope_note": "Only the two path guards differ from 8f357fa. Harness/library/corpus trees are identical. Hosted runs identify their actual frozen runtime and executed driver separately.",
+  "seeded_asset_lifecycle_observations": {
+    "inference_calls": 0,
+    "passed_per_seed": 4,
+    "seeds": [
+      101,
+      102,
+      103
+    ]
+  },
+  "standalone_host_passed": 119,
+  "status": "passed",
+  "targeted_artifact_policy_passed": 78,
+  "targeted_quota_record_closure_passed": 36
+}

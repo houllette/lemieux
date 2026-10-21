@@ -69,19 +69,27 @@ The executor stays fixed while `--editor-model` and `--editor-effort` select a
 separate proposer/reflector (hosted defaults: GPT-6 Sol, high). General and
 domain-specific proposals receive fresh repeated probes. Experimental
 append-only prompt compositions execute again before selection. The frozen
-`experimental_mean/v1` rule compares repeated means, so an occasional passing
-control does not make adoption impossible. This rule is a search heuristic,
-not a significance test. Receipts carry `experimental_task_local`; applying
+`experimental_mean/v2` rule compares repeated means and may admit repeated,
+fully verified perfect ties for task-local experiments. Such a tie is not a
+quality gain. This rule is a search heuristic, not a significance test.
+Receipts carry `experimental_task_local`; applying
 them requires the host's additional `experimental_task_local` capability.
 They cannot authorize persistent canaries, even with a confirmation document.
 The ordinary strict rule and zero-extra-request product defaults are unchanged.
 
 Start with `--stage mechanism --research --task-requests 8`, which selects the
-developer-exposed graph workflow for a small five-arm canary. `--streams` freezes
+developer-exposed graph workflow for a small six-arm canary. The
+`no_experience` arm performs the same improver work with prior experience
+withheld. `--streams` freezes
 a comma-separated subset. A canary is mechanism evidence only; fresh efficacy
 and independently powered confirmation retain their separate registration and
 exposure requirements. Every hosted invocation still requires explicit user
 authorization and `--allow-live`.
+
+The [recorded research sequence](qualification/2026-10-21-research-sequence/README.md)
+separates observed profile adaptation, reviewed skill use and unestablished
+efficacy. Helper execution and setting changes were not observed in its hosted
+asset canary.
 
 ### Typed candidates and portable exports
 

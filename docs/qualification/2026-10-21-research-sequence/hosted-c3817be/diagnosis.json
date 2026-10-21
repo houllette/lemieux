@@ -1,0 +1,349 @@
+{
+  "episodes": [
+    {
+      "all_public_grades_passed": false,
+      "arm": "updating",
+      "asset_rejections": [
+        {
+          "decision": "reject",
+          "kind": "skill",
+          "reason": "asset_validation_rejected"
+        }
+      ],
+      "composition": [],
+      "control": [
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        },
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        }
+      ],
+      "evidence_sha256": "c989fe7a03aaa48f7812ba7299d9cde495af5cb58705150bc4f559a17c18095c",
+      "learning_failure": null,
+      "public_grade_count": 7,
+      "reflection_complete": true,
+      "reflection_record_bytes": 379903,
+      "repetition": 1,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "no_experience",
+      "asset_rejections": [
+        {
+          "decision": "reject",
+          "kind": "skill",
+          "reason": "asset_validation_rejected"
+        }
+      ],
+      "composition": [
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        },
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        }
+      ],
+      "control": [
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        },
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        }
+      ],
+      "evidence_sha256": "929b76a1d1f01f5dd425e78a5f10f1fd82d421ac20a306fc0be8d8d46526a181",
+      "learning_failure": null,
+      "public_grade_count": 12,
+      "reflection_complete": true,
+      "reflection_record_bytes": 601652,
+      "repetition": 2,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "retry",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "7ecc304d8b7606aa9d40aa83782559ed32a394c88c8b6c546682e7e40a9102bc",
+      "learning_failure": null,
+      "public_grade_count": 1,
+      "reflection_complete": true,
+      "reflection_record_bytes": null,
+      "repetition": 1,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": false,
+      "arm": "updating",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "47f61f3ceb48cad2bbddfa0f2bf99cdd583161cf423baeea380ad35e74fdb3ec",
+      "learning_failure": {
+        "checkpoint_key": "refinement",
+        "kind": "refinement_incomplete",
+        "reason": "{:requires_recovery, \"refinement\"}"
+      },
+      "public_grade_count": 4,
+      "reflection_complete": true,
+      "reflection_record_bytes": 172273,
+      "repetition": 2,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "retrieval",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "4f78f287c59a5815920911145592015f1c5286073507e2f8038d2670fd9eb8d5",
+      "learning_failure": null,
+      "public_grade_count": 1,
+      "reflection_complete": true,
+      "reflection_record_bytes": 93971,
+      "repetition": 1,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "frozen",
+      "asset_rejections": [
+        {
+          "decision": "reject",
+          "kind": "skill",
+          "reason": "asset_validation_rejected"
+        }
+      ],
+      "composition": [],
+      "control": [
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        },
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        }
+      ],
+      "evidence_sha256": "036c5d3ec94ae070fc0840fe17c2f37fc0f30c40cb33e02952a054cf4b1943ca",
+      "learning_failure": null,
+      "public_grade_count": 7,
+      "reflection_complete": true,
+      "reflection_record_bytes": 355533,
+      "repetition": 2,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "frozen",
+      "asset_rejections": [
+        {
+          "decision": "reject",
+          "kind": "skill",
+          "reason": "asset_validation_rejected"
+        }
+      ],
+      "composition": [
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        },
+        {
+          "score": 0.0,
+          "status": "failed",
+          "stop_reason": "max_turns",
+          "verified_success": false
+        }
+      ],
+      "control": [
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        },
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        }
+      ],
+      "evidence_sha256": "963b5762b071973f2dfd39faf8e93fea3f6e4852f7a5c7fec550629705ab6c5f",
+      "learning_failure": null,
+      "public_grade_count": 9,
+      "reflection_complete": true,
+      "reflection_record_bytes": 488790,
+      "repetition": 1,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "no_experience",
+      "asset_rejections": [
+        {
+          "decision": "approve",
+          "kind": "skill",
+          "reason": "Bounded workflow hypothesis supported by the public source: main.py imports the generated .build runtime, docs/development.md directs edits under src/project followed by a build and checks, and the transcript shows an optional git command preventing chained checks from running. The skill tells users to confirm paths and commands in each repository; it contains no graph solution or expected outputs and requests no elevated access."
+        }
+      ],
+      "composition": [
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        },
+        {
+          "score": 0.0,
+          "status": "failed",
+          "stop_reason": "max_turns",
+          "verified_success": false
+        }
+      ],
+      "control": [
+        {
+          "score": 0.0,
+          "status": "failed",
+          "stop_reason": "max_turns",
+          "verified_success": false
+        },
+        {
+          "score": 1.0,
+          "status": "completed",
+          "stop_reason": "stop",
+          "verified_success": true
+        }
+      ],
+      "evidence_sha256": "02293b081e4c268afc753878a383d1b4228931543f3168044f4ea2c44adcb154",
+      "learning_failure": null,
+      "public_grade_count": 16,
+      "reflection_complete": false,
+      "reflection_record_bytes": 858839,
+      "repetition": 1,
+      "selected_asset_digests": [
+        "1c1c8bcf08f02d6b41e7cb0ba17c021459c49597fbb4cfcc1073068a29c04c21"
+      ],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "disabled",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "735e177c8dbf2793bd60a969a5188f31ac96d21617b5a0141a266fa2876fea9c",
+      "learning_failure": null,
+      "public_grade_count": 1,
+      "reflection_complete": true,
+      "reflection_record_bytes": null,
+      "repetition": 2,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "retry",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "a3b5ccd42c737c9bc1235d5cc700bae7c6dbfd97ece96a4a0f10750726ff8e44",
+      "learning_failure": null,
+      "public_grade_count": 1,
+      "reflection_complete": true,
+      "reflection_record_bytes": null,
+      "repetition": 2,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": false,
+      "arm": "retrieval",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "204c40a93189fe59f8505eb7f4b5dd2d76aa601ffa0128594e0edf38b8160bd0",
+      "learning_failure": null,
+      "public_grade_count": 1,
+      "reflection_complete": true,
+      "reflection_record_bytes": 49025,
+      "repetition": 1,
+      "selected_asset_digests": [],
+      "task_id": "seed-graph-1"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "disabled",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "81e054ef1e05bed40569e98e973d45090cfbdefcf301f5dd403d17a42e51fceb",
+      "learning_failure": null,
+      "public_grade_count": 1,
+      "reflection_complete": true,
+      "reflection_record_bytes": null,
+      "repetition": 1,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    },
+    {
+      "all_public_grades_passed": true,
+      "arm": "retrieval",
+      "asset_rejections": [],
+      "composition": [],
+      "control": [],
+      "evidence_sha256": "679c1ff331f54582f7c87eede58a2c5d3b0c5d1afb71fb7f810d49d51ca6e532",
+      "learning_failure": null,
+      "public_grade_count": 1,
+      "reflection_complete": true,
+      "reflection_record_bytes": 116713,
+      "repetition": 2,
+      "selected_asset_digests": [],
+      "task_id": "development-graph-2"
+    }
+  ],
+  "interpretation": "Original scores and reports are preserved. Ordinary arms graded passing artifacts as successes, while probe terminal policy erased passing grades at max_turns. New research scopes register consistent artifact grading; the default strict rule remains.",
+  "kind": "hosted_canary_diagnosis",
+  "observed_failures": [
+    "Skill drafts added an unsupported payload description and nonliteral trigger phrases; rejected before critic review.",
+    "The first frozen episode had nine passing public artifact grades but composition score zero at an accounted max_turns stop.",
+    "One complete reflection input was 858839 bytes, exceeding its frozen 786432-byte cap; no evidence was silently dropped.",
+    "A child controller stopped for an informational USD reservation overrun. Physical request tokens were below 131072 and request spans below 180 seconds; all physical usage reconciled."
+  ],
+  "result": "incomplete_execution_not_a_mechanism_pass",
+  "source_revision": "c3817be4cfe9b0d46d0cc047fa68ad38417c7bf5"
+}

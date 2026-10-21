@@ -1,0 +1,118 @@
+{
+  "checks": [
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556871/job/119432111438",
+      "name": "Commit identities",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112498",
+      "name": "Example builder",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556871/job/119432111025",
+      "name": "Secret scan (full history)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112320",
+      "name": "Example capture",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112147",
+      "name": "Elixir floor (1.19 / OTP 28)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112197",
+      "name": "Coverage threshold",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112223",
+      "name": "Security",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112449",
+      "name": "Dialyzer",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112336",
+      "name": "Hex package (pinned)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112380",
+      "name": "Hex package (floor Elixir 1.19.0 / OTP 27.0)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432111610",
+      "name": "Lint workflows",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112446",
+      "name": "Lint & test",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432111967",
+      "name": "Public wording",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112669",
+      "name": "Example research",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112478",
+      "name": "Example review",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112582",
+      "name": "Example security",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112426",
+      "name": "Example systemone_compaction",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112552",
+      "name": "Example verifier",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112213",
+      "name": "Standalone release host",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432112116",
+      "name": "Docs links",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556921/job/119432111917",
+      "name": "Example computer_use",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/houllette/lemieux/actions/runs/39660556871/job/119432111369",
+      "name": "Tutorial and release helpers",
+      "state": "SUCCESS"
+    }
+  ],
+  "final_archive_commit_requires_separate_ci": true,
+  "implementation_revision": "18994204c2c30c74f2ff5ed2f4a0bc640f00542b",
+  "observed_at": "2026-10-21T19:47:09.684456+00:00",
+  "pull_request": "https://github.com/houllette/lemieux/pull/85"
+}

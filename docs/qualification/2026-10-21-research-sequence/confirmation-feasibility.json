@@ -1,0 +1,38 @@
+{
+  "available_source": {
+    "assessment": "metadata_count_only_no_independence_or_unexposed_attestation",
+    "repository": "https://github.com/harbor-framework/terminal-bench-2-1",
+    "revision": "7131e4375048a0e408a8fb404b5f499d726b695b",
+    "task_metadata_count": 89
+  },
+  "decision": "not_dispatchable_as_independent_confirmation",
+  "example_powered_size": {
+    "independent_streams": 110,
+    "per_comparison": 0.9360394160262464,
+    "three_comparison_lower_bound": 0.8081182480787392
+  },
+  "hosted_dispatches": 0,
+  "interpretation": "Prospective feasibility only; no independent efficacy or representativeness claim. Existing synthetic and exposed runs remain development evidence.",
+  "kind": "independent_confirmation_feasibility",
+  "optimistic_quality_power": {
+    "per_comparison": 0.8530360789936167,
+    "three_comparison_lower_bound": 0.5591082369808502
+  },
+  "optimistic_stream_upper_bound": 89,
+  "power_implementation": "Lemieux.Learning.Qualification.Paired at c3817be",
+  "registered_quality_assumptions": {
+    "alpha": 0.05,
+    "desired_joint_power": 0.8,
+    "loss_probability": 0.05,
+    "maximum_regression_rate": 0.1,
+    "minimum_effect": 0.1,
+    "primary_tests": 6,
+    "win_probability": 0.25
+  },
+  "requirements": [
+    "At least enough genuinely independent streams for the frozen power rule; related repository history and subtasks cannot inflate the count.",
+    "Separately curated source and grader closures, known-reference apparatus checks, immutable images and exposure attestation.",
+    "A matching successful hosted mechanism canary before research efficacy dispatch."
+  ],
+  "schema_version": 1
+}

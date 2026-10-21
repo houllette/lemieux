@@ -1,0 +1,158 @@
+{
+  "excluded_from_efficacy": true,
+  "kind": "incomplete_seed_no_targets_dispatched",
+  "physical_dispatches": {
+    "01M5FHSFKTBJVZ7S4KKRVSZDPH": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 2773,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.000294,
+        "input_tokens": 2732,
+        "output_tokens": 41
+      }
+    },
+    "01M5FHSJSQDT3KD6SRQ2840VE7": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 3369,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.000368,
+        "input_tokens": 3292,
+        "output_tokens": 77
+      }
+    },
+    "01M5FHSNEB69R8BMG2SAZH5GQ2": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 4334,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.000486,
+        "input_tokens": 4203,
+        "output_tokens": 131
+      }
+    },
+    "01M5FHSQFCF3VZSZVFRHYDAB61": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 4748,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.000498,
+        "input_tokens": 4691,
+        "output_tokens": 57
+      }
+    },
+    "01M5FHSVKYC83CF3MZVKMJ9SFF": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 5399,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.000626,
+        "input_tokens": 5184,
+        "output_tokens": 215
+      }
+    },
+    "01M5FHSYR5N59P516BQXG4HX8H": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 5681,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.00066,
+        "input_tokens": 5450,
+        "output_tokens": 231
+      }
+    },
+    "01M5FHT0YBTP3B0TC6WM6DZYFM": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 6155,
+      "usage": {
+        "cache_read_tokens": 4608,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.000287,
+        "input_tokens": 1332,
+        "output_tokens": 215
+      }
+    },
+    "01M5FHT5YS75877B75DE0QHZEQ": {
+      "model": "openai_codex:gpt-6-luna",
+      "role": "task",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 6365,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.000648,
+        "input_tokens": 6335,
+        "output_tokens": 30
+      }
+    },
+    "01M5FHTBCYEE57KPPZS53BCKH8": {
+      "model": "openai_codex:gpt-6-sol",
+      "role": "reflection",
+      "status": "reported",
+      "terminal": true,
+      "tokens": 29240,
+      "usage": {
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "cost_usd": 0.065592,
+        "input_tokens": 28351,
+        "output_tokens": 889
+      }
+    }
+  },
+  "reason": "Reflection citations used original sequence numbers as projected array indexes; rejected without retention. New frozen scopes add an explicit citation index and one metered structural repair.",
+  "row": {
+    "allocated_requests": 9,
+    "arm": "retrieval",
+    "candidate_count": 0,
+    "cost_usd": null,
+    "created_lesson_ids": [],
+    "evidence_sha256": "849a8871846c56c1c6e972fbc31a79edf431bf9bee3caf9c77f22107910a3f9a",
+    "exposed_case_ids": [],
+    "latency_ms": 49554,
+    "passed": true,
+    "private_confirmation_passed": true,
+    "promotion_count": 0,
+    "qualification_complete": false,
+    "repetition": 1,
+    "requests": 9,
+    "requests_kind": "physical_dispatches",
+    "rollback_count": 0,
+    "safety_failures": [],
+    "task_id": "seed-graph-1",
+    "tokens": 68064,
+    "visible_verification_passed": true,
+    "workspace_evidence_complete": true
+  },
+  "source_evidence_bytes_sha256": "849a8871846c56c1c6e972fbc31a79edf431bf9bee3caf9c77f22107910a3f9a",
+  "source_revision": "57a6aa3"
+}
