@@ -104,8 +104,9 @@ mise exec -- mix precommit    # includes the ordinary suite; it must exit 0
 `mix precommit` runs CI's main checks locally: the dependency audits,
 warnings-as-errors compilation, formatting, Credo, xref, the docs build, the
 ordinary suite, a separate coverage run enforcing the 85% floor, Dialyzer,
-and the checks of the `dist/lmx` release host. Coverage starts a fresh VM;
-the ordinary suite keeps its own timing and flake evidence. The first run
+and the checks of the `dist/lmx` release host. Coverage starts a fresh VM and
+collects cases serially, avoiding contention from instrumentation; the ordinary
+suite keeps its concurrency, timing and flake evidence. The first run
 takes longer because it compiles the test dependencies and builds Dialyzer's
 cache; subsequent runs still execute both suites. It needs network access
 for the audits. `mix ci` runs the same gate without rewriting anything, as the

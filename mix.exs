@@ -611,7 +611,12 @@ defmodule Lemieux.MixProject do
       # Shared by local gates and CI so instrumentation, warnings and
       # failure handling cannot quietly diverge. Do not combine it with the
       # ordinary suite in one VM: Mix runs `test` only once per invocation.
-      "test.cover": "test --cover --preload-modules --warnings-as-errors --raise",
+      # Instrumented cases share a coverage server and compete for the same
+      # hosted CPU. Parallel coverage lost bounded optional learning work and
+      # startup events at two different seeds, while ordinary and targeted runs
+      # passed. Collect line coverage serially; test.fast retains the ordinary
+      # concurrency and timing evidence. Neither assertions nor deadlines change.
+      "test.cover": "test --cover --preload-modules --warnings-as-errors --raise --max-cases 1",
       "test.fast": "test --warnings-as-errors --raise",
       # The distributed suite runs as a second `mix` process. Mix runs a task
       # once per invocation, so a second `test` in the same alias was silently
