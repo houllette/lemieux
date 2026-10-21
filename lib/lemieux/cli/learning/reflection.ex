@@ -40,6 +40,9 @@ defmodule Lemieux.CLI.Learning.Reflection do
   identify evidence for the statement, not merely a status label. Use an empty
   lessons list if the record supports no useful reusable observation. Never
   claim activation authority, independent confirmation or statistical efficacy.
+  Copy source_pointers exactly from the supplied citation index. Transcript seq
+  fields are original event sequence numbers, NOT indices in the projected
+  transcript array. Never construct a pointer by guessing an array position.
   """
 
   @doc "Retains every conversational/tool entry; replaces repeated accounting/catalog metadata with hashed references."
@@ -93,30 +96,104 @@ defmodule Lemieux.CLI.Learning.Reflection do
             "temperature" => 0.0
           }
         },
-        2
+        1
       )
 
     with :ok <- valid_record(record),
          {:ok, options, _} <-
            Profile.configure(profile, Keyword.take(opts, [:provider, :sessions_dir, :supervisor])),
-         {:ok, observation} <-
-           Session.run(
-             %{
-               cwd: Keyword.fetch!(opts, :cwd),
-               prompt: Contract.encode!(record),
-               timeout_ms: 480_000
-             },
-             options
-           ),
-         %{"lessons" => lessons} when is_list(lessons) and length(lessons) <= 4 <-
-           JSON.decode!(observation["answer"]),
-         true <- Enum.all?(lessons, &(valid_hypothesis(&1, record) == :ok)) do
-      {:ok, lessons, observation}
+         {:ok, observation} <- reflect_session(record, options, opts, "") do
+      case hypotheses(observation, record) do
+        {:ok, lessons} -> {:ok, lessons, attempts(observation, [observation])}
+        {:error, _invalid} -> repair(record, observation, options, opts)
+      end
     else
       _invalid -> {:error, :reflection_incomplete_or_invalid}
     end
-  rescue
-    _invalid_json -> {:error, :reflection_incomplete_or_invalid}
+  end
+
+  defp reflect_session(record, options, opts, correction) do
+    Session.run(
+      %{
+        cwd: Keyword.fetch!(opts, :cwd),
+        timeout_ms: 480_000,
+        prompt:
+          "Source record (pointers are relative to this object):\n" <>
+            Contract.encode!(record) <>
+            "\nCitation index (copy exact pointer strings; seq is NOT an array index):\n" <>
+        JSON.encode!(citation_index(record)) <> correction
+      },
+      options
+    )
+  end
+
+  # One bounded structural repair, under the same controlled provider and outer
+  # allowance. Invalid citations are never silently deleted or reinterpreted.
+  # A second invalid response abstains. Both sessions remain in durable evidence.
+  defp repair(record, rejected, options, opts) do
+    correction =
+      "\nYour earlier response failed the schema or citation checks. Repair it using only " <>
+        "pointers copied from the index and supported source observations; otherwise return an empty lessons list. " <>
+        "Do not treat original seq numbers as projected array indices. Earlier response:\n" <>
+        String.slice(rejected["answer"] || "", 0, 12_000)
+
+    with {:ok, observation} <- reflect_session(record, options, opts, correction),
+         {:ok, lessons} <- hypotheses(observation, record) do
+      {:ok, lessons, attempts(observation, [rejected, observation])}
+    else
+      _invalid -> {:error, :reflection_incomplete_or_invalid}
+    end
+  end
+
+  defp hypotheses(observation, record) do
+    with {:ok, %{"lessons" => lessons} = result} <- JSON.decode(observation["answer"] || ""),
+         true <- map_size(result) == 1 and is_list(lessons) and length(lessons) <= 4,
+         true <- Enum.all?(lessons, &(valid_hypothesis(&1, record) == :ok)) do
+      {:ok, lessons}
+    else
+      _invalid -> {:error, :invalid_reflection_response}
+    end
+  end
+
+  defp attempts(observation, observations),
+    do:
+      Map.put(
+        observation,
+        "reflection_attempts",
+        Enum.map(
+          observations,
+          &%{"session_id" => &1["session_id"], "observation_sha256" => Contract.digest(&1)}
+        )
+      )
+
+  @doc "Lists stable, valid citation pointers beside event identities so a reflector need not count array positions."
+  @spec citation_index(record :: map()) :: [map()]
+  def citation_index(record) do
+    original = index_observation(record["original"] || %{}, "/original")
+    selected = index_observation(record["selected"] || %{}, "/selected")
+
+    probes =
+      (record["probes"] || [])
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {probe, index} ->
+        index_observation(probe["observation"] || %{}, "/probes/#{index}/observation")
+      end)
+
+    original ++ selected ++ probes
+  end
+
+  defp index_observation(observation, prefix) do
+    (observation["transcript"] || [])
+    |> Enum.with_index()
+    |> Enum.map(fn {entry, index} ->
+      %{
+        "pointer" => prefix <> "/transcript/#{index}",
+        "entry_id" => entry["id"],
+        "original_seq" => entry["seq"],
+        "type" => entry["type"],
+        "tool" => get_in(entry, ["payload", "name"])
+      }
+    end)
   end
 
   @spec retain(

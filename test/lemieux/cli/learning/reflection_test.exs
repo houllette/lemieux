@@ -4,6 +4,77 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
   alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Experience.Retrieval.Evidence
   alias LemieuxTest.LessonFixtures, as: F
+  @moduletag :tmp_dir
+
+  test "a malformed citation receives one bounded repair and a second malformed answer refuses",
+       %{tmp_dir: dir} do
+    supervisor = :"reflection_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
+
+    hypothesis = %{
+      "kind" => "procedure",
+      "outcome" => "insufficient_evidence",
+      "mechanism" => "Verify the active source.",
+      "applicability" => ["workflow"],
+      "source_pointers" => ["/original/transcript/0"]
+    }
+
+    good = JSON.encode!(%{"lessons" => [hypothesis]})
+
+    bad =
+      JSON.encode!(%{
+        "lessons" => [Map.put(hypothesis, "source_pointers", ["/original/transcript/999"])]
+      })
+
+    record = %{
+      "original" => %{
+        "transcript" => [
+          %{
+            "id" => "entry",
+            "type" => "tool_result",
+            "seq" => 999,
+            "payload" => %{"output" => "verified"}
+          }
+        ]
+      }
+    }
+
+    opts = [
+      model: "test:model",
+      effort: "default",
+      cwd: dir,
+      supervisor: supervisor,
+      sessions_dir: Path.join(dir, "sessions")
+    ]
+
+    provider =
+      Lemieux.Providers.Scripted.new(
+        Enum.map(
+          [bad, good],
+          &Lemieux.Providers.Scripted.complete(&1,
+            usage: %{"input_tokens" => 2, "output_tokens" => 2}
+          )
+        )
+      )
+
+    assert {:ok, [^hypothesis], observation} =
+             Reflection.distill(record, Keyword.put(opts, :provider, provider))
+
+    assert length(observation["reflection_attempts"]) == 2
+
+    provider =
+      Lemieux.Providers.Scripted.new(
+        Enum.map(
+          [bad, bad, good],
+          &Lemieux.Providers.Scripted.complete(&1,
+            usage: %{"input_tokens" => 2, "output_tokens" => 2}
+          )
+        )
+      )
+
+    assert {:error, :reflection_incomplete_or_invalid} =
+             Reflection.distill(record, Keyword.put(opts, :provider, provider))
+  end
 
   test "trajectory projection preserves full tool output and references omitted repeated metadata" do
     output = String.duplicate("x", 5000)
@@ -21,6 +92,9 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     assert [%{"id" => "request", "sha256" => digest}] = projected["metadata_references"]
     assert digest == Lemieux.Contract.digest(request)
     assert projected["source_observation_sha256"] == Lemieux.Contract.digest(observation)
+
+    assert [%{"pointer" => "/original/transcript/0", "entry_id" => "tool"}] =
+             Reflection.citation_index(%{"original" => projected})
   end
 
   test "a rejected experiment retains a source-backed negative lesson, not activation authority" do
