@@ -493,6 +493,36 @@ defmodule Lemieux.Learning.RefinementTest do
     assert receipt["composition"] == []
   end
 
+  test "experimental append-only proposals compose and execute before scoped selection", ctx do
+    owner = self()
+
+    opts =
+      options(ctx, ["GOOD GENERAL", "GOOD DOMAIN"])
+      |> Keyword.put(:support_policy, %{
+        "id" => "experimental_mean/v1",
+        "minimum_gain" => 0.1,
+        "minimum_repetitions" => 2
+      })
+      |> Keyword.put(:observe_probe, fn record ->
+        send(owner, {:probe_record, record})
+        :ok
+      end)
+
+    assert {:ok, receipt} = Refinement.run(ctx.handle, "research-compose", ctx.plan, opts)
+    assert receipt["decision"] == "proposed"
+    assert receipt["qualification"] == "experimental_task_local"
+
+    assert receipt["selected_profile"]["options"]["system"] ==
+             "Portable base GOOD GENERAL GOOD DOMAIN"
+
+    assert length(receipt["candidate_ids"]) == 2
+    assert length(receipt["composition"]) == 2
+    assert receipt["excluded"] == []
+
+    assert_receive {:probe_record,
+                    %{"phase" => "composition", "observation" => %{"status" => "completed"}}}
+  end
+
   test "dirty, drifting and unconfined inputs refuse before provider resolution", ctx do
     for changes <- [
           %{"clean" => false},

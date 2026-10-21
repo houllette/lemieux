@@ -14,7 +14,8 @@ defmodule Lemieux.CLI.Learning.RecordingTest do
         Scripted.new([
           Scripted.complete("ok", usage: %{"input_tokens" => 4, "output_tokens" => 3}),
           Scripted.error(:unavailable)
-        ])
+        ]),
+        role: :reflection
       )
 
     request = %Request{model: "test:model", entries: [], tools: []}
@@ -24,6 +25,7 @@ defmodule Lemieux.CLI.Learning.RecordingTest do
     assert_receive {:error, :unavailable}
     records = Agent.get(meter, &Map.values/1)
     assert length(records) == 2
+    assert Enum.all?(records, &(&1["model"] == "test:model" and &1["role"] == "reflection"))
     assert Enum.any?(records, &(&1["tokens"] == 7 and &1["terminal"]))
     assert Enum.any?(records, &(is_nil(&1["tokens"]) and &1["terminal"]))
     assert Provider.reasoning_efforts(provider, "test:model") == []

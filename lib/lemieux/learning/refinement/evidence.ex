@@ -38,6 +38,8 @@ defmodule Lemieux.Learning.Refinement.Evidence do
        %{
          "score" => assessment["score"],
          "regression" => assessment["regression"],
+         "safety_failure" => Map.get(assessment, "safety_failure", assessment["regression"]),
+         "evidence_complete" => true,
          "verified_success" =>
            if(verifier? or observation["status"] == "failed", do: assessment["verified_success"]),
          "status" => observation["status"],
@@ -80,10 +82,16 @@ defmodule Lemieux.Learning.Refinement.Evidence do
            "usage" => %{"state" => "complete"},
            "completeness" => %{"usage" => "complete", "artifacts" => "complete"}
          },
-         _assessment
+         assessment
        ) do
     if turn_limit_notice?(notice),
-      do: {:ok, %{"score" => 0.0, "regression" => true, "verified_success" => false}},
+      do:
+        {:ok,
+         Map.merge(assessment, %{
+           "score" => 0.0,
+           "regression" => true,
+           "verified_success" => false
+         })},
       else: {:error, :incomplete_probe_evidence}
   end
 

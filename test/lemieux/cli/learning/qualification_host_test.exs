@@ -292,6 +292,86 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     assert frozen["exposed_case_ids"] == []
   end
 
+  test "whole-record reflection feeds a later executed proposal and removing it removes the gain",
+       ctx do
+    owner = self()
+
+    hypothesis = %{
+      "kind" => "procedure",
+      "outcome" => "insufficient_evidence",
+      "mechanism" =>
+        "Inspect the active source, make the focused correction, then verify the executed output before completing.",
+      "applicability" => ["coding verification failure recovery repository workflow"],
+      "source_pointers" => ["/original/transcript/0"]
+    }
+
+    provider = fn
+      :reflection ->
+        Scripted.new([
+          fn request ->
+            send(owner, {:reflector_model, request.model})
+            Scripted.complete(JSON.encode!(%{"lessons" => [hypothesis]}), usage: usage())
+          end
+        ])
+
+      _ ->
+        Scripted.new([
+          Scripted.tool_call("read", "read", %{"path" => "solution.py"}, usage: usage()),
+          Scripted.tool_call("fix", "write", %{"path" => "solution.py", "content" => "fixed"},
+            usage: usage()
+          ),
+          Scripted.complete("done", usage: usage())
+        ])
+    end
+
+    first_config =
+      Map.merge(ctx.config, %{
+        reflection: true,
+        editor_model: "test:editor",
+        editor_effort: "default",
+        provider: provider
+      })
+
+    assert {:ok, first} = Host.episode(first_config, context(ctx.fixture, "updating"))
+    assert first["passed"]
+    assert first["qualification_complete"]
+    assert [id] = first["created_lesson_ids"]
+    assert_receive {:reflector_model, "test:editor"}
+    store = LessonFiles.new(Path.join(ctx.config.root, "library-updating-1"), ctx.config.scope)
+    assert {:ok, lesson} = Lessons.read(store, id)
+    assert lesson.provenance["actor"] == "qualification-reflector"
+    assert lesson.mechanism == hypothesis["mechanism"]
+
+    input =
+      Path.join(ctx.config.root, "1-#{ctx.fixture.id}-updating/reflection-input.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    refute Map.has_key?(input, "confirmation_grade")
+    assert input["original"]["transcript"] != []
+
+    later = %{
+      ctx.fixture
+      | id: "reflected-later",
+        task: %{ctx.fixture.task | id: "reflected-later"}
+    }
+
+    config =
+      put_in(ctx.config, [:fixtures, later.id], later)
+      |> Map.put(:provider, causal_provider(later.id))
+
+    assert {:ok, learned} =
+             Host.episode(config, context(later, "updating", [id], [ctx.fixture.id]))
+
+    assert learned["passed"]
+    assert learned["promotion_count"] == 1
+    assert learned["exposed_case_ids"] == [ctx.fixture.id]
+    assert {:ok, ablated} = Host.episode(config, context(later, "frozen"))
+    refute ablated["passed"]
+    assert ablated["promotion_count"] == 0
+    assert ablated["exposed_case_ids"] == []
+  end
+
   defp causal_provider(task_id) do
     profile =
       Host.baseline("test:model", "default") |> update_in(["options", "system"], &(&1 <> " GOOD"))

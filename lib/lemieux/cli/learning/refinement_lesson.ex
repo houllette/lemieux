@@ -76,7 +76,11 @@ defmodule Lemieux.CLI.Learning.RefinementLesson do
         "key" => "refinement-" <> receipt["sha256"],
         "kind" => "proposer_lesson",
         "outcome" => "supported",
-        "qualification" => "behavioral",
+        "qualification" =>
+          if(receipt["qualification"] == "experimental_task_local",
+            do: "unconfirmed",
+            else: "behavioral"
+          ),
         "applicability" => ["coding verification failure recovery repository workflow"],
         "mechanism" =>
           "A task-local contrast supported this profile. Recheck its assumptions on the new repository; it proves no transfer and grants no activation authority. Retained profile guidance: " <>

@@ -20,8 +20,10 @@ defmodule Lemieux.Learning.Refinement do
   releases it when the caller dies.
 
   Candidate bytes use the discovery plan, Candidate and Surface contracts.
-  Comparisons require every candidate observation to beat every baseline
-  observation without a regression. Variability stays explicit. Conflicting
+  By default every candidate observation must beat every baseline observation
+  without a regression. An explicitly frozen experimental mean policy is a
+  task-local search heuristic and produces no ordinary promotion eligibility.
+  Variability stays explicit. Conflicting
   edits are excluded; a composition is executed before selection. Without a
   verifier the result is behavioral/unconfirmed, never correctness or transfer.
   The original output/profile always remains in the receipt.
@@ -44,6 +46,7 @@ defmodule Lemieux.Learning.Refinement do
   alias Lemieux.Learning.Discovery.Surface
   alias Lemieux.Learning.Refinement.Edits
   alias Lemieux.Learning.Refinement.Evidence
+  alias Lemieux.Learning.Refinement.Support
   alias Lemieux.Learning.RuntimeEvidence
 
   @bindings ~w(source_sha256 harness_sha256 environment_sha256 descriptors_sha256 policy_sha256 verification_sha256 model_sha256)
@@ -99,8 +102,10 @@ defmodule Lemieux.Learning.Refinement do
     bindings = opts[:bindings]
     repetitions = Keyword.get(opts, :repetitions, 2)
     count = plan.budget["maximum_candidates"] - 1
+    support = Keyword.get(opts, :support_policy, Support.strict())
 
     with :ok <- Plan.verify(plan),
+         :ok <- Support.verify(support),
          :ok <- Profile.validate(baseline),
          true <- Enum.any?(plan.seeds, &(&1["content_sha256"] == Contract.digest(baseline))),
          true <- is_map(bindings) and Enum.all?(@bindings, &digest?(bindings[&1])),
@@ -119,12 +124,20 @@ defmodule Lemieux.Learning.Refinement do
         "repetitions" => repetitions,
         "maximum_candidates" => count,
         "verifier" => Keyword.get(opts, :verifier, false),
+        "support_policy" => support,
         "allocation" => Contract.json(opts[:allocation]),
         "runtime" => runtime,
         "signal" => opts[:signal],
         "callbacks_sha256" =>
           private_digest(
-            Keyword.take(opts, [:isolation, :assess, :propose, :expose, :token_bound])
+            Keyword.take(opts, [
+              :isolation,
+              :assess,
+              :propose,
+              :expose,
+              :token_bound,
+              :observe_probe
+            ])
           )
       }
 
@@ -138,6 +151,7 @@ defmodule Lemieux.Learning.Refinement do
          repetitions: repetitions,
          maximum: count,
          verifier: data["verifier"] == true,
+         support: support,
          runtime: runtime,
          digest: Contract.digest(data)
        }}
@@ -187,9 +201,13 @@ defmodule Lemieux.Learning.Refinement do
   defp compose_and_decide(plan, config, opts, control, accepted, rejected) do
     with {:ok, observed} <- candidate_probes(accepted, config, opts) do
       supported =
-        Enum.filter(observed, &Evidence.supported?(control, &1.evaluations, config.verifier))
+        Enum.filter(
+          observed,
+          &Support.supported?(control, &1.evaluations, config.verifier, config.support)
+        )
 
-      {profile, kept, conflicts} = Edits.compose(config.baseline, supported)
+      {profile, kept, conflicts} =
+        Edits.compose(config.baseline, supported, config.support["id"] == "experimental_mean/v1")
 
       validate_composition(
         plan,
@@ -289,7 +307,7 @@ defmodule Lemieux.Learning.Refinement do
     case probes(profile, "composition", config, opts) do
       {:ok, composed} ->
         receipt =
-          if Evidence.supported?(control, composed, config.verifier),
+          if Support.supported?(control, composed, config.verifier, config.support),
             do:
               baseline(config, "supported_task_local_change")
               |> Map.merge(%{
@@ -297,8 +315,7 @@ defmodule Lemieux.Learning.Refinement do
                 "selected_profile" => profile,
                 "selected_sha256" => Contract.digest(profile),
                 "candidate_ids" => Enum.map(kept, & &1.candidate.id),
-                "qualification" =>
-                  if(config.verifier, do: "task_local_verified", else: "behavioral_unconfirmed")
+                "qualification" => qualification(config)
               }),
             else: baseline(config, "composition_not_supported")
 
@@ -320,6 +337,7 @@ defmodule Lemieux.Learning.Refinement do
             "manifest_sha256" => item.candidate.sha256,
             "parents" => item.candidate.parents,
             "manifest" => Candidate.to_map(item.candidate),
+            "profile" => item.profile,
             "mechanism" => item.candidate.extensions["mechanism"],
             "evaluations" => item.evaluations
           }
@@ -369,7 +387,8 @@ defmodule Lemieux.Learning.Refinement do
              :ok <- RuntimeEvidence.verify(observation, lease.runtime_identity, changes),
              assessment <- opts[:assess].(observation, lease),
              {:ok, record} <-
-               Evidence.record(observation, assessment, config.verifier, lease.runtime_identity) do
+               Evidence.record(observation, assessment, config.verifier, lease.runtime_identity),
+             :ok <- observe_probe(opts, name, profile, observation, record) do
           {:ok,
            Map.merge(record, %{
              "attempt" => attempt,
@@ -385,6 +404,18 @@ defmodule Lemieux.Learning.Refinement do
     end
   end
 
+  defp observe_probe(opts, name, profile, observation, record) do
+    if observer = opts[:observe_probe],
+      do:
+        observer.(%{
+          "phase" => name,
+          "profile" => profile,
+          "observation" => observation,
+          "assessment" => record
+        }),
+      else: :ok
+  end
+
   defp abort_lease(module, state, id) do
     if function_exported?(module, :abort, 2), do: module.abort(state, id), else: :ok
   end
@@ -392,6 +423,7 @@ defmodule Lemieux.Learning.Refinement do
   defp controlled(opts, role) do
     provider =
       case opts[:provider] do
+        factory when is_function(factory, 1) -> factory.(role)
         factory when is_function(factory, 0) -> factory.()
         provider -> provider
       end
@@ -405,6 +437,7 @@ defmodule Lemieux.Learning.Refinement do
   defp live_allowed(opts) do
     provider =
       case opts[:provider] do
+        factory when is_function(factory, 1) -> factory.(:probe)
         factory when is_function(factory, 0) -> factory.()
         provider -> provider
       end
@@ -428,6 +461,7 @@ defmodule Lemieux.Learning.Refinement do
       "selected_profile" => config.baseline,
       "selected_sha256" => Contract.digest(config.baseline),
       "qualification" => "unassessed",
+      "support_policy" => config.support,
       "candidate_ids" => [],
       "control" => [],
       "candidates" => [],
@@ -435,6 +469,12 @@ defmodule Lemieux.Learning.Refinement do
       "excluded" => []
     }
   end
+
+  defp qualification(%{support: %{"id" => "experimental_mean/v1"}}),
+    do: "experimental_task_local"
+
+  defp qualification(config),
+    do: if(config.verifier, do: "task_local_verified", else: "behavioral_unconfirmed")
 
   defp seal(receipt),
     do: Map.put(receipt, "sha256", Contract.digest(Map.delete(receipt, "sha256")))

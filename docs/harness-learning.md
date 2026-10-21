@@ -52,6 +52,37 @@ state deliberately before starting a fresh history. A killed writer can leave
 `control.lock`; inspect its owner and journal before removing the lock. No
 background learning task survives a completed hook or session shutdown.
 
+### Explicit research qualification
+
+`scripts/qualify_learning_study.exs --research` selects a separate experimental
+lane. It reflects on complete public task records, including successful tasks,
+rejected probes and uncertainty; each retained hypothesis cites checked JSON
+pointers into its source bytes. Interpretation remains unconfirmed. Reflection
+uses the episode's allowance, and an empty result is a legitimate abstention.
+Private confirmation grades never enter reflection, proposal or selection.
+All conversational and tool-result bytes survive the trajectory projection;
+repeated request/catalog accounting metadata is represented by hashed references
+to the retained full observations. Research retrieval explicitly allows larger,
+readable source views; the ordinary bounded disclosure defaults stay small.
+
+The executor stays fixed while `--editor-model` and `--editor-effort` select a
+separate proposer/reflector (hosted defaults: GPT-6 Sol, high). General and
+domain-specific proposals receive fresh repeated probes. Experimental
+append-only prompt compositions execute again before selection. The frozen
+`experimental_mean/v1` rule compares repeated means, so an occasional passing
+control does not make adoption impossible. This rule is a search heuristic,
+not a significance test. Receipts carry `experimental_task_local`; applying
+them requires the host's additional `experimental_task_local` capability.
+They cannot authorize persistent canaries, even with a confirmation document.
+The ordinary strict rule and zero-extra-request product defaults are unchanged.
+
+Start with `--stage mechanism --research --task-requests 8`, which selects the
+developer-exposed graph workflow for a small five-arm canary. `--streams` freezes
+a comma-separated subset. A canary is mechanism evidence only; fresh efficacy
+and independently powered confirmation retain their separate registration and
+exposure requirements. Every hosted invocation still requires explicit user
+authorization and `--allow-live`.
+
 ### Typed candidates and portable exports
 
 `Lemieux.Learning.Asset` represents a non-executable skill tree, trusted personal

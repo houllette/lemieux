@@ -37,7 +37,8 @@ defmodule Lemieux.Learning.Experience.Retrieval do
     max_results: 4,
     max_decisions: 128,
     max_note_bytes: 1024,
-    max_evidence_bytes: 32_768
+    max_evidence_bytes: 32_768,
+    max_artifact_bytes: 1024
   ]
   @stopwords ~w(the and for with from this that then when into before after only task)
   @type result :: %{
@@ -113,7 +114,11 @@ defmodule Lemieux.Learning.Experience.Retrieval do
       notes = Enum.map(chosen, &Evidence.note(&1.lesson, limits[:max_note_bytes]))
 
       with {:ok, files, guards} <-
-             Evidence.materialize(Enum.map(chosen, & &1.lesson), limits[:max_evidence_bytes]) do
+             Evidence.materialize(
+               Enum.map(chosen, & &1.lesson),
+               limits[:max_evidence_bytes],
+               limits[:max_artifact_bytes]
+             ) do
         content = %{"notes" => notes, "evidence" => files, "guards" => guards}
 
         receipt =
@@ -161,10 +166,15 @@ defmodule Lemieux.Learning.Experience.Retrieval do
          values[:max_entries] <= 10_000 and values[:max_results] <= 16 and
          values[:max_decisions] <= 128 and
          values[:max_source_bytes] <= 100 * 1024 * 1024 and
-         values[:max_note_bytes] <= 4096 and values[:max_evidence_bytes] <= 262_144,
+         disclosure_limits?(values),
        do: {:ok, values},
        else: {:error, :invalid_retrieval_limits}
   end
+
+  defp disclosure_limits?(values),
+    do:
+      values[:max_note_bytes] <= 4096 and values[:max_evidence_bytes] <= 2_097_152 and
+        values[:max_artifact_bytes] <= 1_048_576
 
   defp library(map, limits) do
     with true <- json?(map) and byte_size(JSON.encode!(map)) <= 1_048_576,

@@ -170,6 +170,52 @@ defmodule Lemieux.Learning.PromotionTest do
   defp canary(ctx), do: Map.merge(ctx.request, %{mode: :canary, confirmation: ctx.confirmation})
   defp update_context(ctx, fun), do: Agent.update(ctx.authority_state, fun)
 
+  test "experimental comparisons require additional authority and cannot authorize persistent canaries",
+       ctx do
+    record = fn score ->
+      %{
+        "score" => score,
+        "regression" => score == 0,
+        "verified_success" => score == 1,
+        "safety_failure" => false,
+        "evidence_complete" => true
+      }
+    end
+
+    receipt =
+      ctx.request.refinement
+      |> Map.put("qualification", "experimental_task_local")
+      |> Map.put("support_policy", %{
+        "id" => "experimental_mean/v1",
+        "minimum_gain" => 0.1,
+        "minimum_repetitions" => 2
+      })
+      |> Map.put("control", Enum.map([0, 1], record))
+      |> Map.put("composition", Enum.map([1, 1], record))
+      |> seal()
+
+    request = %{ctx.request | refinement: receipt}
+    update_context(ctx, &%{&1 | refinements: [receipt["sha256"]]})
+
+    assert {:error, :guidance_not_eligible} =
+             Promotion.promote(ctx.host, "research", request, ctx.authority)
+
+    attrs =
+      ctx.context.policy
+      |> Map.drop(~w(schema_version sha256))
+      |> Map.update!("capabilities", &["experimental_task_local" | &1])
+
+    assert {:ok, policy} = Policy.new(attrs)
+    update_context(ctx, &%{&1 | policy: policy})
+    assert {:ok, harness, _} = Promotion.promote(ctx.host, "research", request, ctx.authority)
+    assert harness.system =~ "GOOD"
+    assert {:ok, _, _} = Promotion.undo(ctx.host, ctx.authority)
+    persistent = Map.merge(request, %{mode: :canary, confirmation: ctx.confirmation})
+
+    assert {:error, :guidance_not_eligible} =
+             Promotion.promote(ctx.host, "persistent", persistent, ctx.authority)
+  end
+
   defp observation(receipt, id, task, regression \\ false) do
     %{
       "id" => id,

@@ -5,8 +5,10 @@ defmodule Lemieux.Learning.Promotion.Guidance do
   alias Lemieux.Harness
   alias Lemieux.Learning.Discovery.Surface
   alias Lemieux.Learning.Overlay
+  alias Lemieux.Learning.Promotion.Policy
   alias Lemieux.Learning.Refinement
   alias Lemieux.Learning.Refinement.Evidence
+  alias Lemieux.Learning.Refinement.Support
   alias Lemieux.Tool
   alias Lemieux.Tools
 
@@ -37,7 +39,7 @@ defmodule Lemieux.Learning.Promotion.Guidance do
          :ok <- Profile.validate(profile),
          true <- Contract.digest(request.baseline) == receipt["original_profile_sha256"],
          true <- Contract.digest(profile) == receipt["selected_sha256"],
-         true <- supported?(receipt),
+         true <- supported?(request, context),
          {:ok, suffix, descriptions} <- delta(request.baseline, profile),
          :ok <- trust(descriptions, context, base),
          {:ok, confirmation} <- confirmation(request, context),
@@ -51,11 +53,26 @@ defmodule Lemieux.Learning.Promotion.Guidance do
     _invalid -> {:error, :guidance_not_eligible}
   end
 
-  defp supported?(receipt) do
+  defp supported?(
+         %{
+           mode: :task_local,
+           refinement: %{"qualification" => "experimental_task_local"} = receipt
+         },
+         context
+       ) do
+    policy = receipt["support_policy"]
+
+    Policy.authorize(context, "experimental_task_local") == :ok and
+      is_map(policy) and policy["id"] == "experimental_mean/v1" and
+      Support.supported?(receipt["control"] || [], receipt["composition"] || [], true, policy)
+  end
+
+  defp supported?(%{refinement: receipt}, _context) do
     control = receipt["control"] || []
     composed = receipt["composition"] || []
 
     receipt["qualification"] in ~w(behavioral_unconfirmed task_local_verified) and
+      Map.get(receipt, "support_policy", Support.strict()) == Support.strict() and
       length(control) >= 2 and
       Evidence.supported?(control, composed, receipt["qualification"] == "task_local_verified")
   end

@@ -152,6 +152,12 @@ defmodule Lemieux.Learning.Proposer do
       CLI lane, preserve the parent system text exactly and append only the
       targeted instructions; tool descriptions may change only enabled tools
       within the frozen surface. Keep mechanism at most 256 UTF-8 bytes.
+
+      If evidence/operator.json names proposal_scope, respect it: "general"
+      seeks a reusable workflow invariant across repository domains; "domain"
+      seeks a procedure conditional on the current toolchain or domain. Both
+      must cite the observed mechanism, preserve the base, and avoid embedding
+      task solutions. Inspect retained evidence before deciding to abstain.
       """
   end
 

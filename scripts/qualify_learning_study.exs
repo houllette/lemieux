@@ -24,7 +24,11 @@ alias Lemieux.Providers.Scripted
       task_requests: :integer,
       repetitions: :integer,
       manifest: :string,
-      offline_smoke: :boolean
+      offline_smoke: :boolean,
+      research: :boolean,
+      editor_model: :string,
+      editor_effort: :string,
+      streams: :string
     ]
   )
 
@@ -34,7 +38,9 @@ if live and opts[:offline_smoke],
   do: raise("The offline smoke subset cannot select a hosted provider")
 
 stage = opts[:stage] || "calibration"
-true = stage in ~w(calibration development confirmation)
+true = stage in ~w(calibration mechanism development confirmation)
+research = opts[:research] == true
+if stage == "mechanism" and not research, do: raise("Mechanism stage requires --research")
 
 if stage == "confirmation" and not opts[:manifest],
   do:
@@ -45,6 +51,21 @@ repetitions = opts[:repetitions] || 2
 true = requests in 8..24 and repetitions in 2..10
 model = opts[:model] || if(live, do: "openai_codex:gpt-6-luna", else: "test:model")
 effort = opts[:effort] || if(live, do: "low", else: "default")
+
+editor_model =
+  opts[:editor_model] || if(live and research, do: "openai_codex:gpt-6-sol", else: model)
+
+editor_effort = opts[:editor_effort] || if(live and research, do: "high", else: effort)
+
+if not research and (opts[:editor_model] || opts[:editor_effort]),
+  do: raise("Separate editor requires --research")
+
+true =
+  if live,
+    do:
+      String.starts_with?(editor_model, "openai_codex:") and
+        editor_effort in ~w(low medium high xhigh max),
+    else: editor_model == "test:model" and editor_effort == "default"
 
 true =
   if live,
@@ -103,13 +124,25 @@ scope = %{"id" => "qualification-study/" <> Contract.sha256(root)}
   end
 
 fixtures = if opts[:offline_smoke], do: Enum.take(fixtures, 2), else: fixtures
+
+selected_streams =
+  if opts[:streams],
+    do: String.split(opts[:streams], ","),
+    else: if(stage == "mechanism", do: ["graph"])
+
+fixtures =
+  if selected_streams,
+    do: Enum.filter(fixtures, &(&1.cluster in selected_streams)),
+    else: fixtures
+
+true = fixtures != []
 streams = Enum.map(fixtures, & &1.cluster) |> Enum.uniq()
-seeds = if opts[:offline_smoke], do: Enum.filter(seeds, &(&1.cluster in streams)), else: seeds
+seeds = Enum.filter(seeds, &(&1.cluster in streams))
 seed_ids = Enum.map(seeds, & &1.id)
 
 allowance = %{
-  "requests" => max(160, 8 * requests + 16),
-  "tokens" => 3_000_000,
+  "requests" => if(research, do: max(192, 8 * requests + 48), else: max(160, 8 * requests + 16)),
+  "tokens" => if(research, do: 6_000_000, else: 3_000_000),
   "time_ms" => 2_000_000,
   "cost_usd" => nil
 }
@@ -169,6 +202,37 @@ runtime = %{
   }
 }
 
+runtime =
+  if research do
+    Map.merge(runtime, %{
+      "research_protocol" => %{
+        "id" => "whole_record_research/v1",
+        "stage" => stage,
+        "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",
+        "editor_model" => editor_model,
+        "editor_effort" => editor_effort,
+        "support_policy" => %{
+          "id" => "experimental_mean/v1",
+          "minimum_gain" => 0.1,
+          "minimum_repetitions" => 2
+        },
+        "proposal_scopes" => ["general", "domain"],
+        "composition" => "append_only_system_union_then_fresh_execution",
+        "activation" => "experimental_task_local_permission_no_persistent_canary",
+        "efficacy" => "separate_quality_and_efficiency_endpoints_no_changed_historical_thresholds"
+      },
+      "refinement" => %{
+        "repetitions" => 2,
+        "maximum_candidates" => 2,
+        "reserved_requests" => 8 * requests + 32,
+        "reserved_tokens" => 4_500_000,
+        "surface" => ["system_suffix", "tool_descriptions"]
+      }
+    })
+  else
+    runtime
+  end
+
 runtime = Map.put(runtime, "sha256", Contract.digest(runtime))
 
 config = %{
@@ -192,6 +256,20 @@ config = %{
   opaque_paths: true,
   capture_workspace: true
 }
+
+config =
+  if research,
+    do:
+      Map.merge(config, %{
+        reflection: true,
+        editor_model: editor_model,
+        editor_effort: editor_effort,
+        proposal_scopes: ["general", "domain"],
+        refinement_tokens: 4_500_000,
+        support_policy: runtime["research_protocol"]["support_policy"],
+        refinement_requests: 8 * requests + 32
+      }),
+    else: config
 
 build_plan = fn library_sha, current_runtime ->
   if stage != "calibration" do
@@ -285,10 +363,31 @@ try do
     {:ok, meter} = Agent.start_link(fn -> %{} end)
     fixture = Map.fetch!(config.fixtures, context["task"]["id"])
 
-    provider = fn _role ->
+    provider = fn role ->
       cond do
         live ->
-          Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0))
+          Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0), role: role)
+
+        research and role == :reflection ->
+          Scripted.new([
+            Scripted.complete(
+              JSON.encode!(%{
+                "lessons" => [
+                  %{
+                    "kind" => "procedure",
+                    "outcome" => "insufficient_evidence",
+                    "mechanism" =>
+                      "Read the development entry points, repair active source, regenerate the executed copy and verify both paths.",
+                    "applicability" => [
+                      "coding verification failure recovery repository workflow"
+                    ],
+                    "source_pointers" => ["/original/transcript/0"]
+                  }
+                ]
+              }),
+              usage: %{"input_tokens" => 2, "output_tokens" => 2}
+            )
+          ])
 
         fixture[:offline_oracle] ->
           # Reference implementations remain host-only. This branch is

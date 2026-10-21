@@ -5,13 +5,24 @@ defmodule Lemieux.CLI.Learning.Recording do
   alias Lemieux.Provider
   alias Lemieux.Usage
 
-  @spec new(meter :: pid(), provider :: Provider.t()) :: Provider.t()
-  def new(meter, provider), do: {__MODULE__, %{meter: meter, provider: provider}}
+  @spec new(meter :: pid(), provider :: Provider.t(), opts :: keyword()) :: Provider.t()
+  def new(meter, provider, opts \\ []),
+    do: {__MODULE__, %{meter: meter, provider: provider, role: opts[:role]}}
 
   @impl true
   def run(state, request, emit) do
     id = Lemieux.ID.generate()
-    :ok = Agent.update(state.meter, &Map.put(&1, id, %{"status" => "in_flight", "tokens" => nil}))
+
+    :ok =
+      Agent.update(
+        state.meter,
+        &Map.put(&1, id, %{
+          "status" => "in_flight",
+          "tokens" => nil,
+          "model" => request.model,
+          "role" => state.role && to_string(state.role)
+        })
+      )
 
     result =
       Provider.run(state.provider, request, fn event ->
@@ -45,7 +56,9 @@ defmodule Lemieux.CLI.Learning.Recording do
 
     Agent.update(
       meter,
-      &Map.put(&1, id, %{"status" => "reported", "tokens" => tokens, "usage" => facts})
+      &Map.update!(&1, id, fn record ->
+        Map.merge(record, %{"status" => "reported", "tokens" => tokens, "usage" => facts})
+      end)
     )
   end
 

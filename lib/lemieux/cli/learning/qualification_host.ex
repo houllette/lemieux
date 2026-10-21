@@ -12,6 +12,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.CLI.Learning.Installation
   alias Lemieux.CLI.Learning.Leases
   alias Lemieux.CLI.Learning.RefinementLesson
+  alias Lemieux.CLI.Learning.Reflection
   alias Lemieux.CLI.Learning.WorkspaceEvidence
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime.Evaluation
@@ -35,6 +36,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.Learning.Promotion.Policy
   alias Lemieux.Learning.Proposer
   alias Lemieux.Learning.Refinement
+  alias Lemieux.Learning.Refinement.Support
   alias Lemieux.Providers.Scripted
   alias Lemieux.Store.JSONL
 
@@ -182,11 +184,17 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       },
       consumer: %{
         "id" => "exposure-" <> Lemieux.ID.generate(),
-        "consumer_role" => "proposer",
+        "consumer_role" => if(context["arm"] == "retrieval", do: "task", else: "proposer"),
         "consumer_id" => "qualification-host",
-        "model" => config.model,
+        "model" =>
+          if(context["arm"] == "retrieval", do: config.model, else: editor_model(config)),
         "at" => DateTime.to_iso8601(DateTime.utc_now())
       },
+      options:
+        if(config[:reflection],
+          do: [max_evidence_bytes: 2_097_152, max_artifact_bytes: 786_432, max_results: 2],
+          else: []
+        ),
       commit: fn current_scope, exposure ->
         commit_exposure(config, context, dir, current_scope, exposure)
       end
@@ -293,7 +301,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
     } = state
 
     sources = if retrieved && retrieved.exposure, do: retrieved.exposure.source_case_ids, else: []
-    created = retain(state, store)
+    {created, reflection} = retain(state, store)
     selected_grade = result.selected[:confirmation_grade] || result.selected.grade
 
     evidence = %{
@@ -308,6 +316,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       "learning_failure" => result[:learning_failure],
       "controller" => Controller.snapshot(controller),
       "created_lesson_ids" => created,
+      "reflection" => reflection,
+      "retrieval" => if(retrieved, do: retrieved.receipt),
       "all_attempt_grades" => Agent.get(config.grades, & &1)
     }
 
@@ -327,8 +337,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
        "candidate_count" => candidate_count(result),
        "promotion_count" => promotion_count(result),
        "rollback_count" => promotion_count(result),
-       "qualification_complete" =>
-         is_nil(result[:learning_failure]) and workspace_complete?(evidence),
+       "qualification_complete" => qualification_complete?(result, evidence, reflection),
        "workspace_evidence_complete" => workspace_complete?(evidence),
        "requests" => if(metered, do: map_size(metered), else: accounting["requests"]),
        "tokens" => accounting["tokens"],
@@ -343,6 +352,11 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
        "evidence_sha256" => Contract.digest(evidence)
      }}
   end
+
+  defp qualification_complete?(result, evidence, reflection),
+    do:
+      is_nil(result[:learning_failure]) and workspace_complete?(evidence) and
+        reflection["complete"]
 
   defp retain(state, store) do
     %{
@@ -374,11 +388,96 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           source_lessons: sources
         )
 
-      ids ++ refinement_ids
+      {reflected_ids, reflection} = reflect(state, store, authority, sources)
+      {ids ++ refinement_ids ++ reflected_ids, reflection}
     else
-      []
+      {[], %{"complete" => true, "status" => "disabled"}}
     end
   end
+
+  defp reflect(%{config: %{reflection: true}} = state, store, authority, sources) do
+    config = state.config
+    probe_dir = Path.join(state.dir, "probe-records")
+
+    probes =
+      case File.ls(probe_dir) do
+        {:ok, names} ->
+          names
+          |> Enum.sort()
+          |> Enum.map(&(probe_dir |> Path.join(&1) |> File.read!() |> JSON.decode!()))
+
+        {:error, :enoent} ->
+          []
+      end
+
+    record = %{
+      "task_request" => state.fixture.task.prompt,
+      "original" => Reflection.project(state.original.observation),
+      "selected" => Reflection.project(state.result.selected.observation),
+      "refinement" => state.result.refinement,
+      "public_grades" => %{
+        "original" => state.original.grade,
+        "selected" => state.result.selected.grade
+      },
+      "probes" =>
+        Enum.map(
+          probes,
+          &Map.update!(&1, "observation", fn observation -> Reflection.project(observation) end)
+        )
+    }
+
+    :ok = Installation.write(Path.join(state.dir, "reflection-input.json"), record)
+
+    provider =
+      Controller.provider(state.controller, :reflection, config.provider.(:reflection),
+        token_bound: &token_bound/1,
+        timeout_ms: 180_000
+      )
+
+    outcome =
+      with {:ok, hypotheses, observation} <-
+             Reflection.distill(record,
+               model: editor_model(config),
+               effort: editor_effort(config),
+               provider: provider,
+               cwd: state.dir,
+               sessions_dir: Path.join(state.dir, "sessions"),
+               supervisor: config.supervisor
+             ),
+           {:ok, ids} <-
+             Reflection.retain(record, hypotheses, state.fixture.id, store, authority,
+               source_lessons: sources
+             ) do
+        {:ok, ids,
+         %{
+           "complete" => true,
+           "hypotheses" => hypotheses,
+           "observation" => observation,
+           "source_sha256" => Contract.digest(record),
+           "created_lesson_ids" => ids
+         }}
+      end
+
+    {ids, receipt} =
+      case outcome do
+        {:ok, ids, receipt} ->
+          {ids, receipt}
+
+        error ->
+          {[],
+           %{
+             "complete" => false,
+             "reason" => Kernel.inspect(error),
+             "source_sha256" => Contract.digest(record)
+           }}
+      end
+
+    :ok = Installation.write(Path.join(state.dir, "reflection.json"), receipt)
+    {ids, receipt}
+  end
+
+  defp reflect(_state, _store, _authority, _sources),
+    do: {[], %{"complete" => true, "status" => "not_selected"}}
 
   defp read_lesson(store, id) do
     {:ok, lesson} = Lessons.read(store, id)
@@ -394,7 +493,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           experience.query,
           experience.binding,
           experience.consumer,
-          experience.commit
+          experience.commit,
+          experience.options
         )
 
       result
@@ -487,19 +587,19 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       Evaluation.factory(lease.options, lease.host, parent_profile: baseline, surface: @surface)
 
     evolver =
-      Proposer.profile(config.model,
+      Proposer.profile(editor_model(config),
         quota: true,
         experience: true,
         abstain: true,
         task_local: true,
-        reasoning_effort: config.effort,
+        reasoning_effort: editor_effort(config),
         max_requests: 16,
         max_tokens: 8192
       )
 
     allocation = %{
       requests: refinement_requests(config),
-      tokens: 1_500_000,
+      tokens: refinement_tokens(config),
       time_ms: 1_500_000,
       cost_usd: nil
     }
@@ -515,7 +615,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           objectives: [%{"name" => "task_success", "direction" => "maximize"}],
           validation_case_ids: ["unexposed"],
           budget: %{
-            "maximum_candidates" => 2,
+            "maximum_candidates" => length(proposal_scopes(config)) + 1,
             "maximum_tokens" => allocation.tokens,
             "maximum_time_ms" => allocation.time_ms,
             "maximum_cost_usd" => 0.0,
@@ -558,7 +658,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           sessions_dir: Path.join(dir, "sessions"),
           controller: controller,
           isolation: {Leases, lease},
-          provider: fn -> config.provider.(:probe) end,
+          provider: fn role -> config.provider.(role) end,
           token_bound: &token_bound/1,
           request_timeout_ms: 180_000,
           acquisition_timeout_ms: acquisition_timeout(config),
@@ -567,6 +667,12 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           end,
           allow_live: config[:allow_live] == true,
           verifier: true,
+          support_policy: Map.get(config, :support_policy, Support.strict()),
+          observe_probe: fn record ->
+            path = Path.join(dir, "probe-records")
+            :ok = File.mkdir_p(path)
+            Installation.write(Path.join(path, Contract.digest(record) <> ".json"), record)
+          end,
           assess: fn _, probe ->
             grade = grade(config, fixture, probe.task.cwd)
 
@@ -574,7 +680,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
               "score" => grade["score"],
               "regression" =>
                 grade["score"] < original.grade["score"] or grade["safety_failures"] != [],
-              "verified_success" => grade["passed"]
+              "verified_success" => grade["passed"],
+              "safety_failure" => grade["safety_failures"] != []
             }
           end,
           expose: fn _ ->
@@ -672,6 +779,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
             | consumer:
                 Map.merge(experience.consumer, %{
                   "id" => "exposure-" <> Lemieux.ID.generate(),
+                  "consumer_role" => "proposer",
+                  "model" => editor_model(config),
                   "at" => DateTime.to_iso8601(DateTime.utc_now())
                 })
           },
@@ -697,18 +806,35 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         }
 
         context = proposal_context(context, plan, original)
-        proposed = Proposer.propose(plan, State.new(plan), context)
 
-        case proposed do
-          {:ok, candidate, _} -> {:ok, [candidate], Agent.get(retained, & &1)}
-          {:noop, _} -> {:ok, [], %{}}
-          error -> error
-        end
+        search_scopes(proposal_scopes(config), context, plan, retained)
       after
         Agent.stop(retained)
       end
     else
       {:error, :disabled}
+    end
+  end
+
+  defp search_scopes(scopes, context, plan, retained) do
+    scopes
+    |> Enum.with_index(1)
+    |> Enum.reduce_while({:ok, []}, fn {scope, ordinal}, {:ok, candidates} ->
+      scoped =
+        context
+        |> Map.put(:ordinal, ordinal)
+        |> Map.put(:artifacts, Agent.get(retained, & &1))
+        |> Map.update!(:evidence, &Map.put(&1, "proposal_scope", scope))
+
+      case Proposer.propose(plan, State.new(plan), scoped) do
+        {:ok, candidate, _} -> {:cont, {:ok, candidates ++ [candidate]}}
+        {:noop, _} -> {:cont, {:ok, candidates}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, candidates} -> {:ok, candidates, Agent.get(retained, & &1)}
+      error -> error
     end
   end
 
@@ -807,7 +933,12 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       %{
         selected: selected,
         refinement: receipt,
-        promotion: %{"activation" => activation, "undo" => undo, "final_grade" => final.grade}
+        promotion: %{
+          "activation" => activation,
+          "undo" => undo,
+          "final_grade" => final.grade,
+          "final_observation" => final.observation
+        }
       }
     after
       GenServer.stop(server)
@@ -822,7 +953,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         "id" => "qualification/v1",
         "actor" => "qualification-host",
         "scope" => config.scope,
-        "capabilities" => ["retain", "task_local"],
+        "capabilities" => capabilities(config),
         "trust" => "personal",
         "maximum_bytes" => 16_384,
         "ttl_ms" => 600_000,
@@ -860,6 +991,14 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp signal(%{captures: [capture | _]}), do: capture["kind"]
   defp signal(%{grade: %{"passed" => false}}), do: "verification_failure"
   defp signal(_original), do: "no_signal"
+  defp editor_model(config), do: config[:editor_model] || config.model
+  defp editor_effort(config), do: config[:editor_effort] || config.effort
+  defp proposal_scopes(config), do: config[:proposal_scopes] || ["task_local"]
+
+  defp capabilities(%{support_policy: %{"id" => "experimental_mean/v1"}}),
+    do: ["retain", "task_local", "experimental_task_local"]
+
+  defp capabilities(_config), do: ["retain", "task_local"]
   defp observation({:ok, observation}), do: observation
   defp observation({:error, _, observation}), do: observation
 
@@ -930,6 +1069,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp initial_lessons(config, _context), do: config[:initial_lessons] || []
   defp acquisition_timeout(config), do: config[:acquisition_timeout_ms] || 5000
   defp refinement_requests(config), do: config[:refinement_requests] || 112
+  defp refinement_tokens(config), do: config[:refinement_tokens] || 1_500_000
   defp candidate_count(%{refinement: nil}), do: 0
   defp candidate_count(%{refinement: receipt}), do: length(receipt["candidates"] || [])
   defp promotion_count(%{promotion: nil}), do: 0
