@@ -44,13 +44,9 @@ defmodule Lemieux.CLI.Learning.AssetLane do
           controller: details.controller,
           isolation: {Leases, details.lease},
           bindings: details.lease.bindings,
-          allocation: %{
-            requests: config[:asset_requests] || 8 * (config[:task_requests] || 16) + 4,
-            tokens: Map.get(config, :asset_tokens, 4_500_000),
-            time_ms: config[:asset_time_ms] || 1_500_000,
-            cost_usd: nil
-          },
+          allocation: allocation(config),
           support_policy: config.support_policy,
+          terminal_rule: Map.get(config, :terminal_rule, :completed_task),
           allow_live: config[:allow_live] == true,
           task_model: config.model,
           editor_model: config[:editor_model] || config.model,
@@ -141,6 +137,14 @@ defmodule Lemieux.CLI.Learning.AssetLane do
       harness
     end
   end
+
+  defp allocation(config),
+    do: %{
+      requests: Map.get(config, :asset_requests, 8 * Map.get(config, :task_requests, 16) + 4),
+      tokens: Map.get(config, :asset_tokens, 4_500_000),
+      time_ms: Map.get(config, :asset_time_ms, 1_500_000),
+      cost_usd: nil
+    }
 
   defp profile_changes(%{
          result: %{refinement: %{"decision" => "proposed"} = receipt},

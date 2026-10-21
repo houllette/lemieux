@@ -17,6 +17,17 @@ repeated mean gains or repeated fully verified ties for **task-local research**.
 A tie is a search choice, never evidence of improvement. Strict dominance and
 fresh host authority remain required by the existing persistent policy.
 
+The `whole_record_research/v3` protocol defines success as the independently
+verified file outcome for every arm. With complete, matching usage and transcript
+evidence, reaching the task turn limit does not erase a passing artifact grade
+only for refinement. Earlier protocols did erase it for probes while ordinary
+arms retained credit for the same files. Budget stops remain explicit in probe
+records and the report's `budget_stops` views; artifact success does not imply
+that the agent completed its final report. Provider failures, cancellations,
+timeouts and unknown usage still refuse complete qualification. The ordinary
+refinement default continues to require a completed task. Historical plans and
+results retain their original scoring rules.
+
 Version 4 adds `no_experience`: the same improver, probes and retention work with
 all earlier experience withheld from every subsequent proposal. Frozen,
 updating and withheld arms share the same per-episode allowance. Retrieval-only,

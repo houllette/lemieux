@@ -11,7 +11,16 @@ defmodule Lemieux.Learning.Refinement.Evidence do
           runtime :: map()
         ) ::
           {:ok, map()} | {:error, term()}
-  def record(observation, assessment, verifier?, runtime)
+  @spec record(
+          observation :: map(),
+          assessment :: term(),
+          verifier? :: boolean(),
+          runtime :: map(),
+          terminal_rule :: :completed_task | :artifact_outcome
+        ) :: {:ok, map()} | {:error, term()}
+  def record(observation, assessment, verifier?, runtime, terminal_rule \\ :completed_task)
+
+  def record(observation, assessment, verifier?, runtime, terminal_rule)
       when is_map(observation) and is_map(assessment) do
     qualification = observation["runtime_qualification"]
     entries = observation["transcript"] || []
@@ -33,10 +42,13 @@ defmodule Lemieux.Learning.Refinement.Evidence do
          true <- evidence["harness_snapshot"]["semantic_sha256"] == harness["semantic_sha256"],
          true <- get_in(harness, ["workflow", "evaluation", "sha256"]) == qualification["sha256"],
          true <- not verifier? or is_boolean(assessment["verified_success"]),
-         {:ok, assessment} <- terminal_assessment(observation, evidence, assessment) do
+         {:ok, assessment} <-
+           terminal_assessment(observation, evidence, assessment, terminal_rule) do
       {:ok,
        %{
          "score" => assessment["score"],
+         "verifier_score" => score,
+         "scoring_rule" => Atom.to_string(terminal_rule),
          "regression" => assessment["regression"],
          "safety_failure" => Map.get(assessment, "safety_failure", assessment["regression"]),
          "evidence_complete" => true,
@@ -55,27 +67,39 @@ defmodule Lemieux.Learning.Refinement.Evidence do
     end
   end
 
-  def record(_observation, _assessment, _verifier?, _runtime), do: {:error, :invalid_assessment}
+  def record(_observation, _assessment, _verifier?, _runtime, _rule),
+    do: {:error, :invalid_assessment}
 
   @doc false
   @spec terminal(observation :: map(), evidence :: map(), assessment :: map()) ::
           {:ok, map()} | {:error, term()}
-  def terminal(observation, evidence, assessment),
-    do: terminal_assessment(observation, evidence, assessment)
+  @spec terminal(
+          observation :: map(),
+          evidence :: map(),
+          assessment :: map(),
+          terminal_rule :: :completed_task | :artifact_outcome
+        ) :: {:ok, map()} | {:error, term()}
+  def terminal(observation, evidence, assessment, terminal_rule \\ :completed_task),
+    do: terminal_assessment(observation, evidence, assessment, terminal_rule)
 
   defp terminal_assessment(
          %{"status" => "completed", "provider_error" => nil},
          _evidence,
-         assessment
-       ),
+         assessment,
+         rule
+       )
+       when rule in [:completed_task, :artifact_outcome],
        do: {:ok, assessment}
 
   # The profile's turn limit is an observed failure, just as in Discovery's
   # evaluator. Treating it as missing evidence prevented any proposal on hard
   # tasks. Only a matching terminal manifest with complete accounting qualifies;
   # cancellation, provider failures and evaluator clocks still require recovery.
-  # A verifier may accept partially completed files, but cannot turn this stop
-  # into successful candidate evidence.
+  # The default requires completion. An explicitly registered artifact study
+  # instead uses the same external file grader for every arm. A known budget
+  # stop after a correct patch must not erase that grade only for probes; stop
+  # status remains recorded separately. Provider/cancellation/unknown stops
+  # never receive this exception.
   defp terminal_assessment(
          %{
            "status" => "failed",
@@ -88,20 +112,27 @@ defmodule Lemieux.Learning.Refinement.Evidence do
            "usage" => %{"state" => "complete"},
            "completeness" => %{"usage" => "complete", "artifacts" => "complete"}
          },
-         assessment
+         assessment,
+         rule
        ) do
-    if turn_limit_notice?(notice),
-      do:
+    case {turn_limit_notice?(notice), rule} do
+      {true, :artifact_outcome} ->
+        {:ok, assessment}
+
+      {true, :completed_task} ->
         {:ok,
          Map.merge(assessment, %{
            "score" => 0.0,
            "regression" => true,
            "verified_success" => false
-         })},
-      else: {:error, :incomplete_probe_evidence}
+         })}
+
+      _invalid ->
+        {:error, :incomplete_probe_evidence}
+    end
   end
 
-  defp terminal_assessment(_observation, _evidence, _assessment),
+  defp terminal_assessment(_observation, _evidence, _assessment, _rule),
     do: {:error, :incomplete_probe_evidence}
 
   # Agent.Session projects the loop's own error notice into provider_error too.

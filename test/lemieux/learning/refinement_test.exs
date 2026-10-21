@@ -418,7 +418,8 @@ defmodule Lemieux.Learning.RefinementTest do
 
     assert Enum.all?(candidate["evaluations"], fn record ->
              record["score"] == 0 and record["regression"] and
-               record["verified_success"] == false and record["stop_reason"] == "max_turns"
+               record["verified_success"] == false and record["stop_reason"] == "max_turns" and
+               record["verifier_score"] == 1 and record["scoring_rule"] == "completed_task"
            end)
   end
 
@@ -431,6 +432,113 @@ defmodule Lemieux.Learning.RefinementTest do
              Refinement.run(ctx.handle, "unaccounted-bound", ctx.plan, opts)
 
     assert Controller.snapshot(ctx.controller)["accounting"]["tokens"] == nil
+  end
+
+  test "registered artifact research preserves verified file outcomes at a known turn limit",
+       ctx do
+    policy = %{
+      "id" => "experimental_mean/v2",
+      "verified_ties" => true,
+      "minimum_gain" => 0.1,
+      "minimum_repetitions" => 2
+    }
+
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:verifier, true)
+      |> Keyword.put(:support_policy, policy)
+      |> Keyword.put(:terminal_rule, :artifact_outcome)
+      |> Keyword.put(:provider, bounded_provider(&String.contains?(&1, "GOOD")))
+
+    assert {:ok, receipt} = Refinement.run(ctx.handle, "artifact-candidate", ctx.plan, opts)
+    assert receipt["decision"] == "proposed"
+    assert receipt["terminal_rule"] == "artifact_outcome"
+    assert receipt["qualification"] == "experimental_task_local"
+
+    assert Enum.all?(
+             receipt["composition"],
+             &(&1["score"] == 1 and &1["verified_success"] == true and
+                 &1["stop_reason"] == "max_turns")
+           )
+
+    assert {:error, :invalid_refinement_configuration} =
+             Refinement.run(
+               ctx.handle,
+               "strict-artifact",
+               ctx.plan,
+               Keyword.delete(opts, :support_policy)
+             )
+  end
+
+  test "artifact research cannot credit unknown budget stops, provider failures or cancellation",
+       ctx do
+    owner = self()
+
+    assess = fn observation, lease ->
+      assessment = ctx.opts[:assess].(observation, lease)
+      send(owner, {:artifact_source, observation, lease.runtime_identity, assessment})
+      assessment
+    end
+
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:verifier, true)
+      |> Keyword.put(:terminal_rule, :artifact_outcome)
+      |> Keyword.put(:support_policy, %{
+        "id" => "experimental_mean/v2",
+        "verified_ties" => true,
+        "minimum_gain" => 0.1,
+        "minimum_repetitions" => 2
+      })
+      |> Keyword.put(:assess, assess)
+      |> Keyword.put(:provider, bounded_provider(fn _ -> true end))
+
+    assert {:ok, _receipt} = Refinement.run(ctx.handle, "artifact-sources", ctx.plan, opts)
+    assert_receive {:artifact_source, observation, identity, assessment}
+
+    assert {:ok, record} =
+             Refinement.Evidence.record(
+               observation,
+               assessment,
+               true,
+               identity,
+               :artifact_outcome
+             )
+
+    assert record["score"] == assessment["score"]
+
+    for reason <- [":cancelled", ":error", ":agent_timeout", ":benchmark_timeout"] do
+      assert {:error, :incomplete_probe_evidence} =
+               Refinement.Evidence.record(
+                 Map.put(observation, "finish_reason", reason),
+                 assessment,
+                 true,
+                 identity,
+                 :artifact_outcome
+               )
+    end
+
+    failed = put_in(observation, ["provider_error", "category"], "timeout")
+
+    assert {:error, :incomplete_probe_evidence} =
+             Refinement.Evidence.record(failed, assessment, true, identity, :artifact_outcome)
+  end
+
+  test "artifact research still requires recovery when turn-limit usage is unknown", ctx do
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:verifier, true)
+      |> Keyword.put(:terminal_rule, :artifact_outcome)
+      |> Keyword.put(:support_policy, %{
+        "id" => "experimental_mean/v2",
+        "verified_ties" => true,
+        "minimum_gain" => 0.1,
+        "minimum_repetitions" => 2
+      })
+      |> Keyword.put(:provider, bounded_provider(fn _ -> true end, nil))
+
+    assert {:error, {:requires_recovery, "artifact-unknown"}} =
+             Refinement.run(ctx.handle, "artifact-unknown", ctx.plan, opts)
   end
 
   test "a matched contrast retains a real improvement and records an independent regression",

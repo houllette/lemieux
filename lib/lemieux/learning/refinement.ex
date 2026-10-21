@@ -72,7 +72,15 @@ defmodule Lemieux.Learning.Refinement do
 
   def preflight(_invalid, _bindings), do: {:error, :isolation_required}
 
-  @doc "Runs a finite host-authorized experiment; returns a retained baseline or a scoped proposal."
+  @doc """
+  Runs a finite host-authorized experiment; returns a retained baseline or a scoped proposal.
+
+  The default terminal rule requires task completion. An explicitly experimental
+  support policy with a verifier may register `terminal_rule: :artifact_outcome`
+  to retain externally verified file grades at an accounted turn limit. This
+  choice is frozen in the request and receipt; it does not excuse provider,
+  cancellation, timeout or accounting failures, or grant persistent activation.
+  """
   @spec run(handle :: Checkpoint.t(), key :: String.t(), plan :: Plan.t(), opts :: keyword()) ::
           term()
   def run(handle, key, %Plan{} = plan, opts) do
@@ -103,9 +111,11 @@ defmodule Lemieux.Learning.Refinement do
     repetitions = Keyword.get(opts, :repetitions, 2)
     count = plan.budget["maximum_candidates"] - 1
     support = Keyword.get(opts, :support_policy, Support.strict())
+    terminal = Keyword.get(opts, :terminal_rule, :completed_task)
 
     with :ok <- Plan.verify(plan),
          :ok <- Support.verify(support),
+         true <- terminal_rule_allowed?(terminal, support, opts[:verifier]),
          :ok <- Profile.validate(baseline),
          true <- Enum.any?(plan.seeds, &(&1["content_sha256"] == Contract.digest(baseline))),
          true <- is_map(bindings) and Enum.all?(@bindings, &digest?(bindings[&1])),
@@ -125,6 +135,7 @@ defmodule Lemieux.Learning.Refinement do
         "maximum_candidates" => count,
         "verifier" => Keyword.get(opts, :verifier, false),
         "support_policy" => support,
+        "terminal_rule" => Atom.to_string(terminal),
         "allocation" => Contract.json(opts[:allocation]),
         "runtime" => runtime,
         "signal" => opts[:signal],
@@ -152,6 +163,7 @@ defmodule Lemieux.Learning.Refinement do
          maximum: count,
          verifier: data["verifier"] == true,
          support: support,
+         terminal: terminal,
          runtime: runtime,
          digest: Contract.digest(data)
        }}
@@ -388,7 +400,13 @@ defmodule Lemieux.Learning.Refinement do
              :ok <- RuntimeEvidence.verify(observation, lease.runtime_identity, changes),
              assessment <- opts[:assess].(observation, lease),
              {:ok, record} <-
-               Evidence.record(observation, assessment, config.verifier, lease.runtime_identity),
+               Evidence.record(
+                 observation,
+                 assessment,
+                 config.verifier,
+                 lease.runtime_identity,
+                 config.terminal
+               ),
              :ok <- observe_probe(opts, name, profile, observation, record) do
           {:ok,
            Map.merge(record, %{
@@ -448,6 +466,13 @@ defmodule Lemieux.Learning.Refinement do
       else: {:error, :live_refinement_requires_allow_live}
   end
 
+  defp terminal_rule_allowed?(:completed_task, _support, _verifier), do: true
+
+  defp terminal_rule_allowed?(:artifact_outcome, support, true),
+    do: Support.experimental?(support)
+
+  defp terminal_rule_allowed?(_rule, _support, _verifier), do: false
+
   defp baseline(config, reason) do
     %{
       "schema_version" => 1,
@@ -463,6 +488,7 @@ defmodule Lemieux.Learning.Refinement do
       "selected_sha256" => Contract.digest(config.baseline),
       "qualification" => "unassessed",
       "support_policy" => config.support,
+      "terminal_rule" => Atom.to_string(config.terminal),
       "candidate_ids" => [],
       "control" => [],
       "candidates" => [],

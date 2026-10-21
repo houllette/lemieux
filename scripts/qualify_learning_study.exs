@@ -240,7 +240,8 @@ runtime =
   if research do
     Map.merge(runtime, %{
       "research_protocol" => %{
-        "id" => "whole_record_research/v2",
+        "id" => "whole_record_research/v3",
+        "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
         "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",
         "editor_model" => editor_model,
@@ -262,6 +263,7 @@ runtime =
         "asset_search" => if(assets, do: AssetSearch.protocol()),
         "profile_search" => opts[:asset_only] != true
       },
+      "probe_terminal_rule" => "verified_accounted_artifact_grade",
       "refinement" => %{
         "repetitions" => 2,
         "maximum_candidates" => 2,
@@ -324,6 +326,7 @@ config =
         asset_requests: research_budget.asset_requests,
         task_time_ms: research_budget.task_time_ms,
         probe_when: :all_observations,
+        terminal_rule: :artifact_outcome,
         asset_search: assets,
         profile_search: opts[:asset_only] != true,
         support_policy: runtime["research_protocol"]["support_policy"],
@@ -634,7 +637,24 @@ try do
   report =
     if research and stage != "calibration" do
       {:ok, endpoints} = Endpoints.report(plan, report["rows"])
-      Map.put(report, "research_endpoints", endpoints)
+
+      stops =
+        Map.new(Enum.group_by(report["rows"], & &1["arm"]), fn {arm, rows} ->
+          {arm,
+           %{
+             "original" => Enum.count(rows, & &1["original_budget_stop"]),
+             "selected" => Enum.count(rows, & &1["selected_budget_stop"]),
+             "probes" => Enum.sum(Enum.map(rows, & &1["probe_budget_stops"]))
+           }}
+        end)
+
+      report
+      |> Map.put("research_endpoints", endpoints)
+      |> Map.put("budget_stops", %{
+        "by_arm" => stops,
+        "interpretation" =>
+          "Original and selected are overlapping views. Verified artifact success does not imply agent completion; probe counts cover task executions, not editor sessions."
+      })
     else
       report
     end

@@ -20,6 +20,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.Contract
   alias Lemieux.Environment
   alias Lemieux.Evidence.ArtifactReference
+  alias Lemieux.Evidence.Run
   alias Lemieux.Extension.Profile
   alias Lemieux.Extensions.Capture
   alias Lemieux.JobBudget
@@ -37,6 +38,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.Learning.Promotion.Policy
   alias Lemieux.Learning.Proposer
   alias Lemieux.Learning.Refinement
+  alias Lemieux.Learning.Refinement.Evidence, as: ProbeEvidence
   alias Lemieux.Learning.Refinement.Support
   alias Lemieux.Providers.Scripted
   alias Lemieux.Request
@@ -373,6 +375,9 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
        "candidate_count" => candidate_count(result),
        "promotion_count" => promotion_count(result),
        "rollback_count" => promotion_count(result),
+       "original_budget_stop" => original.observation["finish_reason"] == ":max_turns",
+       "selected_budget_stop" => result.selected.observation["finish_reason"] == ":max_turns",
+       "probe_budget_stops" => probe_budget_stops(result),
        "asset_candidate_count" => asset_candidate_count(result),
        "asset_application_count" => asset_application_count(result),
        "asset_restoration_count" => asset_restoration_count(result),
@@ -716,6 +721,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           allow_live: config[:allow_live] == true,
           verifier: true,
           support_policy: Map.get(config, :support_policy, Support.strict()),
+          terminal_rule: Map.get(config, :terminal_rule, :completed_task),
           observe_probe: fn record ->
             path = Path.join(dir, "probe-records")
             :ok = File.mkdir_p(path)
@@ -1040,16 +1046,40 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
             verified_final_tie?(config, final, original)), do: final, else: original
   end
 
-  defp verified_final_tie?(%{support_policy: %{"id" => "experimental_mean/v2"}}, final, original) do
+  defp verified_final_tie?(
+         %{support_policy: %{"id" => "experimental_mean/v2"}} = config,
+         final,
+         original
+       ) do
     usage = final.observation["usage"] || %{}
 
     final.grade["passed"] and original.grade["passed"] and
-      final.observation["status"] == "completed" and
-      is_nil(final.observation["provider_error"]) and is_integer(usage["input_tokens"]) and
+      eligible_final?(config, final.observation) and is_integer(usage["input_tokens"]) and
       is_integer(usage["output_tokens"])
   end
 
   defp verified_final_tie?(_config, _final, _original), do: false
+
+  defp eligible_final?(%{terminal_rule: :artifact_outcome}, observation) do
+    entries = observation["transcript"] || []
+    run = Enum.find(Enum.reverse(entries), &(&1["type"] == "run_evidence"))
+
+    with %{"payload" => evidence} <- run,
+         :ok <- Run.verify_transcript(evidence, entries),
+         "complete" <- evidence["usage"]["state"],
+         {:ok, %{"verified_success" => true}} <-
+           ProbeEvidence.terminal(
+             observation,
+             evidence,
+             %{"score" => 1.0, "regression" => false, "verified_success" => true},
+             :artifact_outcome
+           ),
+         do: true,
+         else: (_invalid -> false)
+  end
+
+  defp eligible_final?(_config, observation),
+    do: observation["status"] == "completed" and is_nil(observation["provider_error"])
 
   defp signal(%{probe_when: :all_observations}, _original), do: "bounded_research_review"
   defp signal(_config, %{captures: [capture | _]}), do: capture["kind"]
@@ -1143,6 +1173,25 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp acquisition_timeout(config), do: config[:acquisition_timeout_ms] || 5000
   defp refinement_requests(config), do: config[:refinement_requests] || 112
   defp refinement_tokens(config), do: config[:refinement_tokens] || 1_500_000
+
+  defp probe_budget_stops(result) do
+    profile = result.refinement || %{}
+    assets = result[:asset_search] || %{}
+
+    profile_records =
+      (profile["control"] || []) ++
+        (profile["composition"] || []) ++
+        Enum.flat_map(profile["candidates"] || [], & &1["evaluations"])
+
+    asset_records =
+      (assets["control"] || []) ++
+        (assets["composition"] || []) ++
+        Enum.flat_map(assets["candidates"] || [], & &1["evaluations"])
+
+    Enum.count(profile_records, &(&1["stop_reason"] == "max_turns")) +
+      Enum.count(asset_records, &(get_in(&1, ["observation", "finish_reason"]) == ":max_turns"))
+  end
+
   defp refinement_time(config), do: config[:refinement_time_ms] || 1_500_000
   defp candidate_count(%{refinement: nil}), do: 0
   defp candidate_count(%{refinement: receipt}), do: length(receipt["candidates"] || [])

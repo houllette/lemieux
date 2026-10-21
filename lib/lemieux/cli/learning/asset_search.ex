@@ -100,6 +100,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
       "model" => opts[:editor_model],
       "effort" => opts[:editor_effort],
       "support_policy" => opts[:support_policy],
+      "terminal_rule" => Atom.to_string(opts[:terminal_rule] || :completed_task),
       "allocation" => Contract.json(opts[:allocation])
     }
 
@@ -371,7 +372,12 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
       with :ok <- Refinement.preflight(opts[:isolation], opts[:bindings]),
            {:ok, attempt} <- opts[:probe].(assets, opts[:controller]),
            {:ok, evidence} <-
-             evidence(attempt, Enum.map(assets, & &1.version.digest), opts[:task_model]) do
+             evidence(
+               attempt,
+               Enum.map(assets, & &1.version.digest),
+               opts[:task_model],
+               opts[:terminal_rule] || :completed_task
+             ) do
         {:cont, {:ok, results ++ [evidence]}}
       else
         _invalid -> {:halt, {:error, :asset_probe_incomplete}}
@@ -464,7 +470,15 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   @doc "Checks terminal manifests, request snapshots, exact asset identities and known usage."
   @spec evidence(attempt :: map(), assets :: [String.t()], model :: String.t()) ::
           {:ok, map()} | {:error, term()}
-  def evidence(%{observation: observation, grade: grade}, assets, model) do
+  @spec evidence(
+          attempt :: map(),
+          assets :: [String.t()],
+          model :: String.t(),
+          terminal_rule :: :completed_task | :artifact_outcome
+        ) :: {:ok, map()} | {:error, term()}
+  def evidence(attempt, assets, model, terminal_rule \\ :completed_task)
+
+  def evidence(%{observation: observation, grade: grade}, assets, model, terminal_rule) do
     entries = observation["transcript"] || []
     terminal = Enum.find(Enum.reverse(entries), &(&1["type"] == "run_evidence"))
 
@@ -475,15 +489,24 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
          true <- request_assets?(entries, run, assets, model),
          score when is_number(score) and score >= 0 and score <= 1 <- grade["score"],
          {:ok, assessment} <-
-           Evidence.terminal(observation, run, %{
-             "score" => score,
-             "regression" => not grade["passed"],
-             "verified_success" => grade["passed"],
-             "safety_failure" => grade["safety_failures"] != []
-           }) do
+           Evidence.terminal(
+             observation,
+             run,
+             %{
+               "score" => score,
+               "regression" => not grade["passed"],
+               "verified_success" => grade["passed"],
+               "safety_failure" => grade["safety_failures"] != []
+             },
+             terminal_rule
+           ) do
       {:ok,
        %{
          "score" => assessment["score"],
+         "verifier_score" => score,
+         "status" => observation["status"],
+         "stop_reason" => run["stop_reason"],
+         "scoring_rule" => Atom.to_string(terminal_rule),
          "regression" => assessment["regression"],
          "verified_success" => assessment["verified_success"],
          "safety_failure" => assessment["safety_failure"],

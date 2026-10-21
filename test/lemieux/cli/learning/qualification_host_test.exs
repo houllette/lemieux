@@ -483,6 +483,8 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     config =
       Map.merge(ctx.config, %{
         asset_search: true,
+        terminal_rule: :artifact_outcome,
+        task_requests: 3,
         asset_tokens: 1_000_000,
         profile_search: false,
         provider: provider,
@@ -500,6 +502,9 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     assert row["asset_candidate_count"] == 1
     assert row["asset_application_count"] == 1
     assert row["asset_restoration_count"] == 1
+    assert row["original_budget_stop"]
+    assert row["selected_budget_stop"]
+    assert row["probe_budget_stops"] == 6
     path = Path.join(config.root, "1-#{ctx.fixture.id}-updating/evidence.json")
     evidence = path |> File.read!() |> JSON.decode!()
     assert Agent.get(drafts, & &1) == 2
@@ -510,7 +515,10 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     observation = evidence["asset_application"]["final_observation"]
     sha = hd(evidence["asset_search"]["selected_asset_sha256"])
     attempt = %{observation: observation, grade: evidence["selected_grade"]}
-    assert {:ok, _} = AssetSearch.evidence(attempt, [sha], "test:model")
+    assert {:ok, artifact} = AssetSearch.evidence(attempt, [sha], "test:model", :artifact_outcome)
+    assert artifact["score"] == 1 and artifact["verified_success"]
+    assert {:ok, strict} = AssetSearch.evidence(attempt, [sha], "test:model")
+    assert strict["score"] == 0 and not strict["verified_success"]
 
     assert {:error, _} =
              AssetSearch.evidence(attempt, [Contract.sha256("different asset")], "test:model")
