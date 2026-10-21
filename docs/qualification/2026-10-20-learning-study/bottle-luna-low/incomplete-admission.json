@@ -1,0 +1,30 @@
+{
+  "incomplete_episodes": [
+    {
+      "all_physical_usage_known": true,
+      "arm": "frozen",
+      "cause": {
+        "cause": {
+          "attempt": 2,
+          "phase": "cand_001_03bc6f12",
+          "reason": "probe_incomplete"
+        },
+        "stage": "refinement"
+      },
+      "interpretation": "Candidate comparison could not finish inside the frozen learning token allowance. No completed candidate receipt or promotion is inferred.",
+      "repetition": 2,
+      "task_id": "bottle-header-security",
+      "undispatched_host_refusals": [
+        {
+          "code": "host_admission_denied",
+          "reason": "token_allowance_exhausted",
+          "transcript_bytes_sha256": "d65ea3c27de95299e261b878a0a1438970c53b5402bdab484d0450ff51be60fa"
+        }
+      ]
+    }
+  ],
+  "learning_token_allowance": 1500000,
+  "outer_task_token_allowance": 3000000,
+  "report_candidate_count_semantics": "Candidates retained in completed refinement receipts; partial candidates are described here separately.",
+  "schema_version": 1
+}

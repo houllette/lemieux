@@ -1,0 +1,22 @@
+{
+  "calibration_scope": "study-calibration-luna-low-8303aac",
+  "condition": "completed calibration baseline_success between 0.1 and 0.9 inclusive; all accounting known and execution complete",
+  "if_false": "do not launch the seeded hosted study; report inadequate headroom or incomplete calibration",
+  "if_true": {
+    "effort": "low",
+    "families": 8,
+    "model": "openai_codex:gpt-6-luna",
+    "repetitions": 2,
+    "seed_episodes": 8,
+    "stage": "development",
+    "stopping": "complete fixed sample; abort for apparatus failure and retain incomplete intent without replay",
+    "targets": 160,
+    "task_requests": 10,
+    "variants_per_family": 2
+  },
+  "interpretation": "developer-exposed diagnostic study; eight clusters, no independent confirmation or cross-model claim",
+  "kind": "development_stage_decision_rule",
+  "recorded_at": "2026-10-20T23:27:14.314709+00:00",
+  "schema_version": 1,
+  "source_revision": "8303aacd533cc53fddbd988032100025ba9f98de"
+}

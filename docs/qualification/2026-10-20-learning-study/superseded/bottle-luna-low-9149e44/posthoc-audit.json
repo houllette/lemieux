@@ -1,0 +1,100 @@
+{
+  "all_selected_outcomes_match_original": true,
+  "cases": [
+    {
+      "arm": "disabled",
+      "checks": 6,
+      "correct": 5,
+      "matches_original_grade": true,
+      "repetition": 2,
+      "workspace_sha256": "e5397d5da8e70ace63262bd78f4f16ce54647278b7a807ab825f749af14d914b"
+    },
+    {
+      "arm": "retrieval",
+      "checks": 6,
+      "correct": 4,
+      "matches_original_grade": true,
+      "repetition": 1,
+      "workspace_sha256": "083d42c34a04ec256e57ceceea99c253bf128f4ee5c7aed25878baa353e8951f"
+    },
+    {
+      "arm": "updating",
+      "checks": 6,
+      "correct": 4,
+      "matches_original_grade": true,
+      "repetition": 2,
+      "workspace_sha256": "b43a2c23b9c16aebfe8d547b080ab5dd2caad14dd87473f0bc25fa43f3c21fc4"
+    },
+    {
+      "arm": "frozen",
+      "checks": 6,
+      "correct": 5,
+      "matches_original_grade": true,
+      "repetition": 2,
+      "workspace_sha256": "6938160bd1505cec03741ae471534321d15010a79c3145d38712868875899530"
+    },
+    {
+      "arm": "retry",
+      "checks": 6,
+      "correct": 5,
+      "matches_original_grade": true,
+      "repetition": 2,
+      "workspace_sha256": "810614403343e4f62d3488c9ba2eee5ef75af5256a4d0d95c2325588c44aedf7"
+    },
+    {
+      "arm": "retry",
+      "checks": 6,
+      "correct": 5,
+      "matches_original_grade": true,
+      "repetition": 1,
+      "workspace_sha256": "ad982db3bcd3ee194001ff7899a94ac65c09ffa2de6d8ed9f4fc69e87073d55d"
+    },
+    {
+      "arm": "frozen",
+      "checks": 6,
+      "correct": 4,
+      "matches_original_grade": true,
+      "repetition": 1,
+      "workspace_sha256": "31917934e65f7fe0ae7aed18de1892073547a095cd658cafdee28ec475860f75"
+    },
+    {
+      "arm": "updating",
+      "checks": 6,
+      "correct": 5,
+      "matches_original_grade": true,
+      "repetition": 1,
+      "workspace_sha256": "e0400c8a53d860a540cf41d69ed5e9860e982127946cc5cd6e4ef8b1b105a5d2"
+    },
+    {
+      "arm": "disabled",
+      "checks": 6,
+      "correct": 4,
+      "matches_original_grade": true,
+      "repetition": 1,
+      "workspace_sha256": "baf98c972e5db56e0da0925a18ad5bfd635a08e36169fd55674b4cde2beca507"
+    },
+    {
+      "arm": "retrieval",
+      "checks": 6,
+      "correct": 4,
+      "matches_original_grade": true,
+      "repetition": 2,
+      "workspace_sha256": "c52d03a7d50eb3057a7b618c4f8a99ae67ee804aea9225217ba4f84baacb24dd"
+    }
+  ],
+  "failure_categories": {
+    "invalid_header_input_behavior": 5,
+    "vulnerability_classification": 10
+  },
+  "image": "sha256:1b0494c9cf744e843460d7750d624433b5fb414971613d7bcbf592d042de886d",
+  "limitations": [
+    "Not a reranking of selected outputs",
+    "Does not reconstruct process state, permissions or empty directories",
+    "Single exposed task; no independent efficacy claim"
+  ],
+  "method": "reconstructed_retained_regular_file_bytes_on_pinned_source_then_regraded_in_networkless_readonly_container",
+  "purpose": "posthoc_audit_only_never_used_for_proposal_retry_selection_or_reranking",
+  "schema_version": 1,
+  "selected_outputs_regraded": 10,
+  "source_revision": "9149e4462dc6ec6bd3c5c16b4dac1366b5a23b37"
+}

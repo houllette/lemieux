@@ -1,0 +1,17 @@
+{
+  "candidate_id": "cand_001_c31a511a",
+  "changed_field": "options.usage_mode",
+  "episode": {
+    "arm": "frozen",
+    "repetition": 2,
+    "task_id": "bottle-header-security"
+  },
+  "expected": "quota",
+  "finding": "A proposer wrote a profile omitting the immutable quota usage_mode field. Profile validation rejected it before candidate dispatch.",
+  "observed": "missing",
+  "primary_outcomes_changed": false,
+  "profile_file_sha256": "09c55f22ce19195372acc97863aed79353990d2b30a5ec6bd5049d2419854d94",
+  "purpose": "posthoc_admission_diagnostic_only_no_reranking",
+  "schema_version": 1,
+  "source_revision": "f1982f33af3ec4b734ca0625a80eb52c58d20448"
+}

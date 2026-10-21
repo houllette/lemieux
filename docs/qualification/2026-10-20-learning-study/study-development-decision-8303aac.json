@@ -1,0 +1,11 @@
+{
+  "baseline_success": 0.875,
+  "calibration_report_sha256": "fda74aa253d710524da1c91c7d7f6397204b7615ab7c244630d9f3520a543344",
+  "claim": "development_only_not_independent_confirmation",
+  "decision": "launch_fixed_seeded_development_sample",
+  "reason": "headroom_and_complete_known_accounting_condition_met",
+  "reference_success": 1.0,
+  "rule_bytes_sha256": "ff37edecbf1b1363b0909371c8d2aeebe2934eed8980aeb7342b47d1251e36df",
+  "schema_version": 1,
+  "target_scope": "study-development-luna-low-8303aac"
+}

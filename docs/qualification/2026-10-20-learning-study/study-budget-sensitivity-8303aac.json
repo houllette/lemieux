@@ -1,0 +1,17 @@
+{
+  "arms": [
+    "disabled",
+    "reference"
+  ],
+  "effort": "low",
+  "episodes": 16,
+  "families": 8,
+  "interpretation": "Exploratory budget sensitivity; the registered ten-call study remains unchanged. Repeated families are not additional independent units. No further study is authorized by this decision record.",
+  "model": "openai_codex:gpt-6-luna",
+  "purpose": "one_fixed_development_calibration_to_check_headroom_at_a_smaller_task_budget",
+  "recorded_at": "2026-10-20T23:57:38.259369+00:00",
+  "schema_version": 1,
+  "source_revision": "8303aacd533cc53fddbd988032100025ba9f98de",
+  "stopping": "complete_fixed_sample_with_no_replay_of_incomplete_intents",
+  "task_requests": 8
+}
