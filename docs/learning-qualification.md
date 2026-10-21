@@ -82,6 +82,13 @@ outer allowance. Reservations and actual physical dispatches are reported
 separately, and all unsuccessful search, review, acquisition and reflection work
 counts. A larger allowance is an upper bound, not a commitment to consume it.
 
+Whole-record reflection admits at most 1 MiB of complete public source bytes;
+the lesson wire limit remains 2 MiB and retrieval's total disclosure remains
+2 MiB. Oversized records refuse retention rather than silently discard evidence.
+Subscription qualification suppresses API-dollar admission estimates while
+retaining all reported usage and informational dollar values. Token, request,
+time and any separately configured outer dollar ceilings remain enforced.
+
 Research quality and efficiency have separate registered endpoints. Each compares
 updating with disabled, equal-budget retry and experience-withheld search, sharing
 alpha across all six tests. Quality needs a ten-point stream-success gain and at

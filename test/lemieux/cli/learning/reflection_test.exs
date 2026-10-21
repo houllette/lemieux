@@ -164,6 +164,33 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     end
   end
 
+  test "a large complete combined record survives retention within the lesson wire bound" do
+    record = %{"original" => %{"transcript" => [String.duplicate("x", 860_000)]}}
+
+    attrs = %{
+      "kind" => "procedure",
+      "outcome" => "insufficient_evidence",
+      "mechanism" => "Inspect complete source evidence before adopting a workflow.",
+      "applicability" => ["workflow"],
+      "source_pointers" => ["/original/transcript/0"]
+    }
+
+    context = %{scope: F.scope(), lesson_context: F.context()}
+    assert byte_size(Contract.encode!(record)) > 786_432
+    assert {:ok, lesson} = Reflection.build(record, "combined", context, attrs)
+    bytes = Lesson.encode!(lesson)
+    assert byte_size(bytes) < 2_097_152
+    assert {:ok, ^lesson} = Lesson.decode(bytes)
+
+    oversized =
+      put_in(record, ["original", "transcript"], [
+        String.duplicate("x", Reflection.source_limit())
+      ])
+
+    assert {:error, :invalid_reflection_record} =
+             Reflection.build(oversized, "too-large", context, attrs)
+  end
+
   test "expanded disclosure makes cited trajectory bytes readable beyond the default excerpt" do
     output = String.duplicate("prefix ", 1000) <> "the active artifact stayed stale"
     record = %{"original" => %{"transcript" => [%{"output" => output}]}}

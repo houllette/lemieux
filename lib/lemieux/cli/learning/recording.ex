@@ -7,7 +7,9 @@ defmodule Lemieux.CLI.Learning.Recording do
 
   @spec new(meter :: pid(), provider :: Provider.t(), opts :: keyword()) :: Provider.t()
   def new(meter, provider, opts \\ []),
-    do: {__MODULE__, %{meter: meter, provider: provider, role: opts[:role]}}
+    do:
+      {__MODULE__,
+       %{meter: meter, provider: provider, role: opts[:role], cost_mode: opts[:cost_mode]}}
 
   @impl true
   def run(state, request, emit) do
@@ -78,6 +80,8 @@ defmodule Lemieux.CLI.Learning.Recording do
   def input_modalities(state, model), do: Provider.input_modalities(state.provider, model)
 
   @impl true
+  def estimate_cost(%{cost_mode: :quota}, _request), do: nil
+
   def estimate_cost(state, request), do: Provider.estimate_cost(state.provider, request)
   @impl true
   def reasoning_efforts(state, model), do: Provider.reasoning_efforts(state.provider, model)

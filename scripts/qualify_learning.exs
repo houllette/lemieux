@@ -127,7 +127,10 @@ try do
 
     provider = fn _role ->
       if live,
-        do: Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0)),
+        do:
+          Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
+            cost_mode: :quota
+          ),
         else:
           Scripted.new([
             fn request ->

@@ -8,6 +8,7 @@ alias Lemieux.CLI.Learning.Projects
 alias Lemieux.CLI.Learning.QualificationHost, as: Host
 alias Lemieux.CLI.Learning.Recording
 alias Lemieux.CLI.Learning.Repositories
+alias Lemieux.CLI.Learning.Reflection
 alias Lemieux.CLI.Learning.StudyBudget
 alias Lemieux.Contract
 alias Lemieux.Learning.Experience.Lessons
@@ -211,6 +212,7 @@ runtime = %{
   "transport_max_retries" => 0,
   "inference_route" => if(live, do: "codex_subscription", else: "scripted"),
   "cost_kind" => "subscription_quota_not_api_billing",
+  "cost_estimate_policy" => "subscription_dollars_informational_no_usd_admission_estimate",
   "feedback" => "public_cases_only_no_private_grade_in_proposal_or_selection",
   "acquisition_timeout_ms" => 30_000,
   "episode_paths" => "opaque_arm_and_attempt_identifiers",
@@ -244,6 +246,7 @@ runtime =
         "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
         "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",
+        "reflection_source_bytes" => Reflection.source_limit(),
         "editor_model" => editor_model,
         "editor_effort" => editor_effort,
         "support_policy" => %{
@@ -434,7 +437,10 @@ try do
     provider = fn role ->
       cond do
         live ->
-          Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0), role: role)
+          Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
+            role: role,
+            cost_mode: :quota
+          )
 
         research ->
           LemieuxQualificationReference.provider(role, fixture, model, effort, requests)

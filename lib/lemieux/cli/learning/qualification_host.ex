@@ -197,7 +197,11 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       },
       options:
         if(config[:reflection],
-          do: [max_evidence_bytes: 2_097_152, max_artifact_bytes: 786_432, max_results: 2],
+          do: [
+            max_evidence_bytes: 2_097_152,
+            max_artifact_bytes: Reflection.source_limit(),
+            max_results: 2
+          ],
           else: []
         ),
       commit: fn current_scope, exposure ->

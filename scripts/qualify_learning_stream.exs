@@ -155,7 +155,10 @@ try do
 
       provider =
         if live,
-          do: Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0)),
+          do:
+            Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
+              cost_mode: :quota
+            ),
           else:
             Scripted.new([
               Scripted.tool_call("check", "bash", %{"command" => "make test"},

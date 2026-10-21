@@ -21,6 +21,12 @@ defmodule Lemieux.CLI.Learning.Reflection do
 
   @record_keys ~w(task_request original selected public_grades refinement probes asset_search)
   @hypothesis_keys ~w(kind outcome mechanism applicability source_pointers)
+  @source_limit 1_048_576
+
+  @doc false
+  @spec source_limit() :: pos_integer()
+  def source_limit, do: @source_limit
+
   @system """
   You are Lemieux's experience reflector. Read the complete public task record,
   including original execution, every available probe, composition and selection.
@@ -300,7 +306,7 @@ defmodule Lemieux.CLI.Learning.Reflection do
 
   defp valid_record(record) when is_map(record) do
     if Map.has_key?(record, "original") and Enum.all?(Map.keys(record), &(&1 in @record_keys)) and
-         byte_size(Contract.encode!(record)) <= 786_432,
+         byte_size(Contract.encode!(record)) <= @source_limit,
        do: :ok,
        else: {:error, :invalid_reflection_record}
   end
