@@ -55,7 +55,7 @@ if assets and not research, do: raise("Asset experiments require --research")
 if opts[:asset_only] == true and not assets, do: raise("--asset-only requires --assets")
 if stage == "mechanism" and not research, do: raise("Mechanism stage requires --research")
 
-if stage == "confirmation" and not opts[:manifest],
+if stage == "confirmation" and is_nil(opts[:manifest]),
   do:
     raise("Independent confirmation requires a separately curated, unexposed repository manifest")
 
@@ -285,7 +285,7 @@ runtime =
 runtime = Map.put(runtime, "sha256", Contract.digest(runtime))
 
 if live and research and stage in ~w(development confirmation) do
-  if not opts[:mechanism],
+  if is_nil(opts[:mechanism]),
     do: raise("A matching hosted --mechanism receipt is required before a larger research study")
 
   receipt = opts[:mechanism] |> File.read!() |> JSON.decode!()
