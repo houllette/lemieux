@@ -80,7 +80,30 @@ defmodule Lemieux.CLI.TUIStartupTest do
       send(task, :continue)
     end
 
-    assert :ok = LemieuxTest.Sync.state(app, &(&1.user_state.resume.startup_status == :ready))
+    try do
+      assert :ok = LemieuxTest.Sync.state(app, &(&1.user_state.resume.startup_status == :ready))
+    rescue
+      error in ExUnit.AssertionError ->
+        # Preserve the ordinary event deadline and include where startup stopped.
+        # A coverage-only failure otherwise reports just the observer's mailbox.
+        state = :sys.get_state(app).user_state
+
+        workers =
+          tasks
+          |> Task.Supervisor.children()
+          |> Enum.map(&Process.info(&1, [:current_stacktrace, :status, :message_queue_len]))
+
+        reraise %{
+                  error
+                  | message:
+                      error.message <>
+                        "\nStartup status: #{inspect(state.resume.startup_status)}" <>
+                        "\nBoot steps: #{inspect(state.terminal.boot.steps)}" <>
+                        "\nStartup workers: #{inspect(workers, limit: :infinity)}"
+                },
+                __STACKTRACE__
+    end
+
     ready = :sys.get_state(app).user_state
     assert ready.overlay == nil
     assert Enum.find(ready.terminal.boot.steps, &(&1.id == id)).status == "ok"
