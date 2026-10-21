@@ -1,0 +1,122 @@
+{
+  "application_code_revision": "e7b968ed93eb967415cf06dd9876aebe4b42478d",
+  "archive_validation": "verify.exs checks seals, usage projections and recomputed numeric decisions. project_evidence.py matches private evidence bytes to rows and physical meters to ledgers. Final archive checksums and documentation checks are separate from application-code validation.",
+  "failure_interpretation": "Earlier failures remain evidence. Serial coverage collection and startup-state diagnostics do not prove all timing failures are cured. The ordinary suite remains parallel; assertions, event deadlines, test selection and the coverage floor were not weakened.",
+  "github_code_validation": [
+    {
+      "checks_passed": 22,
+      "ci_run": "https://github.com/houllette/lemieux/actions/runs/39521850530",
+      "readiness_run": "https://github.com/houllette/lemieux/actions/runs/39521850589",
+      "source_revision": "ee526602d8d8dcb5e4514bb0050a49128a47d19c"
+    },
+    {
+      "checks_passed": 22,
+      "ci_run": "https://github.com/houllette/lemieux/actions/runs/39522901889",
+      "readiness_run": "https://github.com/houllette/lemieux/actions/runs/39522901871",
+      "source_revision": "e7b968ed93eb967415cf06dd9876aebe4b42478d"
+    }
+  ],
+  "github_coverage_failures": [
+    {
+      "attempt": 1,
+      "failures": [
+        "TUIStartupTest ready state",
+        "QualificationHostTest request_running event"
+      ],
+      "max_cases": 2,
+      "private_log_bytes_sha256": "e460c630be1412e850691f08ac5722469d49944a56f122ba04cc425c9a5c1cac",
+      "run_id": 39516375495,
+      "seed": 560431,
+      "source_revision": "8303aacd533cc53fddbd988032100025ba9f98de"
+    },
+    {
+      "attempt": 2,
+      "failures": [
+        "LoopTest missing optional scoped experience"
+      ],
+      "max_cases": 2,
+      "private_log_bytes_sha256": "b9c81229da8bc0fd102298f303212d709b0db68a2b66d66204c182eb29d17c66",
+      "run_id": 39516375495,
+      "seed": 403536,
+      "source_revision": "8303aacd533cc53fddbd988032100025ba9f98de"
+    },
+    {
+      "attempt": 1,
+      "failures": [
+        "TUIStartupTest ready state"
+      ],
+      "max_cases": 1,
+      "private_log_bytes_sha256": "519443bdefd1d37ee52a5c787010dfa3a37a6b2dad18d82bbb86068a523fb2e0",
+      "run_id": 39519867352,
+      "seed": 596358,
+      "source_revision": "72eb6e4e3559eac44b2677f5e8eba0ee362203b6"
+    }
+  ],
+  "hosted_study_revision": "8303aacd533cc53fddbd988032100025ba9f98de",
+  "local_full_gate": {
+    "command": "ERL_FLAGS='+S 4' mise exec -- mix precommit.full",
+    "coverage_floor_percent": 85,
+    "coverage_percent": 86.8,
+    "exit_code": 0,
+    "ordinary_checks": 5845,
+    "private_log_bytes_sha256": "6da27349da77a226750e937483356a06caf311ee0bae852bbc3f10c42f0a2868",
+    "python_release_helper_tests": 63,
+    "result_lines": [
+      "Result: 5845 passed (12 doctests, 5833 tests), 7 skipped, 47 excluded",
+      "Result: 5845 passed (12 doctests, 5833 tests), 7 skipped, 47 excluded",
+      "Result: 119 passed",
+      "Result: 25 passed, 5874 excluded",
+      "Result: 50 passed",
+      "Result: 58 passed, 7 excluded",
+      "Result: 2 passed",
+      "Result: 44 passed, 1 excluded",
+      "Result: 6 passed",
+      "Result: 12 passed",
+      "Result: 41 passed, 1 excluded",
+      "Result: 27 passed"
+    ]
+  },
+  "log_retention": "Raw local and failed-CI logs remain in the private host evidence store; only their byte digests are published here.",
+  "schema_version": 1,
+  "timing_observations": [
+    {
+      "observations": [
+        "Flake observation 1/3: seed=101 max_cases=4",
+        "Result: 28 passed",
+        "Flake observation 2/3: seed=102 max_cases=4",
+        "Result: 28 passed",
+        "Flake observation 3/3: seed=103 max_cases=4",
+        "Result: 28 passed"
+      ],
+      "private_log_bytes_sha256": "3fd3e905cb0093399e574a97748f70d75cc674fec5d9aa1ebd2665b363c5930b",
+      "revision_at_observation": "8303aacd533cc53fddbd988032100025ba9f98de",
+      "scope": "28 search checks"
+    },
+    {
+      "observations": [
+        "Flake observation 1/3: seed=101 max_cases=4",
+        "Result: 29 passed",
+        "Flake observation 2/3: seed=102 max_cases=4",
+        "Result: 29 passed",
+        "Flake observation 3/3: seed=103 max_cases=4",
+        "Result: 29 passed"
+      ],
+      "private_log_bytes_sha256": "1cca9d1fd4ae9e7d4bb94505bc2ac612edc6f3c92adbd17933fd51eb2dc04f4e",
+      "revision_at_observation": "f1982f3",
+      "scope": "29 refinement and qualification-host checks"
+    },
+    {
+      "observations": [
+        "Flake observation 1/3: seed=560431 max_cases=2",
+        "Result: 13 passed",
+        "Flake observation 2/3: seed=560432 max_cases=2",
+        "Result: 13 passed",
+        "Flake observation 3/3: seed=560433 max_cases=2",
+        "Result: 13 passed"
+      ],
+      "private_log_bytes_sha256": "06375542a8e2605b3faa73c104354eac2e6c4f5131b9db76bc879aa38d16cc06",
+      "revision_at_observation": "8303aacd533cc53fddbd988032100025ba9f98de",
+      "scope": "13 TUI startup and qualification-host checks"
+    }
+  ]
+}

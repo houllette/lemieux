@@ -1,0 +1,22 @@
+{
+  "access_only_loan_removed": {
+    "study-bottle-luna-low-8303aac": true,
+    "study-bottle-sol-medium-8303aac": true,
+    "study-budget8-calibration-luna-low-8303aac": true,
+    "study-calibration-luna-low-8303aac": true,
+    "study-calibration-sol-medium-8303aac": true,
+    "study-development-luna-low-8303aac": true
+  },
+  "completed_hosted_scopes": [
+    "study-development-luna-low-8303aac",
+    "study-calibration-luna-low-8303aac",
+    "study-calibration-sol-medium-8303aac",
+    "study-budget8-calibration-luna-low-8303aac",
+    "study-bottle-luna-low-8303aac",
+    "study-bottle-sol-medium-8303aac"
+  ],
+  "original_codex_auth": "Not included in the loan, evidence archive or model workspaces.",
+  "remaining_owned_containers": 0,
+  "runtime_revision": "8303aacd533cc53fddbd988032100025ba9f98de",
+  "schema_version": 1
+}
