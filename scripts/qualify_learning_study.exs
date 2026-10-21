@@ -403,6 +403,15 @@ try do
       {fixture.cluster, lessons}
     end)
 
+  {inventory_status, inventory} =
+    Lemieux.CLI.Learning.SeedInventory.check(libraries, Enum.map(seeds, & &1.cluster))
+
+  :ok = Installation.write(Path.join(root, "seed-inventory.json"), inventory)
+
+  if inventory_status == :error do
+    raise "Seed inventory incomplete; no target episodes dispatched. Review seed-inventory.json; do not replay the frozen intent."
+  end
+
   library_sha =
     Contract.digest(
       Map.new(libraries, fn {stream, lessons} ->

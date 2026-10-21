@@ -59,6 +59,12 @@ later observations and supported profiles. Seed usage is reported separately and
 included in the updating arm's request-ratio acceptance check. An external
 manifest can declare `phase: seed` tasks; an empty external seed inventory is
 explicitly reported and exercises no prior retrieval.
+After acquisition, every declared seed stream must contain retained experience
+before target episodes can start. An empty stream writes `seed-inventory.json`
+and stops; the runner never repeats a seed to force that check to pass. This is
+a presence check, not evidence that the lessons help. The archived `8303aac`
+study predates this gate and retained no seed lessons; its frozen comparisons
+cannot qualify prelearned-library transfer.
 Only confirmation-phase outcomes enter the primary endpoint, which is completion
 of every confirmation task and repetition in the stream. All episode success,
 usage and latency are also reported. Stream independence is a study-design
@@ -126,6 +132,12 @@ mix run scripts/qualify_learning_study.exs --stage development --offline-smoke \
 The offline subset cannot select a hosted provider. Reference implementations
 stay in the host and are never supplied to a hosted provider or copied into live
 task inputs. Its passing outcomes establish mechanics only.
+
+The [staged development study](qualification/2026-10-20-learning-study/README.md)
+records the version 3 calibration, seeded comparison, exposed repository
+supplement, physical-dispatch audits and excluded earlier scopes. These tasks
+remain development evidence; they do not establish independent efficacy or
+authorize automatic persistent activation.
 
 The following describes the earlier version 2 pilot runner and its frozen rules.
 

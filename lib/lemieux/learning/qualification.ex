@@ -188,8 +188,7 @@ defmodule Lemieux.Learning.Qualification do
              summaries
            ),
          "analysis" => analysis_report(plan),
-         "resource_policy" =>
-           "Quality and safety first; usage and latency are secondary, not automatic disqualifiers."
+         "resource_policy" => resource_policy(plan)
        })}
     else
       {:error, :incomplete_qualification_report}
@@ -202,6 +201,13 @@ defmodule Lemieux.Learning.Qualification do
   defp mechanics(true, _accounted, false), do: "incomplete_execution"
   defp mechanics(true, false, true), do: "incomplete_accounting"
   defp mechanics(true, true, true), do: "passed"
+
+  defp resource_policy(%{"analysis" => _analysis}),
+    do:
+      "Version 3 benefit requires the registered request and p95-latency ratios, including seed requests, as well as quality, safety, complete execution and accounting, supported promotion and rollback."
+
+  defp resource_policy(_legacy),
+    do: "Quality and safety first; usage and latency are secondary, not automatic disqualifiers."
 
   defp benefit(true, true, comparisons, retry_comparisons) do
     if Enum.any?(~w(frozen updating), fn arm ->
