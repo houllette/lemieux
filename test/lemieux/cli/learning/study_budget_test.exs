@@ -14,7 +14,7 @@ defmodule Lemieux.CLI.Learning.StudyBudgetTest do
       assert budget.allowance["tokens"] > budget.experiment_tokens * final_runs
       assert budget.allowance["time_ms"] > budget.profile_time_ms + budget.asset_time_ms
       if profile?, do: assert(budget.profile_requests >= 8 * requests + 32)
-      if assets?, do: assert(budget.asset_requests >= 8 * requests + 3)
+      if assets?, do: assert(budget.asset_requests >= 8 * requests + 4)
     end
   end
 

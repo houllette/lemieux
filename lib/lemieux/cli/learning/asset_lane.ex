@@ -45,7 +45,7 @@ defmodule Lemieux.CLI.Learning.AssetLane do
           isolation: {Leases, details.lease},
           bindings: details.lease.bindings,
           allocation: %{
-            requests: config[:asset_requests] || 96,
+            requests: config[:asset_requests] || 8 * (config[:task_requests] || 16) + 4,
             tokens: Map.get(config, :asset_tokens, 4_500_000),
             time_ms: config[:asset_time_ms] || 1_500_000,
             cost_usd: nil

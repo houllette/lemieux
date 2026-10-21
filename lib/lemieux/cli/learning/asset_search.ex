@@ -37,6 +37,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   and one shipped configuration. Return {"assets":[]} if no concrete hypothesis is justified.
   Each ASSET has exactly kind, payload, files, requires_tools, triggers.
   A skill has kind "skill", payload {"name":"lowercase-hyphenated-name"},
+  with no other payload keys. Description belongs only in SKILL.md frontmatter.
   files {"SKILL.md":"---\\nname: ...\\ndescription: Use when ...\\n---\\n...",
   "helpers/example.py":"optional complete helper source"}, requires_tools as
   available tool names, and descriptive triggers present in its description.
@@ -67,11 +68,12 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   @spec protocol() :: map()
   def protocol,
     do: %{
-      "id" => "reviewed_assets/v1",
+      "id" => "reviewed_assets/v2",
       "maximum_candidates" => 2,
       "repetitions" => 2,
       "kinds" => ["skill", "configuration"],
       "helper_extensions" => [".py"],
+      "structural_repair" => "at_most_one_toolless_format_repair_no_probe_feedback",
       "activation" => "isolated_task_only_exact_digest_review"
     }
 
@@ -194,15 +196,69 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
       })
 
     with {:ok, observation} <- session(@system, prompt, :proposer, :asset_proposer, opts) do
-      case JSON.decode(observation["answer"] || "") do
-        {:ok, %{"assets" => attrs} = result}
-        when map_size(result) == 1 and is_list(attrs) and length(attrs) <= 2 ->
-          {:ok, attrs, model_observation(observation)}
-
-        _invalid ->
-          {:ok, [],
-           Map.put(model_observation(observation), "rejected", "invalid_proposal_schema")}
+      case validate_answer(observation["answer"], context, opts) do
+        {:ok, attrs} -> {:ok, attrs, model_observation(observation)}
+        {:error, reason} -> repair(observation, reason, context, opts)
       end
+    end
+  end
+
+  defp repair(original, reason, context, opts) do
+    prompt =
+      JSON.encode!(%{
+        "format_repair_only" => true,
+        "original_answer" => original["answer"],
+        "validation_error" => reason,
+        "instructions" =>
+          "Preserve the original hypotheses and components; correct only schema/loader formatting. Do not invent improvements, helpers or settings. Return exactly {\"assets\":[...]}. Each asset has only kind,payload,files,requires_tools,triggers. A skill payload has ONLY name; put description only in SKILL.md frontmatter. Each trigger must be an exact literal substring of that description. Include all referenced files. No probe feedback or quality retry is available.",
+        "available_tools" => context.tools,
+        "settings_allowlist" => context.settings_allowlist,
+        "helper_extensions" => context[:helper_extensions] || []
+      })
+
+    with {:ok, repaired} <- session(@system, prompt, :proposer, :asset_proposer, opts) do
+      receipt =
+        model_observation(repaired)
+        |> Map.put("structural_repair", %{
+          "reason" => reason,
+          "original" => model_observation(original)
+        })
+
+      case validate_answer(repaired["answer"], context, opts) do
+        {:ok, attrs} -> {:ok, attrs, receipt}
+        {:error, error} -> {:ok, [], Map.put(receipt, "rejected", error)}
+      end
+    end
+  end
+
+  defp validate_answer(answer, context, opts) do
+    case JSON.decode(answer || "") do
+      {:ok, %{"assets" => attrs} = result}
+      when map_size(result) == 1 and is_list(attrs) and length(attrs) <= 2 ->
+        validate_trees(attrs, context, opts)
+
+      _invalid ->
+        {:error, "invalid_proposal_schema"}
+    end
+  end
+
+  defp validate_trees(attrs, context, opts) do
+    if Enum.all?(attrs, &valid_tree?(&1, context, opts)),
+      do: {:ok, attrs},
+      else: {:error, "invalid_asset_schema_or_literal_trigger_or_complete_loader_tree"}
+  end
+
+  defp valid_tree?(attrs, context, opts) do
+    root = Path.join(opts[:cwd], "validate-" <> Lemieux.ID.generate())
+
+    try do
+      with true <- search_surface?(attrs),
+           {:ok, version} <- Asset.new(attrs, context),
+           {:ok, _} <- Asset.materialize(version, root, context),
+           do: true,
+           else: (_invalid -> false)
+    after
+      File.rm_rf!(root)
     end
   end
 

@@ -49,7 +49,12 @@ models, efforts, inference route and research policy. An offline receipt cannot
 unlock hosted work. This is observed dataflow, not causal efficacy.
 
 `--assets` additionally searches one procedure tree and one allowlisted shipped
-setting. `--assets --asset-only` isolates that lane. Exact bytes receive a separate
+setting. `--assets --asset-only` isolates that lane. Before review, an invalid
+draft may receive one tool-less, metered structural repair against the actual
+loader. The original answer is preserved; the repair receives no probe feedback
+and may not invent a different hypothesis or add components. A second invalid
+draft is rejected. This format repair is part of the frozen asset protocol and
+request allowance. Exact bytes receive a separate
 model review and fresh host digest approval before isolated probes. The actual
 skill loader, asset identities and request catalogues are verified. A personal
 research policy can admit UTF-8 `.py` files under `helpers/`; the loader never

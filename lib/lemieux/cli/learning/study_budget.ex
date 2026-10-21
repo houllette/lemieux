@@ -4,7 +4,7 @@ defmodule Lemieux.CLI.Learning.StudyBudget do
   @spec research(requests :: pos_integer(), profile? :: boolean(), assets? :: boolean()) :: map()
   def research(requests, profile?, assets?) when requests in 8..200 do
     profile = if profile?, do: 8 * requests + 32, else: 0
-    assets = if assets?, do: 8 * requests + 3, else: 0
+    assets = if assets?, do: 8 * requests + 4, else: 0
     stages = Enum.count([profile?, assets?], & &1)
     tokens = max(4_500_000, 8 * requests * 65_536)
     profile_time = if profile?, do: max(1_500_000, profile * 10_000), else: 0

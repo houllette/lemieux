@@ -434,6 +434,8 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
   test "a reviewed typed setting reaches real isolated requests and its evidence rejects tampered transcripts",
        ctx do
+    drafts = start_supervised!({Agent, fn -> 0 end})
+
     attrs = %{
       "kind" => "configuration",
       "payload" => %{"extension" => "search", "glob_after_requests" => 0},
@@ -444,7 +446,18 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
     provider = fn
       :asset_proposer ->
-        Scripted.new([Scripted.complete(JSON.encode!(%{"assets" => [attrs]}), usage: usage())])
+        Scripted.new([
+          fn _request ->
+            ordinal = Agent.get_and_update(drafts, &{&1, &1 + 1})
+
+            submitted =
+              if ordinal == 0,
+                do: put_in(attrs, ["payload", "description"], "misplaced metadata"),
+                else: attrs
+
+            Scripted.complete(JSON.encode!(%{"assets" => [submitted]}), usage: usage())
+          end
+        ])
 
       :asset_critic ->
         Scripted.new([
@@ -489,6 +502,11 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     assert row["asset_restoration_count"] == 1
     path = Path.join(config.root, "1-#{ctx.fixture.id}-updating/evidence.json")
     evidence = path |> File.read!() |> JSON.decode!()
+    assert Agent.get(drafts, & &1) == 2
+
+    assert evidence["asset_search"]["proposal"]["structural_repair"]["original"]["session_id"] !=
+             evidence["asset_search"]["proposal"]["session_id"]
+
     observation = evidence["asset_application"]["final_observation"]
     sha = hd(evidence["asset_search"]["selected_asset_sha256"])
     attempt = %{observation: observation, grade: evidence["selected_grade"]}
@@ -510,6 +528,65 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
              AssetSearch.evidence(%{attempt | observation: corrupted}, [sha], "test:model")
 
     assert Lemieux.sessions(config.supervisor) == []
+  end
+
+  test "invalid asset formatting receives only one metered repair and never reaches critic or activation",
+       ctx do
+    owner = self()
+
+    provider = fn
+      :asset_proposer ->
+        Scripted.new([
+          fn request ->
+            send(
+              owner,
+              {:draft,
+               Enum.any?(
+                 request.entries,
+                 &(&1.type == :user and String.contains?(&1.payload["text"], "format_repair_only"))
+               )}
+            )
+
+            Scripted.complete(~s({"assets":[{"kind":"unknown"}]}), usage: usage())
+          end
+        ])
+
+      :asset_critic ->
+        flunk("invalid draft must never reach a paid critic")
+
+      _role ->
+        task_provider(true)
+    end
+
+    config =
+      Map.merge(ctx.config, %{
+        asset_search: true,
+        profile_search: false,
+        asset_tokens: 1_000_000,
+        provider: provider,
+        support_policy: %{
+          "id" => "experimental_mean/v2",
+          "verified_ties" => true,
+          "minimum_gain" => 0.1,
+          "minimum_repetitions" => 2
+        }
+      })
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"] and row["qualification_complete"]
+    assert row["asset_candidate_count"] == 0
+    assert row["asset_application_count"] == 0
+    assert_receive {:draft, false}
+    assert_receive {:draft, true}
+    refute_receive {:draft, _}, 20
+
+    evidence =
+      Path.join(config.root, "1-#{ctx.fixture.id}-updating/evidence.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    assert evidence["asset_search"]["proposal"]["rejected"] ==
+             "invalid_asset_schema_or_literal_trigger_or_complete_loader_tree"
   end
 
   defp causal_provider(task_id) do
