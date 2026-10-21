@@ -1,5 +1,90 @@
 # Qualifying learning before release
 
+## Whole-record research sequence
+
+`--research` selects a separate experimental protocol. It does not change the
+strict ordinary refinement policy or grant persistent activation. Freeze the
+executor and editor separately: for example, GPT-6 Luna/low executes every task
+and probe while GPT-6 Sol/high proposes and reflects. Reflection receives the
+whole public task/probe record, including unsuccessful and rejected experiments.
+Its positive, negative and uncertain lessons retain source pointers and remain
+unconfirmed. One metered structural repair may correct malformed reflection;
+it cannot retry an experiment or select a better outcome.
+
+The research search reviews successful as well as failed tasks, proposes general
+and domain changes, and probes their composition. `experimental_mean/v2` admits
+repeated mean gains or repeated fully verified ties for **task-local research**.
+A tie is a search choice, never evidence of improvement. Strict dominance and
+fresh host authority remain required by the existing persistent policy.
+
+Version 4 adds `no_experience`: the same improver, probes and retention work with
+all earlier experience withheld from every subsequent proposal. Frozen,
+updating and withheld arms share the same per-episode allowance. Retrieval-only,
+disabled and equal-allowance retry controls remain. Related variants and repeated
+executions still count as one independent stream.
+
+First rehearse offline, then run a fresh hosted mechanism canary after explicit
+authorization. These examples use separate output directories; never reuse or
+quietly replay an incomplete intent:
+
+```sh
+mix run scripts/qualify_learning_study.exs --research --stage mechanism \
+  --output tmp/research-offline
+mix run scripts/qualify_learning_study.exs --research --stage mechanism --allow-live \
+  --model openai_codex:gpt-6-luna --effort low \
+  --editor-model openai_codex:gpt-6-sol --editor-effort high \
+  --output tmp/research-mechanism
+mix run scripts/qualify_learning_study.exs --research --stage development --allow-live \
+  --model openai_codex:gpt-6-luna --effort low \
+  --editor-model openai_codex:gpt-6-sol --editor-effort high \
+  --mechanism tmp/research-mechanism/mechanism.json \
+  --output tmp/research-development
+```
+
+The canary collects one seed task and executes one later task in six arms, twice.
+`mechanism.json` audits retained lessons, proposer exposure, a changed effective
+runtime, actual changed actions and the experience-withheld control. A larger
+hosted research run requires a passing receipt for the same source revision,
+models, efforts, inference route and research policy. An offline receipt cannot
+unlock hosted work. This is observed dataflow, not causal efficacy.
+
+`--assets` additionally searches one procedure tree and one allowlisted shipped
+setting. `--assets --asset-only` isolates that lane. Exact bytes receive a separate
+model review and fresh host digest approval before isolated probes. The actual
+skill loader, asset identities and request catalogues are verified. A personal
+research policy can admit UTF-8 `.py` files under `helpers/`; the loader never
+imports or executes them. The task must read and execute them through its normal
+confined tools. The canary requires observed procedure loading, helper execution
+and changed tool visibility before that asset policy can enter a larger study.
+Repository assets and default selection gain no such permission. These reviewed
+experiments do not qualify native exports or general automatic helper execution.
+
+Research task horizons support 8–200 requests. The frozen allowance funds each
+complete profile/asset experiment, originals, final executions and reflection;
+token and deadline bounds scale with the horizon. Retry receives the same full
+outer allowance. Reservations and actual physical dispatches are reported
+separately, and all unsuccessful search, review, acquisition and reflection work
+counts. A larger allowance is an upper bound, not a commitment to consume it.
+
+Research quality and efficiency have separate registered endpoints. Each compares
+updating with disabled, equal-budget retry and experience-withheld search, sharing
+alpha across all six tests. Quality needs a ten-point stream-success gain and at
+most 10% observed regressions. Efficiency needs at least 20% fewer **total** physical
+requests including acquisition, at least 80% paired-success streams, and a
+one-sided upper bound of at most 10% on quality regression. A cheap failure cannot
+qualify efficiency. Evidence must be complete, safe and actually exercise the
+mechanism. Legacy two-comparison statistics are diagnostic in version 4;
+`research_endpoints` owns its decisions and prospective quality power. Efficiency
+power is not inferred from quality power.
+
+After reviewing development feedback, freeze a new, separately curated unexposed
+manifest for `--stage confirmation`. Three quality comparisons must meet the
+prospective power requirement at alpha/6 before dispatch. More synthetic variants
+cannot satisfy independence. Underpowered or inconclusive results remain so;
+neither endpoint authorizes persistent activation or broader model/task claims.
+
+## Historical five-arm study
+
 The staged runner is `scripts/qualify_learning_study.exs`. Start with
 `--stage calibration`: it compares the ordinary harness with explicitly
 developer-authored workflow guidance on eight repository-shaped development

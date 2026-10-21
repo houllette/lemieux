@@ -40,8 +40,13 @@ defmodule Lemieux.Extensions.Search do
   @impl Lemieux.Extension
   def apply(%Harness{} = harness, state) do
     count = if is_map(state), do: state.glob_after_requests, else: 1
-    harness |> Harness.update_tools(&add/1) |> Exposure.after_requests(["glob"], count)
+    harness |> Harness.update_tools(&add/1) |> configure(count)
   end
+
+  @doc "Changes this extension's disclosure setting without adding tools or replacing another host's hook."
+  @spec configure(harness :: Harness.t(), count :: non_neg_integer()) :: Harness.t()
+  def configure(harness, count),
+    do: Exposure.configure(harness, ["glob"], count, "lemieux.search.glob")
 
   defp add(tools) do
     names = MapSet.new(tools, &Tool.name/1)

@@ -255,6 +255,39 @@ defmodule Lemieux.Learning.QualificationTest do
     refute report["analysis"]["adequately_powered"]
   end
 
+  test "version 4 withholds all prior experience from the matched improver without changing historical plans" do
+    assert {:ok, original} = stream_plan(2)
+
+    attrs =
+      Map.take(
+        original,
+        ~w(id model effort runtime seed_case_ids initial_library_sha256 repetitions allowance alpha claim tasks analysis)
+      )
+
+    assert {:ok, plan} = Q.plan(Map.put(attrs, "ablation", "withheld_proposer_experience/v1"))
+    assert plan["schema_version"] == 4
+    assert plan["arms"] == original["arms"] ++ ["no_experience"]
+    assert :ok = Q.verify(original)
+    assert :ok = Q.verify(plan)
+    owner = self()
+
+    assert {:ok, report} =
+             Q.run(plan, fn ctx ->
+               if ctx["arm"] == "no_experience", do: send(owner, {:ablation, ctx})
+               {:ok, row(ctx)}
+             end)
+
+    for _ <- 1..8 do
+      assert_receive {:ablation, ctx}
+      assert ctx["available_case_ids"] == []
+      assert ctx["prior_lesson_ids"] == []
+    end
+
+    assert report["arms"]["no_experience"]["attempts"] == 8
+    assert report["benefit"] == "not_assessed_use_registered_research_endpoints"
+    assert {:error, _} = Q.plan(Map.put(attrs, "ablation", "unknown"))
+  end
+
   test "preregistered paired inference detects a useful effect with a bounded regression" do
     assert {:ok, plan} = stream_plan(80)
 

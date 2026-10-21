@@ -42,6 +42,17 @@ defmodule Lemieux.Learning.Refinement.SupportTest do
     refute Support.supported?(records([0, 0]), records([1, 1]), true, %{})
   end
 
+  test "version 2 tries repeated verified perfect ties without calling them a quality gain" do
+    policy = @research |> Map.put("id", "experimental_mean/v2") |> Map.put("verified_ties", true)
+    assert :ok = Support.verify(policy)
+    assert Support.supported?(records([1, 1]), records([1, 1]), true, policy)
+    refute Support.supported?(records([1, 1]), records([1, 1]), false, policy)
+    refute Support.supported?(records([1, 1]), records([1, 0]), true, policy)
+    refute Support.supported?(records([0, 0]), records([0, 0]), true, policy)
+    refute Support.supported?(records([1, 1]), records([1, 1]), true, @research)
+    refute Support.supported?(records([1, 1]), records([1, 1]), true, Support.strict())
+  end
+
   defp records(scores) do
     Enum.map(
       scores,

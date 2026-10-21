@@ -19,7 +19,7 @@ defmodule Lemieux.CLI.Learning.Reflection do
   alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Promotion
 
-  @record_keys ~w(task_request original selected public_grades refinement probes)
+  @record_keys ~w(task_request original selected public_grades refinement probes asset_search)
   @hypothesis_keys ~w(kind outcome mechanism applicability source_pointers)
   @system """
   You are Lemieux's experience reflector. Read the complete public task record,
@@ -121,7 +121,7 @@ defmodule Lemieux.CLI.Learning.Reflection do
           "Source record (pointers are relative to this object):\n" <>
             Contract.encode!(record) <>
             "\nCitation index (copy exact pointer strings; seq is NOT an array index):\n" <>
-        JSON.encode!(citation_index(record)) <> correction
+            JSON.encode!(citation_index(record)) <> correction
       },
       options
     )

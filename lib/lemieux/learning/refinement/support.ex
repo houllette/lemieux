@@ -1,5 +1,7 @@
 defmodule Lemieux.Learning.Refinement.Support do
   @moduledoc """
+  **Experimental.** May change in any 0.x release.
+
   Frozen task-local selection rules. The default requires separated observations.
 
   `experimental_mean/v1` compares repeated mean public scores. A perfect control
@@ -8,6 +10,12 @@ defmodule Lemieux.Learning.Refinement.Support do
   separate host permission for experimental task-local execution and cannot
   authorize persistent canaries. Known task failures are outcomes; unsafe or
   incomplete probes disqualify the entire comparison, including unsafe controls.
+
+  Version 2 additionally permits a source-backed candidate on a repeated,
+  verified perfect tie. Trying a behaviorally different passing harness is a
+  search decision, not evidence it improves quality. Requiring a score increase
+  even to try such a candidate prevented the improver from operating on solved
+  tasks. Efficacy still requires separately registered held-out comparisons.
   """
   alias Lemieux.Learning.Refinement.Evidence
 
@@ -28,7 +36,18 @@ defmodule Lemieux.Learning.Refinement.Support do
              repetitions in 2..5,
       do: :ok
 
+  def verify(%{"id" => "experimental_mean/v2", "verified_ties" => true} = policy)
+      when map_size(policy) == 4 do
+    policy |> Map.delete("verified_ties") |> Map.put("id", "experimental_mean/v1") |> verify()
+  end
+
   def verify(_policy), do: {:error, :invalid_support_policy}
+
+  @spec experimental?(policy :: term()) :: boolean()
+  def experimental?(%{"id" => id} = policy),
+    do: id in ~w(experimental_mean/v1 experimental_mean/v2) and verify(policy) == :ok
+
+  def experimental?(_policy), do: false
 
   @spec supported?(
           control :: list(),
@@ -43,7 +62,13 @@ defmodule Lemieux.Learning.Refinement.Support do
     verify(policy) == :ok and is_list(control) and is_list(candidate) and
       length(control) == length(candidate) and length(control) >= policy["minimum_repetitions"] and
       Enum.all?(control ++ candidate, &complete?(&1, verifier?)) and
-      mean(candidate) - mean(control) >= policy["minimum_gain"]
+      admissible_performance?(control, candidate, verifier?, policy)
+  end
+
+  defp admissible_performance?(control, candidate, verifier?, policy) do
+    mean(candidate) - mean(control) >= policy["minimum_gain"] or
+      (policy["verified_ties"] == true and verifier? and
+         Enum.all?(control ++ candidate, &(&1["score"] == 1 and &1["verified_success"] == true)))
   end
 
   defp complete?(record, verifier?) do

@@ -57,6 +57,12 @@ defmodule Lemieux.Learning.Refinement.Evidence do
 
   def record(_observation, _assessment, _verifier?, _runtime), do: {:error, :invalid_assessment}
 
+  @doc false
+  @spec terminal(observation :: map(), evidence :: map(), assessment :: map()) ::
+          {:ok, map()} | {:error, term()}
+  def terminal(observation, evidence, assessment),
+    do: terminal_assessment(observation, evidence, assessment)
+
   defp terminal_assessment(
          %{"status" => "completed", "provider_error" => nil},
          _evidence,

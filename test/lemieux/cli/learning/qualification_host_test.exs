@@ -1,5 +1,6 @@
 defmodule Lemieux.CLI.Learning.QualificationHostTest do
   use ExUnit.Case, async: true
+  alias Lemieux.CLI.Learning.AssetSearch
   alias Lemieux.CLI.Learning.Fixtures
   alias Lemieux.CLI.Learning.QualificationHost, as: Host
   alias Lemieux.Contract
@@ -7,6 +8,7 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   alias Lemieux.Learning.Experience.Lessons
   alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
   alias Lemieux.Providers.Scripted
+  alias Lemieux.Request
   @moduletag :tmp_dir
 
   # No arbitrary shell or hosted provider in this integration test. The hidden
@@ -124,6 +126,17 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   end
 
   defp usage, do: %{"input_tokens" => 2, "output_tokens" => 2}
+
+  test "large source-backed context receives a larger admission estimate before dispatch" do
+    request = %Request{
+      model: "test:model",
+      system: String.duplicate("x", 160_000),
+      params: [max_tokens: 8192]
+    }
+
+    assert Host.token_bound(request) > 131_072
+    assert Host.token_bound(request) >= Request.input_bytes(request) + 8192
+  end
 
   test "zero learning allowance and missing isolation keep ordinary execution but dispatch no improver",
        ctx do
@@ -370,6 +383,133 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     refute ablated["passed"]
     assert ablated["promotion_count"] == 0
     assert ablated["exposed_case_ids"] == []
+  end
+
+  test "experimental review executes a successful-task candidate on a verified tie, while withholding experience stays causal",
+       ctx do
+    proposer = supported_provider(ctx.fixture.id, false)
+
+    provider = fn
+      :proposer -> proposer.(:proposer)
+      _role -> task_provider(true)
+    end
+
+    policy = %{
+      "id" => "experimental_mean/v2",
+      "minimum_gain" => 0.1,
+      "minimum_repetitions" => 2,
+      "verified_ties" => true
+    }
+
+    config =
+      Map.merge(ctx.config, %{
+        provider: provider,
+        support_policy: policy,
+        probe_when: :all_observations,
+        proposal_scopes: ["general", "domain"]
+      })
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"]
+    assert row["promotion_count"] == 1
+    assert row["candidate_count"] == 2
+
+    evidence =
+      Path.join(config.root, "1-#{ctx.fixture.id}-updating/evidence.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    assert evidence["refinement"]["qualification"] == "experimental_task_local"
+    assert Enum.all?(evidence["refinement"]["control"], &(&1["score"] == 1))
+
+    assert evidence["selected"]["session_id"] ==
+             evidence["promotion"]["final_observation"]["session_id"]
+
+    refute evidence["selected"]["session_id"] == evidence["original"]["session_id"]
+    assert {:ok, without} = Host.episode(config, context(ctx.fixture, "no_experience"))
+    assert without["passed"]
+    assert without["promotion_count"] == 1
+    assert without["exposed_case_ids"] == []
+  end
+
+  test "a reviewed typed setting reaches real isolated requests and its evidence rejects tampered transcripts",
+       ctx do
+    attrs = %{
+      "kind" => "configuration",
+      "payload" => %{"extension" => "search", "glob_after_requests" => 0},
+      "requires_tools" => ["glob"],
+      "files" => %{},
+      "triggers" => []
+    }
+
+    provider = fn
+      :asset_proposer ->
+        Scripted.new([Scripted.complete(JSON.encode!(%{"assets" => [attrs]}), usage: usage())])
+
+      :asset_critic ->
+        Scripted.new([
+          fn request ->
+            user = request.entries |> Enum.filter(&(&1.type == :user)) |> List.last()
+            input = JSON.decode!(user.payload["text"])
+
+            Scripted.complete(
+              JSON.encode!(%{
+                "asset_sha256" => input["asset_sha256"],
+                "decision" => "approve",
+                "reason" => "Only the shipped disclosure parameter changes."
+              }),
+              usage: usage()
+            )
+          end
+        ])
+
+      _ ->
+        task_provider(true)
+    end
+
+    config =
+      Map.merge(ctx.config, %{
+        asset_search: true,
+        asset_tokens: 1_000_000,
+        profile_search: false,
+        provider: provider,
+        support_policy: %{
+          "id" => "experimental_mean/v2",
+          "verified_ties" => true,
+          "minimum_gain" => 0.1,
+          "minimum_repetitions" => 2
+        }
+      })
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"]
+    assert row["qualification_complete"]
+    assert row["asset_candidate_count"] == 1
+    assert row["asset_application_count"] == 1
+    assert row["asset_restoration_count"] == 1
+    path = Path.join(config.root, "1-#{ctx.fixture.id}-updating/evidence.json")
+    evidence = path |> File.read!() |> JSON.decode!()
+    observation = evidence["asset_application"]["final_observation"]
+    sha = hd(evidence["asset_search"]["selected_asset_sha256"])
+    attempt = %{observation: observation, grade: evidence["selected_grade"]}
+    assert {:ok, _} = AssetSearch.evidence(attempt, [sha], "test:model")
+
+    assert {:error, _} =
+             AssetSearch.evidence(attempt, [Contract.sha256("different asset")], "test:model")
+
+    corrupted =
+      update_in(observation["transcript"], fn entries ->
+        Enum.map(entries, fn entry ->
+          if entry["type"] == "tool_result",
+            do: put_in(entry["payload"]["output"], "forged result"),
+            else: entry
+        end)
+      end)
+
+    assert {:error, _} =
+             AssetSearch.evidence(%{attempt | observation: corrupted}, [sha], "test:model")
+
+    assert Lemieux.sessions(config.supervisor) == []
   end
 
   defp causal_provider(task_id) do

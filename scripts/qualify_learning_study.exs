@@ -1,17 +1,23 @@
 # Explicitly authorized, staged qualification. Never loaded by ordinary lmx.
+alias Lemieux.CLI.Learning.AssetSearch
 alias Lemieux.CLI.Learning.CodexAuth
 alias Lemieux.CLI.Learning.Container
 alias Lemieux.CLI.Learning.Installation
+alias Lemieux.CLI.Learning.Mechanism
 alias Lemieux.CLI.Learning.Projects
 alias Lemieux.CLI.Learning.QualificationHost, as: Host
 alias Lemieux.CLI.Learning.Recording
 alias Lemieux.CLI.Learning.Repositories
+alias Lemieux.CLI.Learning.StudyBudget
 alias Lemieux.Contract
 alias Lemieux.Learning.Experience.Lessons
 alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
 alias Lemieux.Learning.Qualification
+alias Lemieux.Learning.Qualification.Endpoints
 alias Lemieux.Providers.ReqLLM
 alias Lemieux.Providers.Scripted
+
+Code.require_file(Application.app_dir(:lemieux, "priv/qualification/reference.exs"))
 
 {opts, [], []} =
   OptionParser.parse(System.argv(),
@@ -28,7 +34,10 @@ alias Lemieux.Providers.Scripted
       research: :boolean,
       editor_model: :string,
       editor_effort: :string,
-      streams: :string
+      streams: :string,
+      assets: :boolean,
+      asset_only: :boolean,
+      mechanism: :string
     ]
   )
 
@@ -40,6 +49,9 @@ if live and opts[:offline_smoke],
 stage = opts[:stage] || "calibration"
 true = stage in ~w(calibration mechanism development confirmation)
 research = opts[:research] == true
+assets = opts[:assets] == true
+if assets and not research, do: raise("Asset experiments require --research")
+if opts[:asset_only] == true and not assets, do: raise("--asset-only requires --assets")
 if stage == "mechanism" and not research, do: raise("Mechanism stage requires --research")
 
 if stage == "confirmation" and not opts[:manifest],
@@ -48,7 +60,7 @@ if stage == "confirmation" and not opts[:manifest],
 
 requests = opts[:task_requests] || 12
 repetitions = opts[:repetitions] || 2
-true = requests in 8..24 and repetitions in 2..10
+true = requests in 8..if(research, do: 200, else: 24) and repetitions in 2..10
 model = opts[:model] || if(live, do: "openai_codex:gpt-6-luna", else: "test:model")
 effort = opts[:effort] || if(live, do: "low", else: "default")
 
@@ -135,17 +147,38 @@ fixtures =
     do: Enum.filter(fixtures, &(&1.cluster in selected_streams)),
     else: fixtures
 
+fixtures =
+  if stage == "mechanism",
+    do: Enum.reject(fixtures, &String.ends_with?(&1.id, "-1")),
+    else: fixtures
+
 true = fixtures != []
 streams = Enum.map(fixtures, & &1.cluster) |> Enum.uniq()
 seeds = Enum.filter(seeds, &(&1.cluster in streams))
 seed_ids = Enum.map(seeds, & &1.id)
 
-allowance = %{
-  "requests" => if(research, do: max(192, 8 * requests + 48), else: max(160, 8 * requests + 16)),
-  "tokens" => if(research, do: 6_000_000, else: 3_000_000),
-  "time_ms" => 2_000_000,
-  "cost_usd" => nil
-}
+research_budget =
+  if research, do: StudyBudget.research(requests, opts[:asset_only] != true, assets)
+
+allowance =
+  if research,
+    do: research_budget.allowance,
+    else: %{
+      "requests" =>
+        cond do
+          assets -> 320
+          research -> max(192, 8 * requests + 48)
+          true -> max(160, 8 * requests + 16)
+        end,
+      "tokens" =>
+        cond do
+          assets -> 12_000_000
+          research -> 6_000_000
+          true -> 3_000_000
+        end,
+      "time_ms" => if(assets, do: 4_000_000, else: 2_000_000),
+      "cost_usd" => nil
+    }
 
 analysis = %{
   "method" => "exact_paired_stream_success",
@@ -183,7 +216,8 @@ runtime = %{
   "episode_paths" => "opaque_arm_and_attempt_identifiers",
   "workspace_evidence" => "bounded_actual_changed_file_bytes_before_lease_release",
   "offline_smoke" => opts[:offline_smoke] == true,
-  "probe_selection" => "visible_verification_failed",
+  "probe_selection" =>
+    if(research, do: "all_completed_task_records", else: "visible_verification_failed"),
   "probe_terminal_rule" => "verified_accounted_max_turns_is_scored_failure",
   "proposal_task_request" => "explicit_public_prompt_without_private_grading",
   "search_directory_policy" => "owned_workspace_root_and_in_environment_directory_change",
@@ -206,26 +240,36 @@ runtime =
   if research do
     Map.merge(runtime, %{
       "research_protocol" => %{
-        "id" => "whole_record_research/v1",
+        "id" => "whole_record_research/v2",
         "stage" => stage,
         "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",
         "editor_model" => editor_model,
         "editor_effort" => editor_effort,
         "support_policy" => %{
-          "id" => "experimental_mean/v1",
+          "id" => "experimental_mean/v2",
+          "verified_ties" => true,
           "minimum_gain" => 0.1,
           "minimum_repetitions" => 2
         },
         "proposal_scopes" => ["general", "domain"],
         "composition" => "append_only_system_union_then_fresh_execution",
         "activation" => "experimental_task_local_permission_no_persistent_canary",
-        "efficacy" => "separate_quality_and_efficiency_endpoints_no_changed_historical_thresholds"
+        "final_selection" =>
+          "candidate_on_completed_accounted_verified_tie_otherwise_public_gain",
+        "efficacy" =>
+          "separate_quality_and_efficiency_endpoints_no_changed_historical_thresholds",
+        "endpoints" => Endpoints.policy(),
+        "asset_search" => if(assets, do: AssetSearch.protocol()),
+        "profile_search" => opts[:asset_only] != true
       },
       "refinement" => %{
         "repetitions" => 2,
         "maximum_candidates" => 2,
-        "reserved_requests" => 8 * requests + 32,
-        "reserved_tokens" => 4_500_000,
+        "reserved_requests" => research_budget.profile_requests,
+        "reserved_tokens" => research_budget.experiment_tokens,
+        "reserved_time_ms" => research_budget.profile_time_ms,
+        "asset_reserved_requests" => research_budget.asset_requests,
+        "asset_reserved_time_ms" => research_budget.asset_time_ms,
         "surface" => ["system_suffix", "tool_descriptions"]
       }
     })
@@ -234,6 +278,14 @@ runtime =
   end
 
 runtime = Map.put(runtime, "sha256", Contract.digest(runtime))
+
+if live and research and stage in ~w(development confirmation) do
+  if not opts[:mechanism],
+    do: raise("A matching hosted --mechanism receipt is required before a larger research study")
+
+  receipt = opts[:mechanism] |> File.read!() |> JSON.decode!()
+  :ok = Mechanism.gate(receipt, runtime, model, effort)
+end
 
 config = %{
   root: root,
@@ -265,45 +317,58 @@ config =
         editor_model: editor_model,
         editor_effort: editor_effort,
         proposal_scopes: ["general", "domain"],
-        refinement_tokens: 4_500_000,
+        refinement_tokens: research_budget.experiment_tokens,
+        refinement_time_ms: research_budget.profile_time_ms,
+        asset_tokens: research_budget.experiment_tokens,
+        asset_time_ms: research_budget.asset_time_ms,
+        asset_requests: research_budget.asset_requests,
+        task_time_ms: research_budget.task_time_ms,
+        probe_when: :all_observations,
+        asset_search: assets,
+        profile_search: opts[:asset_only] != true,
         support_policy: runtime["research_protocol"]["support_policy"],
-        refinement_requests: 8 * requests + 32
+        refinement_requests: research_budget.profile_requests
       }),
     else: config
 
 build_plan = fn library_sha, current_runtime ->
   if stage != "calibration" do
-    {:ok, plan} =
-      Qualification.plan(%{
-        "id" => Path.basename(root),
-        "model" => model,
-        "effort" => effort,
-        "runtime" => current_runtime,
-        "seed_case_ids" => seed_ids,
-        "initial_library_sha256" => library_sha,
-        "repetitions" => repetitions,
-        "allowance" => allowance,
-        "alpha" => 0.05,
-        "claim" =>
-          if(stage == "confirmation",
-            do: "independent_confirmation",
-            else: "development_qualification"
-          ),
-        "analysis" => analysis,
-        "tasks" =>
-          Enum.map(fixtures, fn fixture ->
-            %{
-              "id" => fixture.id,
-              "cluster" => fixture.cluster,
-              "source_sha256" => fixture.source_sha256,
-              "phase" =>
-                Map.get_lazy(fixture, :phase, fn ->
-                  if(String.ends_with?(fixture.id, "-1"), do: "learning", else: "confirmation")
-                end)
-            }
-          end)
-      })
+    attrs = %{
+      "id" => Path.basename(root),
+      "model" => model,
+      "effort" => effort,
+      "runtime" => current_runtime,
+      "seed_case_ids" => seed_ids,
+      "initial_library_sha256" => library_sha,
+      "repetitions" => repetitions,
+      "allowance" => allowance,
+      "alpha" => 0.05,
+      "claim" =>
+        if(stage == "confirmation",
+          do: "independent_confirmation",
+          else: "development_qualification"
+        ),
+      "analysis" => analysis,
+      "tasks" =>
+        Enum.map(fixtures, fn fixture ->
+          %{
+            "id" => fixture.id,
+            "cluster" => fixture.cluster,
+            "source_sha256" => fixture.source_sha256,
+            "phase" =>
+              Map.get_lazy(fixture, :phase, fn ->
+                if(String.ends_with?(fixture.id, "-1"), do: "learning", else: "confirmation")
+              end)
+          }
+        end)
+    }
 
+    attrs =
+      if research, do: Map.put(attrs, "ablation", "withheld_proposer_experience/v1"), else: attrs
+
+    {:ok, plan} = Qualification.plan(attrs)
+
+    if research, do: :ok = Endpoints.preflight(plan)
     plan
   else
     seal = %{
@@ -368,26 +433,8 @@ try do
         live ->
           Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0), role: role)
 
-        research and role == :reflection ->
-          Scripted.new([
-            Scripted.complete(
-              JSON.encode!(%{
-                "lessons" => [
-                  %{
-                    "kind" => "procedure",
-                    "outcome" => "insufficient_evidence",
-                    "mechanism" =>
-                      "Read the development entry points, repair active source, regenerate the executed copy and verify both paths.",
-                    "applicability" => [
-                      "coding verification failure recovery repository workflow"
-                    ],
-                    "source_pointers" => ["/original/transcript/0"]
-                  }
-                ]
-              }),
-              usage: %{"input_tokens" => 2, "output_tokens" => 2}
-            )
-          ])
+        research ->
+          LemieuxQualificationReference.provider(role, fixture, model, effort, requests)
 
         fixture[:offline_oracle] ->
           # Reference implementations remain host-only. This branch is
@@ -523,7 +570,15 @@ try do
   seed_usage = %{
     "requests" => Enum.sum(Enum.map(warmup, & &1["requests"])),
     "tokens" => Enum.sum(Enum.map(warmup, & &1["tokens"])),
-    "episodes" => length(warmup)
+    "episodes" => length(warmup),
+    "requests_by_stream" =>
+      Map.new(streams, fn stream ->
+        {stream,
+         warmup
+         |> Enum.filter(&(config.fixtures[&1["task_id"]].cluster == stream))
+         |> Enum.map(& &1["requests"])
+         |> Enum.sum()}
+      end)
   }
 
   runtime =
@@ -577,6 +632,14 @@ try do
   end
 
   report =
+    if research and stage != "calibration" do
+      {:ok, endpoints} = Endpoints.report(plan, report["rows"])
+      Map.put(report, "research_endpoints", endpoints)
+    else
+      report
+    end
+
+  report =
     report
     |> Map.put("runtime", runtime)
     |> Map.put("warmup_rows", warmup)
@@ -600,6 +663,16 @@ try do
     |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
 
   :ok = Installation.write(Path.join(root, "report.json"), report)
+
+  if stage == "mechanism" do
+    {:ok, mechanism} = Mechanism.audit(root, plan, report)
+    :ok = Installation.write(Path.join(root, "mechanism.json"), mechanism)
+    IO.puts(JSON.encode!(Map.take(mechanism, ~w(status checks interpretation))))
+  end
+
+  if not live and stage != "calibration" do
+    true = report["mechanics"] == "passed"
+  end
 
   IO.puts(
     JSON.encode!(

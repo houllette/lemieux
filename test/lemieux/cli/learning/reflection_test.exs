@@ -1,8 +1,10 @@
 defmodule Lemieux.CLI.Learning.ReflectionTest do
   use ExUnit.Case, async: true
   alias Lemieux.CLI.Learning.Reflection
+  alias Lemieux.Contract
   alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Experience.Retrieval.Evidence
+  alias Lemieux.Providers.Scripted
   alias LemieuxTest.LessonFixtures, as: F
   @moduletag :tmp_dir
 
@@ -48,10 +50,10 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     ]
 
     provider =
-      Lemieux.Providers.Scripted.new(
+      Scripted.new(
         Enum.map(
           [bad, good],
-          &Lemieux.Providers.Scripted.complete(&1,
+          &Scripted.complete(&1,
             usage: %{"input_tokens" => 2, "output_tokens" => 2}
           )
         )
@@ -63,10 +65,10 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     assert length(observation["reflection_attempts"]) == 2
 
     provider =
-      Lemieux.Providers.Scripted.new(
+      Scripted.new(
         Enum.map(
           [bad, bad, good],
-          &Lemieux.Providers.Scripted.complete(&1,
+          &Scripted.complete(&1,
             usage: %{"input_tokens" => 2, "output_tokens" => 2}
           )
         )
@@ -90,8 +92,8 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     projected = Reflection.project(observation)
     assert projected["transcript"] == [entry]
     assert [%{"id" => "request", "sha256" => digest}] = projected["metadata_references"]
-    assert digest == Lemieux.Contract.digest(request)
-    assert projected["source_observation_sha256"] == Lemieux.Contract.digest(observation)
+    assert digest == Contract.digest(request)
+    assert projected["source_observation_sha256"] == Contract.digest(observation)
 
     assert [%{"pointer" => "/original/transcript/0", "entry_id" => "tool"}] =
              Reflection.citation_index(%{"original" => projected})

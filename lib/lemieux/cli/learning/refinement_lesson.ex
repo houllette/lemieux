@@ -83,7 +83,7 @@ defmodule Lemieux.CLI.Learning.RefinementLesson do
           ),
         "applicability" => ["coding verification failure recovery repository workflow"],
         "mechanism" =>
-          "A task-local contrast supported this profile. Recheck its assumptions on the new repository; it proves no transfer and grants no activation authority. Retained profile guidance: " <>
+          "Repeated task-local probes selected this profile under the recorded search policy. A verified tie is not a quality improvement. Recheck its assumptions on the new repository; it proves no transfer and grants no activation authority. Retained profile guidance: " <>
             String.slice(suffix, 0, 2048),
         "supporting" => ["finding"],
         "contradicting" => [],

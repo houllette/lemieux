@@ -1,10 +1,14 @@
 defmodule Lemieux.Learning.AssetTest do
   use ExUnit.Case, async: true
+  alias Lemieux.Agent.Session, as: AgentSession
+  alias Lemieux.Extensions.Search
   alias Lemieux.Extensions.Workspace.SkillTool
   alias Lemieux.Harness
   alias Lemieux.Learning.Asset
   alias Lemieux.Learning.Asset.Extension
+  alias Lemieux.Providers.Scripted
   alias Lemieux.Tool
+  alias Lemieux.Tool.Exposure
   alias Lemieux.Tool.Override
   alias Lemieux.Tools.Read
   @moduletag :tmp_dir
@@ -106,6 +110,29 @@ defmodule Lemieux.Learning.AssetTest do
     assert {:error, _} = Asset.materialize(version, Path.join(dir, "bad-trigger"), context)
   end
 
+  test "Python helper bytes require explicit personal policy and remain on-demand inert assets",
+       %{tmp_dir: dir} do
+    attrs =
+      skill()
+      |> update_in(["files", "SKILL.md"], &(&1 <> "Read [the helper](helpers/check.py).\n"))
+      |> put_in(
+        ["files", "helpers/check.py"],
+        "raise RuntimeError('must never execute during asset loading')\n"
+      )
+
+    assert {:error, _} = Asset.new(attrs, context())
+    assert {:error, _} = Asset.new(attrs, Map.put(context(), :helper_extensions, [".py"]))
+    personal = Map.merge(context(), %{trust: "personal", helper_extensions: [".py"]})
+    assert {:ok, version} = Asset.new(attrs, personal)
+    root = Path.join(dir, "python-helper")
+    assert {:ok, skill} = Asset.materialize(version, root, personal)
+    assert skill.name == "check-records"
+    assert version.content["validator"]["helper_extensions"] == [".py"]
+    assert {:error, _} = Asset.verify(version, context())
+    assert File.read!(Path.join(root, "helpers/check.py")) =~ "must never execute"
+    assert {:error, _} = Asset.new(put_in(attrs["files"]["outside.py"], "pass"), personal)
+  end
+
   test "trusted descriptions and shipped settings cannot change host authority", %{tmp_dir: dir} do
     attrs = %{
       "kind" => "tool_description",
@@ -159,5 +186,74 @@ defmodule Lemieux.Learning.AssetTest do
           assert(
             {:error, _} = Asset.new(put_in(settings["payload"][field], "injected"), context())
           )
+  end
+
+  test "a reviewed search setting changes actual disclosure and preserves independent host restrictions",
+       %{tmp_dir: dir} do
+    supervisor = :"asset_search_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
+    File.write!(Path.join(dir, "input.txt"), "fixture")
+    assert {:ok, base} = Harness.assemble(Harness.new(), [Search])
+    assert [first, second] = catalogs(base, supervisor, dir)
+    refute "glob" in first
+    assert "glob" in second
+
+    settings = %{
+      "kind" => "configuration",
+      "payload" => %{"extension" => "search", "glob_after_requests" => 0},
+      "requires_tools" => ["read"],
+      "files" => %{},
+      "triggers" => []
+    }
+
+    assert {:ok, version} = Asset.new(settings, context())
+    root = Path.join(dir, "setting")
+    assert {:ok, nil} = Asset.materialize(version, root, context())
+
+    spec =
+      {Extension,
+       [version: version, root: root, context: %{context() | approved_digests: [version.digest]}]}
+
+    assert {:ok, immediate} = Harness.assemble(base, [spec])
+    assert Enum.all?(catalogs(immediate, supervisor, dir), &("glob" in &1))
+
+    constrained = Exposure.after_requests(base, ["glob"], 5)
+    assert {:ok, constrained} = Harness.assemble(constrained, [spec])
+    assert Enum.all?(catalogs(constrained, supervisor, dir), &("glob" not in &1))
+    assert [first | _] = catalogs(base, supervisor, dir)
+    refute "glob" in first
+  end
+
+  defp catalogs(harness, supervisor, dir) do
+    owner = self()
+
+    provider =
+      Scripted.new([
+        fn request ->
+          send(owner, {:catalog, Enum.map(request.tools, &Tool.name/1)})
+
+          Scripted.tool_call("read", "read", %{"path" => "input.txt"},
+            usage: %{"input_tokens" => 2, "output_tokens" => 2}
+          )
+        end,
+        fn request ->
+          send(owner, {:catalog, Enum.map(request.tools, &Tool.name/1)})
+          Scripted.complete("done", usage: %{"input_tokens" => 2, "output_tokens" => 2})
+        end
+      ])
+
+    assert {:ok, _observation} =
+             AgentSession.run(%{prompt: "Read input.txt", cwd: dir, timeout_ms: 5000},
+               provider: provider,
+               model: "test:model",
+               supervisor: supervisor,
+               sessions_dir: Path.join(dir, "sessions"),
+               session_options: [harness: harness, max_requests: 4]
+             )
+
+    for _ <- 1..2 do
+      assert_receive {:catalog, names}
+      names
+    end
   end
 end

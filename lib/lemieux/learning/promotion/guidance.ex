@@ -63,7 +63,7 @@ defmodule Lemieux.Learning.Promotion.Guidance do
     policy = receipt["support_policy"]
 
     Policy.authorize(context, "experimental_task_local") == :ok and
-      is_map(policy) and policy["id"] == "experimental_mean/v1" and
+      Support.experimental?(policy) and
       Support.supported?(receipt["control"] || [], receipt["composition"] || [], true, policy)
   end
 

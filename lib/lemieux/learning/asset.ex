@@ -15,6 +15,12 @@ defmodule Lemieux.Learning.Asset do
   environments, permissions, commands or evaluators. The validator identity and
   complete dependency bytes travel inside the version digest. New kinds must
   pass the host's qualification protocol before automatic selection is enabled.
+
+  By default skill files are inert Markdown, text or JSON. A personal host may
+  explicitly admit Python source under `helpers/` with `helper_extensions: [".py"]`;
+  that policy is pinned in the validator identity. The loader never executes
+  those bytes. Exact-digest host approval and ordinary confined tool execution
+  remain separate requirements. Repository trust cannot admit helper source.
   """
   alias Lemieux.Asset.Version
   alias Lemieux.Contract
@@ -42,7 +48,7 @@ defmodule Lemieux.Learning.Asset do
             "schema_version" => 1,
             "scope" => context.scope,
             "binding" => context.binding,
-            "validator" => validator(),
+            "validator" => validator(context),
             "qualification" => "unconfirmed"
           })
       })
@@ -143,7 +149,8 @@ defmodule Lemieux.Learning.Asset do
            strings?(attrs["requires_tools"], 16, 64) and
              Enum.all?(attrs["requires_tools"], &(&1 in context.tools)),
          true <- strings?(attrs["triggers"], 8, 128),
-         true <- files?(attrs["files"]),
+         true <- helper_policy?(context),
+         true <- files?(attrs["files"], context),
          true <- byte_size(Contract.encode!(attrs)) <= 65_536,
          true <- kind?(attrs, context) do
       :ok
@@ -213,18 +220,33 @@ defmodule Lemieux.Learning.Asset do
 
   defp kind?(_attrs, _context), do: false
 
-  defp files?(files) when is_map(files) and map_size(files) <= 32 do
-    Enum.all?(files, &file?/1)
+  defp files?(files, context) when is_map(files) and map_size(files) <= 32 do
+    Enum.all?(files, &file?(&1, context))
   end
 
-  defp files?(_files), do: false
+  defp files?(_files, _context), do: false
 
-  defp file?({path, bytes}) do
+  defp file?({path, bytes}, context) do
     is_binary(path) and Path.type(path) == :relative and Path.join(Path.split(path)) == path and
       Enum.all?(Path.split(path), &path_component?/1) and
-      Path.extname(path) in ~w(.md .txt .json) and is_binary(bytes) and String.valid?(bytes) and
+      extension?(path, context) and is_binary(bytes) and String.valid?(bytes) and
       byte_size(bytes) <= 16_384
   end
+
+  # Helpers remain inert UTF-8 files. Only an explicitly enabled personal
+  # research host may admit Python source, and activation still needs an exact
+  # digest approval. Loading a skill never imports or executes this code; a task
+  # must copy/use it through its ordinary confined file and command tools.
+  defp helper_policy?(context),
+    do:
+      Map.get(context, :helper_extensions, []) in [[], [".py"]] and
+        (Map.get(context, :helper_extensions, []) == [] or context.trust == "personal")
+
+  defp extension?(path, context),
+    do:
+      Path.extname(path) in ~w(.md .txt .json) or
+        (Path.extname(path) in Map.get(context, :helper_extensions, []) and
+           String.starts_with?(path, "helpers/"))
 
   defp path_component?(part),
     do: part not in [".", "..", ""] and not String.starts_with?(part, ".")
@@ -255,9 +277,15 @@ defmodule Lemieux.Learning.Asset do
         Enum.uniq(values) == values and
         Enum.all?(values, &(is_binary(&1) and byte_size(&1) in 1..bytes))
 
-  defp validator,
-    do: %{
+  defp validator(context) do
+    validator = %{
       "id" => "lemieux/typed-asset/v1",
       "code_sha256" => Contract.sha256(__MODULE__.module_info(:md5))
     }
+
+    case Map.get(context, :helper_extensions, []) do
+      [] -> validator
+      extensions -> Map.put(validator, "helper_extensions", extensions)
+    end
+  end
 end

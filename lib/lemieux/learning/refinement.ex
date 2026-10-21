@@ -207,7 +207,7 @@ defmodule Lemieux.Learning.Refinement do
         )
 
       {profile, kept, conflicts} =
-        Edits.compose(config.baseline, supported, config.support["id"] == "experimental_mean/v1")
+        Edits.compose(config.baseline, supported, Support.experimental?(config.support))
 
       validate_composition(
         plan,
@@ -268,7 +268,8 @@ defmodule Lemieux.Learning.Refinement do
       plan: plan,
       baseline: config.baseline,
       original: config.original,
-      bindings: config.bindings
+      bindings: config.bindings,
+      provider_factory: fn -> controlled(opts, :proposer) end
     }
 
     case opts[:propose].(context, provider) do
@@ -470,8 +471,9 @@ defmodule Lemieux.Learning.Refinement do
     }
   end
 
-  defp qualification(%{support: %{"id" => "experimental_mean/v1"}}),
-    do: "experimental_task_local"
+  defp qualification(%{support: %{"id" => id}})
+       when id in ~w(experimental_mean/v1 experimental_mean/v2),
+       do: "experimental_task_local"
 
   defp qualification(config),
     do: if(config.verifier, do: "task_local_verified", else: "behavioral_unconfirmed")

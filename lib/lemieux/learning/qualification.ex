@@ -2,7 +2,7 @@ defmodule Lemieux.Learning.Qualification do
   @moduledoc """
   **Experimental.** May change in any 0.x release.
 
-  A preregistered, host-executed five-arm learning protocol.
+  A preregistered, host-executed learning protocol.
 
   Plans freeze model/effort, runtime, task order and clusters, initial experience,
   equal outer allowances, repetition count and stopping rules before dispatch.
@@ -19,6 +19,11 @@ defmodule Lemieux.Learning.Qualification do
   not become independent observations. Underpowered independent confirmation
   plans refuse before execution. See `Lemieux.Learning.Qualification.Paired` for
   the estimand, test assumptions and power model.
+  Version 4 adds a matched improver with its prior experience withheld. It
+  retains task execution, proposal, probe and reflection work, but can disclose
+  no earlier lesson. Its quality/efficiency claims belong to the explicitly
+  registered `Qualification.Endpoints` supplement; the legacy combined benefit
+  field cannot claim a research effect without that additional comparison.
   Tokens, cost and latency are reported as secondary evidence; greater usage
   does not disqualify an accurate result. A small or ceiling-limited experiment
   is inconclusive, even when every task passes. Re-running exposed cases cannot
@@ -28,6 +33,7 @@ defmodule Lemieux.Learning.Qualification do
   alias Lemieux.Learning.Qualification.Paired
 
   @arms ~w(disabled retrieval retry frozen updating)
+  @research_arms @arms ++ ["no_experience"]
   @required ~w(id model effort runtime tasks seed_case_ids initial_library_sha256 repetitions allowance alpha claim)
 
   @spec arms() :: [String.t()]
@@ -47,14 +53,15 @@ defmodule Lemieux.Learning.Qualification do
          true <- ids?(attrs["seed_case_ids"]),
          true <- tasks?(attrs["tasks"], attrs["analysis"]),
          true <- registered_analysis?(attrs),
+         true <- registered_ablation?(attrs),
          true <- Enum.all?(attrs["tasks"], &(&1["id"] not in attrs["seed_case_ids"])),
          true <- allowance?(attrs["allowance"]),
          true <- powered_confirmation?(attrs) do
       {:ok,
        seal(
          Map.merge(attrs, %{
-           "schema_version" => if(attrs["analysis"], do: 3, else: 2),
-           "arms" => @arms,
+           "schema_version" => version(attrs),
+           "arms" => if(attrs["ablation"], do: @research_arms, else: @arms),
            "stopping" => "fixed_complete_sample",
            "resource_gate" => "outer_allowance_only",
            "comparison_family" =>
@@ -79,13 +86,17 @@ defmodule Lemieux.Learning.Qualification do
 
   def plan(_invalid), do: {:error, :invalid_qualification_plan}
 
+  defp version(%{"ablation" => _}), do: 4
+  defp version(%{"analysis" => _}), do: 3
+  defp version(_legacy), do: 2
+  defp plan_fields(%{"ablation" => _, "analysis" => _}), do: ["ablation", "analysis" | @required]
   defp plan_fields(%{"analysis" => _}), do: ["analysis" | @required]
   defp plan_fields(_legacy), do: @required
 
   @spec verify(plan :: map()) :: :ok | {:error, term()}
   def verify(plan) do
     with :ok <- Contract.verify_digest(plan, "sha256"),
-         {:ok, ^plan} <- plan(Map.take(plan, ["analysis" | @required])) do
+         {:ok, ^plan} <- plan(Map.take(plan, ["ablation", "analysis" | @required])) do
       :ok
     else
       _invalid -> {:error, :invalid_qualification_plan}
@@ -139,7 +150,7 @@ defmodule Lemieux.Learning.Qualification do
   def report(plan, rows) do
     if verify(plan) == :ok and complete?(plan, rows) do
       summaries =
-        Map.new(@arms, fn arm ->
+        Map.new(plan["arms"], fn arm ->
           chosen = Enum.filter(rows, &(&1["arm"] == arm))
 
           {arm,
@@ -154,10 +165,11 @@ defmodule Lemieux.Learning.Qualification do
              "candidate_count" => Enum.sum(Enum.map(chosen, &Map.get(&1, "candidate_count", 0))),
              "promotion_count" => Enum.sum(Enum.map(chosen, &Map.get(&1, "promotion_count", 0))),
              "rollback_count" => Enum.sum(Enum.map(chosen, &Map.get(&1, "rollback_count", 0)))
-           }}
+           }
+           |> Map.merge(asset_metrics(plan, chosen))}
         end)
 
-      comparisons = Map.new(@arms -- ["disabled"], &{&1, comparison(plan, rows, &1)})
+      comparisons = Map.new(plan["arms"] -- ["disabled"], &{&1, comparison(plan, rows, &1)})
       retry_comparisons = Map.new(~w(frozen updating), &{&1, comparison(plan, rows, &1, "retry")})
       safe = Enum.all?(rows, &(&1["safety_failures"] == []))
       accounted = Enum.all?(rows, &is_integer(&1["tokens"]))
@@ -197,10 +209,22 @@ defmodule Lemieux.Learning.Qualification do
     _invalid -> {:error, :incomplete_qualification_report}
   end
 
+  defp asset_metrics(%{"schema_version" => 4}, rows),
+    do:
+      Map.new(~w(asset_candidate_count asset_application_count asset_restoration_count), fn key ->
+        {key, Enum.sum(Enum.map(rows, &Map.get(&1, key, 0)))}
+      end)
+
+  defp asset_metrics(_legacy, _rows), do: %{}
+
   defp mechanics(false, _accounted, _executed), do: "safety_failure"
   defp mechanics(true, _accounted, false), do: "incomplete_execution"
   defp mechanics(true, false, true), do: "incomplete_accounting"
   defp mechanics(true, true, true), do: "passed"
+
+  defp resource_policy(%{"schema_version" => 4}),
+    do:
+      "Version 4 defers benefit to registered quality and efficiency endpoints, including the matched experience-withheld improver and complete acquisition/search/reflection accounting."
 
   defp resource_policy(%{"analysis" => _analysis}),
     do:
@@ -221,6 +245,9 @@ defmodule Lemieux.Learning.Qualification do
 
   defp supported?(comparison),
     do: comparison["regressions"] == 0 and hd(comparison["interval"]) > 0
+
+  defp benefit_for(%{"schema_version" => 4}, _safe, _accounted, _comparisons, _retry, _summaries),
+    do: "not_assessed_use_registered_research_endpoints"
 
   defp benefit_for(%{"analysis" => analysis} = plan, true, true, comparisons, retry, summaries) do
     supported =
@@ -256,13 +283,23 @@ defmodule Lemieux.Learning.Qualification do
     clusters = plan["tasks"] |> Enum.map(& &1["cluster"]) |> Enum.uniq() |> length()
     power = Paired.power(clusters, analysis, plan["alpha"] / 2)
 
-    Map.merge(analysis, %{
-      "power" => power,
-      "adequately_powered" => power["both_primary_lower_bound"] >= analysis["desired_power"],
-      "primary_estimand" => "fraction_of_independent_streams_completing_all_confirmation_tasks",
-      "secondary_estimand" => "all_episode_task_success_usage_and_latency",
-      "interpretation" => "conditional_on_registered_tasks_models_and_independent_stream_design"
-    })
+    result =
+      Map.merge(analysis, %{
+        "power" => power,
+        "adequately_powered" => power["both_primary_lower_bound"] >= analysis["desired_power"],
+        "primary_estimand" => "fraction_of_independent_streams_completing_all_confirmation_tasks",
+        "secondary_estimand" => "all_episode_task_success_usage_and_latency",
+        "interpretation" => "conditional_on_registered_tasks_models_and_independent_stream_design"
+      })
+
+    if plan["schema_version"] == 4,
+      do:
+        Map.put(
+          result,
+          "interpretation",
+          "legacy_two_comparison_diagnostic_use_research_endpoints"
+        ),
+      else: result
   end
 
   defp analysis_report(_legacy), do: nil
@@ -285,7 +322,7 @@ defmodule Lemieux.Learning.Qualification do
       for(
         repetition <- 1..plan["repetitions"],
         task <- plan["tasks"],
-        arm <- rotate(@arms, repetition - 1),
+        arm <- rotate(plan["arms"], repetition - 1),
         do: {repetition, task, arm}
       )
 
@@ -312,7 +349,8 @@ defmodule Lemieux.Learning.Qualification do
       "repetition" => repetition,
       "allowance" => plan["allowance"],
       "initial_library_sha256" => plan["initial_library_sha256"],
-      "available_case_ids" => plan["seed_case_ids"] ++ available,
+      "available_case_ids" =>
+        if(arm == "no_experience", do: [], else: plan["seed_case_ids"] ++ available),
       "prior_lesson_ids" =>
         if(updates?, do: Enum.flat_map(previous, & &1["created_lesson_ids"]), else: [])
     }
@@ -382,15 +420,17 @@ defmodule Lemieux.Learning.Qualification do
          stream_passed?(tasks, index, plan["repetitions"], arm)}
       end)
 
-    primary = arm == "updating" and control_arm in ~w(disabled retry)
+    primary =
+      plan["schema_version"] != 4 and arm == "updating" and control_arm in ~w(disabled retry)
 
     Paired.compare(pairs, plan["alpha"] / 2)
     |> Map.put("confirmatory", primary)
     |> Map.put("endpoint", "all_confirmation_tasks_and_repetitions_passed_per_stream")
   end
 
-  defp updates_experience?(%{"schema_version" => 3}, arm) when arm in ~w(updating retrieval),
-    do: true
+  defp updates_experience?(%{"schema_version" => version}, arm)
+       when version in [3, 4] and arm in ~w(updating retrieval),
+       do: true
 
   defp updates_experience?(_plan, "updating"), do: true
   defp updates_experience?(_plan, _arm), do: false
@@ -478,6 +518,12 @@ defmodule Lemieux.Learning.Qualification do
     do: is_map(analysis) and analysis?(analysis)
 
   defp registered_analysis?(_legacy), do: true
+
+  defp registered_ablation?(%{"ablation" => ablation, "analysis" => analysis}),
+    do: ablation == "withheld_proposer_experience/v1" and is_map(analysis)
+
+  defp registered_ablation?(%{"ablation" => _invalid}), do: false
+  defp registered_ablation?(_ordinary), do: true
 
   defp analysis?(analysis) when is_map(analysis) do
     Enum.sort(Map.keys(analysis)) ==

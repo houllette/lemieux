@@ -7,6 +7,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.Benchmark.Corpus.Exposure
   alias Lemieux.Benchmark.Runtime, as: BenchmarkRuntime
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.Learning.AssetLane
   alias Lemieux.CLI.Learning.CapturedLesson
   alias Lemieux.CLI.Learning.Fixtures
   alias Lemieux.CLI.Learning.Installation
@@ -38,6 +39,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.Learning.Refinement
   alias Lemieux.Learning.Refinement.Support
   alias Lemieux.Providers.Scripted
+  alias Lemieux.Request
   alias Lemieux.Store.JSONL
 
   @surface ["system_suffix", "tool_descriptions"]
@@ -73,6 +75,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           job_budget: budget,
           max_tokens: cap["tokens"],
           max_time_ms: cap["time_ms"],
+          max_records: 4096,
           cost_mode: :quota,
           learning: [
             max_requests: config[:learning_requests] || cap["requests"],
@@ -240,7 +243,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       )
 
     finish_episode(
-      %{
+      maybe_assets(%{
         config: config,
         context: context,
         fixture: fixture,
@@ -250,20 +253,51 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         original: original,
         result: result,
         retrieved: retrieved,
+        lease: leased,
+        baseline: baseline,
         binding: lesson_context,
         bindings: bindings,
         started: started
-      },
+      }),
       store
     )
   end
+
+  defp maybe_assets(%{config: %{asset_search: true}, context: %{"arm" => arm}} = state)
+       when arm in ~w(frozen updating no_experience) do
+    if enabled?(state.config) and is_nil(state.result[:learning_failure]) do
+      result =
+        AssetLane.run(
+          state.config,
+          state,
+          fn controller, name, factory, role ->
+            attempt(
+              Map.put(state.config, :attempt_role, role),
+              state.fixture,
+              state.lease,
+              controller,
+              name,
+              factory
+            )
+          end,
+          fn final, original -> select_final(state.config, final, original) end
+        )
+
+      %{state | result: result}
+    else
+      state
+    end
+  end
+
+  defp maybe_assets(state), do: state
 
   defp adapt(config, context, fixture, leased, controller, details, dir) do
     cond do
       context["arm"] == "retry" ->
         retry(config, fixture, leased, controller, details.original)
 
-      context["arm"] in ~w(frozen updating) and enabled?(config) and
+      context["arm"] in ~w(frozen updating no_experience) and enabled?(config) and
+        config[:profile_search] != false and
           (config[:probe_when] != :verification_failed or not details.original.grade["passed"]) ->
         refine(
           config,
@@ -318,6 +352,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       "created_lesson_ids" => created,
       "reflection" => reflection,
       "retrieval" => if(retrieved, do: retrieved.receipt),
+      "asset_search" => result[:asset_search],
+      "asset_application" => result[:asset_application],
       "all_attempt_grades" => Agent.get(config.grades, & &1)
     }
 
@@ -337,6 +373,9 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
        "candidate_count" => candidate_count(result),
        "promotion_count" => promotion_count(result),
        "rollback_count" => promotion_count(result),
+       "asset_candidate_count" => asset_candidate_count(result),
+       "asset_application_count" => asset_application_count(result),
+       "asset_restoration_count" => asset_restoration_count(result),
        "qualification_complete" => qualification_complete?(result, evidence, reflection),
        "workspace_evidence_complete" => workspace_complete?(evidence),
        "requests" => if(metered, do: map_size(metered), else: accounting["requests"]),
@@ -367,7 +406,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       original: original
     } = state
 
-    if enabled?(config) and context["arm"] in ~w(retrieval frozen updating) do
+    if enabled?(config) and context["arm"] in ~w(retrieval frozen updating no_experience) do
       authority =
         authority(config, state.prepared.harness, state.binding, state.bindings, nil, fixture.id)
 
@@ -415,6 +454,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       "original" => Reflection.project(state.original.observation),
       "selected" => Reflection.project(state.result.selected.observation),
       "refinement" => state.result.refinement,
+      "asset_search" => reflection_assets(state.result),
       "public_grades" => %{
         "original" => state.original.grade,
         "selected" => state.result.selected.grade
@@ -513,15 +553,19 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       )
 
     try do
+      role = Map.get(config, :attempt_role, :task)
+
       provider =
-        Controller.provider(controller, :task, config.provider.(:task),
+        Controller.provider(controller, role, config.provider.(role),
           token_bound: &token_bound/1,
           timeout_ms: 180_000
         )
 
+      harness = if is_function(harness, 1), do: harness.(lease), else: harness
+
       outcome =
         if harness do
-          AgentSession.run(Map.take(lease.task, [:cwd, :prompt, :timeout_ms]),
+          AgentSession.run(task_config(config, lease.task),
             provider: provider,
             model: config.model,
             supervisor: config.supervisor,
@@ -541,7 +585,10 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
               surface: @surface
             )
 
-          BenchmarkRuntime.run(runtime, lease.task)
+          BenchmarkRuntime.run(runtime, %{
+            lease.task
+            | timeout_ms: config[:task_time_ms] || lease.task.timeout_ms
+          })
         end
 
       observation = observation(outcome)
@@ -592,6 +639,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         experience: true,
         abstain: true,
         task_local: true,
+        review_successes: config[:probe_when] == :all_observations,
         reasoning_effort: editor_effort(config),
         max_requests: 16,
         max_tokens: 8192
@@ -600,7 +648,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
     allocation = %{
       requests: refinement_requests(config),
       tokens: refinement_tokens(config),
-      time_ms: 1_500_000,
+      time_ms: refinement_time(config),
       cost_usd: nil
     }
 
@@ -692,13 +740,13 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
                 }),
               else: {:error, :disabled}
           end,
-          propose: fn _, provider ->
+          propose: fn proposal, _provider ->
             propose(
               config,
               plan,
               bytes,
               evolver,
-              provider,
+              proposal.provider_factory,
               experience,
               dir,
               {fixture.task.prompt, original}
@@ -706,7 +754,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           end,
           signal: %{
             "id" => fixture.id,
-            "kind" => signal(original),
+            "kind" => signal(config, original),
             "hypothesis_supported" => true
           }
         )
@@ -773,7 +821,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
           sessions_dir: Path.join(dir, "sessions"),
           provider: provider,
           evolver_profile: evolver,
-          timeout_ms: 480_000,
+          timeout_ms: config[:task_time_ms] || 480_000,
           experience: %{
             experience
             | consumer:
@@ -926,9 +974,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
 
       # An empty promoted result can tie useful partial work at zero after a
       # provider failure. A tie establishes no improvement over the original.
-      selected =
-        if final.grade["score"] > original.grade["score"] and
-             final.grade["safety_failures"] == [], do: final, else: original
+      selected = select_final(config, final, original)
 
       %{
         selected: selected,
@@ -988,15 +1034,34 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
     end
   end
 
-  defp signal(%{captures: [capture | _]}), do: capture["kind"]
-  defp signal(%{grade: %{"passed" => false}}), do: "verification_failure"
-  defp signal(_original), do: "no_signal"
+  defp select_final(config, final, original) do
+    if final.grade["safety_failures"] == [] and
+         (final.grade["score"] > original.grade["score"] or
+            verified_final_tie?(config, final, original)), do: final, else: original
+  end
+
+  defp verified_final_tie?(%{support_policy: %{"id" => "experimental_mean/v2"}}, final, original) do
+    usage = final.observation["usage"] || %{}
+
+    final.grade["passed"] and original.grade["passed"] and
+      final.observation["status"] == "completed" and
+      is_nil(final.observation["provider_error"]) and is_integer(usage["input_tokens"]) and
+      is_integer(usage["output_tokens"])
+  end
+
+  defp verified_final_tie?(_config, _final, _original), do: false
+
+  defp signal(%{probe_when: :all_observations}, _original), do: "bounded_research_review"
+  defp signal(_config, %{captures: [capture | _]}), do: capture["kind"]
+  defp signal(_config, %{grade: %{"passed" => false}}), do: "verification_failure"
+  defp signal(_config, _original), do: "no_signal"
   defp editor_model(config), do: config[:editor_model] || config.model
   defp editor_effort(config), do: config[:editor_effort] || config.effort
   defp proposal_scopes(config), do: config[:proposal_scopes] || ["task_local"]
 
-  defp capabilities(%{support_policy: %{"id" => "experimental_mean/v1"}}),
-    do: ["retain", "task_local", "experimental_task_local"]
+  defp capabilities(%{support_policy: %{"id" => id}})
+       when id in ~w(experimental_mean/v1 experimental_mean/v2),
+       do: ["retain", "task_local", "experimental_task_local"]
 
   defp capabilities(_config), do: ["retain", "task_local"]
   defp observation({:ok, observation}), do: observation
@@ -1055,6 +1120,12 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
 
   defp task_requests(config), do: config[:task_requests] || 16
 
+  defp task_config(config, task),
+    do:
+      task
+      |> Map.take([:cwd, :prompt, :timeout_ms])
+      |> Map.put(:timeout_ms, config[:task_time_ms] || task.timeout_ms)
+
   defp episode_name(config, context) do
     name = "#{context["repetition"]}-#{context["task"]["id"]}-#{context["arm"]}"
     if config[:opaque_paths], do: Contract.sha256(name), else: name
@@ -1063,6 +1134,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp lease_name(config, name),
     do: if(config[:opaque_paths], do: Contract.sha256(name), else: name)
 
+  defp initial_lessons(_config, %{"arm" => "no_experience"}), do: []
+
   defp initial_lessons(%{seed_libraries: libraries}, context),
     do: Map.get(libraries, context["stream_id"], [])
 
@@ -1070,15 +1143,39 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp acquisition_timeout(config), do: config[:acquisition_timeout_ms] || 5000
   defp refinement_requests(config), do: config[:refinement_requests] || 112
   defp refinement_tokens(config), do: config[:refinement_tokens] || 1_500_000
+  defp refinement_time(config), do: config[:refinement_time_ms] || 1_500_000
   defp candidate_count(%{refinement: nil}), do: 0
   defp candidate_count(%{refinement: receipt}), do: length(receipt["candidates"] || [])
   defp promotion_count(%{promotion: nil}), do: 0
   defp promotion_count(_result), do: 1
+  defp asset_candidate_count(%{asset_search: search}), do: length(search["candidates"])
+  defp asset_candidate_count(_result), do: 0
+  defp asset_application_count(%{asset_application: _}), do: 1
+  defp asset_application_count(_result), do: 0
+  defp asset_restoration_count(%{asset_application: %{"restored" => true}}), do: 1
+  defp asset_restoration_count(_result), do: 0
+
+  defp reflection_assets(%{asset_application: application, asset_search: search}),
+    do:
+      Map.put(
+        search,
+        "application",
+        Map.update!(application, "final_observation", &Reflection.project/1)
+      )
+
+  defp reflection_assets(result), do: result[:asset_search]
 
   defp fixture_grade(config, fixture, cwd),
     do: Map.get(config, :fixture_module, Fixtures).grade(fixture, cwd, config.environment)
 
   @spec token_bound(term()) :: pos_integer()
+  def token_bound(%Request{} = request),
+    do:
+      max(
+        131_072,
+        Request.input_bytes(request) + Keyword.get(request.params, :max_tokens, 8192) + 8192
+      )
+
   def token_bound(_request), do: 131_072
 
   defp bindings(config, fixture, prepared) do

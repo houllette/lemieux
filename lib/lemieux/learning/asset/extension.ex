@@ -17,13 +17,13 @@ defmodule Lemieux.Learning.Asset.Extension do
   """
   @behaviour Lemieux.Extension
   import Kernel, except: [apply: 2]
+  alias Lemieux.Extensions.Search
   alias Lemieux.Extensions.Workspace.Skill
   alias Lemieux.Extensions.Workspace.SkillTool
   alias Lemieux.Harness
   alias Lemieux.Learning.Asset
   alias Lemieux.Learning.Asset.Reader
   alias Lemieux.Tool
-  alias Lemieux.Tool.Exposure
   alias Lemieux.Tool.Override
 
   @impl true
@@ -101,7 +101,7 @@ defmodule Lemieux.Learning.Asset.Extension do
       ) do
     # Disclosure only. Do not add a missing tool: an asset cannot equip a host.
     harness
-    |> Exposure.after_requests(["glob"], payload["glob_after_requests"])
+    |> Search.configure(payload["glob_after_requests"])
     |> record(state)
   end
 
@@ -126,6 +126,7 @@ defmodule Lemieux.Learning.Asset.Extension do
   @impl true
   def describe(state),
     do: %{
+      "id" => state.version.id,
       "kind" => state.version.content["kind"],
       "sha256" => state.version.digest,
       "validator" => state.version.content["validator"],
