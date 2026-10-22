@@ -374,7 +374,12 @@ defmodule Lemieux.IxwayTest do
         params: [
           base_url: "https://must-not-contact.example",
           api_key: "wrong-key",
-          req_http_options: [headers: [{"authorization", "Bearer wrong"}]]
+          req_http_options: [
+            headers: [
+              {"authorization", "Bearer wrong"},
+              {"x-ixway-harness", "request-controlled"}
+            ]
+          ]
         ]
       )
 

@@ -49,6 +49,10 @@ defmodule Lemieux.Extensions.EnvironmentContext.Remote do
     end
   end
 
+  # A drive-relative Windows path is indistinguishable from a bare one-letter
+  # SCP host. Abstain on that spelling; git@c: or ssh://c/ remains explicit.
+  defp scp(<<drive, ?:, _path::binary>>) when drive in ?A..?Z or drive in ?a..?z, do: nil
+
   defp scp(remote) do
     case Regex.run(~r/\A(?:[a-zA-Z0-9_.-]+@)?([^:@\/]+):([^:]+)\z/, remote) do
       [_, host, path] -> identity(host, transport_path(path))

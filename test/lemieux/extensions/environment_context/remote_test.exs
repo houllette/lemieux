@@ -3,6 +3,20 @@ defmodule Lemieux.Extensions.EnvironmentContext.RemoteTest do
 
   alias Lemieux.Extensions.EnvironmentContext.Remote
 
+  test "drive-relative paths abstain while explicit single-letter hosts remain usable" do
+    for drive <- ~w(C c Z z) do
+      assert Remote.normalize("#{drive}:team/repo.git") == nil
+      assert Remote.normalize("#{drive}:/team/repo.git") == nil
+      assert Remote.normalize("#{drive}:\\team\\repo.git") == nil
+
+      assert Remote.normalize("git@#{drive}:team/repo.git") ==
+               "#{String.downcase(drive)}/team/repo"
+
+      assert Remote.normalize("ssh://#{drive}/team/repo.git") ==
+               "#{String.downcase(drive)}/team/repo"
+    end
+  end
+
   test "transport origins strip credentials and suffixes while canonical identities stay stable" do
     for {remote, expected} <- [
           {"https://user:secret@GitHub.com:8443/acme/project.git?token=secret#private",

@@ -97,6 +97,8 @@ defmodule Lemieux.Extensions.EnvironmentContextTest do
           "../repo.git",
           "github.com/acme/project.git",
           "gitlab/acme/project.git",
+          "C:acme/project.git",
+          "c:acme/project.git",
           "file:///private/repo.git",
           "ext::secret",
           "https://github.com/acme/../project.git"
@@ -111,6 +113,24 @@ defmodule Lemieux.Extensions.EnvironmentContextTest do
     git(dir, ["config", "remote.origin.url", "https://github.com/acme/one.git"])
     git(dir, ["config", "--add", "remote.origin.url", "https://github.com/acme/two.git"])
     refute block(cwd: dir) =~ "- Git remote:"
+  end
+
+  test "a linked worktree reads its common origin through its own nested directory", %{
+    tmp_dir: tmp_dir
+  } do
+    dir = repository(tmp_dir)
+    git(dir, ["remote", "add", "origin", "ssh://git@GitLab:2222/acme/project.git.git"])
+    linked = Path.join(dir, "linked")
+    git(dir, ["worktree", "add", "--detach", "--no-checkout", linked])
+    nested = Path.join(linked, "nested")
+    File.mkdir_p!(nested)
+
+    snapshot = block(cwd: nested)
+
+    assert snapshot =~ "- Working directory: #{nested}\n- Git remote: gitlab/acme/project.git"
+    assert snapshot =~ "- Git: repository with a detached HEAD"
+    refute snapshot =~ "ssh://"
+    refute snapshot =~ ":2222"
   end
 
   test "origin stays local data without includes, URL rewrites or repository programs", %{

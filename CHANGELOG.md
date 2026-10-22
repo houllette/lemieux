@@ -23,7 +23,8 @@ API.
 - Native Ixway inference declares its harness identity, preserving an explicit
   host declaration without duplicates. New startup environment snapshots pair
   the BEAM host's working directory with a sanitized Git origin, omitting
-  credentials and ambiguous remotes without network discovery or URL rewriting.
+  credentials, local paths and ambiguous remotes without network discovery
+  or URL rewriting.
 
 - Experimental learning qualification adds independent stream isolation,
   exact paired inference, prospective power and practical acceptance thresholds.
