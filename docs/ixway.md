@@ -179,6 +179,24 @@ effort either way, because the catalog is advisory and gateway admission stays
 authoritative.
 
 Session inference carries Lemieux session/conversation IDs and the application name.
+It also declares `x-ixway-harness: lemieux`, independently of the application
+name or model alias. An embedded host can supply its own lowercase
+`x-ixway-harness` header; the first explicit declaration wins and is sent once.
+This client-reported metadata grants no authorization.
+
+New `lmx` sessions include a sanitized Git origin beside the BEAM host's working
+directory in the existing startup environment block, when one is unambiguous.
+Only `host/owner/repository` is retained; credentials, scheme, port, query and
+fragment are removed. Local paths and unsupported or ambiguous origins are
+omitted, including Windows drive-relative paths such as `C:team/repo.git`.
+For a one-letter SSH host, use an explicit `git@c:team/repo.git` or
+`ssh://c/team/repo.git` origin. Discovery reads local Git configuration without
+contacting the remote or expanding URL rewrites, within the shared two-second
+startup bound. The
+snapshot describes the BEAM host even when tools run elsewhere, and is
+independent of Ixway's authorization project. Running sessions keep their
+startup snapshot; future sessions gain this context after an updated launch.
+
 Ixway generates its own request ID, returned in response disclosure. Lemieux
 request IDs stay in request snapshots and active trace spans.
 Active W3C trace context is propagated by default in Ixway mode; set

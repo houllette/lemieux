@@ -57,6 +57,106 @@ defmodule Lemieux.Extensions.EnvironmentContextTest do
              "on branch main; no uncommitted changes when the session started"
   end
 
+  test "origin is sanitized beside its nested working directory and frozen at startup", %{
+    tmp_dir: tmp_dir
+  } do
+    dir = repository(tmp_dir)
+    nested = Path.join(dir, "nested")
+    File.mkdir_p!(nested)
+
+    git(dir, [
+      "remote",
+      "add",
+      "origin",
+      "https://user:secret@GitHub.com:443/acme/project.git?token=private#hidden"
+    ])
+
+    {:ok, state} = EnvironmentContext.init(cwd: nested, now: @now)
+    git(dir, ["remote", "set-url", "origin", "git@github.com:other/replacement.git"])
+    harness = EnvironmentContext.apply(Harness.new(system: "base"), state)
+
+    assert harness.system =~
+             "- Working directory: #{nested}\n- Git remote: github.com/acme/project"
+
+    assert harness.system =~ "- Source: BEAM host; tool execution may use another machine"
+    refute harness.system =~ "replacement"
+    refute harness.system =~ "secret"
+    refute harness.system =~ "private"
+    refute harness.system =~ "hidden"
+    assert block(cwd: nested) =~ "- Git remote: github.com/other/replacement"
+  end
+
+  test "absent, local and ambiguous origins keep directory and status without a remote", %{
+    tmp_dir: tmp_dir
+  } do
+    dir = repository(tmp_dir)
+    refute block(cwd: dir) =~ "- Git remote:"
+
+    for remote <- [
+          "/private/repo.git",
+          "../repo.git",
+          "github.com/acme/project.git",
+          "gitlab/acme/project.git",
+          "C:acme/project.git",
+          "c:acme/project.git",
+          "file:///private/repo.git",
+          "ext::secret",
+          "https://github.com/acme/../project.git"
+        ] do
+      git(dir, ["config", "remote.origin.url", remote])
+      snapshot = block(cwd: dir)
+      assert snapshot =~ "- Working directory: #{dir}"
+      assert snapshot =~ "- Git: repository on branch main"
+      refute snapshot =~ "- Git remote:"
+    end
+
+    git(dir, ["config", "remote.origin.url", "https://github.com/acme/one.git"])
+    git(dir, ["config", "--add", "remote.origin.url", "https://github.com/acme/two.git"])
+    refute block(cwd: dir) =~ "- Git remote:"
+  end
+
+  test "a linked worktree reads its common origin through its own nested directory", %{
+    tmp_dir: tmp_dir
+  } do
+    dir = repository(tmp_dir)
+    git(dir, ["remote", "add", "origin", "ssh://git@GitLab:2222/acme/project.git.git"])
+    linked = Path.join(dir, "linked")
+    git(dir, ["worktree", "add", "--detach", "--no-checkout", linked])
+    nested = Path.join(linked, "nested")
+    File.mkdir_p!(nested)
+
+    snapshot = block(cwd: nested)
+
+    assert snapshot =~ "- Working directory: #{nested}\n- Git remote: gitlab/acme/project.git"
+    assert snapshot =~ "- Git: repository with a detached HEAD"
+    refute snapshot =~ "ssh://"
+    refute snapshot =~ ":2222"
+  end
+
+  test "origin stays local data without includes, URL rewrites or repository programs", %{
+    tmp_dir: tmp_dir
+  } do
+    dir = repository(tmp_dir)
+    marker = Path.join(dir, "executed")
+    script = Path.join(dir, "monitor.sh")
+    File.write!(script, "#!/bin/sh\ntouch #{LemieuxTest.Shell.quoted(marker)}\n")
+    File.chmod!(script, 0o755)
+    git(dir, ["config", "core.fsmonitor", script])
+    git(dir, ["config", "remote.origin.url", "https://github.com/acme/project.git"])
+    git(dir, ["config", "url.https://secret@elsewhere.example/.insteadOf", "https://github.com/"])
+    included = Path.join(dir, "included.config")
+
+    File.write!(
+      included,
+      "[remote \"origin\"]\nurl = https://secret@elsewhere.example/other/repo.git\n"
+    )
+
+    git(dir, ["config", "include.path", included])
+
+    assert block(cwd: dir) =~ "- Git remote: github.com/acme/project"
+    refute File.exists?(marker)
+  end
+
   test "a directory outside git says that instead" do
     outside =
       System.tmp_dir!() |> Path.join("lmx-env-#{System.unique_integer([:positive])}")
