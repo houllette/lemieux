@@ -50,6 +50,7 @@ defmodule Lemieux.Learning.Extension.Confirmation do
   alias Lemieux.Learning.Extension.Build
   alias Lemieux.Learning.Extension.Confirmation.Evidence
   alias Lemieux.Learning.Extension.Export
+  alias Lemieux.Learning.Extension.Review
   alias Lemieux.Learning.Extension.Tree
   alias Lemieux.Learning.Extension.Workbench.Project
 
@@ -128,10 +129,14 @@ defmodule Lemieux.Learning.Extension.Confirmation do
   end
 
   @doc "Exports exactly the passing candidate source with a separate, content-free evidence receipt."
-  @spec export(confirmation :: t(), destination :: Path.t()) :: {:ok, map()} | {:error, term()}
-  def export(handle, destination) do
+  @spec export(confirmation :: t(), destination :: Path.t(), opts :: keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def export(handle, destination, opts \\ []) do
     with {:ok, candidate, receipt} <- qualification(handle),
+         {:ok, receipt} <- code_review(candidate, receipt, opts),
          {:ok, _exported} <- Export.export(Path.join(candidate.root, "source"), destination),
+         :ok <-
+           Tree.write(Path.join(destination, "lemieux-extension-qualification.json"), receipt),
          :ok <- verify_export(handle, destination, receipt) do
       {:ok, receipt}
     end
@@ -144,12 +149,41 @@ defmodule Lemieux.Learning.Extension.Confirmation do
     with {:ok, _candidate, expected} <- qualification(handle),
          :ok <- Export.verify(source),
          {:ok, exported} <- Tree.read(Path.join(source, "lemieux-extension-export.json")),
-         true <- receipt == expected and exported["sha256"] == expected["source_sha256"] do
+         {:ok, marker} <- Tree.read(Path.join(source, "lemieux-extension-qualification.json")),
+         true <-
+           base_receipt(receipt) == expected and marker == receipt and
+             exported["sha256"] == expected["source_sha256"],
+         :ok <- Review.verify(exported["files"], receipt["code_gate"], receipt["review"]) do
       :ok
     else
       false -> {:error, :confirmation_receipt_mismatch}
       error -> error
     end
+  end
+
+  defp code_review(candidate, receipt, opts) do
+    root = Path.join(candidate.root, "source")
+
+    with {:ok, manifest} <- Tree.read(Path.join(root, "lemieux-extension.json")),
+         true <- is_map(manifest["dependencies"]) and is_list(manifest["capabilities"]),
+         :ok <- Export.dependencies(manifest),
+         {:ok, source} <- Tree.read(Path.join(root, "lemieux-extension-export.json")),
+         :ok <- Review.verify(source["files"], opts[:code_gate], opts[:review]) do
+      enriched =
+        receipt
+        |> Map.delete("sha256")
+        |> Map.merge(%{"code_gate" => opts[:code_gate], "review" => opts[:review]})
+
+      {:ok, Map.put(enriched, "sha256", Contract.digest(enriched))}
+    else
+      false -> {:error, :qualified_export_requires_complete_dependency_manifest}
+      error -> error
+    end
+  end
+
+  defp base_receipt(receipt) do
+    base = Map.drop(receipt, ~w(code_gate review sha256))
+    Map.put(base, "sha256", Contract.digest(base))
   end
 
   defp qualification(handle) do
@@ -164,7 +198,10 @@ defmodule Lemieux.Learning.Extension.Confirmation do
          true <- verdict["verdict"] == "pass",
          {:ok, _control, candidate} <- builds(handle, receipt),
          {:ok, source} <-
-           Tree.read(Path.join([candidate.root, "source", "lemieux-extension-export.json"])) do
+           Tree.read(Path.join([candidate.root, "source", "lemieux-extension-export.json"])),
+         {:ok, manifest} <-
+           Tree.read(Path.join([candidate.root, "source", "lemieux-extension.json"])),
+         {:ok, build} <- Tree.read(Path.join(candidate.root, "build.json")) do
       # Keep hidden membership, results and graders out of the installable tree.
       assessment = %{
         "schema_version" => 1,
@@ -174,6 +211,10 @@ defmodule Lemieux.Learning.Extension.Confirmation do
         "confirmation_sha256" => handle.sha256,
         "report_sha256" => Contract.digest(report),
         "profile" => receipt["profiles"]["variant"],
+        "runtime" => build["runtime"],
+        "extension_api" => Lemieux.Extension.api_version(),
+        "dependencies" => manifest["dependencies"],
+        "capabilities" => manifest["capabilities"],
         "verdict" => verdict,
         "production_active" => false
       }

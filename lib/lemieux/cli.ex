@@ -38,6 +38,7 @@ defmodule Lemieux.CLI do
   alias Lemieux.CLI.Help
   alias Lemieux.CLI.History
   alias Lemieux.CLI.Jobs
+  alias Lemieux.CLI.Learning.Command, as: LearningCommand
   alias Lemieux.CLI.Logs
   alias Lemieux.CLI.MCPCommands
   alias Lemieux.CLI.Options
@@ -50,7 +51,7 @@ defmodule Lemieux.CLI do
 
   # The subcommands, so a help flag after one of them is recognised as a
   # request for the manual rather than passed on as an option.
-  @commands ~w(tui run acp jobs log request fork feedback harness corpus explain status help plugin extension mcp
+  @commands ~w(tui run acp jobs log request fork feedback harness corpus explain status learning help plugin extension mcp
                 skills desktop update)
 
   @doc """
@@ -340,6 +341,7 @@ defmodule Lemieux.CLI do
   defp route(["acp" | argv], opts), do: ACP.main(argv, opts)
   defp route(["jobs" | argv], opts), do: Jobs.main(argv, opts)
   defp route(["status" | argv], opts), do: Status.run(argv, opts)
+  defp route(["learning" | argv], opts), do: LearningCommand.run(argv, opts)
   defp route(["explain" | argv], opts), do: Explain.run(argv, opts)
   defp route(["log" | argv], opts), do: History.log(argv, opts)
   defp route(["request" | argv], opts), do: History.request(argv, opts)

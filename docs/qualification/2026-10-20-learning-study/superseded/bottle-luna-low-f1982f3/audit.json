@@ -1,0 +1,5670 @@
+{
+  "all_meters_match_ledgers": true,
+  "all_report_rows_match_evidence_hashes": true,
+  "episodes": [
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b468f4890a2b86f5d0ce6c1254d27b606abc816ac918e51d26c795dc64812d70"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 368965,
+      "meter_matches_ledger": true,
+      "meter_tokens": 368965,
+      "original_finish_reason": ":max_turns",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b468f4890a2b86f5d0ce6c1254d27b606abc816ac918e51d26c795dc64812d70"
+      },
+      "original_status": "failed",
+      "physical_dispatches": {
+        "01M5DSGN8VVMWHV3NMVP1HJN9X": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3595,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000376,
+            "input_tokens": 3553,
+            "output_tokens": 42
+          }
+        },
+        "01M5DSGQ03ZM9NYBCDZ7C0AH7Z": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6023,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00045,
+            "input_tokens": 4051,
+            "output_tokens": 52
+          }
+        },
+        "01M5DSGRFDWF8N6EY5N7XTV19Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6775,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000521,
+            "input_tokens": 4815,
+            "output_tokens": 40
+          }
+        },
+        "01M5DSGSV6EV4AAYV05D9FPY5E": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9339,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000774,
+            "input_tokens": 7387,
+            "output_tokens": 32
+          }
+        },
+        "01M5DSGVBTHG8NNCVZ2VVSB8WQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9560,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000797,
+            "input_tokens": 7605,
+            "output_tokens": 35
+          }
+        },
+        "01M5DSGWQ9R6PN5NV0T2Y4EBPA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9612,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000798,
+            "input_tokens": 7668,
+            "output_tokens": 24
+          }
+        },
+        "01M5DSGXYTRBCXSPFPVPNH7ZD0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9688,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000818,
+            "input_tokens": 7713,
+            "output_tokens": 55
+          }
+        },
+        "01M5DSGZK5V4XHVW7T7RM2BVZ6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11018,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000941,
+            "input_tokens": 9068,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSH0NR09H5DS96JKYDQ8M6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11659,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001005,
+            "input_tokens": 9709,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSH21SM44XYXTRDGQDCERY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12490,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001097,
+            "input_tokens": 10518,
+            "output_tokens": 52
+          }
+        },
+        "01M5DSH3KBJQ833GG9GCCQSKKN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12968,
+          "usage": {
+            "cache_read_tokens": 10880,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000329,
+            "input_tokens": 2060,
+            "output_tokens": 28
+          }
+        },
+        "01M5DSH4ZR4QTAJCV3Z2WKS7AH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14272,
+          "usage": {
+            "cache_read_tokens": 9344,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000603,
+            "input_tokens": 4887,
+            "output_tokens": 41
+          }
+        },
+        "01M5DSH6DNE5W10S14XGPGA7A5": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14462,
+          "usage": {
+            "cache_read_tokens": 9472,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000614,
+            "input_tokens": 4939,
+            "output_tokens": 51
+          }
+        },
+        "01M5DSH84YV2PVNEVQMVN1A3N3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15080,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001363,
+            "input_tokens": 13090,
+            "output_tokens": 70
+          }
+        },
+        "01M5DSH9NFD5GCPFNJPQQ515H2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15203,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001366,
+            "input_tokens": 13236,
+            "output_tokens": 47
+          }
+        },
+        "01M5DSHB64CDZ85V6RF5HKMP9Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15251,
+          "usage": {
+            "cache_read_tokens": 14976,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000188,
+            "input_tokens": 248,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSHDCDZ5XTTEY637JQ18RC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21929,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002032,
+            "input_tokens": 19979,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSHEP7ETEF5WDEBC7WE876": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 23263,
+          "usage": {
+            "cache_read_tokens": 11520,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001302,
+            "input_tokens": 11711,
+            "output_tokens": 32
+          }
+        },
+        "01M5DSHG5MF8DJAYGM252BDE0W": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 23467,
+          "usage": {
+            "cache_read_tokens": 14208,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00108,
+            "input_tokens": 9229,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSHHXH5MX9XAPMGD6WJTV9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24151,
+          "usage": {
+            "cache_read_tokens": 5888,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001942,
+            "input_tokens": 18120,
+            "output_tokens": 143
+          }
+        },
+        "01M5DSHKRYG0M42JPYBY8EW227": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24205,
+          "usage": {
+            "cache_read_tokens": 23040,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000359,
+            "input_tokens": 1135,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSHNPS4F8T7BQ3TBE0BN86": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24833,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002322,
+            "input_tokens": 22884,
+            "output_tokens": 29
+          }
+        },
+        "01M5DSHQVSQXB35RVF1F3QKD61": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24943,
+          "usage": {
+            "cache_read_tokens": 14080,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001239,
+            "input_tokens": 10833,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSHS6RW1ZAXT84GFCX2YHE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 25179,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002385,
+            "input_tokens": 23159,
+            "output_tokens": 100
+          }
+        }
+      },
+      "physical_request_count": 24,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 24,
+      "rollback_count": 0,
+      "selected_finish_reason": ":max_turns",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 4,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.6666666666666666
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b468f4890a2b86f5d0ce6c1254d27b606abc816ac918e51d26c795dc64812d70"
+      },
+      "selected_status": "failed",
+      "source_evidence_bytes_sha256": "42f1c393327e9d08768120a5a42d92ecb6bbd159512e4dc33765bcfb85be9d95",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "0ad5bc54efff760d63a4b082b90b0f6ac136b624b73bcd959543f7b653d90b16"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_26001bbb60b8eef0e2352b326f610fafb953d2aae762cc20651446a4e90a7d0f"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 281753,
+      "meter_matches_ledger": true,
+      "meter_tokens": 281753,
+      "original_finish_reason": ":max_turns",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "0ad5bc54efff760d63a4b082b90b0f6ac136b624b73bcd959543f7b653d90b16"
+      },
+      "original_status": "failed",
+      "physical_dispatches": {
+        "01M5DRX0X33YY54ZH49E1HWVS4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3601,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000214,
+            "input_tokens": 1771,
+            "output_tokens": 38
+          }
+        },
+        "01M5DRX2CTDT1408H9WM28STX9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4328,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000284,
+            "input_tokens": 2349,
+            "output_tokens": 59
+          }
+        },
+        "01M5DRX4BHAW63R2Q2ME88BAED": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6251,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000468,
+            "input_tokens": 4291,
+            "output_tokens": 40
+          }
+        },
+        "01M5DRX60446CMXKNSDYHQ556N": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6313,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00047,
+            "input_tokens": 4363,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRX7GT1ZD6XVJSSHN2N5P4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7463,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000594,
+            "input_tokens": 5491,
+            "output_tokens": 52
+          }
+        },
+        "01M5DRX92C2FCFW920JZW08GBY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7815,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000626,
+            "input_tokens": 5852,
+            "output_tokens": 43
+          }
+        },
+        "01M5DRXAT38Y1M8NMYPMA7N62Z": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7939,
+          "usage": {
+            "cache_read_tokens": 6016,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000264,
+            "input_tokens": 1893,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRXCC9AF0T2ZQERNA2FY85": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8770,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00089,
+            "input_tokens": 8738,
+            "output_tokens": 32
+          }
+        },
+        "01M5DRXDXMVC8B4QRZFYHY0KF1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8845,
+          "usage": {
+            "cache_read_tokens": 7808,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.0002,
+            "input_tokens": 992,
+            "output_tokens": 45
+          }
+        },
+        "01M5DRXFJRJJEE8GFXHCS49Q1C": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9004,
+          "usage": {
+            "cache_read_tokens": 8704,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000129,
+            "input_tokens": 270,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRXGJTPVJH3XNRMQM5TE72": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9870,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000837,
+            "input_tokens": 7894,
+            "output_tokens": 56
+          }
+        },
+        "01M5DRXJFEVZZX5V9M3Y3KG8T9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9934,
+          "usage": {
+            "cache_read_tokens": 7296,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000355,
+            "input_tokens": 2592,
+            "output_tokens": 46
+          }
+        },
+        "01M5DRXM2YDN1VKSP4223QVCET": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10092,
+          "usage": {
+            "cache_read_tokens": 4096,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000653,
+            "input_tokens": 5965,
+            "output_tokens": 31
+          }
+        },
+        "01M5DRXN8CPWNMESH7ND44P23F": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10616,
+          "usage": {
+            "cache_read_tokens": 8832,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000283,
+            "input_tokens": 1744,
+            "output_tokens": 40
+          }
+        },
+        "01M5DRXQGP87DRZY0GM9ZJJ7D4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10880,
+          "usage": {
+            "cache_read_tokens": 9728,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000267,
+            "input_tokens": 1015,
+            "output_tokens": 137
+          }
+        },
+        "01M5DRXSD79FBB1EK2DXM081BM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11026,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000942,
+            "input_tokens": 9075,
+            "output_tokens": 31
+          }
+        },
+        "01M5DRXVZ2T5GR8BWEYA3YHY0Z": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17707,
+          "usage": {
+            "cache_read_tokens": 10496,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000839,
+            "input_tokens": 7178,
+            "output_tokens": 33
+          }
+        },
+        "01M5DRXZMATZ7NP6NGH5894F07": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17810,
+          "usage": {
+            "cache_read_tokens": 17536,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000215,
+            "input_tokens": 244,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRY0N8P11ZGAXPNK01XR73": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18427,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001684,
+            "input_tokens": 16473,
+            "output_tokens": 34
+          }
+        },
+        "01M5DRY23HSBZY9S86TRPQNC7N": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18505,
+          "usage": {
+            "cache_read_tokens": 9856,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000975,
+            "input_tokens": 8619,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRY3DFPZWZJ5HGMCK58F0Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18917,
+          "usage": {
+            "cache_read_tokens": 9728,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001078,
+            "input_tokens": 9034,
+            "output_tokens": 155
+          }
+        },
+        "01M5DRY5FK4ZF7V7SWFMCCJRAK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19067,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001756,
+            "input_tokens": 17092,
+            "output_tokens": 55
+          }
+        },
+        "01M5DRY6VMXTQTWZRV2XBTYV0M": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19245,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001784,
+            "input_tokens": 17244,
+            "output_tokens": 81
+          }
+        },
+        "01M5DRY921S75X8Q6JEZ4571Y3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19328,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001945,
+            "input_tokens": 19297,
+            "output_tokens": 31
+          }
+        }
+      },
+      "physical_request_count": 24,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 24,
+      "rollback_count": 0,
+      "selected_finish_reason": ":max_turns",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 5,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8333333333333334
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "0ad5bc54efff760d63a4b082b90b0f6ac136b624b73bcd959543f7b653d90b16"
+      },
+      "selected_status": "failed",
+      "source_evidence_bytes_sha256": "f8202d309a387a375f8d96336d6c094d70be4c812349cec7fce546aa584608a7",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "869e92fe1f4a92178596245f213ac73db3263ca58294c8d6449cc21d11dbb6c4"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e88d897c14bd4c6361c1d401363b9c9da5fa00aac0f537ebe88cc2a2ef5bbbc8"
+        },
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "0032ee367abe5a7c18834ba455ba83ee369c125c4b69385633a60bcf72bfb7e2"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "c994b76da757ce74909fb66f99817b1b22aed975333631800a3b31e6e6bc26be"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "576db7c7925559bdc40cc9536c14166662f759c284c40613c7946f1172907bdb"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "candidate_sha256": "f29c5df49f27a0234dc7a64ba53fb147b7ab82a52397cdafd869c3b3b2ebbaa9",
+          "evaluations": [
+            {
+              "attempt": 1,
+              "harness_sha256": "04fd3fd9619a180ba2910959501e574d443eb40ea2ec39672a6b2eacc819f76c",
+              "lease_id": "probe_01M5DSEEQ17VTCW7M1FCJ7EC7X",
+              "observation_sha256": "170d56cd73f9fed7e35d7bab600a52107fa3dd9e0e4a50706fa57d86b2326720",
+              "profile_sha256": "f29c5df49f27a0234dc7a64ba53fb147b7ab82a52397cdafd869c3b3b2ebbaa9",
+              "regression": true,
+              "run_sha256": "03d24ab88252e09432a9c4ff2a8de8aa10c7d765fd5238274859ba6c94b7c3f8",
+              "runtime_sha256": "2514db5e621c96791c22f085c8e50d2495d879531ce209f416ceb1b2f7ba93db",
+              "score": 0.0,
+              "session_id": "01M5DSEF9XJX2TZWPEJ3T76R91",
+              "status": "failed",
+              "stop_reason": "max_turns",
+              "verified_success": false
+            },
+            {
+              "attempt": 2,
+              "harness_sha256": "9e4e7a74f4440f3c591aa79d5ba31e6ae4b40b4d88b97ab87ef7da6c01c341d0",
+              "lease_id": "probe_01M5DSFR7QD1BKEP7XHKKQ396X",
+              "observation_sha256": "7ce8752d3c6e23fb30bb64a7acfefc93328dadb00ab6ae485097190da349d1f3",
+              "profile_sha256": "f29c5df49f27a0234dc7a64ba53fb147b7ab82a52397cdafd869c3b3b2ebbaa9",
+              "regression": false,
+              "run_sha256": "a2c88d8a3059c7e67771633928f6358886b2c63f671d9762fae342c5eaf13aa7",
+              "runtime_sha256": "5f5fa55be18201b84fa6ca8259ae42d6ecfadd1889d94867f788e44cc95e0df1",
+              "score": 1.0,
+              "session_id": "01M5DSFRVQHCGB7VQQGSQ9DC1Z",
+              "status": "completed",
+              "stop_reason": "stop",
+              "verified_success": true
+            }
+          ]
+        }
+      ],
+      "created_lesson_ids": [
+        "lesson_f0c3e782c8fc67255ab5a63380bbedf28f8078a1b2f35a8c78c79c405348ba84",
+        "lesson_6b35c6b5f735dffc0a344358ad8b587122d92e85788f55a26b4335af6bf95aab"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 1156587,
+      "meter_matches_ledger": true,
+      "meter_tokens": 1156587,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "576db7c7925559bdc40cc9536c14166662f759c284c40613c7946f1172907bdb"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DSBNQ5067DQF6Z24YE9MCD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3591,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00021,
+            "input_tokens": 1768,
+            "output_tokens": 31
+          }
+        },
+        "01M5DSBQ4YAFV7CDASPAB6YQHY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4230,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000264,
+            "input_tokens": 2275,
+            "output_tokens": 35
+          }
+        },
+        "01M5DSBRFE2KP136EY8FT5W7PE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4282,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000265,
+            "input_tokens": 2337,
+            "output_tokens": 25
+          }
+        },
+        "01M5DSBSH03VT07F58JJ1BDR5X": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4349,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000276,
+            "input_tokens": 2393,
+            "output_tokens": 36
+          }
+        },
+        "01M5DSBTXAG8KFBQAA7WH8BZE3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4408,
+          "usage": {
+            "cache_read_tokens": 4224,
+            "cache_write_tokens": 0,
+            "cost_usd": 7.3e-05,
+            "input_tokens": 152,
+            "output_tokens": 32
+          }
+        },
+        "01M5DSBWEG9QNA2RKNENSK9H03": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6536,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000493,
+            "input_tokens": 4586,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSBXW63HMN5QMGZC48KSPG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6693,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000508,
+            "input_tokens": 4743,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSBYXP4CBVHY080AX5MZWK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7784,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000619,
+            "input_tokens": 5831,
+            "output_tokens": 33
+          }
+        },
+        "01M5DSC0WDAQCHZFMT4GH73Z63": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7872,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000626,
+            "input_tokens": 5922,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSC2KBRS98CVTGQMHGYBCP": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8865,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000731,
+            "input_tokens": 6901,
+            "output_tokens": 44
+          }
+        },
+        "01M5DSC4C46Q80TAKHT3B8SEMY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9392,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000778,
+            "input_tokens": 7442,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSC5FGAD8DA9CCYP193AK3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10027,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000858,
+            "input_tokens": 8037,
+            "output_tokens": 70
+          }
+        },
+        "01M5DSC74CXK2AS7PERPK91SN2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10144,
+          "usage": {
+            "cache_read_tokens": 4224,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000651,
+            "input_tokens": 5877,
+            "output_tokens": 43
+          }
+        },
+        "01M5DSC8MCA5QHEDE397A24YRA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10515,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000891,
+            "input_tokens": 8564,
+            "output_tokens": 31
+          }
+        },
+        "01M5DSC9TKJ5MQRPAGEWB33N17": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11001,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000958,
+            "input_tokens": 9004,
+            "output_tokens": 77
+          }
+        },
+        "01M5DSCB8Z69P9S9QGGTGD8GPG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11187,
+          "usage": {
+            "cache_read_tokens": 10752,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000171,
+            "input_tokens": 386,
+            "output_tokens": 49
+          }
+        },
+        "01M5DSCCHTWQYTTZKZ2RAH8806": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11235,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000962,
+            "input_tokens": 9288,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSCEW3MXCKNTJ9FTWSCMY9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17954,
+          "usage": {
+            "cache_read_tokens": 11008,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000833,
+            "input_tokens": 6875,
+            "output_tokens": 71
+          }
+        },
+        "01M5DSCKSTEWPGPHA1FQV1ZHBY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3612,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000228,
+            "input_tokens": 1751,
+            "output_tokens": 69
+          }
+        },
+        "01M5DSCNKTEG28PQ24Q18MK535": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18346,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00168,
+            "input_tokens": 16380,
+            "output_tokens": 46
+          }
+        },
+        "01M5DSCQQRA1081RPATRZTJJ33": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18815,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00172,
+            "input_tokens": 16867,
+            "output_tokens": 28
+          }
+        },
+        "01M5DSCS9ZBSSZMR5DY138XWPR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 20071,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001856,
+            "input_tokens": 18098,
+            "output_tokens": 53
+          }
+        },
+        "01M5DSCV25J2C10ZCAHYF7P00J": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21167,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001952,
+            "input_tokens": 19226,
+            "output_tokens": 21
+          }
+        },
+        "01M5DSCW82A125FWT4J6JF0EJ1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21411,
+          "usage": {
+            "cache_read_tokens": 18176,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000523,
+            "input_tokens": 3190,
+            "output_tokens": 45
+          }
+        },
+        "01M5DSCXQQ3ZM8FNGTXBB8DAP8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22294,
+          "usage": {
+            "cache_read_tokens": 20992,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000351,
+            "input_tokens": 1275,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSCZ3CRR6G0D6S0PJ5J00V": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22464,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00208,
+            "input_tokens": 20527,
+            "output_tokens": 17
+          }
+        },
+        "01M5DSD13QX1VA624BTZ57TNDA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22660,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002165,
+            "input_tokens": 20560,
+            "output_tokens": 180
+          }
+        },
+        "01M5DSD33JT74PCS4BR3G1KVEY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22891,
+          "usage": {
+            "cache_read_tokens": 19840,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000522,
+            "input_tokens": 3004,
+            "output_tokens": 47
+          }
+        },
+        "01M5DSD4E692GS06KGSC7JM0GW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22937,
+          "usage": {
+            "cache_read_tokens": 21248,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000392,
+            "input_tokens": 1662,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSD6A63G1RRN576ZY6VGM0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 29674,
+          "usage": {
+            "cache_read_tokens": 22144,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00101,
+            "input_tokens": 7441,
+            "output_tokens": 89
+          }
+        },
+        "01M5DSD9X0SWYZDSRDRSTD4PWT": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3598,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000381,
+            "input_tokens": 3544,
+            "output_tokens": 54
+          }
+        },
+        "01M5DSDBECYNM7MT69P58G2YAG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4300,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000301,
+            "input_tokens": 2271,
+            "output_tokens": 109
+          }
+        },
+        "01M5DSDD9K2JJK2WHSX6NN6S2N": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10241,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000869,
+            "input_tokens": 8276,
+            "output_tokens": 45
+          }
+        },
+        "01M5DSDEVJ81VTB394F9MR3HTA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10309,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00087,
+            "input_tokens": 8359,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSDFXHF5VPGK10BPGV3EKP": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10778,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000924,
+            "input_tokens": 8811,
+            "output_tokens": 47
+          }
+        },
+        "01M5DSDHG2SVND7WAK11FHCW5P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10931,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00093,
+            "input_tokens": 8988,
+            "output_tokens": 23
+          }
+        },
+        "01M5DSDJRZMT9CJK8BVKSZEYMA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11680,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00105,
+            "input_tokens": 9624,
+            "output_tokens": 136
+          }
+        },
+        "01M5DSDMA6H6GQNRDWA5E58PEV": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11846,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001031,
+            "input_tokens": 9879,
+            "output_tokens": 47
+          }
+        },
+        "01M5DSDNNBXGDZ4WT8KR61TFGJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11894,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001027,
+            "input_tokens": 9947,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSDQTHKECWZR37TWPEQP3B": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18579,
+          "usage": {
+            "cache_read_tokens": 10112,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000963,
+            "input_tokens": 8430,
+            "output_tokens": 37
+          }
+        },
+        "01M5DSDS9Q4ER6BDRA3EBPZZ8Q": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18720,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001711,
+            "input_tokens": 16770,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSDTBSFCCPCS32Z75BFQYC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19191,
+          "usage": {
+            "cache_read_tokens": 4096,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001564,
+            "input_tokens": 15061,
+            "output_tokens": 34
+          }
+        },
+        "01M5DSDVR84V7MAGMJ9R87Q1AX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19316,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001771,
+            "input_tokens": 17366,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSDX03F5H97T06HPYAT1Z9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19740,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001883,
+            "input_tokens": 17615,
+            "output_tokens": 205
+          }
+        },
+        "01M5DSDZA8M52TAJ5XH7TP9EQN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19961,
+          "usage": {
+            "cache_read_tokens": 19456,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000266,
+            "input_tokens": 453,
+            "output_tokens": 52
+          }
+        },
+        "01M5DSE0PCQNJ2EKDR3A4QBDZY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 20010,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001839,
+            "input_tokens": 18063,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSE2ZDG3C4Q8C6Z9NB2Y8Q": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 26545,
+          "usage": {
+            "cache_read_tokens": 11392,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001664,
+            "input_tokens": 15065,
+            "output_tokens": 88
+          }
+        },
+        "01M5DSE5RNYZZN68653R61KRSZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 1323,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000193,
+            "input_tokens": 1170,
+            "output_tokens": 153
+          }
+        },
+        "01M5DSE7FK98P3AR8AKMT0GPKE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7392,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000755,
+            "input_tokens": 7353,
+            "output_tokens": 39
+          }
+        },
+        "01M5DSE8JSCHQCPM381QRC9WE1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14401,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001533,
+            "input_tokens": 14168,
+            "output_tokens": 233
+          }
+        },
+        "01M5DSEAYPW8WZNFHM6TVZ9PPF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14632,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001548,
+            "input_tokens": 14420,
+            "output_tokens": 212
+          }
+        },
+        "01M5DSED6Z24EQJD7AXEYNY731": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14694,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001486,
+            "input_tokens": 14652,
+            "output_tokens": 42
+          }
+        },
+        "01M5DSEFB60KEG1R1TNQJ2MW62": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3640,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00022,
+            "input_tokens": 1804,
+            "output_tokens": 44
+          }
+        },
+        "01M5DSEHMNSY1YDY78N9M0NF6A": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4607,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000307,
+            "input_tokens": 2640,
+            "output_tokens": 47
+          }
+        },
+        "01M5DSEKBX4YYKGDB1BQN3P1X4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4675,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000306,
+            "input_tokens": 2726,
+            "output_tokens": 29
+          }
+        },
+        "01M5DSENY3RYZRNKHWDTCWQWFJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4927,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000338,
+            "input_tokens": 2963,
+            "output_tokens": 44
+          }
+        },
+        "01M5DSEQCVW60JG6ZSEQMJ6KBN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4992,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000338,
+            "input_tokens": 3043,
+            "output_tokens": 29
+          }
+        },
+        "01M5DSERGKVJDZ8FE9G8T5BFF0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7810,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000626,
+            "input_tokens": 5845,
+            "output_tokens": 45
+          }
+        },
+        "01M5DSETEYB724MD91VN2DV7H2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7870,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000623,
+            "input_tokens": 5927,
+            "output_tokens": 23
+          }
+        },
+        "01M5DSEVSBQARQZJ8H2FY816V6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7919,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00063,
+            "input_tokens": 5971,
+            "output_tokens": 28
+          }
+        },
+        "01M5DSEX3XSA2Q0SMSCP3X7WWS": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7970,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000636,
+            "input_tokens": 6020,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSEYK515M2PB4J7Z53JPH0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8014,
+          "usage": {
+            "cache_read_tokens": 7808,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000107,
+            "input_tokens": 184,
+            "output_tokens": 22
+          }
+        },
+        "01M5DSEZZBS589EMSVM5GT1MEF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8069,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000648,
+            "input_tokens": 6114,
+            "output_tokens": 35
+          }
+        },
+        "01M5DSF1A9WAJ0Q3BTEKQTFDJT": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8145,
+          "usage": {
+            "cache_read_tokens": 7808,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000132,
+            "input_tokens": 287,
+            "output_tokens": 50
+          }
+        },
+        "01M5DSF2VAKGVKWJDCD29X5ME9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9160,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000755,
+            "input_tokens": 7210,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSF3WXAW6KXQ35S831PRCW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10361,
+          "usage": {
+            "cache_read_tokens": 7680,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000357,
+            "input_tokens": 2651,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSF5RBSVFN2Z267EV1E1DN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11313,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000973,
+            "input_tokens": 9358,
+            "output_tokens": 35
+          }
+        },
+        "01M5DSF7YF3DQCERKVR0941GNJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11521,
+          "usage": {
+            "cache_read_tokens": 11136,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000162,
+            "input_tokens": 355,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSF9SVCFCC9X3SA1GA2D76": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12292,
+          "usage": {
+            "cache_read_tokens": 7680,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00055,
+            "input_tokens": 4583,
+            "output_tokens": 29
+          }
+        },
+        "01M5DSFB9HAZQEW1P4S62NPQRM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12344,
+          "usage": {
+            "cache_read_tokens": 7936,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000532,
+            "input_tokens": 4378,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSFCBSPG2BC3NVDRAZX93J": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13485,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001184,
+            "input_tokens": 11544,
+            "output_tokens": 21
+          }
+        },
+        "01M5DSFE1QC5WCR3BE087HHF56": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13570,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001196,
+            "input_tokens": 11620,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSFFB3893ZGEE0XWTRA3SC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14423,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00129,
+            "input_tokens": 12451,
+            "output_tokens": 52
+          }
+        },
+        "01M5DSFHDNAWQ2VFHF3D0D9KRD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14576,
+          "usage": {
+            "cache_read_tokens": 13440,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000302,
+            "input_tokens": 1001,
+            "output_tokens": 135
+          }
+        },
+        "01M5DSFKHH1YCYCSHRXP2EQ9CZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14799,
+          "usage": {
+            "cache_read_tokens": 12160,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000396,
+            "input_tokens": 2612,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSFNPMP4WAC0D4YCR8DQSH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21474,
+          "usage": {
+            "cache_read_tokens": 14592,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000845,
+            "input_tokens": 6855,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSFRXMYRJS7T921QS2P4KY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3617,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000209,
+            "input_tokens": 1803,
+            "output_tokens": 22
+          }
+        },
+        "01M5DSFT89964Q2EKA7KNG5Z54": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4196,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00026,
+            "input_tokens": 2244,
+            "output_tokens": 32
+          }
+        },
+        "01M5DSFVMPM0TC56N3VEYNWCGB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6113,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000452,
+            "input_tokens": 4159,
+            "output_tokens": 34
+          }
+        },
+        "01M5DSFX2KQS6CZ3KH71YT42QK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7782,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000618,
+            "input_tokens": 5830,
+            "output_tokens": 32
+          }
+        },
+        "01M5DSFYESDWQPC2WHXMR28BY5": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8584,
+          "usage": {
+            "cache_read_tokens": 3968,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000516,
+            "input_tokens": 4580,
+            "output_tokens": 36
+          }
+        },
+        "01M5DSG0150DH56G4FH5BFKPXC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9710,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000819,
+            "input_tokens": 7739,
+            "output_tokens": 51
+          }
+        },
+        "01M5DSG1FPDBH2B8KE5F5BBDNZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9807,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00082,
+            "input_tokens": 7857,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSG2PZCGJ8SDHMQ8FAPD1H": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10751,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001104,
+            "input_tokens": 10679,
+            "output_tokens": 72
+          }
+        },
+        "01M5DSG474S7VJJ6TS3E7C6SS3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10905,
+          "usage": {
+            "cache_read_tokens": 10496,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000156,
+            "input_tokens": 383,
+            "output_tokens": 26
+          }
+        },
+        "01M5DSG5CGQSSZ20XK6VPEMY0R": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10949,
+          "usage": {
+            "cache_read_tokens": 5888,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000576,
+            "input_tokens": 5034,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSG7FPYE3A4TCJFZBKWZF7": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17627,
+          "usage": {
+            "cache_read_tokens": 8448,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001014,
+            "input_tokens": 9149,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSG8Z563QK9S66HDP8VWET": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18489,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00169,
+            "input_tokens": 16535,
+            "output_tokens": 34
+          }
+        },
+        "01M5DSGA8PVHZV9CVPMNP28K9H": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18677,
+          "usage": {
+            "cache_read_tokens": 10752,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000912,
+            "input_tokens": 7895,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSGBCFKBGPENR4Y464HEN6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19421,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001851,
+            "input_tokens": 17298,
+            "output_tokens": 203
+          }
+        },
+        "01M5DSGDWRPSEAJXDEDPK5EHTZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19639,
+          "usage": {
+            "cache_read_tokens": 7552,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001304,
+            "input_tokens": 12038,
+            "output_tokens": 49
+          }
+        },
+        "01M5DSGFF4D9YDT7CPA5KJPASR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19687,
+          "usage": {
+            "cache_read_tokens": 10752,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001012,
+            "input_tokens": 8908,
+            "output_tokens": 27
+          }
+        },
+        "01M5DSGHRK5XM1DKTRRCTP9XPE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 26189,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002468,
+            "input_tokens": 24214,
+            "output_tokens": 55
+          }
+        }
+      },
+      "physical_request_count": 93,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "aba02c64dcbb74a08b6e3adf93ac434a15d73e27436e7a7c6d10a72eaf485e12",
+            "lease_id": "probe_01M5DSCK43W9335Q2EFQQ3BSM6",
+            "observation_sha256": "d444ba15d32c38a367392db32bb6c6220408bda6d283a5638ec9088df63682fc",
+            "profile_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+            "regression": false,
+            "run_sha256": "62b15e0ca42a50346f8a7b0fabd31b927670a85bc268cc08a0ba3e300d0f582b",
+            "runtime_sha256": "a146c8fa2e897fd2e24b7bc96aa57f30a6c2e9a041cc84cb64c91bd78be3dd7d",
+            "score": 0.997275204359673,
+            "session_id": "01M5DSCKR73DZTC5GYTT89PTVM",
+            "status": "completed",
+            "stop_reason": "stop",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "7121e59375b93341ec1eb75f319004916758eaab61fb2c8d1d0a166f8c49d4c5",
+            "lease_id": "probe_01M5DSD98EAVT0ZTG26X9RBHDF",
+            "observation_sha256": "a5e4f51d5be1f3e3d5902b40b703ae4955d16be54ce5e2c0fa67bd2022d9ea9a",
+            "profile_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+            "regression": false,
+            "run_sha256": "01d19121e343d9ea8f4ca47eccdc819c4f44a718f0676bcdbb6d85c479a66fde",
+            "runtime_sha256": "069739ad31e14e9b1d827e1bb869b58f06cedaaab4c1c2367c1911c685df2a5a",
+            "score": 1.0,
+            "session_id": "01M5DSD9VRKQHGRB1VS487HYEA",
+            "status": "completed",
+            "stop_reason": "stop",
+            "verified_success": true
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [],
+        "original_profile_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+        "sha256": "c9b69335ebad2cb9bbf555fa33dd35b7a9d020e842a1f18d7828d91687d7e51d"
+      },
+      "repetition": 2,
+      "reserved_requests": 178,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 4,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.6666666666666666
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "576db7c7925559bdc40cc9536c14166662f759c284c40613c7946f1172907bdb"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "378832336a415e4ba699ab1d12a0b8ffbbb4a8f19450fb76f088a9c18407f511",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "1f591a315261d933e1939d7dd7cf34404b6a5f231dc0de0d63b65dd7404bc357"
+        },
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "054d8de020ed2ca39419f5bf7b23cd876d748c813bdd4cc73da01fe4cd1bb06f"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "fecd26928c137ac756055ec105428b21ccf080795b7592ebf7bbabc751a9448a"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 608999,
+      "meter_matches_ledger": true,
+      "meter_tokens": 608999,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fecd26928c137ac756055ec105428b21ccf080795b7592ebf7bbabc751a9448a"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DS8PWR6RRV8CGS7YGA4ZMV": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3601,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000378,
+            "input_tokens": 3555,
+            "output_tokens": 46
+          }
+        },
+        "01M5DS8S2HR48J1HQMRZDF5VQV": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4330,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000279,
+            "input_tokens": 2363,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS8TK4PFSE68YWF5R4774H": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6547,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000494,
+            "input_tokens": 4597,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS8VW409W2CKGACYZKZGN6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7082,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000549,
+            "input_tokens": 5127,
+            "output_tokens": 35
+          }
+        },
+        "01M5DS8X765FWFRYDC0MRS0HVW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7145,
+          "usage": {
+            "cache_read_tokens": 6912,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000104,
+            "input_tokens": 203,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS8YF71RX928WYAJW4A57M": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7813,
+          "usage": {
+            "cache_read_tokens": 4096,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000452,
+            "input_tokens": 3619,
+            "output_tokens": 98
+          }
+        },
+        "01M5DS92HAMXY0WFV1XGYTC7K7": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3575,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000211,
+            "input_tokens": 1746,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS93X0TRDF444P51JT39VF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5926,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000439,
+            "input_tokens": 3958,
+            "output_tokens": 48
+          }
+        },
+        "01M5DS95G7B33RJ1F43GEMG4TW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7778,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000621,
+            "input_tokens": 5817,
+            "output_tokens": 41
+          }
+        },
+        "01M5DS9708C5J673D71A7Q0FYJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8030,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000642,
+            "input_tokens": 6080,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS982W3915AGSP3EPP20DY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9165,
+          "usage": {
+            "cache_read_tokens": 7552,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000254,
+            "input_tokens": 1571,
+            "output_tokens": 42
+          }
+        },
+        "01M5DS99R0E6CDQX3S967QJ4VX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9230,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000762,
+            "input_tokens": 7280,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS9AT2TH2QJT68EHWWTX9F": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10386,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000939,
+            "input_tokens": 8283,
+            "output_tokens": 183
+          }
+        },
+        "01M5DS9D02XERQHJTPQQ6M44ZE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10558,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000903,
+            "input_tokens": 8589,
+            "output_tokens": 49
+          }
+        },
+        "01M5DS9EGPCZGH7J0SWSRVNY72": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10610,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000901,
+            "input_tokens": 8659,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS9GQ2W65GCKW3HSDP8C95": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17300,
+          "usage": {
+            "cache_read_tokens": 10112,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000837,
+            "input_tokens": 7146,
+            "output_tokens": 42
+          }
+        },
+        "01M5DS9J9ZSZ71CD346KTM265J": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17685,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001608,
+            "input_tokens": 15735,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS9KW79GBV0J1CNWFC3Q0P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18130,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001656,
+            "input_tokens": 16171,
+            "output_tokens": 39
+          }
+        },
+        "01M5DS9NEE5NZSC5TSZYXSFWV8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18255,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001665,
+            "input_tokens": 16305,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS9PN45B62RVNH5E2D338Q": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18590,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001765,
+            "input_tokens": 16473,
+            "output_tokens": 197
+          }
+        },
+        "01M5DS9RPT6Q1DGVTQQ35RN15G": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18780,
+          "usage": {
+            "cache_read_tokens": 18304,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000243,
+            "input_tokens": 445,
+            "output_tokens": 31
+          }
+        },
+        "01M5DSA00R1HXPHPP6NYG8B11F": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 26361,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002489,
+            "input_tokens": 24377,
+            "output_tokens": 64
+          }
+        },
+        "01M5DSA1539WDZ8SP47ATPYV1T": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 26507,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002504,
+            "input_tokens": 24523,
+            "output_tokens": 64
+          }
+        },
+        "01M5DSA2DW1HE9ETQC5AYQ1ZHC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 26614,
+          "usage": {
+            "cache_read_tokens": 10368,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001741,
+            "input_tokens": 16215,
+            "output_tokens": 31
+          }
+        },
+        "01M5DSA4FEW5HH676Z98GWA320": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 33173,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.003171,
+            "input_tokens": 31188,
+            "output_tokens": 65
+          }
+        },
+        "01M5DSA9HBA2Y47MMXZD5CDW02": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3590,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000219,
+            "input_tokens": 1746,
+            "output_tokens": 52
+          }
+        },
+        "01M5DSABR7B4J8PHWK5ZRSMW7B": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4579,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000304,
+            "input_tokens": 2611,
+            "output_tokens": 48
+          }
+        },
+        "01M5DSAD2TSKB7VYWP9524YYZP": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6412,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000509,
+            "input_tokens": 4390,
+            "output_tokens": 102
+          }
+        },
+        "01M5DSAF1RAMGKRCE5ZVBDR7Z2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6405,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000482,
+            "input_tokens": 4450,
+            "output_tokens": 35
+          }
+        },
+        "01M5DSAGMMS66RSDS6Y479D8B0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6759,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00052,
+            "input_tokens": 4797,
+            "output_tokens": 42
+          }
+        },
+        "01M5DSAJ1J24W5Z7G4HNG3RQPR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6902,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000733,
+            "input_tokens": 6795,
+            "output_tokens": 107
+          }
+        },
+        "01M5DSAKGYHDK4DSB70ZWKJ7S5": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6976,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000545,
+            "input_tokens": 5006,
+            "output_tokens": 50
+          }
+        },
+        "01M5DSAN4S64NPQ5RGDA2MKCQ6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7854,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000675,
+            "input_tokens": 5777,
+            "output_tokens": 157
+          }
+        },
+        "01M5DSAPTE827S9880Q349X0XY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8061,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000653,
+            "input_tokens": 6092,
+            "output_tokens": 49
+          }
+        },
+        "01M5DSAR4TJWGS4NK77PGTXYWG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8113,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000651,
+            "input_tokens": 6162,
+            "output_tokens": 31
+          }
+        },
+        "01M5DSAT94JQHHM9MR0SHN83GK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14794,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00132,
+            "input_tokens": 12841,
+            "output_tokens": 33
+          }
+        },
+        "01M5DSAVR57YCGDJNZ1VJP5YQE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14968,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001336,
+            "input_tokens": 13018,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSAWYRGWV024BAMVHTJNRN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15895,
+          "usage": {
+            "cache_read_tokens": 14848,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000308,
+            "input_tokens": 910,
+            "output_tokens": 137
+          }
+        },
+        "01M5DSAYHEQG3CFFT6KM77NRFB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15971,
+          "usage": {
+            "cache_read_tokens": 15616,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000212,
+            "input_tokens": 303,
+            "output_tokens": 52
+          }
+        },
+        "01M5DSB0B79ZF5Y3SGHFQQQ4PK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 16031,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001442,
+            "input_tokens": 14081,
+            "output_tokens": 30
+          }
+        },
+        "01M5DSB1GHBE3GZRQM9PGZVVSQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 16316,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001499,
+            "input_tokens": 14296,
+            "output_tokens": 100
+          }
+        },
+        "01M5DSB33QS42WJCYRD6GVAMR8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 16436,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001483,
+            "input_tokens": 14485,
+            "output_tokens": 31
+          }
+        },
+        "01M5DSB56CZAYPGS3N4ZETQW40": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 23221,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002204,
+            "input_tokens": 21164,
+            "output_tokens": 137
+          }
+        },
+        "01M5DSB7PMQQGJGTQ2F5MPF2V8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 23399,
+          "usage": {
+            "cache_read_tokens": 15744,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000965,
+            "input_tokens": 7549,
+            "output_tokens": 106
+          }
+        },
+        "01M5DSBARNAN8BHNSMNG54ZFDB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 1323,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000193,
+            "input_tokens": 1170,
+            "output_tokens": 153
+          }
+        },
+        "01M5DSBCFC3XX5NT8VV083VJCV": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7448,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000762,
+            "input_tokens": 7404,
+            "output_tokens": 44
+          }
+        },
+        "01M5DSBE88QZ9WAN5RQFD3Z2FW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14586,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001554,
+            "input_tokens": 14347,
+            "output_tokens": 239
+          }
+        },
+        "01M5DSBGQC7RQS4WKQX902T8RQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14855,
+          "usage": {
+            "cache_read_tokens": 14208,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000307,
+            "input_tokens": 397,
+            "output_tokens": 250
+          }
+        },
+        "01M5DSBK8AEXHWHMTD7R9CZKJX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14934,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001517,
+            "input_tokens": 14876,
+            "output_tokens": 58
+          }
+        }
+      },
+      "physical_request_count": 49,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "02c1ebab53d3bc093de55c88f264aaa793ef070949fa9ba8363ab3df2b5d614d",
+            "lease_id": "probe_01M5DS91SVMD1PZ5GX526V6Y80",
+            "observation_sha256": "8b6b4b17f97730f8efd4e4290785483e4564886c25afca8684ff24872538fade",
+            "profile_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+            "regression": false,
+            "run_sha256": "a5622ead832a5427564285a909c429313a180a5cb94bc5f8d0d29e22091cf8c3",
+            "runtime_sha256": "b38d8937e1edf966556e7d6fa20967e301b183445460e0b56ecd2a2640b536b0",
+            "score": 1.0,
+            "session_id": "01M5DS92FWK5D66VG6GK43GWEH",
+            "status": "completed",
+            "stop_reason": "stop",
+            "verified_success": true
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "a75f175f55b1b8e56b7bf2c575ebe87080883fb5f360ae77428b923e5a3b8c87",
+            "lease_id": "probe_01M5DSA8VZG6FT0DXFHCCKZNVC",
+            "observation_sha256": "facf9e0ead620d06ee1f73b85a3076d3d12e14d35fb24fdb0b5a1da0c37990f9",
+            "profile_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+            "regression": false,
+            "run_sha256": "03886171dd451d9bb29bac21344d4d4d1518bb218bbb8ae988c1a1d18b63748b",
+            "runtime_sha256": "3f9638cb905f27c5ad6f356f6c10c65d7cd1ed8d16dd3a525159546506c247e1",
+            "score": 0.997275204359673,
+            "session_id": "01M5DSA9FSANSHH6JYVE8FXCDK",
+            "status": "completed",
+            "stop_reason": "stop",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_c31a511a",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "65624758e1ea225d697ceb84ed213113aefe517927e92c691f28e2200537cdf5",
+        "sha256": "beeda9368baaf27c51be4ed022ecc9591d33766c78ad9853f34fb42e9d987712"
+      },
+      "repetition": 2,
+      "reserved_requests": 166,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 2,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.3333333333333333
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fecd26928c137ac756055ec105428b21ccf080795b7592ebf7bbabc751a9448a"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "e58f3cda492b47767003e2b7299d204ec660902b837e38c06ce862a6847a2045",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "f0c6c64ae5429fca9001ee34067674eb02c8d12e530c077a0d3c19964efd5125"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 259583,
+      "meter_matches_ledger": true,
+      "meter_tokens": 259583,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "f0c6c64ae5429fca9001ee34067674eb02c8d12e530c077a0d3c19964efd5125"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DS7Q048G24B0ES9RJP8734": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3615,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000384,
+            "input_tokens": 3559,
+            "output_tokens": 56
+          }
+        },
+        "01M5DS7RWVM1KH9CY8S7NYBNSG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4360,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000276,
+            "input_tokens": 2408,
+            "output_tokens": 32
+          }
+        },
+        "01M5DS7TECZJVK50G8B7E4KBMK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8160,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00066,
+            "input_tokens": 6199,
+            "output_tokens": 41
+          }
+        },
+        "01M5DS7VY512TBPXENTME3BA0W": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8665,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000706,
+            "input_tokens": 6715,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS7XA2W81ES2CT633YWMEM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9500,
+          "usage": {
+            "cache_read_tokens": 8448,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000204,
+            "input_tokens": 1015,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS7YMPTRSWZHGYWSVGMV1X": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9704,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00081,
+            "input_tokens": 7754,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS7ZPFSCB0AR8E6490FV61": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10320,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.0009,
+            "input_tokens": 8298,
+            "output_tokens": 102
+          }
+        },
+        "01M5DS818FCYNMZ74AWT3QRWRH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10463,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000893,
+            "input_tokens": 8494,
+            "output_tokens": 49
+          }
+        },
+        "01M5DS82CSDQVM3F5K40K728SA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10511,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000889,
+            "input_tokens": 8564,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS84DXJ5ZZYC6WZ4VV43XZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17205,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001566,
+            "input_tokens": 15239,
+            "output_tokens": 46
+          }
+        },
+        "01M5DS85X9EMP6VVKXS03K4BH3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17499,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001589,
+            "input_tokens": 15549,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS873832RPNQW6Z2MSVANK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18011,
+          "usage": {
+            "cache_read_tokens": 10240,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000893,
+            "input_tokens": 7737,
+            "output_tokens": 34
+          }
+        },
+        "01M5DS88ZMRD0NAMHKF8KK3QB4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18136,
+          "usage": {
+            "cache_read_tokens": 9472,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000973,
+            "input_tokens": 8634,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS8AH6B9PRTW7TR6PWVX91": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18454,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001715,
+            "input_tokens": 16427,
+            "output_tokens": 107
+          }
+        },
+        "01M5DS8C7P6FNKNWYK45H9NEHY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18576,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001696,
+            "input_tokens": 16629,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS8EDRTK6R5WZA890F5DV3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 25345,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00241,
+            "input_tokens": 23304,
+            "output_tokens": 121
+          }
+        },
+        "01M5DS8G6DR3RSQ8YDB58Q94QA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 25472,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002385,
+            "input_tokens": 23526,
+            "output_tokens": 26
+          }
+        },
+        "01M5DS8JM8PARQ0BPJPDRMA4CW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 25587,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002407,
+            "input_tokens": 23613,
+            "output_tokens": 54
+          }
+        }
+      },
+      "physical_request_count": 18,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 18,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 5,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8333333333333334
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "f0c6c64ae5429fca9001ee34067674eb02c8d12e530c077a0d3c19964efd5125"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "0c89ea1c1c246f75ab9868944559ba8f872241db784c6c290ffba626cbe8f1fc",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "eff59c6d908dae8e396ba95857cfdd3884949ac38fa6d06dd561e831bffa009b"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e1788f05679f2efcfe9d1024e9fb56c048040adcc3458ea9e80e3e324ea22559"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b445fb3e128f3e97207ec9c6c97bc947199423a40858519fbd76a2d66c7b0bb8"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "2813719fedf70fa27b789880fecd91d7342760e1f1afccfe84749ee3c58d3834"
+        },
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "45a1f4aadc01dcc8cf4aed5ab94d00ad548117ec9a0ec3857a4aa37ff440796b"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 1282202,
+      "meter_matches_ledger": true,
+      "meter_tokens": 1282202,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "45a1f4aadc01dcc8cf4aed5ab94d00ad548117ec9a0ec3857a4aa37ff440796b"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DRYE61MEDC5MZKV2VATDY0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3574,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000205,
+            "input_tokens": 1760,
+            "output_tokens": 22
+          }
+        },
+        "01M5DRYFPTG43MFMSVE5YE9KSB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4153,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000255,
+            "input_tokens": 2201,
+            "output_tokens": 32
+          }
+        },
+        "01M5DRYH6CZ6YYG4NW1BYTQS88": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4611,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000302,
+            "input_tokens": 2656,
+            "output_tokens": 35
+          }
+        },
+        "01M5DRYJNGPPPRM8DHY1H68SGD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4829,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000347,
+            "input_tokens": 2818,
+            "output_tokens": 91
+          }
+        },
+        "01M5DRYM88HZH2Z5QTQBYZPF7W": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8196,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000654,
+            "input_tokens": 6257,
+            "output_tokens": 19
+          }
+        },
+        "01M5DRYNW0ZGSMEEKR6PSSPRE2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8421,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000685,
+            "input_tokens": 6461,
+            "output_tokens": 40
+          }
+        },
+        "01M5DRYQWV984B534P1C88RMP7": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8501,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000696,
+            "input_tokens": 6534,
+            "output_tokens": 47
+          }
+        },
+        "01M5DRYST68M6M4ZCYC620NYN4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8699,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000709,
+            "input_tokens": 6749,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRYV3K76123S6D6H98QAJT": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9846,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00083,
+            "input_tokens": 7881,
+            "output_tokens": 45
+          }
+        },
+        "01M5DRYWKW99PFRQVNRSDTNCNR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10314,
+          "usage": {
+            "cache_read_tokens": 8192,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000306,
+            "input_tokens": 2092,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRYXWF6H6EMR9RW4FNCG27": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11446,
+          "usage": {
+            "cache_read_tokens": 10112,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000241,
+            "input_tokens": 1317,
+            "output_tokens": 17
+          }
+        },
+        "01M5DRYYZV99HN83PQFBBXXJXX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11492,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000988,
+            "input_tokens": 9542,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRZ0BQYP745QKKE4FX4A67": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12358,
+          "usage": {
+            "cache_read_tokens": 9600,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000389,
+            "input_tokens": 2714,
+            "output_tokens": 44
+          }
+        },
+        "01M5DRZ1Y8AKN6K3YSVRQ872R7": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12651,
+          "usage": {
+            "cache_read_tokens": 11264,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000354,
+            "input_tokens": 1130,
+            "output_tokens": 257
+          }
+        },
+        "01M5DRZ474NT4AGGWJTC0B5KPN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12845,
+          "usage": {
+            "cache_read_tokens": 3968,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000942,
+            "input_tokens": 8840,
+            "output_tokens": 37
+          }
+        },
+        "01M5DRZ899YMSN121VG8VB61BM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12900,
+          "usage": {
+            "cache_read_tokens": 12160,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000206,
+            "input_tokens": 715,
+            "output_tokens": 25
+          }
+        },
+        "01M5DRZ9FWHWGCTEWXYTMZTFBR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14081,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001279,
+            "input_tokens": 12051,
+            "output_tokens": 110
+          }
+        },
+        "01M5DRZB59HSJ8SD0A3Y1RS5C4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14207,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001267,
+            "input_tokens": 12240,
+            "output_tokens": 47
+          }
+        },
+        "01M5DRZFSAM2FS4B34S5PYVEEK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14302,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001268,
+            "input_tokens": 12355,
+            "output_tokens": 27
+          }
+        },
+        "01M5DRZHYPMMYYBQ7KJ7EJYWRX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21054,
+          "usage": {
+            "cache_read_tokens": 4608,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001732,
+            "input_tokens": 16342,
+            "output_tokens": 104
+          }
+        },
+        "01M5DRZPZ5DDMM80TFTPNV361E": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3582,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000209,
+            "input_tokens": 1760,
+            "output_tokens": 30
+          }
+        },
+        "01M5DRZRNR9W78S9BKX1V9TRPE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4416,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000286,
+            "input_tokens": 2454,
+            "output_tokens": 42
+          }
+        },
+        "01M5DRZTB6K4B5KBW5SJ66C35D": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4531,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000294,
+            "input_tokens": 2577,
+            "output_tokens": 34
+          }
+        },
+        "01M5DRZVTEERCXD87X7S2AMDG3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4589,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000299,
+            "input_tokens": 2637,
+            "output_tokens": 32
+          }
+        },
+        "01M5DRZXRZR7BPW68GZ8J0N05P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6518,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000498,
+            "input_tokens": 4551,
+            "output_tokens": 47
+          }
+        },
+        "01M5DRZZCA320JRMPDHTDPXVRR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6745,
+          "usage": {
+            "cache_read_tokens": 4224,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000306,
+            "input_tokens": 2491,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS00QA08A60QZ8AVVTP1QD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7341,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00058,
+            "input_tokens": 5374,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS02SDB9WMFV8626KD8X6F": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7505,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000592,
+            "input_tokens": 5549,
+            "output_tokens": 36
+          }
+        },
+        "01M5DS042QCBMTXHABEFF4H70P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7563,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000595,
+            "input_tokens": 5614,
+            "output_tokens": 29
+          }
+        },
+        "01M5DS055APCRRR4DHM6EXAM8A": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8568,
+          "usage": {
+            "cache_read_tokens": 4352,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00048,
+            "input_tokens": 4180,
+            "output_tokens": 36
+          }
+        },
+        "01M5DS06QP8ZVZWH3R1BQT9EEZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9940,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000835,
+            "input_tokens": 7986,
+            "output_tokens": 34
+          }
+        },
+        "01M5DS08RQ5B496TDKVR9Q6RPW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11853,
+          "usage": {
+            "cache_read_tokens": 7296,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000541,
+            "input_tokens": 4527,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS09PJD6FG2S7HTJDMMX8P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12578,
+          "usage": {
+            "cache_read_tokens": 9728,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000394,
+            "input_tokens": 2820,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS0AWGFAA7E49VPAT5J2T6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12627,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001102,
+            "input_tokens": 10677,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS0CBMZS3AQ9HMHWNSPH75": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12680,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001107,
+            "input_tokens": 10730,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS0DMXBQ0FQX6H83YKJABV": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13596,
+          "usage": {
+            "cache_read_tokens": 4352,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000983,
+            "input_tokens": 9207,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS0F2DRJCH0VH6YF9RBBQB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13728,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001212,
+            "input_tokens": 11777,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS0G740WQCJ3Z7RJ48ZP0Q": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14136,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001257,
+            "input_tokens": 12175,
+            "output_tokens": 41
+          }
+        },
+        "01M5DS0HQ49VTBWRRBHE4JE9WT": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14458,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001305,
+            "input_tokens": 12457,
+            "output_tokens": 81
+          }
+        },
+        "01M5DS0KC8P6YKB00VA56G3C8Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14627,
+          "usage": {
+            "cache_read_tokens": 8448,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000739,
+            "input_tokens": 6088,
+            "output_tokens": 91
+          }
+        },
+        "01M5DS0PABN4GWN66PTVC4057V": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14811,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001327,
+            "input_tokens": 12844,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS0QK48CP72TVEJFRT2YHS": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14859,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001324,
+            "input_tokens": 12912,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS0SWH8GKXS1C7Y9JAG87A": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21584,
+          "usage": {
+            "cache_read_tokens": 13952,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000915,
+            "input_tokens": 7602,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS0VTCX20XSDH741YWYERF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22516,
+          "usage": {
+            "cache_read_tokens": 6272,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.0017,
+            "input_tokens": 16211,
+            "output_tokens": 33
+          }
+        },
+        "01M5DS104SXFG2SWZZ8GWRDVVJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3613,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000226,
+            "input_tokens": 1756,
+            "output_tokens": 65
+          }
+        },
+        "01M5DS130VFW1HSS6K7JJ83DF4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5573,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000405,
+            "input_tokens": 3603,
+            "output_tokens": 50
+          }
+        },
+        "01M5DS14EVF2FG2VK6Z7JXVQBP": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5641,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000403,
+            "input_tokens": 3691,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS15Z0FB20DH0C86BH7MBS": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7112,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00055,
+            "input_tokens": 5162,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS17AXCPVWTN67HJTTJ6X0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7166,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000556,
+            "input_tokens": 5216,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS18GRV35M186B4RJKV00M": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8456,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00069,
+            "input_tokens": 6494,
+            "output_tokens": 42
+          }
+        },
+        "01M5DS19TTAT8AFDD5PF4QBT6V": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8633,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000703,
+            "input_tokens": 6682,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS1B02VKEFHKMM9R5PRG3B": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9145,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000783,
+            "input_tokens": 7122,
+            "output_tokens": 103
+          }
+        },
+        "01M5DS1CXV1ZQJCA4RQ0768MAQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9232,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000764,
+            "input_tokens": 7278,
+            "output_tokens": 34
+          }
+        },
+        "01M5DS1FA3FP33CXCB3JASN6AX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9470,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00082,
+            "input_tokens": 7435,
+            "output_tokens": 115
+          }
+        },
+        "01M5DS1GVME0KNKRXGBXRV88D4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9677,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000825,
+            "input_tokens": 7683,
+            "output_tokens": 74
+          }
+        },
+        "01M5DS1JHNATGXSZRNQXVHKE5G": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9761,
+          "usage": {
+            "cache_read_tokens": 8448,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000243,
+            "input_tokens": 1246,
+            "output_tokens": 67
+          }
+        },
+        "01M5DS1MTGPGT41MF8TA25145C": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 16494,
+          "usage": {
+            "cache_read_tokens": 9472,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000812,
+            "input_tokens": 6984,
+            "output_tokens": 38
+          }
+        },
+        "01M5DS1P7P7ASEEG87BX3JBPTY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 16555,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001495,
+            "input_tokens": 14605,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS1QPXMG6VRXQQXDF0XK26": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17541,
+          "usage": {
+            "cache_read_tokens": 16256,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000302,
+            "input_tokens": 1257,
+            "output_tokens": 28
+          }
+        },
+        "01M5DS1S7VJRA5KPMKSY0E5E6T": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 17606,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.0016,
+            "input_tokens": 15656,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS1TTDSTX3ZQ6FHDAQ4BBG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18277,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001667,
+            "input_tokens": 16328,
+            "output_tokens": 29
+          }
+        },
+        "01M5DS1W5C3508986WGG05YASH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18340,
+          "usage": {
+            "cache_read_tokens": 8320,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001097,
+            "input_tokens": 9990,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS1XB22XVDC0SCSDMK88VW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18625,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001903,
+            "input_tokens": 18523,
+            "output_tokens": 102
+          }
+        },
+        "01M5DS1YXPW237T356REC2Q0TP": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18745,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001714,
+            "input_tokens": 16794,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS216RKTN68KEP2JEKAJ4M": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 25478,
+          "usage": {
+            "cache_read_tokens": 17408,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001015,
+            "input_tokens": 7985,
+            "output_tokens": 85
+          }
+        },
+        "01M5DS22QFHKN8BJ7RE757FDNN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 25643,
+          "usage": {
+            "cache_read_tokens": 16384,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001146,
+            "input_tokens": 9118,
+            "output_tokens": 141
+          }
+        },
+        "01M5DS24BBR996EVEY9NVT9EJP": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 25934,
+          "usage": {
+            "cache_read_tokens": 25216,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000412,
+            "input_tokens": 499,
+            "output_tokens": 219
+          }
+        },
+        "01M5DS26D83E8FVRJYHCR2CM2C": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 26154,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002455,
+            "input_tokens": 24204,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS2AVFB3C2H6H39RCH8ZF5": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3599,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000216,
+            "input_tokens": 1764,
+            "output_tokens": 43
+          }
+        },
+        "01M5DS2CGKBDW9PAW5Q9T6YEN0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4295,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000271,
+            "input_tokens": 2338,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS2DSAZ74TESW122J0NYT7": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4472,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000294,
+            "input_tokens": 2504,
+            "output_tokens": 48
+          }
+        },
+        "01M5DS2FTD9SSX6BA0ZEE4TCCJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5012,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000346,
+            "input_tokens": 3047,
+            "output_tokens": 45
+          }
+        },
+        "01M5DS2HD2Y416S8EHA06CTW2P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5099,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000352,
+            "input_tokens": 3141,
+            "output_tokens": 38
+          }
+        },
+        "01M5DS2JZQPMBCQKEY34MFT6EK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11978,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001037,
+            "input_tokens": 10028,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS2MCGP1AB25Y5HT7NKXHG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12636,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001103,
+            "input_tokens": 10686,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS2NG6HS9XN4AEGG06BS7W": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13221,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001169,
+            "input_tokens": 11252,
+            "output_tokens": 49
+          }
+        },
+        "01M5DS2QF6BJWJFM79RBSJ9PEW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13411,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00122,
+            "input_tokens": 11362,
+            "output_tokens": 129
+          }
+        },
+        "01M5DS2SD15NEQX3TYR1PW7S78": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13584,
+          "usage": {
+            "cache_read_tokens": 13056,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000202,
+            "input_tokens": 481,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS2TGQRMGTDS0RB1SCNSDD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13636,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001376,
+            "input_tokens": 13605,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS2WYBPWE00HF8JH5FPSSB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 20378,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001903,
+            "input_tokens": 18364,
+            "output_tokens": 94
+          }
+        },
+        "01M5DS31DFQJHG2YX652CWY9ES": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3611,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000223,
+            "input_tokens": 1761,
+            "output_tokens": 58
+          }
+        },
+        "01M5DS33A5NSXQ6608X6ZG9V60": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4393,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000278,
+            "input_tokens": 2443,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS34KBPZ40C7JDJ236N8MG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5582,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000426,
+            "input_tokens": 3561,
+            "output_tokens": 101
+          }
+        },
+        "01M5DS367Y2EXZJNDQN3SFKNZK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 8059,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000648,
+            "input_tokens": 6102,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS385J93Q7KE4ZN24GFVZM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10342,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000874,
+            "input_tokens": 8391,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS39BX7GDKZBHNR16QJ741": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12888,
+          "usage": {
+            "cache_read_tokens": 7936,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000591,
+            "input_tokens": 4912,
+            "output_tokens": 40
+          }
+        },
+        "01M5DS3ASDE4S1610CD3A5NH0K": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13084,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001156,
+            "input_tokens": 11113,
+            "output_tokens": 51
+          }
+        },
+        "01M5DS3CDCW2EDQZMKTZ1TYY03": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13203,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001184,
+            "input_tokens": 11192,
+            "output_tokens": 91
+          }
+        },
+        "01M5DS3DWQ6959S29J7641J9YE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13345,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00118,
+            "input_tokens": 11378,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS3F4QKNP4YQCDY480AXDJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13393,
+          "usage": {
+            "cache_read_tokens": 13184,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000164,
+            "input_tokens": 182,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS3HFRA0YAP55HE5HPPMTX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 20094,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001858,
+            "input_tokens": 18121,
+            "output_tokens": 53
+          }
+        },
+        "01M5DS3K3EKFDGHQDT1RTZHQFB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 20855,
+          "usage": {
+            "cache_read_tokens": 12928,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000934,
+            "input_tokens": 7897,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS3M9TF7KMCXSV6N2PYGZ9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21523,
+          "usage": {
+            "cache_read_tokens": 5376,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001702,
+            "input_tokens": 16062,
+            "output_tokens": 85
+          }
+        },
+        "01M5DS3NZX303JFT2Y7RFCAZW2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21580,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001998,
+            "input_tokens": 19627,
+            "output_tokens": 33
+          }
+        },
+        "01M5DS3QS1SA790PRYA5JQ5EWX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21811,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002048,
+            "input_tokens": 19792,
+            "output_tokens": 99
+          }
+        },
+        "01M5DS3SR5QTVMMMN45X4WJSYA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21926,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002031,
+            "input_tokens": 19979,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS3W3F5KV36FFGGHV71K72": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 28611,
+          "usage": {
+            "cache_read_tokens": 4224,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002496,
+            "input_tokens": 24350,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS3XHPP4W5M9XC6J2JVJ3B": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 29004,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002945,
+            "input_tokens": 28893,
+            "output_tokens": 111
+          }
+        },
+        "01M5DS3ZFDY6H0BNPFKJ0689R6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 29172,
+          "usage": {
+            "cache_read_tokens": 28416,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000371,
+            "input_tokens": 729,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS41YEDKM1NNJXK8397NP6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 35703,
+          "usage": {
+            "cache_read_tokens": 19840,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001818,
+            "input_tokens": 15779,
+            "output_tokens": 84
+          }
+        }
+      },
+      "physical_request_count": 100,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 100,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 5,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8333333333333334
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "eff59c6d908dae8e396ba95857cfdd3884949ac38fa6d06dd561e831bffa009b"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "8fdea25a6f24287adc53de3161315eb165bdb7a9aabab1d59056d14adc9edbda",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "9c49419843091f578b13d2502a48fc6c6afcce67566896da61ad9640a40b5ad7"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_d8f45f8cb23c466b2be20fde173667f21e6fc0c32f3d105e6c23686de103388d",
+        "lesson_9fe901976c8d7c43d278d63fb30ab0b8c3dceaceba69a7d1931cdaab98684180"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 416382,
+      "meter_matches_ledger": true,
+      "meter_tokens": 416382,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "9c49419843091f578b13d2502a48fc6c6afcce67566896da61ad9640a40b5ad7"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DS474YBV44JYQVD6MMES0P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3599,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000375,
+            "input_tokens": 3562,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS48N5RMMYHMB8YQ9WP96E": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4528,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000295,
+            "input_tokens": 2571,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS4A3JCHQ8QD456Y2YWX51": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4943,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000334,
+            "input_tokens": 2992,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS4BCY6EKXPM6DNP7W9PYQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11133,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000965,
+            "input_tokens": 9151,
+            "output_tokens": 62
+          }
+        },
+        "01M5DS4DV6H9H5CS4JWAQWA35Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11329,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000971,
+            "input_tokens": 9381,
+            "output_tokens": 28
+          }
+        },
+        "01M5DS4EWS0FDXAPFB1TBWZBB9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12167,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001056,
+            "input_tokens": 10216,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS4GTV1ZJ4NN658PQAZA9E": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12269,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001066,
+            "input_tokens": 10320,
+            "output_tokens": 29
+          }
+        },
+        "01M5DS4J3NRWR2HFEJ7F7E5GBG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12664,
+          "usage": {
+            "cache_read_tokens": 11136,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000275,
+            "input_tokens": 1500,
+            "output_tokens": 28
+          }
+        },
+        "01M5DS4NFGJ9E35PQS7VBS5T1C": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13413,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001186,
+            "input_tokens": 11450,
+            "output_tokens": 43
+          }
+        },
+        "01M5DS4QK1MJ9C0VHWXF4A5JTZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13514,
+          "usage": {
+            "cache_read_tokens": 12544,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000234,
+            "input_tokens": 942,
+            "output_tokens": 28
+          }
+        },
+        "01M5DS4RN9TD4VAFJ6M06V0X8K": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 13920,
+          "usage": {
+            "cache_read_tokens": 10880,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000425,
+            "input_tokens": 3010,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS4TN4EKGTACNJWQ3KBR0K": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14064,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001268,
+            "input_tokens": 12058,
+            "output_tokens": 86
+          }
+        },
+        "01M5DS4W1EVHT10YZ47BKPVTRC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14289,
+          "usage": {
+            "cache_read_tokens": 12032,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000365,
+            "input_tokens": 2210,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS4X9T1ND7KB137W09BBEC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14335,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001272,
+            "input_tokens": 12388,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS4ZBVQ8P3H7ZSWJX2B89B": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21011,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00194,
+            "input_tokens": 19063,
+            "output_tokens": 28
+          }
+        },
+        "01M5DS50TCNESXH72VAH3N52GR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21792,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002017,
+            "input_tokens": 19846,
+            "output_tokens": 26
+          }
+        },
+        "01M5DS52389HTAKRJ573XHX85N": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 21854,
+          "usage": {
+            "cache_read_tokens": 13312,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000999,
+            "input_tokens": 8514,
+            "output_tokens": 28
+          }
+        },
+        "01M5DS53P4ZPYP2PG1W78ZHV81": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22438,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002082,
+            "input_tokens": 20490,
+            "output_tokens": 28
+          }
+        },
+        "01M5DS54R8VXFK4PK1DF8QQTGD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 23074,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002174,
+            "input_tokens": 21056,
+            "output_tokens": 98
+          }
+        },
+        "01M5DS56CG3RX5P1HK1SFV278W": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 23187,
+          "usage": {
+            "cache_read_tokens": 12160,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001235,
+            "input_tokens": 11000,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS58KNSDTWGCMD5XWBPJ3Z": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 29905,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002846,
+            "input_tokens": 27915,
+            "output_tokens": 70
+          }
+        },
+        "01M5DS5AXSGSH6HSQCZYA75SCX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 30035,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002875,
+            "input_tokens": 28005,
+            "output_tokens": 110
+          }
+        },
+        "01M5DS5CFBNB9FBD1XQ2E5Y0EF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 30201,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002858,
+            "input_tokens": 28254,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS5EYDY9Y3A1BBA82S8SVG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 36718,
+          "usage": {
+            "cache_read_tokens": 13184,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002513,
+            "input_tokens": 23464,
+            "output_tokens": 70
+          }
+        }
+      },
+      "physical_request_count": 24,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 24,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 5,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8333333333333334
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "9c49419843091f578b13d2502a48fc6c6afcce67566896da61ad9640a40b5ad7"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "75d963bf3d173dc173ca3ab7de2f2a7bc1a1c0b20414fb9e1472e5b3489c37ed",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b00b658790a29928209f1b9153f0c31c51df87b90ab764188b6679f5c937e816"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_40c0a9ee3176bb8c7f8042232765b669436df89f1796a3e90ea51b99bff7b958",
+        "lesson_001760e6697559642b485f30ca30ce64cc2c11cd2717e878726b992154837f83"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 336786,
+      "meter_matches_ledger": true,
+      "meter_tokens": 336786,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b00b658790a29928209f1b9153f0c31c51df87b90ab764188b6679f5c937e816"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DS5KJH87XMRB0ZHW5ZKZYH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3595,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000215,
+            "input_tokens": 1761,
+            "output_tokens": 42
+          }
+        },
+        "01M5DS5N1KDPJNKJQJH0ZVRB2P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4311,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000275,
+            "input_tokens": 2350,
+            "output_tokens": 41
+          }
+        },
+        "01M5DS5PCX1H1ZYJAEBHS1D3SF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5114,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000351,
+            "input_tokens": 3164,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS5QGWFT1W5CTY7FNNV2DN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6244,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000464,
+            "input_tokens": 4292,
+            "output_tokens": 32
+          }
+        },
+        "01M5DS5S7WKGJDGVYW9K5P0V7W": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10045,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000849,
+            "input_tokens": 8083,
+            "output_tokens": 42
+          }
+        },
+        "01M5DS5TNBX7Y6J97Q2ZS1WEPF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10125,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000858,
+            "input_tokens": 8160,
+            "output_tokens": 45
+          }
+        },
+        "01M5DS5W42XSS6W4RPB7X8Z654": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10603,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.0009,
+            "input_tokens": 8653,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS5X5APKP4DR5FFYZPRPWF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 11243,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000996,
+            "input_tokens": 9213,
+            "output_tokens": 110
+          }
+        },
+        "01M5DS5Z8C9RDFM6JBVCN19F5J": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12082,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001087,
+            "input_tokens": 10033,
+            "output_tokens": 129
+          }
+        },
+        "01M5DS611P875BD07RWSVZ4RVN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12255,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001071,
+            "input_tokens": 10288,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS6343NPJZHYKCMWYA9T74": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 12303,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001068,
+            "input_tokens": 10356,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS65GW01H0RV08M7DT5NB0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 18988,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001741,
+            "input_tokens": 17031,
+            "output_tokens": 37
+          }
+        },
+        "01M5DS66XVR9BJAKF4K6DPG3Y4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19176,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001757,
+            "input_tokens": 17226,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS68C2TQMHWHK6GP5ZR25K": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19870,
+          "usage": {
+            "cache_read_tokens": 6016,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001527,
+            "input_tokens": 13651,
+            "output_tokens": 203
+          }
+        },
+        "01M5DS6AVK5SNS96V2DVVNZ2W7": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 19924,
+          "usage": {
+            "cache_read_tokens": 4992,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001555,
+            "input_tokens": 14902,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS6CA6KTSHRA4462MYVHJ9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 20385,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001944,
+            "input_tokens": 18270,
+            "output_tokens": 195
+          }
+        },
+        "01M5DS6EK5ZV58X7DG04VWK4GD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 20569,
+          "usage": {
+            "cache_read_tokens": 20096,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000259,
+            "input_tokens": 446,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS6NP8VAEF8Q9JTAQHHVFB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 28159,
+          "usage": {
+            "cache_read_tokens": 20352,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00101,
+            "input_tokens": 7743,
+            "output_tokens": 64
+          }
+        },
+        "01M5DS6Q2Q7JAMN652W6TZ22Y9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 28352,
+          "usage": {
+            "cache_read_tokens": 9856,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001974,
+            "input_tokens": 18432,
+            "output_tokens": 64
+          }
+        },
+        "01M5DS6RM5DFRZ1YG7A99AK5GB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 28454,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002683,
+            "input_tokens": 26507,
+            "output_tokens": 27
+          }
+        },
+        "01M5DS6TQ9WNSJA7P3AFV3JX3P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 34989,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.003361,
+            "input_tokens": 32981,
+            "output_tokens": 88
+          }
+        }
+      },
+      "physical_request_count": 21,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 21,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 5,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8333333333333334
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b00b658790a29928209f1b9153f0c31c51df87b90ab764188b6679f5c937e816"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "0352d649eb9bdbc193018370a67c435325b57e62d48b15288fd7ace8bfb37820",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 367,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "7064c5508e6837eb037287e6395bf49333082f18d47b8fd1183572309ae58a74"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 300544,
+      "meter_matches_ledger": true,
+      "meter_tokens": 300544,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "7064c5508e6837eb037287e6395bf49333082f18d47b8fd1183572309ae58a74"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DRVQP79ACE0E0S49VJ4RG3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3598,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000377,
+            "input_tokens": 3554,
+            "output_tokens": 44
+          }
+        },
+        "01M5DRVT36E8GWCXJQ3Q4YEWCA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4846,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000331,
+            "input_tokens": 2878,
+            "output_tokens": 48
+          }
+        },
+        "01M5DRVVHYDQ2Z7FZRMZXWMRA0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5155,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000357,
+            "input_tokens": 3200,
+            "output_tokens": 35
+          }
+        },
+        "01M5DRVX0GTM4CJKMTZWEM0GRV": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6223,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000461,
+            "input_tokens": 4275,
+            "output_tokens": 28
+          }
+        },
+        "01M5DRVYHPW5FS2EMTJJV56EM1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6885,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000527,
+            "input_tokens": 4937,
+            "output_tokens": 28
+          }
+        },
+        "01M5DRW0VMB7EH0KV666DYKH49": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7232,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000562,
+            "input_tokens": 5283,
+            "output_tokens": 29
+          }
+        },
+        "01M5DRW2BT3WNEFJGFDM1VAP6T": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7548,
+          "usage": {
+            "cache_read_tokens": 6656,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000171,
+            "input_tokens": 855,
+            "output_tokens": 37
+          }
+        },
+        "01M5DRW3VTYXDAEW0HQVM6KFF0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7737,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000631,
+            "input_tokens": 5742,
+            "output_tokens": 75
+          }
+        },
+        "01M5DRW5T49HVGSK16N0N4VB6D": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7916,
+          "usage": {
+            "cache_read_tokens": 4992,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00036,
+            "input_tokens": 2879,
+            "output_tokens": 45
+          }
+        },
+        "01M5DRW73Y3G5E6JWXFN3N39K6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7962,
+          "usage": {
+            "cache_read_tokens": 6016,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000266,
+            "input_tokens": 1919,
+            "output_tokens": 27
+          }
+        },
+        "01M5DRW91VZGYBD85S1FH3Z77Z": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14645,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001306,
+            "input_tokens": 12690,
+            "output_tokens": 35
+          }
+        },
+        "01M5DRWAHTQ1KD50XYVXKK49PJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 14742,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001313,
+            "input_tokens": 12794,
+            "output_tokens": 28
+          }
+        },
+        "01M5DRWC5TRC55H4YYT01SB1X6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15477,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001389,
+            "input_tokens": 13521,
+            "output_tokens": 36
+          }
+        },
+        "01M5DRWDDB8JT55GK9ZX1QDKN6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15753,
+          "usage": {
+            "cache_read_tokens": 7552,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000935,
+            "input_tokens": 8103,
+            "output_tokens": 98
+          }
+        },
+        "01M5DRWEZB5DHHNAEPX4J70CDB": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15884,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001434,
+            "input_tokens": 13919,
+            "output_tokens": 45
+          }
+        },
+        "01M5DRWG87R25QE1NZXDSQ8RPC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 15931,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001431,
+            "input_tokens": 13984,
+            "output_tokens": 27
+          }
+        },
+        "01M5DRWJFTBMHX1JX2T7RB9WVX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 22618,
+          "usage": {
+            "cache_read_tokens": 15360,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000895,
+            "input_tokens": 7219,
+            "output_tokens": 39
+          }
+        },
+        "01M5DRWKXBFNJ5Y14M3E00ETWM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 23577,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002197,
+            "input_tokens": 21626,
+            "output_tokens": 31
+          }
+        },
+        "01M5DRWNNQK6474RSDBJCBQ3CK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24040,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002275,
+            "input_tokens": 22010,
+            "output_tokens": 110
+          }
+        },
+        "01M5DRWRR580DPNKSS0KE9KXHE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24158,
+          "usage": {
+            "cache_read_tokens": 23808,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000283,
+            "input_tokens": 324,
+            "output_tokens": 26
+          }
+        },
+        "01M5DRWTZVDET207S74HEPAXF6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24264,
+          "usage": {
+            "cache_read_tokens": 14592,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001131,
+            "input_tokens": 9627,
+            "output_tokens": 45
+          }
+        },
+        "01M5DRWWEMTVGT9T61C6JXD3F0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 24353,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.002289,
+            "input_tokens": 22367,
+            "output_tokens": 66
+          }
+        }
+      },
+      "physical_request_count": 22,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 22,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 6,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 367,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "7064c5508e6837eb037287e6395bf49333082f18d47b8fd1183572309ae58a74"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "0e996d30e0f26ca4729505e68589f8f22059e47870299bb503c624d82eaeecf2",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 367,
+          "correct": 366,
+          "exit_zero": false,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.997275204359673,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a52c2fbec388855a264109bd481c768379decd990b3a040fb6650a97985eefae"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_9e71aa1e607a270f20b6a12ce02e3d60241ba40637080f3d2ad2960c86379d01",
+        "lesson_e36547802d76419e3dead149100b887253e366388a7da1a223e877c87ec33113"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 73468,
+      "meter_matches_ledger": true,
+      "meter_tokens": 73468,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a52c2fbec388855a264109bd481c768379decd990b3a040fb6650a97985eefae"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DS735M14R6M4GHM0QHBVX8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3610,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000378,
+            "input_tokens": 3567,
+            "output_tokens": 43
+          }
+        },
+        "01M5DS74PZ64MADM0XESCBR0H2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4310,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000275,
+            "input_tokens": 2349,
+            "output_tokens": 41
+          }
+        },
+        "01M5DS77VC41F6F3VMC7XKXK27": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4749,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000491,
+            "input_tokens": 4709,
+            "output_tokens": 40
+          }
+        },
+        "01M5DS796WSWGMWE6E03QP9EKQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4811,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00032,
+            "input_tokens": 2862,
+            "output_tokens": 29
+          }
+        },
+        "01M5DS7B62ZQSMKZ4HS773VWK9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9156,
+          "usage": {
+            "cache_read_tokens": 4096,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000559,
+            "input_tokens": 5030,
+            "output_tokens": 30
+          }
+        },
+        "01M5DS7CCW1Z12TNP4X69MCHV1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 9892,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000842,
+            "input_tokens": 7909,
+            "output_tokens": 63
+          }
+        },
+        "01M5DS7E4Q6491DTZC82WTM2FD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10023,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000848,
+            "input_tokens": 8056,
+            "output_tokens": 47
+          }
+        },
+        "01M5DS7FKCPME9Z9NQCCQBKY6R": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 10075,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000847,
+            "input_tokens": 8124,
+            "output_tokens": 31
+          }
+        },
+        "01M5DS7JAPR6RH2PPYQCNBBGK3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 16842,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.001559,
+            "input_tokens": 14803,
+            "output_tokens": 119
+          }
+        }
+      },
+      "physical_request_count": 9,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 9,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 6,
+        "correct": 4,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.6666666666666666
+      },
+      "selected_public_grade": {
+        "checks": 367,
+        "correct": 366,
+        "exit_zero": false,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.997275204359673,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a52c2fbec388855a264109bd481c768379decd990b3a040fb6650a97985eefae"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "00ba36e3e8dcded817d22da35f040e96fb83ace74acb3250bf13c7443cbb2094",
+      "task_id": "bottle-header-security",
+      "unknown_dispatch_usage": 0
+    }
+  ],
+  "incomplete_episodes": 0,
+  "projection": "counts_and_content_free_provenance_no_transcripts_credentials_or_task_solutions",
+  "runtime_revision": "f1982f33af3ec4b734ca0625a80eb52c58d20448",
+  "schema_version": 1,
+  "source_report_bytes_sha256": "cddf6f3b4d0b901086b58cd8ddfe7eb1b8b57bf9bbe523795e8e166fe0f2268b",
+  "total_ledger_tokens": 5085269,
+  "total_physical_requests": 384,
+  "total_tokens": 5085269,
+  "total_unknown_dispatch_usage": 0
+}

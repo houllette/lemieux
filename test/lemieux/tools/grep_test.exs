@@ -19,7 +19,13 @@ defmodule Lemieux.Tools.GrepTest do
     def write_file(_programs, cwd, path, contents), do: Local.write_file(nil, cwd, path, contents)
 
     def run(programs, command, opts) do
-      program = command |> String.trim_leading("'") |> String.split(["'", " "], parts: 2) |> hd()
+      program =
+        command
+        |> String.split(" && ", parts: 2)
+        |> List.last()
+        |> String.trim_leading("'")
+        |> String.split(["'", " "], parts: 2)
+        |> hd()
 
       if program in programs,
         do: {:ok, [{:data, "sh: #{program}: command not found\n"}, {:exit_status, 127}]},

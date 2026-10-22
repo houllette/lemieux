@@ -265,6 +265,7 @@ defmodule Lemieux.Tools.Grep do
 
     case Command.run(search.environment, directory, command,
            timeout_ms: @rg_timeout_ms,
+           workspace_cwd: search.cwd,
            max_bytes: @rg_output_bytes
          ) do
       {:ok, %{status: 127}} -> :unavailable

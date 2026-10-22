@@ -22,7 +22,7 @@ defmodule Lemieux.CLI.Learning.CapturedLesson do
       with :ok <- Capture.verify(record),
            true <- record["scope"] == Storage.scope(workspace),
            {:ok, context} <- authority.(),
-           {:ok, lesson} <- lesson(record, task_id, context, opts),
+           {:ok, lesson} <- build(record, task_id, context, opts),
            {:ok, _receipt} <- Promotion.retain(store, lesson, authority) do
         {:cont, {:ok, ids ++ [lesson.id]}}
       else
@@ -31,7 +31,9 @@ defmodule Lemieux.CLI.Learning.CapturedLesson do
     end)
   end
 
-  defp lesson(record, task_id, context, opts) do
+  @spec build(record :: map(), task_id :: String.t(), context :: map(), opts :: keyword()) ::
+          {:ok, Lesson.t()} | {:error, term()}
+  def build(record, task_id, context, opts \\ []) do
     bytes = JSON.encode!(record)
 
     reference =
@@ -81,15 +83,19 @@ defmodule Lemieux.CLI.Learning.CapturedLesson do
         "kind" => "procedure",
         "outcome" => "insufficient_evidence",
         "qualification" => "unconfirmed",
-        "applicability" => ["coding verification failure recovery"],
+        "applicability" =>
+          Keyword.get(opts, :applicability, ["coding verification failure recovery"]),
         "mechanism" =>
           "Observed #{record["kind"]} for #{record["command"] || "a tool or correction"}. Inspect the bounded source before proposing a change; this observation proves neither task correctness nor transfer.",
         "supporting" => [finding],
         "contradicting" => [],
         "candidate_ids" => [],
         "binding" => context.lesson_context,
-        "provenance" => %{"actor" => "qualification-host", "capture_sha256" => record["sha256"]},
-        "created_at" => DateTime.to_iso8601(context.now),
+        "provenance" => %{
+          "actor" => Keyword.get(opts, :actor, "qualification-host"),
+          "capture_sha256" => record["sha256"]
+        },
+        "created_at" => record["created_at"],
         "expires_at" => nil,
         "supersedes" => [],
         "source_lessons" => Enum.map(Keyword.get(opts, :source_lessons, []), &Lesson.to_map/1)

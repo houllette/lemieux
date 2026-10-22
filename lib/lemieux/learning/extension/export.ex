@@ -21,9 +21,11 @@ defmodule Lemieux.Learning.Extension.Export do
   """
 
   alias Lemieux.Contract
+  alias Lemieux.Learning.Extension.Review
 
   @manifest "lemieux-extension.json"
   @receipt "lemieux-extension-export.json"
+  @qualification "lemieux-extension-qualification.json"
   @root_files ~w(mix.exs mix.lock .formatter.exs README.md BUILDING.md LICENSE LICENSE.md)
 
   @doc "Copies a declared extension into a new directory and writes its integrity receipt."
@@ -59,20 +61,43 @@ defmodule Lemieux.Learning.Extension.Export do
          :ok <- matching_manifest(receipt, manifest),
          :ok <- matching_files(root, receipt["files"]),
          {:ok, files} <- read_files(root, Map.keys(receipt["files"])) do
-      verify_files(files, receipt["files"])
+      with :ok <- verify_files(files, receipt["files"]),
+           do: qualification(root, receipt)
     end
   end
 
-  defp validate_manifest(%{"schema_version" => 1, "module" => module, "files" => files})
+  defp validate_manifest(
+         %{"schema_version" => 1, "module" => module, "files" => files} = manifest
+       )
        when is_binary(module) and is_list(files) do
     if Regex.match?(~r/^[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*$/, module) do
-      validate_files(files)
+      with :ok <- validate_files(files), do: dependencies(manifest)
     else
       {:error, :invalid_extension_module}
     end
   end
 
   defp validate_manifest(_manifest), do: {:error, :invalid_extension_manifest}
+
+  @doc "Checks an explicit complete helper graph; legacy unassessed manifests may omit it."
+  @spec dependencies(manifest :: map()) :: :ok | {:error, term()}
+  def dependencies(%{"files" => files, "dependencies" => graph, "capabilities" => capabilities})
+      when is_list(files) and is_map(graph) and is_list(capabilities) do
+    if Enum.sort(Map.keys(graph)) == Enum.sort(files) and length(capabilities) <= 32 and
+         Enum.all?(graph, &dependency_entry?(&1, files)) and
+         Enum.all?(capabilities, &(is_binary(&1) and byte_size(&1) in 1..128)),
+       do: :ok,
+       else: {:error, :incomplete_extension_dependencies}
+  end
+
+  def dependencies(manifest) do
+    if Map.has_key?(manifest, "dependencies") or Map.has_key?(manifest, "capabilities"),
+      do: {:error, :incomplete_extension_dependencies},
+      else: :ok
+  end
+
+  defp dependency_entry?({_file, needs}, files),
+    do: is_list(needs) and Enum.uniq(needs) == needs and Enum.all?(needs, &(&1 in files))
 
   defp validate_files(files) do
     if Enum.all?(files, &is_binary/1) and length(files) == length(Enum.uniq(files)) and
@@ -115,7 +140,9 @@ defmodule Lemieux.Learning.Extension.Export do
 
   defp source_names(root, relative, names) do
     names
-    |> Enum.reject(&(relative == "" and &1 in [@receipt, "_build", "deps", ".git", "tmp"]))
+    |> Enum.reject(
+      &(relative == "" and &1 in [@receipt, @qualification, "_build", "deps", ".git", "tmp"])
+    )
     |> Enum.reduce_while({:ok, []}, fn name, {:ok, paths} ->
       path = if relative == "", do: name, else: Path.join(relative, name)
 
@@ -171,7 +198,7 @@ defmodule Lemieux.Learning.Extension.Export do
 
     Path.type(path) == :relative and Path.join(parts) == path and
       Enum.all?(parts, &(&1 not in [".", "..", ""])) and
-      (path in [@manifest, @receipt | @root_files] or
+      (path in [@manifest, @receipt, @qualification | @root_files] or
          match?([directory, _ | _] when directory in ["lib", "priv", "test", "bench"], parts))
   end
 
@@ -207,6 +234,38 @@ defmodule Lemieux.Learning.Extension.Export do
       {:error, :enoent} -> :ok
       {:ok, _stat} -> {:error, :destination_exists}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # This portable marker binds public evidence identities to the exact export.
+  # It is integrity metadata, not authority or an independent re-run of a judge.
+  # Confirmation.verify_export/3 additionally verifies the retained private plan.
+  defp qualification(root, receipt) do
+    case File.lstat(Path.join(root, @qualification)) do
+      {:error, :enoent} ->
+        :ok
+
+      {:ok, %{type: :regular, size: size}} when size <= 65_536 ->
+        with {:ok, bytes} <- read_file(root, @qualification),
+             {:ok, marker} <- Contract.decode(bytes),
+             :ok <- Contract.verify_digest(marker, "sha256"),
+             true <-
+               marker["schema_version"] == 1 and marker["qualification"] == "confirmed" and
+                 marker["source_sha256"] == receipt["sha256"] and
+                 marker["production_active"] == false,
+             true <-
+               Enum.all?(
+                 ~w(build_sha256 confirmation_sha256 report_sha256),
+                 &(is_binary(marker[&1]) and Regex.match?(~r/\A[a-f0-9]{64}\z/, marker[&1]))
+               ),
+             :ok <- Review.verify(receipt["files"], marker["code_gate"], marker["review"]) do
+          :ok
+        else
+          _invalid -> {:error, :invalid_package_qualification}
+        end
+
+      _unsafe ->
+        {:error, :invalid_package_qualification}
     end
   end
 

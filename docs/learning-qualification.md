@@ -1,5 +1,265 @@
 # Qualifying learning before release
 
+## Whole-record research sequence
+
+The [recorded research sequence](qualification/2026-10-21-research-sequence/README.md)
+preserves implementation corrections, separately scoped hosted canaries and the
+development comparison. The profile canary demonstrated experience reaching an
+executed change; the asset canary exercised reviewed skills but did not
+demonstrate helper execution or setting changes. Neither establishes efficacy.
+
+`--research` selects a separate experimental protocol. It does not change the
+strict ordinary refinement policy or grant persistent activation. Freeze the
+executor and editor separately: for example, GPT-6 Luna/low executes every task
+and probe while GPT-6 Sol/high proposes and reflects. Reflection receives the
+whole public task/probe record, including unsuccessful and rejected experiments.
+Its positive, negative and uncertain lessons retain source pointers and remain
+unconfirmed. One metered structural repair may correct malformed reflection;
+it cannot retry an experiment or select a better outcome.
+
+The research search reviews successful as well as failed tasks, proposes general
+and domain changes, and probes their composition. `experimental_mean/v2` admits
+repeated mean gains or repeated fully verified ties for **task-local research**.
+A tie is a search choice, never evidence of improvement. Strict dominance and
+fresh host authority remain required by the existing persistent policy.
+
+The `whole_record_research/v3` protocol defines success as the independently
+verified file outcome for every arm. With complete, matching usage and transcript
+evidence, reaching the task turn limit does not erase a passing artifact grade
+only for refinement. Earlier protocols did erase it for probes while ordinary
+arms retained credit for the same files. Budget stops remain explicit in probe
+records and the report's `budget_stops` views; artifact success does not imply
+that the agent completed its final report. Provider failures, cancellations,
+timeouts and unknown usage still refuse complete qualification. The ordinary
+refinement default continues to require a completed task. Historical plans and
+results retain their original scoring rules.
+
+Version 4 adds `no_experience`: the same improver, probes and retention work with
+all earlier experience withheld from every subsequent proposal. Frozen,
+updating and withheld arms share the same per-episode allowance. Retrieval-only,
+disabled and equal-allowance retry controls remain. Related variants and repeated
+executions still count as one independent stream.
+
+First rehearse offline, then run a fresh hosted mechanism canary after explicit
+authorization. These examples use separate output directories; never reuse or
+quietly replay an incomplete intent:
+
+```sh
+mix run scripts/qualify_learning_study.exs --research --stage mechanism \
+  --output tmp/research-offline
+mix run scripts/qualify_learning_study.exs --research --stage mechanism --allow-live \
+  --model openai_codex:gpt-6-luna --effort low \
+  --editor-model openai_codex:gpt-6-sol --editor-effort high \
+  --output tmp/research-mechanism
+mix run scripts/qualify_learning_study.exs --research --stage development --allow-live \
+  --model openai_codex:gpt-6-luna --effort low \
+  --editor-model openai_codex:gpt-6-sol --editor-effort high \
+  --mechanism tmp/research-mechanism/mechanism.json \
+  --output tmp/research-development
+```
+
+The canary collects one seed task and executes one later task in six arms, twice.
+`mechanism.json` audits retained lessons, proposer exposure, a changed effective
+runtime, actual changed actions and the experience-withheld control. A larger
+hosted research run requires a passing receipt for the same source revision,
+models, efforts, inference route and research policy. An offline receipt cannot
+unlock hosted work. This is observed dataflow, not causal efficacy.
+
+`--assets` additionally searches one procedure tree and one allowlisted shipped
+setting. `--assets --asset-only` isolates that lane. Before review, an invalid
+draft may receive one tool-less, metered structural repair against the actual
+loader. The original answer is preserved; the repair receives no probe feedback
+and may not invent a different hypothesis or add components. A second invalid
+draft is rejected. This format repair is part of the frozen asset protocol and
+request allowance. Exact bytes receive a separate
+model review and fresh host digest approval before isolated probes. The actual
+skill loader, asset identities and request catalogues are verified. A personal
+research policy can admit UTF-8 `.py` files under `helpers/`; the loader never
+imports or executes them. The task must read and execute them through its normal
+confined tools. The canary requires observed procedure loading, helper execution
+and changed tool visibility before that asset policy can enter a larger study.
+Repository assets and default selection gain no such permission. These reviewed
+experiments do not qualify native exports or general automatic helper execution.
+
+Research task horizons support 8–200 requests. The frozen allowance funds each
+complete profile/asset experiment, originals, final executions and reflection;
+token and deadline bounds scale with the horizon. Retry receives the same full
+outer allowance. Reservations and actual physical dispatches are reported
+separately, and all unsuccessful search, review, acquisition and reflection work
+counts. A larger allowance is an upper bound, not a commitment to consume it.
+
+Whole-record reflection admits at most 1 MiB of complete public source bytes;
+the lesson wire limit remains 2 MiB and retrieval's total disclosure remains
+2 MiB. Oversized records refuse retention rather than silently discard evidence.
+Subscription qualification suppresses API-dollar admission estimates while
+retaining all reported usage and informational dollar values. Token, request,
+time and any separately configured outer dollar ceilings remain enforced.
+
+Research quality and efficiency have separate registered endpoints. Each compares
+updating with disabled, equal-budget retry and experience-withheld search, sharing
+alpha across all six tests. Quality needs a ten-point stream-success gain and at
+most 10% observed regressions. Efficiency needs at least 20% fewer **total** physical
+requests including acquisition, at least 80% paired-success streams, and a
+one-sided upper bound of at most 10% on quality regression. A cheap failure cannot
+qualify efficiency. Evidence must be complete, safe and actually exercise the
+mechanism. Legacy two-comparison statistics are diagnostic in version 4;
+`research_endpoints` owns its decisions and prospective quality power. Efficiency
+power is not inferred from quality power.
+
+After reviewing development feedback, freeze a new, separately curated unexposed
+manifest for `--stage confirmation`. Three quality comparisons must meet the
+prospective power requirement at alpha/6 before dispatch. More synthetic variants
+cannot satisfy independence. Underpowered or inconclusive results remain so;
+neither endpoint authorizes persistent activation or broader model/task claims.
+
+## Historical five-arm study
+
+The staged runner is `scripts/qualify_learning_study.exs`. Start with
+`--stage calibration`: it compares the ordinary harness with explicitly
+developer-authored workflow guidance on eight repository-shaped development
+families. This diagnoses whether the permitted harness surface can help; the
+reference guidance contains no implementation or private checks. After reviewing
+headroom, use a fresh output directory and `--stage development` for all five arms.
+Both stages default to Scripted. Hosted execution requires explicit authorization
+and `--allow-live`; model/effort/output switches follow the subscription rules below.
+
+The development corpus covers dependency layers, nested transactions, TTL/LRU,
+configuration overlays, event reconciliation, weighted intervals, integer
+apportionment and atomic patches. Each repository has source modules, a generated
+runtime, build tooling, public checks and private checks. Both source and generated
+runtime must pass. These are synthetic developer-visible diagnostics, not real
+GitHub issues or independent confirmation. Additional variants remain in their
+original family; eight families cannot be relabeled as eighty independent cases.
+Public checks cover the contract categories using different parameters from
+private checks. The initial calibration's smaller checker is retained as prior
+development evidence; it is not pooled with the strengthened corpus.
+
+`--manifest PATH` imports pinned external repositories instead of generated cases.
+The private JSON manifest has `schema_version: 1`, `metadata` (including `id`,
+`exposure: developer_exposed | unexposed`, and upstream revision/provenance), and
+`tasks`. Each task supplies `id`, `cluster`, `phase: seed | learning | confirmation`,
+`source`, `source_sha256`, an immutable local `image: sha256:...`, `prompt`,
+`public_pytest_args`, `immutable_paths`, `private_tests` and
+`private_tests_sha256`. Source and private test digests use
+`Lemieux.CLI.Learning.Leases.source_digest/1`. Remove Git history and credentials
+before freezing sources. Private tests must be outside the source tree and never
+enter model containers; separate grader containers receive a read-only `/tests`
+mount. File tools and shell commands share the logical `/app` workspace.
+The imported public prompt lists frozen verification paths and permits regression
+tests in separate new files. The same declared constraint applies to every arm;
+private test paths and contents stay outside that prompt.
+Directory-scoped search helpers keep the owned workspace mount and change
+directory inside the command environment, including absolute logical paths.
+Qualify each image/grader with an untouched baseline and a known reference repair
+before hosted work. This adapter runs pytest already installed in the image and
+does not install packages or enable network access. Adapted benchmark runtimes
+must be reported separately from official leaderboard results.
+
+`--stage confirmation --manifest PATH` requires an unexposed corpus attestation
+and adequate prospective power. Exposed repository tasks remain development
+evidence. The runner cannot prove the curator's independence or absence of
+training contamination from an exposure label.
+
+Plans with an `analysis` field use protocol version 3; version 2 plans and their
+historical analysis remain verifiable. Each independent stream owns its library
+per arm and repetition. Only earlier tasks in that stream can become experience.
+The generated development study first collects one fixed seed task per family
+through ordinary capture, with no search or seed selection. Registration freezes
+that recipe and every target before paid work; the target plan then pins actual
+retained seed bytes. Every learning arm/repetition receives the same initial seed
+inventory for its stream. Retrieval accumulates observations without probing;
+frozen refinement keeps the seed inventory; updating refinement also retains
+later observations and supported profiles. Seed usage is reported separately and
+included in the updating arm's request-ratio acceptance check. An external
+manifest can declare `phase: seed` tasks; an empty external seed inventory is
+explicitly reported and exercises no prior retrieval.
+After acquisition, every declared seed stream must contain retained experience
+before target episodes can start. An empty stream writes `seed-inventory.json`
+and stops; the runner never repeats a seed to force that check to pass. This is
+a presence check, not evidence that the lessons help. The archived `8303aac`
+study predates this gate and retained no seed lessons; its frozen comparisons
+cannot qualify prelearned-library transfer.
+Only confirmation-phase outcomes enter the primary endpoint, which is completion
+of every confirmation task and repetition in the stream. All episode success,
+usage and latency are also reported. Stream independence is a study-design
+requirement; grouping labels cannot establish it for overlapping repositories.
+
+The two primary comparisons are updating versus disabled and updating versus
+retry. Exact one-sided paired McNemar tests use alpha/2. The reported exact interval
+is for win probability conditional on a discordant stream, **not** an interval
+for percentage-point improvement. Other contrasts are diagnostic. Practical
+acceptance additionally requires a ten-point observed stream-success improvement,
+at most 10% regressing streams, total requests at most eight times each control,
+p95 latency at most ten times each control, and observed candidate promotion and
+rollback. Safety failures, incomplete execution or unknown usage still refuse a
+benefit claim. This is bounded efficacy evidence, not a universal no-regression
+or release-safety guarantee. See [NIST's paired-test assumptions](https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/mcnemar.htm).
+
+Power is computed before dispatch using the actual rejection and practical
+acceptance rule. With assumed win/loss probabilities 0.25/0.05, 80 independent
+streams give about 90.4% power per primary comparison and an 80.8% lower bound
+for detecting both. Those assumptions are predictions, not measured efficacy.
+An underpowered version 3 `independent_confirmation` plan is refused before
+execution. A small development study remains explicitly underpowered; significance
+does not establish representativeness or justify automatic asset activation.
+
+The study host gives task selection, retries and the proposer only public
+verification feedback. Private grades stay outside those decisions. Retries can
+use the full outer request allowance, stopping on public verification success;
+refinement runs only after failed public verification. Supported profiles and
+their contrast evidence become source-backed proposer lessons. All task, proposer,
+probe, promoted and unsuccessful work is metered. Pre-dispatch acquisition failures
+retain a diagnostic category, and the study freezes a 30-second acquisition limit.
+Incomplete checkpoints still require explicit recovery and are never replayed.
+A terminal `max_turns` probe with verified runtime evidence and complete usage is
+scored as a failed probe, allowing refinement to learn from an exhausted control.
+It cannot become a successful candidate even when its partial files pass public
+checks. Provider failures, missing usage and evaluator timeouts remain incomplete.
+The proposer receives the public task request explicitly alongside bounded
+transcript evidence; private grading is never included.
+Study workspaces hide arm and attempt labels behind opaque paths. Actual changed
+file bytes are retained before lease release, including shell-generated files;
+bounded or unreadable omissions refuse complete qualification. Private workspace
+artifacts remain outside model containers and are indexed by digest in the report.
+The request envelope scales with `--task-requests` (8–24): at least eight task
+allocations plus sixteen proposer calls, with six task allocations plus sixteen
+reserved for refinement. Every arm receives that same outer envelope; retry
+attempts can use it fully. The default twelve-call task allowance retains a
+160-call outer cap. A twenty-four-call task uses 208 outer slots.
+
+For example, after explicit hosted authorization:
+
+```sh
+mix run scripts/qualify_learning_study.exs --allow-live --stage calibration \
+  --model openai_codex:gpt-6-luna --effort low --output tmp/study-calibration-luna
+mix run scripts/qualify_learning_study.exs --allow-live --stage development \
+  --model openai_codex:gpt-6-luna --effort low --output tmp/study-development-luna
+```
+
+An inexpensive offline study rehearsal uses reference repairs through Scripted:
+
+```sh
+mix run scripts/qualify_learning_study.exs --stage development --offline-smoke \
+  --output tmp/study-offline-rehearsal
+```
+
+The offline subset cannot select a hosted provider. Reference implementations
+stay in the host and are never supplied to a hosted provider or copied into live
+task inputs. Its passing outcomes establish mechanics only.
+
+The [staged development study](qualification/2026-10-20-learning-study/README.md)
+records the version 3 calibration, seeded comparison, exposed repository
+supplement, physical-dispatch audits and excluded earlier scopes. These tasks
+remain development evidence; they do not establish independent efficacy or
+authorize automatic persistent activation.
+
+The following describes the earlier version 2 pilot runner and its frozen rules.
+
+The [2026-10-20 hosted pilot](qualification/2026-10-20-default-learning/README.md)
+records separate GPT-6 subscription scopes, stock-path reuse, five-arm outcomes,
+complete usage projections and the remaining qualification work. It preserves
+the superseded pilot and an interrupted intent separately.
+
 Lemieux's learning APIs remain experimental and opt-in. The qualification host in
 `Lemieux.CLI.Learning.QualificationHost` is an explicit development harness; ordinary
 `lmx` starts none of it. It exercises the ordinary CLI assembly, capture, source-backed
@@ -34,6 +294,29 @@ proposer and probe sessions. Credentials stay in the host. The access-only loan 
 the local Codex sign-in is private and removed on exit; the runner neither copies
 nor consumes its refresh token. The subscription route is quota-funded: any provider
 USD estimate is informational, not a claim of API billing.
+
+Use `--model openai_codex:gpt-6-luna --effort low` to freeze another explicitly
+authorized subscription model/effort pair. Each pair needs a separate fresh
+output directory and report; do not pool different model or effort scopes.
+Non-subscription routes are refused by this runner. Reports include direct
+frozen/updating comparisons with the equal-budget retry control and updating
+versus frozen experience, as well as the ordinary disabled comparison.
+The runners disable SDK transport retries (`max_retries: 0`) and freeze that
+setting in the plan. Only session/controller retries may create another call,
+so a failed transport cannot silently add attempts below the dispatch counter.
+
+`scripts/qualify_learning_stream.exs` supplements that protocol with the actual
+stock ordinary-use experience lane. It runs paired disabled/default streams in
+fixed workspace identities, through shared CLI assembly and the real private
+lesson store, with no learning hook, campaign or prompt injection supplied by
+the evaluator. Each task has 32 request slots and an eight-minute deadline;
+learning creates zero additional requests. The same networkless container and
+independent host grader apply. Its plan is written before dispatch, and every
+episode retains intent, transcript, usage, grading, learning status and digest.
+It reports whether subsequent tasks actually received experience. This is
+development mechanics/non-regression evidence, not an independent benefit claim.
+Use the same model/effort/output switches and explicit `--allow-live` boundary;
+without that flag it uses only Scripted.
 
 The protocol writes a fixed warmup plan before collecting two seed tasks, then
 freezes their actual retained library, target source digests, model, effort, runtime,
@@ -137,7 +420,9 @@ Quality and safety lead the decision. Requests, tokens, latency percentiles and
 unknown accounting are reported separately. Extra tokens are not an automatic
 disqualifier. A benefit claim requires complete accounting, no safety failure,
 no paired regression and a positive conservative paired-cluster interval, with a
-Bonferroni correction across four comparisons. Small samples or a perfect baseline
+Bonferroni correction across all seven preregistered contrasts. Refinement must
+beat both the disabled arm and the equal-budget retry arm without regressions.
+Small samples or a perfect baseline
 remain inconclusive. The script labels all results development qualification.
 Independent confirmation still needs fresh, unexposed tasks and any claimed model
 scope; a development rerun cannot satisfy that requirement.

@@ -64,6 +64,11 @@ defmodule Lemieux.CLI.Help do
       {:ok,
        "lmx status [NAMESPACE COMMAND [ARGUMENTS]] [options]\n\nInspect current extension readiness or run an explicitly local observation/cancellation command. Sends no model request; uses current configured callbacks and environment. /status inspects a live terminal session."}
 
+  def command("learning"),
+    do:
+      {:ok,
+       "lmx learning [inspect|undo|off|on] [options]\n\nInspect scoped ordinary-use experience without a provider. Undo blocks the last recalled lessons and restores the next request's base prompt. Off persists for this workspace in the current personal state directory. Personal learning:false and project opt-outs still take precedence over on. No extra inference allowance or persistent promotion is granted."}
+
   def command("plugin"), do: topic("plugins")
   def command("extension"), do: topic("extensions")
   def command("mcp"), do: topic("mcp")
@@ -110,6 +115,7 @@ defmodule Lemieux.CLI.Help do
       lmx log SESSION               Print a stored conversation
       lmx fork SESSION [CUT]        Copy a conversation to branch from it
       lmx status [options]          Inspect local extension readiness
+      lmx learning [COMMAND]        Inspect, undo or opt out of scoped experience
       lmx explain [options]         Show what a session would start with (JSON)
       lmx mcp list|trust|import     Manage MCP servers (lmx help mcp)
       lmx plugin install|list|remove Manage Claude Code-compatible plugins
@@ -134,8 +140,7 @@ defmodule Lemieux.CLI.Help do
           --output-format F         lmx run only: text | json | stream-json
           --config PATH|none        Settings file (default ~/.lmx/config.json)
           --router MODE             Routing: direct, ixway or a route (LMX_ROUTER)
-          --ixway URL               Use Ixway as the sole inference pipeline
-                                    (instance origin; LMX_IXWAY_URL and
+          --ixway URL               Ixway gateway origin (LMX_IXWAY_URL and
                                     IXWAY_API_KEY). Models: ixway:ID
           --base-url URL            Route model API calls through this provider-
                                     compatible gateway (or set $LMX_BASE_URL)

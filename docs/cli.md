@@ -1265,6 +1265,15 @@ runs a model.
 
 ### Harness-learning inspection
 
+`lmx learning [inspect|undo|off|on]` manages ordinary-use scoped experience without
+creating a provider. `off` persists for this workspace in the current personal
+state directory; personal `"learning": false` and project opt-outs still win
+over `on`. In a live terminal session use `/status learning inspect`,
+`/status learning undo` or `/status learning off`. See
+[ordinary-use controls](harness-learning.md#ordinary-use-experience-and-controls)
+for accounting, evidence and the boundary between unconfirmed context and
+independently qualified promotion.
+
 Verify versioned, digest-bearing contracts without starting a session:
 
 ```sh

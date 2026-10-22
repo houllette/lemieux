@@ -1,0 +1,58 @@
+{
+  "bottle_base_revision": "0207a34f0c5716cd292dd4480253ad35d3da49f3",
+  "final_search_checks": {
+    "checks": 6,
+    "grep_backend": "walk",
+    "hosted_model_calls": 0,
+    "namespaces": [
+      "logical /app/test",
+      "physical owned directory"
+    ],
+    "passed": 6,
+    "revision": "8303aacd533cc53fddbd988032100025ba9f98de"
+  },
+  "final_task_contract": "Public frozen verification paths are disclosed; separate new regression files are allowed.",
+  "grading_qualification": {
+    "hosted_model_calls": 0,
+    "offline_reference_repair": {
+      "private_checks": 6,
+      "private_correct": 6,
+      "public_checks": 367,
+      "public_correct": 367
+    },
+    "private_apparatus_log_bytes_sha256": "1f322cd2900a9c7b9c54c7fb3290823dc1c4cc4ee4a2d81845f7a2442d4c93f0",
+    "untouched": {
+      "private_checks": 6,
+      "private_correct": 2,
+      "public_checks": 367,
+      "public_correct": 366
+    }
+  },
+  "image": "sha256:1b0494c9cf744e843460d7750d624433b5fb414971613d7bcbf592d042de886d",
+  "immutable_public_files": 44,
+  "limits": [
+    "Private tests, task solutions and original transcripts are retained locally, not published.",
+    "Snapshot regrading reconstructs regular file bytes, not process state or permissions."
+  ],
+  "original_public_task_prompt_sha256": "89b1abdf0af19399f720233b5cdf6b2e8e0ff7b6e3fe3e2a3af0d4d298a8641a",
+  "private_tests_sha256": "3db2ab070e3a493899570eb7f8b2d5e041f0480bc3bfc2a18ff227cc89d6faf5",
+  "public_pytest_args": [
+    "test"
+  ],
+  "schema_version": 1,
+  "scope": "adapted_exposed_repository_development_diagnostic_not_official_leaderboard",
+  "source_export": "Git history removed and secrets-name check passed; agent receives only the source workspace. Private tests are mounted only in a separate grader.",
+  "source_metadata": {
+    "bottle_base_commit": "0207a34f0c5716cd292dd4480253ad35d3da49f3",
+    "exposure": "developer_exposed",
+    "git_history": "removed_from_agent_sources",
+    "id": "terminal-bench-2.1-bottle-repository-development-supplement",
+    "selection": "pinned_existing_bottle_repository_with_public_and_private_tests",
+    "upstream": {
+      "commit": "7131e4375048a0e408a8fb404b5f499d726b695b",
+      "repository": "https://github.com/harbor-framework/terminal-bench-2-1"
+    }
+  },
+  "source_sha256": "d1c058b75e5d0fbd7cf008259c6e765f4c6a83570c72434b40389495a0cd8e5c",
+  "upstream_collection_revision": "7131e4375048a0e408a8fb404b5f499d726b695b"
+}

@@ -1,5 +1,137 @@
 # Harness-learning contracts
 
+## Ordinary-use experience and controls
+
+With a writable personal state directory, stock `lmx run` and the terminal
+host retain failure/recovery observations and retrieve relevant scoped
+experience for later tasks. No example extension, campaign or scheduled job
+is required. The library still starts no Lemieux processes when installed.
+`--config none` without `LMX_HOME` has no personal state and disables this lane.
+Explicit profiles and the extension builder retain their selected behavior.
+
+The default lane allocates **zero additional inference requests**. It selects
+at most two bounded hypotheses, commits source-case exposure before disclosure,
+and inserts untrusted context before the ordinary request's admission and
+accounting checks. This can change a later task's behavior. It does not prove
+that a suggestion works, create an independent budget, execute a replay,
+or authorize tools, networking, credentials or scheduling. Isolated
+propose/probe/compose and persistent promotion retain their explicit host
+allowance, isolation, confirmation and rollback contracts. The ordinary lane
+records `abstained_no_authorized_isolated_probe` for that operation; retrieval
+alone must not be reported as a successful refinement experiment.
+
+```sh
+lmx learning inspect              # no provider is created or contacted
+lmx learning undo                 # block the last recalled lesson set
+lmx learning off                  # persistent opt-out for this workspace
+lmx learning on                   # remove that workspace opt-out
+```
+
+The same live session exposes `/status learning inspect`,
+`/status learning undo` and `/status learning off`. Inspection reports scope,
+retained/blocked identities, qualification, evidence directory, the latest
+decision and zero extra inference requests. The standalone command works
+without provider credentials. `undo` restores the next request's original
+system prompt and blocks the recalled lessons; it cannot retract a request
+already sent. Exposure receipts remain immutable evidence. Separate reviewed
+overlays and explicitly promoted persistent assets keep their own rollback.
+
+Personal `"learning": false` and `"disabled_extensions": ["learning"]`
+override the workspace switch. A project can opt out with `.lmx/learning.json`
+containing `{"enabled": false}`; malformed or unavailable project policy also
+withholds learning. Project policy never overrides a personal opt-out. Existing
+capture settings still control raw capture independently; `"capture": false`
+disables both capture and this experience lane. Opt-out preserves retained
+content rather than deleting evidence.
+
+Lessons bind to the current workspace, model, complete authorized catalog and
+environment identity. A changed binding, ambiguous lesson, missing source,
+unavailable storage or policy, lock conflict, or exceeded bound retains the
+ordinary request. The journal stops at 1,000 evidence files; archive retained
+state deliberately before starting a fresh history. A killed writer can leave
+`control.lock`; inspect its owner and journal before removing the lock. No
+background learning task survives a completed hook or session shutdown.
+
+### Explicit research qualification
+
+`scripts/qualify_learning_study.exs --research` selects a separate experimental
+lane. It reflects on complete public task records, including successful tasks,
+rejected probes and uncertainty; each retained hypothesis cites checked JSON
+pointers into its source bytes. Interpretation remains unconfirmed. Reflection
+uses the episode's allowance, and an empty result is a legitimate abstention.
+Private confirmation grades never enter reflection, proposal or selection.
+All conversational and tool-result bytes survive the trajectory projection;
+repeated request/catalog accounting metadata is represented by hashed references
+to the retained full observations. Research retrieval explicitly allows larger,
+readable source views; the ordinary bounded disclosure defaults stay small.
+
+The executor stays fixed while `--editor-model` and `--editor-effort` select a
+separate proposer/reflector (hosted defaults: GPT-6 Sol, high). General and
+domain-specific proposals receive fresh repeated probes. Experimental
+append-only prompt compositions execute again before selection. The frozen
+`experimental_mean/v2` rule compares repeated means and may admit repeated,
+fully verified perfect ties for task-local experiments. Such a tie is not a
+quality gain. This rule is a search heuristic, not a significance test.
+Receipts carry `experimental_task_local`; applying
+them requires the host's additional `experimental_task_local` capability.
+They cannot authorize persistent canaries, even with a confirmation document.
+The ordinary strict rule and zero-extra-request product defaults are unchanged.
+
+Start with `--stage mechanism --research --task-requests 8`, which selects the
+developer-exposed graph workflow for a small six-arm canary. The
+`no_experience` arm performs the same improver work with prior experience
+withheld. `--streams` freezes
+a comma-separated subset. A canary is mechanism evidence only; fresh efficacy
+and independently powered confirmation retain their separate registration and
+exposure requirements. Every hosted invocation still requires explicit user
+authorization and `--allow-live`.
+
+The [recorded research sequence](qualification/2026-10-21-research-sequence/README.md)
+separates observed profile adaptation, reviewed skill use and unestablished
+efficacy. Helper execution and setting changes were not observed in its hosted
+asset canary.
+
+### Typed candidates and portable exports
+
+`Lemieux.Learning.Asset` represents a non-executable skill tree, trusted personal
+tool descriptions, or an allowlisted parameter of shipped code as an ordinary
+`Lemieux.Asset.Version`. Skills use the actual skill loader and include every
+supporting file; missing transitive references, broken triggers, unsafe paths,
+missing tools, changed runtime bindings and oversized descriptions refuse use.
+`Lemieux.Learning.Asset.Extension` requires the current host's explicit digest
+approval, applies through the normal harness seam and records the exact asset
+in `resolved_assets`. Its procedure body remains behind the real skill tool.
+Live assembly refuses collisions with loaded skills and custom host skill
+loaders; approving asset bytes does not approve replacing a host executor.
+Reassembly from the retained base restores the original harness.
+
+These new kinds are **not automatically selected** by the default controller.
+Qualify each kind with the reusable protocol before enabling automatic use.
+The initial trusted configuration surface is only search catalog disclosure
+(`search.glob_after_requests`), which cannot add a missing tool. Candidates
+cannot select modules, commands, models, routes, environments or permissions.
+Profile-only campaigns and reviewed overlays retain their existing format.
+
+Confirmed native exports now carry `lemieux-extension-qualification.json` with
+their exact source/build/confirmation/report identities and frozen profile.
+`Extension.Export.verify/1` checks package integrity;
+`Extension.Confirmation.verify_export/3` additionally checks retained private
+confirmation evidence. Source, helpers and runtime assets still use the existing
+source-preserving Mix export/build path. Unassessed exports cannot acquire
+confirmation from compilation or a manually written metadata file.
+Qualified native packages must declare a complete `"dependencies"` graph
+(one entry per declared file, including leaves) and `"capabilities"` list,
+pass CodeGate bound to `Contract.digest(export_receipt["files"])`, and receive
+a fresh `review:` approval at qualified export. A candidate cannot bypass this
+by omitting a generated-code flag. The API takes `code_gate:` with
+`content_sha256` and `evidence`, and `review:` with `actor`, the same
+`content_sha256`, and `decision: "approved_for_export"` (string keys/values).
+The CLI takes those two JSON files after the destination:
+`mix lemieux.extension.confirm export DIRECTORY DIGEST PACKAGE CODE_GATE.json REVIEW.json`.
+Export grants no
+release or runtime authority. Installation, credentials and rollback remain
+host-owned, and independent confirmation remains scoped to its exact evidence.
+
 **Experimental.** May change in any 0.x release.
 
 **Harness learning** improves the harness a session runs with (its
@@ -306,8 +438,10 @@ Ixway.
 ## Persistent improvement lessons
 
 `Experience.Lesson` retains what an improvement attempted and why it appeared
-to work, fail or remain uncertain. It is an opt-in evidence contract; ordinary
-`lmx` sessions do not yet capture or activate these lessons automatically.
+to work, fail or remain uncertain. The library contract is opt-in. Ordinary
+`lmx` now retains scoped observations and retrieves relevant, explicitly
+unconfirmed hypotheses on later tasks when personal state and capture are
+available. It does not automatically qualify or persistently promote them.
 Hosts create a lesson from an authorized `Experience.Bundle`, its complete
 artifact bytes keyed by SHA-256, and string-keyed attributes:
 

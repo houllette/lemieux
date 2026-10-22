@@ -4,6 +4,7 @@ defmodule Lemieux.ExtensionConfirmationTest do
   alias Lemieux.Benchmark.Corpus
   alias Lemieux.Benchmark.Manifest
   alias Lemieux.Contract
+  alias Lemieux.Experiment.CodeGate
   alias Lemieux.Experiment.Plan
   alias Lemieux.Learning.Extension.Build
   alias Lemieux.Learning.Extension.Confirmation
@@ -43,7 +44,9 @@ defmodule Lemieux.ExtensionConfirmationTest do
       JSON.encode!(%{
         "schema_version" => 1,
         "module" => "ConfirmationFixture",
-        "files" => ["mix.exs", "lib/fixture.ex"]
+        "files" => ["mix.exs", "lib/fixture.ex"],
+        "dependencies" => %{"mix.exs" => [], "lib/fixture.ex" => []},
+        "capabilities" => []
       })
     )
 
@@ -119,12 +122,57 @@ defmodule Lemieux.ExtensionConfirmationTest do
     assert exposure.source_case_ids == ~w(fresh-a fresh-b)
     assert {:error, :eexist} = Confirmation.run(confirmation)
     destination = Path.join(context.tmp_dir, "installed")
-    assert {:ok, receipt} = Confirmation.export(confirmation, destination)
+
+    assert {:error, :executable_export_requires_bound_gate_and_human_review} =
+             Confirmation.export(confirmation, destination)
+
+    assert {:ok, source} =
+             Tree.read(
+               Path.join([context.candidate.root, "source", "lemieux-extension-export.json"])
+             )
+
+    digest = Contract.digest(source["files"])
+
+    gate = %{
+      "content_sha256" => digest,
+      "evidence" =>
+        Map.new(
+          CodeGate.required_evidence(),
+          &{&1, %{"passed" => true, "digest" => Contract.sha256("fixture-" <> &1)}}
+        )
+    }
+
+    review = %{
+      "actor" => "fixture-reviewer",
+      "content_sha256" => digest,
+      "decision" => "approved_for_export"
+    }
+
+    assert {:error, _} =
+             Confirmation.export(confirmation, destination,
+               code_gate: gate,
+               review: Map.put(review, "content_sha256", "wrong")
+             )
+
+    assert {:error, _} =
+             Confirmation.export(confirmation, destination,
+               code_gate: put_in(gate, ["evidence", "precommit", "passed"], false),
+               review: review
+             )
+
+    assert {:ok, receipt} =
+             Confirmation.export(confirmation, destination, code_gate: gate, review: review)
+
     assert receipt["qualification"] == "confirmed"
     assert receipt["build_sha256"] == context.candidate.sha256
     assert receipt["production_active"] == false
     assert :ok = Export.verify(destination)
     assert :ok = Confirmation.verify_export(confirmation, destination, receipt)
+
+    assert {:ok, portable} =
+             Tree.read(Path.join(destination, "lemieux-extension-qualification.json"))
+
+    assert portable == receipt
 
     assert {:error, :confirmation_receipt_mismatch} =
              Confirmation.verify_export(

@@ -1,0 +1,107 @@
+{
+  "bench_has_preexisting_changes": true,
+  "bench_revision": "aeb75eb30f2e3746826cccac275ac8bf2e09b843",
+  "confirmation_requirements": {
+    "bench_adapter_is_not_directly_compatible": true,
+    "frozen_example_independent_streams": 110,
+    "prepared_sufficiently_powered_unexposed_manifest_found": false,
+    "required_work": [
+      "curate independently unexposed source and grader closures with enough independent streams",
+      "calibrate task difficulty on the actual frozen executor without consuming confirmation outcomes for tuning",
+      "qualify positive and negative controls and exact image/evaluator identities",
+      "bridge the official SWE-bench evaluator through the existing runtime and evidence boundaries before claiming that benchmark",
+      "freeze exposure, causal seed recipe, all six arms and complete usage before dispatch"
+    ],
+    "rsi_external_adapter": "separate pinned source/private pytest trees in immutable networkless images",
+    "same_repository_history_remains_one_cluster": true
+  },
+  "inference_calls": 0,
+  "interpretation": "Useful development and adapter infrastructure, not a ready independent-confirmation corpus. Task counts and related histories cannot be relabeled as independent streams.",
+  "kind": "read_only_local_corpus_comparison",
+  "observed_at": "2026-10-21T20:49:19.483893+00:00",
+  "schema_version": 1,
+  "source_byte_sha256": {
+    "README.md": "72e5004cdac0770fbc9a3bc3471130c94509028b2cfac9699bbbdef671ef9248",
+    "bench/HOLDOUT-LEDGER.json": "3a9c09bfcdc4ce8d27a05db50d2bf66ec8dd75d42ad202b800a16a7c92bd9e30",
+    "bench/controls/full-manifest/controls.json": "457787ea3b99af94555e1dbb996b7cca037564436bcd526fea00e9e2857bf598",
+    "bench/full-manifest.json": "88b912fc9d1660512183a74920f57c32640abdcc1ec27a31c43482fe450b2be4",
+    "bench/manifest.json": "42f5ba4799b8c82b51ddf4ac5cdede276b2ce1017f991057295cb80d344089d4",
+    "docs/methodology.md": "dfa1a6f62cdf400ad8c4c4e7d664155b65dd2dd2e647691c8c247da43b5e3f4f",
+    "docs/swe-bench-evaluator.md": "b4fce7bceeb360a9d62111d151a994028d29242bf78d59de8f585cc430f29987",
+    "tmp/swebench/verified-sample50/manifest.json": "0b6adfda9b263caed8358a062136ba397ac9c9d643535265e70a2917f0dc9ca3"
+  },
+  "swebench": {
+    "bench_execution": "swe-bench-v1",
+    "evaluator_revision": "02e7a74ffd0b707aab73d203fe87bdc7c76afc8e",
+    "local_source_exposure_attestation": "not_established_for_remaining_tasks",
+    "local_source_repositories": {
+      "astropy__astropy": 95,
+      "django__django": 850,
+      "marshmallow-code__marshmallow": 9,
+      "matplotlib__matplotlib": 184,
+      "mwaskom__seaborn": 22,
+      "pallets__flask": 11,
+      "psf__requests": 44,
+      "pvlib__pvlib-python": 63,
+      "pydata__xarray": 110,
+      "pydicom__pydicom": 56,
+      "pylint-dev__astroid": 31,
+      "pylint-dev__pylint": 57,
+      "pytest-dev__pytest": 119,
+      "pyvista__pyvista": 16,
+      "scikit-learn__scikit-learn": 229,
+      "sphinx-doc__sphinx": 187,
+      "sqlfluff__sqlfluff": 50,
+      "sympy__sympy": 386
+    },
+    "local_source_repository_groups": 18,
+    "local_source_task_metadata_directories": 2519,
+    "manifest_lock_fields": [
+      "dataset_sha256",
+      "evaluator_commit",
+      "hints_included",
+      "python_packages_sha256",
+      "split",
+      "task_repo_commit"
+    ],
+    "official_evaluator_bridge_available": true,
+    "prepared_sample_repositories": {
+      "astropy__astropy": 2,
+      "django__django": 22,
+      "matplotlib__matplotlib": 4,
+      "mwaskom__seaborn": 1,
+      "pydata__xarray": 3,
+      "pylint-dev__pylint": 1,
+      "pytest-dev__pytest": 1,
+      "scikit-learn__scikit-learn": 4,
+      "sphinx-doc__sphinx": 7,
+      "sympy__sympy": 5
+    },
+    "prepared_sample_repository_groups": 10,
+    "prepared_sample_tasks": 50,
+    "sample_tasks_marked_development": 50,
+    "source_checkouts_clean": {
+      "SWE-bench": true,
+      "swe-bench-tasks": true
+    },
+    "task_repo_revision": "3d07b464b7b311a0cbfb5ed5b2d8a3b96f84a33d"
+  },
+  "terminal_bench": {
+    "all_tasks_marked_development": true,
+    "controls_scope_note": "Recorded controls from this bench; not rerun by this read-only assessment.",
+    "frontier_pool_tasks": 49,
+    "full_manifest_upstream": {
+      "dataset": "terminal-bench/terminal-bench-2-1",
+      "ref": "sha256:7d7bdc1cbedad549fc1140404bd4dc45e5fd0ea7c4186773687d177ad3a0699a"
+    },
+    "full_tasks": 89,
+    "noop_passed_count": 1,
+    "oracle_failed_count": 9,
+    "pilot_pool_tasks": 16,
+    "prepared_sample_tasks": 12,
+    "sample_manifest_upstream": {
+      "commit": "7131e4375048a0e408a8fb404b5f499d726b695b",
+      "repository": "https://github.com/harbor-framework/terminal-bench-2-1"
+    }
+  }
+}

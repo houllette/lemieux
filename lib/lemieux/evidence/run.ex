@@ -252,6 +252,34 @@ defmodule Lemieux.Evidence.Run do
 
   def verify(_other), do: {:error, :invalid_run_evidence}
 
+  @doc "Verifies that the manifest's complete transcript range matches supplied source entries."
+  @spec verify_transcript(run :: t() | map(), entries :: [Entry.t() | map()]) ::
+          :ok | {:error, term()}
+  def verify_transcript(%__MODULE__{} = run, entries), do: verify_transcript(to_map(run), entries)
+
+  def verify_transcript(run, entries) when is_map(run) and is_list(entries) do
+    with :ok <- verify(run) do
+      ids = run["transcript"]["entry_ids"]
+      decoded = Enum.map(entries, &decode_entry/1)
+      selected = Enum.filter(decoded, &(&1.id in ids))
+      artifact = Enum.find(run["artifacts"], &(&1["id"] == run["transcript"]["artifact_id"]))
+
+      with true <- Enum.map(selected, & &1.id) == ids,
+           {:ok, reference} <- ArtifactReference.from_map(artifact) do
+        ArtifactReference.verify_bytes(reference, Enum.map_join(selected, "\n", &Entry.encode!/1))
+      else
+        _invalid -> {:error, :invalid_transcript_source}
+      end
+    end
+  rescue
+    _invalid_entry -> {:error, :invalid_transcript_source}
+  end
+
+  def verify_transcript(_run, _entries), do: {:error, :invalid_transcript_source}
+
+  defp decode_entry(%Entry{} = entry), do: entry
+  defp decode_entry(entry), do: Entry.decode!(JSON.encode!(entry))
+
   defp required_strings(attrs) do
     Enum.reduce_while(~w(id model outcome stop_reason created_at), :ok, fn field, :ok ->
       case attrs[field] do

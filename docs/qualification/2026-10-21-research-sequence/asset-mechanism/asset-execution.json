@@ -1,0 +1,103 @@
+{
+  "episodes": [
+    {
+      "arm": "no_experience",
+      "candidate_kinds": {
+        "skill": 1
+      },
+      "evidence_sha256": "5ce6128bfb77861e3d7788b39de1f67d7db3fe0910e713967f05518a9ddf14fa",
+      "python_helpers": 0,
+      "repetition": 1,
+      "restored": true,
+      "selected_asset_sha256": [
+        "65d524d050916180d00e0471b3c66fc69dd3d370c1eae8a4d446254e746bbf96"
+      ],
+      "structural_repair_used": true,
+      "successful_helper_reads": 0,
+      "successful_skill_loads": 1
+    },
+    {
+      "arm": "no_experience",
+      "candidate_kinds": {
+        "skill": 1
+      },
+      "evidence_sha256": "6d7133bec6cb6998789913e253d1738be8106ebd019844b29ccfb75aa0f199c7",
+      "python_helpers": 0,
+      "repetition": 2,
+      "restored": true,
+      "selected_asset_sha256": [
+        "cc785b44356849c50022cd5ba6e990b7f3b1fc8c061dc3c32c6c714557a26106"
+      ],
+      "structural_repair_used": true,
+      "successful_helper_reads": 0,
+      "successful_skill_loads": 1
+    },
+    {
+      "arm": "frozen",
+      "candidate_kinds": {
+        "skill": 1
+      },
+      "evidence_sha256": "b3576320bbdce95be9bcb3d5f18f6ff95287fd008b7bc16bf3ae852ef30ea592",
+      "python_helpers": 0,
+      "repetition": 2,
+      "restored": true,
+      "selected_asset_sha256": [
+        "a96d152cfad9f1fdd35c731b88d30e4b03c174ff557764189439b1f85246f7b0"
+      ],
+      "structural_repair_used": true,
+      "successful_helper_reads": 0,
+      "successful_skill_loads": 1
+    },
+    {
+      "arm": "frozen",
+      "candidate_kinds": {
+        "skill": 1
+      },
+      "evidence_sha256": "c8c4d01f561a4dce64a0ef8542a5d73f25e368476e67abb69915108f8f283b3a",
+      "python_helpers": 0,
+      "repetition": 1,
+      "restored": true,
+      "selected_asset_sha256": [
+        "8d23f468968fb73d4cf31c474e3eca89de1c6afc21b9d59d34f936682428cfae"
+      ],
+      "structural_repair_used": true,
+      "successful_helper_reads": 0,
+      "successful_skill_loads": 0
+    },
+    {
+      "arm": "updating",
+      "candidate_kinds": {
+        "skill": 1
+      },
+      "evidence_sha256": "34de2489b670fb2822cbd87d2c7c5b9397e8ce5f92f989510a9d52e999b207b3",
+      "python_helpers": 0,
+      "repetition": 2,
+      "restored": true,
+      "selected_asset_sha256": [
+        "228b8e48fbd1c51443dcb79396d71f6eb0c74849b9e5eb528c7c7598a24718ed"
+      ],
+      "structural_repair_used": true,
+      "successful_helper_reads": 0,
+      "successful_skill_loads": 1
+    },
+    {
+      "arm": "updating",
+      "candidate_kinds": {
+        "skill": 1
+      },
+      "evidence_sha256": "3b7ab8aa9499ba490263625c84bc5b52589736ef6fb9a6b19bab39eb6cf815d3",
+      "python_helpers": 0,
+      "repetition": 1,
+      "restored": true,
+      "selected_asset_sha256": [
+        "098ba411f99ba20c7ed902b7a9ee6ba80e686855109a73a086d9db048697bf0a"
+      ],
+      "structural_repair_used": false,
+      "successful_helper_reads": 0,
+      "successful_skill_loads": 1
+    }
+  ],
+  "interpretation": "Actual skill use was observed; helper and setting efficacy were not demonstrated. No generated code or task solution is included.",
+  "kind": "content_free_asset_execution_summary",
+  "source_revision": "8f357fa"
+}

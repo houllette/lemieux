@@ -41,7 +41,7 @@ defmodule Lemieux.Learning.Controller do
   alias Lemieux.RepositoryContext.Worker
 
   @roles ~w(task proposer critic probe composition reflection confirmation)
-  @signals ~w(verification_failure repeated_tool_failure correction verification_recovery tool_recovery)
+  @signals ~w(verification_failure repeated_tool_failure correction verification_recovery tool_recovery bounded_research_review)
 
   @spec start_link(opts :: keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts)

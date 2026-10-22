@@ -20,6 +20,28 @@ API.
 
 ### Features
 
+- Experimental learning qualification adds independent stream isolation,
+  exact paired inference, prospective power and practical acceptance thresholds.
+  A staged repository-workflow study separates public verification feedback from
+  private grading and retains supported refinement profiles for later proposals.
+  Version 2 plans keep their original analysis; version 3 is selected explicitly.
+
+- Ordinary `lmx` sessions retain scoped observations and reuse bounded,
+  unconfirmed experience on later tasks, with provider-free `lmx learning`
+  inspection, exact context undo and a persistent workspace opt-out. This
+  lane adds no inference requests; isolated refinement and persistent
+  promotion retain their explicit host qualification gates.
+- Experimental typed learning candidates support on-demand procedure files,
+  trusted personal tool descriptions and allowlisted search disclosure settings.
+  Complete bytes, helpers, runtime bindings and current digest approval are
+  checked through the real loader. New kinds remain gated from automatic use.
+  Learned procedures cannot shadow loaded skills or replace a host skill loader.
+- Qualified native exports carry portable source/runtime/evidence identities.
+  Migration: confirmed export now requires a complete dependency/capability
+  manifest and explicit CodeGate/reviewer JSON bound to the source inventory;
+  development exports remain unassessed. See the
+  [qualification guide](docs/harness-learning.md#typed-candidates-and-portable-exports).
+
 - `/tools` opens a filterable native tray with colored availability states,
   tool descriptions and keyboard/mouse toggles. Navigation and switch receipts
   stay out of the transcript; host restrictions and idle-only mutation remain.
@@ -133,6 +155,12 @@ API.
 
 ### Fixes
 
+- Directory-scoped search helpers retain the session workspace and enter the
+  requested directory inside its command environment, so container searches
+  cannot silently inspect an empty host-side tree.
+- Fully accounted turn-limit stops in isolated refinement count as failed probes
+  instead of interrupting the experiment. Partial files cannot qualify a stopped
+  candidate; missing usage and provider failures still require recovery.
 - Empty Tasks views retain their state during refreshes instead of flashing a
   loading message. Completion cards omit repeated shortcut hints. Shift-Up
   toggles the tray, Ctrl-Shift arrows scroll the transcript, and F6 remains an

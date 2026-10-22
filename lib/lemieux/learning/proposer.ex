@@ -117,6 +117,7 @@ defmodule Lemieux.Learning.Proposer do
         "system" =>
           evolver_system(Keyword.get(opts, :experience, false))
           |> task_local(Keyword.get(opts, :task_local, false))
+          |> review_successes(Keyword.get(opts, :review_successes, false))
           |> abstention(Keyword.get(opts, :abstain, false)),
         "max_turns" => Keyword.get(opts, :max_turns, 16),
         # A reasoning model narrating a cross-lineage analysis overran 4096
@@ -152,8 +153,25 @@ defmodule Lemieux.Learning.Proposer do
       CLI lane, preserve the parent system text exactly and append only the
       targeted instructions; tool descriptions may change only enabled tools
       within the frozen surface. Keep mechanism at most 256 UTF-8 bytes.
+
+      If evidence/operator.json names proposal_scope, respect it: "general"
+      seeks a reusable workflow invariant across repository domains; "domain"
+      seeks a procedure conditional on the current toolchain or domain. Both
+      must cite the observed mechanism, preserve the base, and avoid embedding
+      task solutions. Inspect retained evidence before deciding to abstain.
       """
   end
+
+  defp review_successes(system, false), do: system
+
+  defp review_successes(system, true),
+    do:
+      String.replace(
+        system,
+        "failure mechanism observed in the current task.",
+        "behavioral mechanism observed in the current task, including successful execution."
+      ) <>
+        "\nInspect successful trajectories for reusable procedures and avoidable work too. A verified score tie can justify trying a different source-backed harness, but proves no quality gain or transfer. Abstain if no concrete mechanism is supported.\n"
 
   defp abstention(system, false), do: system
 

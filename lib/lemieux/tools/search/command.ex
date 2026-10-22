@@ -21,6 +21,7 @@ defmodule Lemieux.Tools.Search.Command do
   """
 
   alias Lemieux.Environment
+  alias Lemieux.Tools.Search.Scope
 
   @typedoc "What a helper command printed and how it ended."
   @type outcome :: %{
@@ -32,7 +33,9 @@ defmodule Lemieux.Tools.Search.Command do
   Runs `command` in `directory` through `environment`.
 
   Options: `:timeout_ms` (default 30 seconds) and `:max_bytes`, the output
-  collected before the command is abandoned (default 4 MB).
+  collected before the command is abandoned (default 4 MB). `:workspace_cwd`
+  preserves the session workspace while entering a scoped helper directory
+  inside the command environment. Without it, `directory` is the workspace.
   """
   @spec run(
           environment :: Environment.t(),
@@ -43,9 +46,19 @@ defmodule Lemieux.Tools.Search.Command do
   def run(environment, directory, command, opts \\ []) do
     timeout = Keyword.get(opts, :timeout_ms, 30_000)
     max_bytes = Keyword.get(opts, :max_bytes, 4_000_000)
+    workspace = Keyword.get(opts, :workspace_cwd, directory)
+
+    # A container uses cwd as the owned bind-mount root. Passing /app/test as
+    # that root searched an empty host-side tree. Keep the original workspace
+    # and enter the requested directory in the environment's own namespace.
+    command =
+      if directory == workspace,
+        do: command,
+        else:
+          "cd -- " <> quote_argument(Scope.relativize(workspace, directory)) <> " && " <> command
 
     with {:ok, events} <-
-           Environment.run(environment, command, cwd: directory, timeout_ms: timeout) do
+           Environment.run(environment, command, cwd: workspace, timeout_ms: timeout) do
       {:ok, collect(events, max_bytes)}
     end
   end

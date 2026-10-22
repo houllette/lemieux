@@ -1,0 +1,50 @@
+{
+  "auth_cleanup": "removed_owned_access_only_loan_after_vm_stop",
+  "cause": "logical_directory_search_could_replace_owned_host_mount_with_an_empty_wrong_tree",
+  "completed_episodes": 52,
+  "completed_meters_match_ledgers": true,
+  "completed_physical_requests": 450,
+  "completed_tokens": 2085683,
+  "derived_auth_removed": true,
+  "interrupted_usage": "unknown_not_replayed_or_assumed_zero",
+  "interruption": "owned_vm_SIGTERM",
+  "owned_remaining_containers_removed": 0,
+  "primary_analysis": "not_run_no_efficacy_claim",
+  "recorded_at": "2026-10-20T23:23:51.750776+00:00",
+  "schema_version": 1,
+  "source_revision": "9149e4462dc6ec6bd3c5c16b4dac1366b5a23b37",
+  "status": "aborted_apparatus_failure_not_a_completed_qualification",
+  "stopping_rule_completed": false,
+  "unfinished_intents": [
+    {
+      "allowance": {
+        "cost_usd": null,
+        "requests": 160,
+        "time_ms": 2000000,
+        "tokens": 3000000
+      },
+      "arm": "updating",
+      "available_case_ids": [
+        "seed-graph-1",
+        "seed-journal-1",
+        "seed-cache-1",
+        "seed-merge-1",
+        "seed-reconcile-1",
+        "seed-intervals-1",
+        "seed-allocation-1",
+        "seed-patch-1"
+      ],
+      "initial_library_sha256": "a84d9b5380b9d6fcae6a24d4bf422167724ae25ae7dbdc4b3ae15a4bd390830b",
+      "plan_sha256": "679757c633f1076fa9343913fe62cb3ef182cda262c2373d36706f76e479e02f",
+      "prior_lesson_ids": [],
+      "repetition": 1,
+      "stream_id": "reconcile",
+      "task": {
+        "cluster": "reconcile",
+        "id": "development-reconcile-1",
+        "phase": "learning",
+        "source_sha256": "e86b00f5655f7e96ec4e442f1044474c36a1e6e9132269482e7c69b01ac2fb30"
+      }
+    }
+  ]
+}

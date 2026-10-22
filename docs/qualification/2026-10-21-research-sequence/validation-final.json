@@ -1,0 +1,38 @@
+{
+  "application_revision": "8f357fa",
+  "command": "ulimit -n 4096; ERL_FLAGS='+S 4' mise exec -- mix precommit.full",
+  "coverage": {
+    "floor_percent": 85,
+    "passed": 5880,
+    "percent": 86.66
+  },
+  "dialyzer_errors": 0,
+  "distributed_passed": 25,
+  "evidence_boundary": "Application source was committed and unchanged throughout this full gate. Portable evidence files added afterwards are documentation. Hosted efficacy remains separate.",
+  "examples": "all nine passed",
+  "kind": "final_research_validation",
+  "ordinary": {
+    "doctests": 12,
+    "excluded": 47,
+    "passed": 5880,
+    "skipped": 7,
+    "tests": 5868
+  },
+  "package_consumers": "passed",
+  "private_log_sha256": "1dab3514b4210ca5090f9469e78eb8710aa5ba3edb6560242752baaa99052b45",
+  "python_passed": 63,
+  "schema_version": 1,
+  "seeded_asset_lifecycle_observations": {
+    "inference_calls": 0,
+    "passed_per_seed": 4,
+    "seeds": [
+      101,
+      102,
+      103
+    ]
+  },
+  "standalone_host_passed": 119,
+  "status": "passed",
+  "targeted_artifact_policy_passed": 78,
+  "targeted_quota_record_closure_passed": 36
+}

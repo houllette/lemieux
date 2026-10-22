@@ -8,7 +8,7 @@ defmodule Lemieux.Learning.Promotion.Policy do
   """
   alias Lemieux.Contract
   @fields ~w(id actor scope capabilities trust maximum_bytes ttl_ms expires_at canary)
-  @capabilities ~w(retain task_local canary)
+  @capabilities ~w(retain task_local canary experimental_task_local)
 
   @doc "Freezes finite, explicit automatic-promotion bounds."
   @spec new(attrs :: map()) :: {:ok, map()} | {:error, term()}

@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Lemieux.Extension.Confirm do
 
       mix lemieux.extension.confirm prepare CONFIG.exs NEW_DIRECTORY
       mix lemieux.extension.confirm run DIRECTORY EXPECTED_SHA256 [--allow-live]
-      mix lemieux.extension.confirm export DIRECTORY EXPECTED_SHA256 NEW_PACKAGE
+      mix lemieux.extension.confirm export DIRECTORY EXPECTED_SHA256 NEW_PACKAGE CODE_GATE.json REVIEW.json
 
   Prepare executes a trusted explicit config returning `control:` and
   `candidate:` frozen Build structs, `corpus:`, `experiment:` attribute map,
@@ -15,7 +15,9 @@ defmodule Mix.Tasks.Lemieux.Extension.Confirm do
   use; even interrupted attempts consume exposure. Live runs require the explicit
   flag and preregistered budgets. No option uploads evidence or activates code.
 
-  Export copies only passing candidate source. A content-free confirmation
+  Export also requires complete dependency/capability metadata and explicit
+  CodeGate and reviewer JSON, bound to the exact exported file inventory.
+  It copies only passing candidate source. A content-free confirmation
   receipt is written beside it as NEW_PACKAGE.confirmation.json. Keep private
   experiment evidence separately; a receipt is an integrity reference, not a
   signature or proof of efficacy on tasks outside its declared evaluation.
@@ -63,12 +65,15 @@ defmodule Mix.Tasks.Lemieux.Extension.Confirm do
     end
   end
 
-  defp execute(["export", directory, digest, destination]) do
+  defp execute(["export", directory, digest, destination, gate_path, review_path]) do
     receipt_path = destination <> ".confirmation.json"
     if File.exists?(receipt_path), do: Mix.raise("Receipt destination exists: #{receipt_path}")
 
     with {:ok, handle} <- Confirmation.open(directory, digest),
-         {:ok, receipt} <- Confirmation.export(handle, destination),
+         {:ok, gate} <- Tree.read(gate_path),
+         {:ok, review} <- Tree.read(review_path),
+         {:ok, receipt} <-
+           Confirmation.export(handle, destination, code_gate: gate, review: review),
          :ok <- Tree.write(receipt_path, receipt) do
       Mix.shell().info(
         "Exported confirmed source: #{destination}\nEvidence receipt: #{receipt_path}"

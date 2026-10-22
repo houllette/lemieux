@@ -52,8 +52,8 @@ defmodule Lemieux.Tools.Search.Files do
     max_files = Keyword.get(opts, :max_files, @default_max_files)
     absolute = Scope.location(cwd, directory)
 
-    with :unavailable <- ripgrep(environment, absolute, max_files),
-         :unavailable <- git(environment, absolute, max_files) do
+    with :unavailable <- ripgrep(environment, cwd, absolute, max_files),
+         :unavailable <- git(environment, cwd, absolute, max_files) do
       walk(environment, cwd, directory, max_files)
     end
   end
@@ -71,7 +71,7 @@ defmodule Lemieux.Tools.Search.Files do
       is_nil(System.find_executable("rg"))
   end
 
-  defp ripgrep(environment, absolute, max_files) do
+  defp ripgrep(environment, cwd, absolute, max_files) do
     if ripgrep_absent?(environment) do
       :unavailable
     else
@@ -85,7 +85,7 @@ defmodule Lemieux.Tools.Search.Files do
         ) <> " 2>/dev/null"
 
       environment
-      |> Command.run(absolute, command, max_bytes: max_files * 256)
+      |> Command.run(absolute, command, max_bytes: max_files * 256, workspace_cwd: cwd)
       |> ripgrep_listing(max_files)
     end
   end
@@ -106,7 +106,7 @@ defmodule Lemieux.Tools.Search.Files do
 
   defp ripgrep_listing(_other, _max_files), do: :unavailable
 
-  defp git(environment, absolute, max_files) do
+  defp git(environment, cwd, absolute, max_files) do
     case Command.run(
            environment,
            absolute,
@@ -114,7 +114,8 @@ defmodule Lemieux.Tools.Search.Files do
            # listing files must not start a program the repository's
            # configuration names.
            "git -c core.fsmonitor= ls-files -z --cached --others --exclude-standard 2>/dev/null",
-           max_bytes: max_files * 256
+           max_bytes: max_files * 256,
+           workspace_cwd: cwd
          ) do
       # Nothing listed usually means the directory is itself ignored — a
       # dependency tree the model asked about by name. `rg` searches a directory
@@ -124,7 +125,7 @@ defmodule Lemieux.Tools.Search.Files do
         :unavailable
 
       {:ok, %{status: status, output: output}} when status in [0, :truncated, :timeout] ->
-        missing = deleted(environment, absolute)
+        missing = deleted(environment, cwd, absolute)
         files = output |> split_null() |> Enum.reject(&MapSet.member?(missing, &1))
         {:ok, listing(files, :git, status == 0, max_files)}
 
@@ -133,8 +134,10 @@ defmodule Lemieux.Tools.Search.Files do
     end
   end
 
-  defp deleted(environment, absolute) do
-    case Command.run(environment, absolute, "git ls-files -z --deleted 2>/dev/null") do
+  defp deleted(environment, cwd, absolute) do
+    case Command.run(environment, absolute, "git ls-files -z --deleted 2>/dev/null",
+           workspace_cwd: cwd
+         ) do
       {:ok, %{status: 0, output: output}} -> output |> split_null() |> MapSet.new()
       _other -> MapSet.new()
     end

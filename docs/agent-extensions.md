@@ -451,7 +451,12 @@ is a separate, private evaluation directory after one candidate is selected.
 5. Run once with `mix lemieux.extension.confirm run DIRECTORY EXPECTED_SHA256`.
    Live profiles additionally require `--allow-live`. Inspect private
    `report.json` and `result.json`, then export a passing result with
-   `mix lemieux.extension.confirm export DIRECTORY EXPECTED_SHA256 NEW_PACKAGE`.
+   `mix lemieux.extension.confirm export DIRECTORY EXPECTED_SHA256 NEW_PACKAGE CODE_GATE.json REVIEW.json`.
+   Qualified executable exports also need a complete dependency/capability
+   manifest and CodeGate plus explicit reviewer approval bound to the exact
+   source inventory. The package includes a portable qualification receipt;
+   [typed candidates and exports](harness-learning.md#typed-candidates-and-portable-exports)
+   documents the data shapes. Ordinary development exports remain unassessed.
    Install the resulting ordinary Mix project through your host's normal deps.
 
 A frozen profile has exactly four fields:

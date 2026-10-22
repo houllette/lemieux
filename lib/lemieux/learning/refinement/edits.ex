@@ -60,26 +60,44 @@ defmodule Lemieux.Learning.Refinement.Edits do
   defp id(_invalid), do: "invalid"
 
   @doc "Excludes both sides of conflicting edits rather than resolving by order."
-  @spec compose(baseline :: map(), supported :: list()) :: {map(), list(), list()}
-  def compose(baseline, supported) do
+  @spec compose(baseline :: map(), supported :: list(), append_system? :: boolean()) ::
+          {map(), list(), list()}
+  def compose(baseline, supported, append_system? \\ false) do
     conflicting =
-      Enum.filter(supported, fn item -> Enum.any?(supported, &conflict?(item, &1)) end)
+      Enum.filter(supported, fn item ->
+        Enum.any?(supported, &conflict?(item, &1, baseline, append_system?))
+      end)
 
     kept = supported -- conflicting
 
     profile =
-      Enum.reduce(kept, baseline, fn item, profile ->
-        Enum.reduce(item.paths, profile, fn path, acc ->
-          keys = String.split(path, ".")
-          put(acc, keys, fetch(item.profile, keys))
-        end)
-      end)
+      kept
+      |> Enum.uniq_by(& &1.digest)
+      |> Enum.reduce(baseline, &apply_item(&1, &2, baseline, append_system?))
 
     {profile, kept,
      Enum.map(conflicting, &%{"candidate" => &1.candidate.id, "reason" => "conflicting_edit"})}
   end
 
-  defp conflict?(a, b) do
+  defp apply_item(item, profile, baseline, append_system?) do
+    Enum.reduce(item.paths, profile, fn path, acc ->
+      apply_path(path, item.profile, acc, baseline, append_system?)
+    end)
+  end
+
+  defp apply_path("options.system", changed, profile, baseline, true) do
+    suffix =
+      String.replace_prefix(changed["options"]["system"], baseline["options"]["system"], "")
+
+    update_in(profile, ["options", "system"], &(&1 <> suffix))
+  end
+
+  defp apply_path(path, changed, profile, _baseline, _append?) do
+    keys = String.split(path, ".")
+    put(profile, keys, fetch(changed, keys))
+  end
+
+  defp conflict?(a, b, baseline, append_system?) do
     a.digest != b.digest and
       Enum.any?(a.paths, fn left ->
         Enum.any?(b.paths, fn right ->
@@ -87,12 +105,24 @@ defmodule Lemieux.Learning.Refinement.Edits do
             left == right or String.starts_with?(left, right <> ".") or
               String.starts_with?(right, left <> ".")
 
-          overlap and
+          overlap and not appendable?(left, right, a, b, baseline, append_system?) and
             get_in(a.profile, String.split(left, ".")) !=
               get_in(b.profile, String.split(left, "."))
         end)
       end)
   end
+
+  # Combining append-only instructions is an experimental proposal, not a
+  # compatibility claim. Refinement must still execute the complete composition.
+  # Other overlapping edits retain the conservative conflict rule.
+  defp appendable?("options.system", "options.system", a, b, baseline, true) do
+    original = baseline["options"]["system"]
+
+    String.starts_with?(a.profile["options"]["system"], original) and
+      String.starts_with?(b.profile["options"]["system"], original)
+  end
+
+  defp appendable?(_left, _right, _a, _b, _baseline, _append?), do: false
 
   defp fetch(map, [key]), do: Map.fetch(map, key)
   defp fetch(map, [key | rest]), do: fetch(Map.get(map, key, %{}), rest)

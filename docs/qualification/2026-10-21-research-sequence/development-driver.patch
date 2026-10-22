@@ -1,0 +1,15 @@
+--- a/scripts/qualify_learning_study.exs
++++ b/scripts/qualify_learning_study.exs
+@@ -58 +58 @@
+-if stage == "confirmation" and not opts[:manifest],
++if stage == "confirmation" and is_nil(opts[:manifest]),
+@@ -196,0 +197,6 @@
++  "driver" => %{
++    "kind" => "path_guard_compatibility_fix_only",
++    "original_sha256" => "79ad311c809a8a2bf2cc8eb78e04375dc3605a75a70aea11ad6cafe2c353f6c2",
++    "executed_sha256" => Contract.sha256(File.read!(__ENV__.file)),
++    "qualification_runtime_revision" => String.trim(revision)
++  },
+@@ -288 +294 @@
+-  if not opts[:mechanism],
++  if is_nil(opts[:mechanism]),

@@ -1,0 +1,2659 @@
+{
+  "all_meters_match_ledgers": null,
+  "all_report_rows_match_evidence_hashes": true,
+  "episodes": [
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b2fff8d361d47b65e89cd9103941ee635a4d7676b1dcebfd893abd11370e54d3"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a82af8fd295dc508f320e5f8d0aa3e2c48d3ffc0f504f0a86235dac2e01d2c3d"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "cc2b02801362a6508a12d6687e5e4af383929f0775a05655bc008ff4467599d7"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_12233283a95f64952afc4b2d2a247796260a170bbdcf76a650b8b21628b3a316"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "cc2b02801362a6508a12d6687e5e4af383929f0775a05655bc008ff4467599d7"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "87e70e62c3882dd9abcbc0efcb4edab999d3da7cc614098a63eaaf8bec7e3d35",
+            "lease_id": "probe_01M5DPTT0PKW7ZXWTY0TQPQE9S",
+            "observation_sha256": "32afd013e48ca8ff55c41ecdf0aa405d43c39b0666a9f679d8ee64ba93cae56f",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "e48113b55a6c033d52d3146eb3ddaa4291a841feff53ba67a3d9d5ad6539aa93",
+            "runtime_sha256": "0e984f0ba304a0c9f77e00dcffe1edeebe175b56d22720f15e93f617ac2590d9",
+            "score": 0.0,
+            "session_id": "01M5DPTV8CZG7CHWK9YDPVAAW2",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "c9e4b568016b490c5c6fd2edfa49f16dc26e13bcb12bd70b79c1879586a145f6",
+            "lease_id": "probe_01M5DPTYBS2PW45CJSD4JSDS0Z",
+            "observation_sha256": "9b12b57c265bab6d3831463e94632af384c4cd90ae7610748efa1d4e3c6d7174",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "70958a4016a0301668d4759f4670d764a433449b3b7728b4165e85b34883b493",
+            "runtime_sha256": "44b39f57519fc110726181b68fcb4ab3bb12bab770bf1c17700c7ed5819e2573",
+            "score": 0.0,
+            "session_id": "01M5DPTZ230M67XQ9SZ8GCBBJH",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "a7c4851baa71af58159903f27960169d7e9bd55d5e6448c555d0e192a7c662d4"
+      },
+      "repetition": 2,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "cc2b02801362a6508a12d6687e5e4af383929f0775a05655bc008ff4467599d7"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "42a7b738bb919d1ca92b1e1dd4d7cce284b5e6b88287e5e6d25e12c88b410c84",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "2f13400607cbb0d74db6cca703e47e6fd7998ecf795269820a184b7d928305cc"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "0d391bf9c34aba01e40bb6baf1fb6557ef52a05e4fe9a93eb96d5390d42a2491"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "3c1c34303838e9f9ba72281519f1cc2445eb058a85a6eca639b2bbee411fb5c0"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_b22498e00805891ec540021901007903426ce0ba82a05c5721f2e873b0668ebf"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "3c1c34303838e9f9ba72281519f1cc2445eb058a85a6eca639b2bbee411fb5c0"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "09e3cdf9550de0f830820e9d0598ec79e428756aa4957b36b2384545ddc9eb31",
+            "lease_id": "probe_01M5DPNG5VHJWH9V3E4RZV12SR",
+            "observation_sha256": "c492d720f52b9334bc2d560c89ee5d736691800677342c780c4c26a1a9a9dba2",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "52dbd9088539ba5334b72226c50ab5fe3c3025e856290c974bc012da1ffa986a",
+            "runtime_sha256": "f1660e3c1296fe9b8b3f72cade755703596c54556e3b5b1e6a8ffd75688d10a6",
+            "score": 0.0,
+            "session_id": "01M5DPNGQXT4H1VCST72QENBP4",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "b3981ee0c989b17f8e2f153fee40e71977cdc9e7f10449c57c6422ed062aac54",
+            "lease_id": "probe_01M5DPNK39443RBV1S936T0QDT",
+            "observation_sha256": "d7d36a1524f89481c6219fdae8e13189620ee89e91a96ee78472d560c3348c4c",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "8a89f0c47f93b8d8834ab05e404e02128612a952c646620ac9f36e5eacda5439",
+            "runtime_sha256": "c81f822a5b066812dfe602cd6bccde6ef8d5e4199b23bcc62d36fbb87ca31490",
+            "score": 0.0,
+            "session_id": "01M5DPNKMSSAVF3JN6D28H62C4",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "916f09f9e48281e42c32da8ed23f4c172654d88aae2ffd88c449b4fe827db547"
+      },
+      "repetition": 1,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "3c1c34303838e9f9ba72281519f1cc2445eb058a85a6eca639b2bbee411fb5c0"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "d412ffbdeb559980099bdd63ed0dfec4a2c973eb1913651ac2e87acd7a33e37a",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "212d94b5dc8ed497627534a8ca8a429946ff56059502d8bbf4557fb57578cfd7"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "834256de05c852de2e203dbec44fa5e74b0e812f209cb61fb6ee14fbebfc8453"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "ce6c71d67e889a63e224ebf8352d820bbb9420c2818c085a510ff3f9337fc121"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_43dad5aafbf91be8bd29a92463463f6d98b4f52ff69cc0746a1526fc32989f95"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "ce6c71d67e889a63e224ebf8352d820bbb9420c2818c085a510ff3f9337fc121"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "811e5260be29bff155ab291ac53262b4e61300d7d6ae6ee325794a1a61148345",
+            "lease_id": "probe_01M5DPR603XM8GGKCZ48K4S7RZ",
+            "observation_sha256": "50f4770c57871249de7eb1b00e6c26f701032619b3908ac61258ef85e7101459",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "3decbf8500428ac81bac99f865b9ffc1d41e45475c9d9e7e62356acae1a4d510",
+            "runtime_sha256": "7165f8c3ef780c6723c32e95a21cac0f1aa26db36ca6a54d8983f7f11d5e90a5",
+            "score": 0.0,
+            "session_id": "01M5DPR6G9ZJP4XDWQVM3GFJ33",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "99210ea1a4c73a83e09761a93bbf21bd2b6b3470dbcbe7f19051ed67bdc2baa2",
+            "lease_id": "probe_01M5DPR8VRNBS6P5DXBMKYW5AB",
+            "observation_sha256": "0af29bb178dea24cb996e98a9d7bcb705fd497731a31656d493b43cf596e6d96",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "cc5cffadbb3b8874eaf5c0920bab0bbf1b1d21cfdff51347ad6fca96ffdac815",
+            "runtime_sha256": "c366060ba2d431e1050e30d306a4c2b551d83971ba39e178b5f83818509e6824",
+            "score": 0.0,
+            "session_id": "01M5DPR9D0HN7D7Y8F27MW13JV",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "8d1fbe877fec43fa0494e4f2fc2f9f27304311f6a298e56dfdc24f57aed69b19"
+      },
+      "repetition": 1,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "ce6c71d67e889a63e224ebf8352d820bbb9420c2818c085a510ff3f9337fc121"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "0072d2a6949cb4aafe62e6215592b84b77e2e48116a1aa29eea2795215d6a6de",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e8daaf80ba57887e0707d6575e54f1cb3ee0bbcfeb02588c5d42d7ad57e4c375"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e8daaf80ba57887e0707d6575e54f1cb3ee0bbcfeb02588c5d42d7ad57e4c375"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e8daaf80ba57887e0707d6575e54f1cb3ee0bbcfeb02588c5d42d7ad57e4c375"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "f1ecbfc4ed0d475359b9462c38f1f1aecf925d1742f5e6e676d64b298d86c503",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "060070f4f1d2afb7a02d1b9da14fe71016dbcc9b569ee16e6bfb31a2a205248f"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_e75e268beaeb5caab7c4c30a0968d2543b02c1a50ef0552fa9e7f7196463cd72"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "060070f4f1d2afb7a02d1b9da14fe71016dbcc9b569ee16e6bfb31a2a205248f"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "060070f4f1d2afb7a02d1b9da14fe71016dbcc9b569ee16e6bfb31a2a205248f"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "b7a820a6f6178b5f4ef0991a15e1fa9c08c6e86efd1d5039ef7e51ac0596b5c0",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "91eab1f864eab383f6c857f4496d01755747fad152cfc7b7f89160b82710798e"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "15308b4c440be9f9bae401090d0f099f7602d708df02797bf30673da8bbcd8e9"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "14a25746c306492c92f1de96e0c5b2a6bda7ef873b63c43f108e652775e0e43d"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "287ba15e191386f29392c89ce81155822bf5062b4290919a5405be3e667447bc"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "5f2918182ffdbea5822ca04847f3a8cd307b0da63be12287f2c31b25bcbeb837"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "658a2c8dd512f56b621d6f8588fe294a3788dfad080cbd35f8dd48b4424a3a33"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "4c2952b86fa3074eba07d6014131e011806e815607dcc550fb4c86a6497c2f2a"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "303afe937705fc2d6864c5480152ee96a6f95c18ec6ca123eb07f2e54d87bf33"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "daefe6d41b4ef49be116c24f1fb72d8e316fa0fa7d84f037ccd5fd000121f9e6"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "87cc09c1f6648384a428bd2090509f2ac531f38bb6264011cdeb36a253c15602"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b575d78e00cf350c02b184ca9f0e4bc900e9b4f4a3d495965d5270b958daa6fa"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "9c9f1e50fee121de32f2a7625b17ffadade12e347e2aca0b566e6145f4f85f36"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a265f1d47056cb6cc9574b24810145db38176614ed84a988ede5fa289bbea444"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 260,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a265f1d47056cb6cc9574b24810145db38176614ed84a988ede5fa289bbea444"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 65,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a265f1d47056cb6cc9574b24810145db38176614ed84a988ede5fa289bbea444"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "cfe0839decdffcdc65432a9531df1ceee9b4a8215520add0d82576dc89160e1a",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "90d3ff389b90ef3eb32348bbdf4c45d5d17392d8229eec8c7b86d15b1df98c80"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "90d3ff389b90ef3eb32348bbdf4c45d5d17392d8229eec8c7b86d15b1df98c80"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "90d3ff389b90ef3eb32348bbdf4c45d5d17392d8229eec8c7b86d15b1df98c80"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "6555386cfb0f5026ba20e7e0f2d4e6c715547aafac4c95334c175473fa74b7af",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "941cbd680b89757626656d5697aa2acc278a5f2b45f16e311f743785881e5d4e"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "9572160c2d5da11637f8e7a5842c2ba3eb8a4022761632705b6d38e508fa915f"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "7d099b0ce13c96778d81aef6c5978a93bb671d547d8edfe977a306b69a995026"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "32bbe4854afeae01ea38db2760df0b1d8a1bb4f56837f45bef58c890360da41e"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "050c075f6cebf4c8fa5ec09ea90fce401db694693d33082306ef5f90c7b87d8d"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b4d0b8358c06fc27722395053aece7436df68fdf4ec25825cb9b9951defc4f99"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "8c06aa69222bb45f5e6338bc97ea81b6b43b66eeb5dfd6e6504706046fa6c718"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "0c3c203cb102deac278efc24b70c3caaef3efb6cc1ea10f8b4d5702e9f0ba902"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "629a984de218845e2812b75a9e36e986730f7f38ac302c0ad5c56ccf8e4133de"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "ba2882a10aa7aeacba9ce247ad5f5908572c53a039577744fc117a1e5259ac7d"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "26e5aaa527b221a931edd65f76ca5a504c76480be3f5a40cf2e47865f8f75e17"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "d6211727dcc65bba89499f9652b9cf204910a10bb302d471d60032e2ceb7b388"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "fd6903e8da2c22076f7853cdde371b6b9fec2c65226e144d454aede2d73904ed"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 260,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fd6903e8da2c22076f7853cdde371b6b9fec2c65226e144d454aede2d73904ed"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 65,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fd6903e8da2c22076f7853cdde371b6b9fec2c65226e144d454aede2d73904ed"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "bc39ea9713fbd60263ef591cb1d04f6b18f10adafac100f6464ec80fb70797d7",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "7fe6217cccc905e982568f8d1c62d7360a29e09e369b862553f12386b1cb7c94"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "06b47235591730b8ab1df47bdd8b76ec34f8c970399c84297dfbb20ddc1fd608"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "ff73de5cadb2015e39d34ac78efa3592f1a18ce3c7769a83e89c72aa7c30db1d"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_30fb273c2cad2e87a3ba2461eaefa77bcb503c0b68b684d104a7f122af916baf"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "ff73de5cadb2015e39d34ac78efa3592f1a18ce3c7769a83e89c72aa7c30db1d"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "f695fac2dad6ef20ff218d3353c66215904f92b556205b8f387194d11ea4301a",
+            "lease_id": "probe_01M5DPXN82VG0CF2J826KP4Y79",
+            "observation_sha256": "0e93aff8bf178bb3ee75ddd7dd7a44dbae4c158aa74d950aa0fa8b4267f416ad",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "9d9b39f4eb411b55f815b3745729bb4c658403692021cb6604102df2c22cff89",
+            "runtime_sha256": "bc8f15f5bd4d50a68784135cb986bce257f499bf833c27fcf60af39b0c6412c7",
+            "score": 0.0,
+            "session_id": "01M5DPXNRZQCNN33ZK21TYGVJ0",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "07f3fa32b8aed0714fb54ef1f73bbec91be8b421de86f0ce8735b2cf20978ff4",
+            "lease_id": "probe_01M5DPXR7QBGKXX1CW46RXGF1Y",
+            "observation_sha256": "b5a05e4d36b0eab1d3fcfa462e1603c8e1d2c61b41ebdbca8728a6acc4a9344a",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "946d2388b98564429a39b3ed9d94084c1f259ef642dd4ab15323c3432c0a71ed",
+            "runtime_sha256": "28e6bc1291f9188cabd0be89d4a525e15029c13bd8071a07208bf06c242302aa",
+            "score": 0.0,
+            "session_id": "01M5DPXRRPWPTQYJ7TAXG02YGB",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "c7b54cf462e9f586ba5954ef6888cfee7364e5cd8f4a487653c405b081f9be96"
+      },
+      "repetition": 2,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "ff73de5cadb2015e39d34ac78efa3592f1a18ce3c7769a83e89c72aa7c30db1d"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "81bb54b285fe4a6eafc3fdfe46b4983a219718159cc33064a671733dd316ac78",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "dfe0e88a459ce9012cb73e5a796182966cd3eff8d789ec26b4ef3f5bbf7f0f97"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "eea2cef59894bd81507c27739601456fe02bce67920970127b2e59ebaf4b2bd7"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "3ad3791c44ae4af21c9dd97f598a3471c4fed53813c50b53ecfad38ec5fd1ceb"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_a587b2d9b3079d1baa18840297ea1d2328f23592374184c44879e36b0d8713b5"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "3ad3791c44ae4af21c9dd97f598a3471c4fed53813c50b53ecfad38ec5fd1ceb"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "0238043b00ee3244517fb89f407e7869fa34ae76e2c4e757cd3ea12571148981",
+            "lease_id": "probe_01M5DPNT49YQEKW447TBG8PYRB",
+            "observation_sha256": "f00f8fcc94dd87d0fdde9ab3ca0384f25bc590fa8ae83c7bf8e8c9d5f7560a94",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "26078f40d09e3a09a8ed6e49961a04fc0382cdbcdb5a65f44d556914b2f4b273",
+            "runtime_sha256": "fb174bcddc378a44954794e233619db5b328b0fa5704a143a17afe2a62ded780",
+            "score": 0.0,
+            "session_id": "01M5DPNTN6F8FTCXFTFMZMTBTF",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "041065e161f2596400b958a118311f0f31e70693f1105f9d7308c8c4e775c5fa",
+            "lease_id": "probe_01M5DPNX01AF8AC43F9K74X473",
+            "observation_sha256": "1fcc4bdd1ad7f4f0fedecf936688b81e52499a3273883a91d1e2035f25992e25",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "3be323d8f82eda8feaffcfb40d2d3301c289158a6bce70249d8d8eb76ff7373a",
+            "runtime_sha256": "7016ce801d218144c8dc14e5b29a128a1c74d6722c72d8b140650afb6ef9d658",
+            "score": 0.0,
+            "session_id": "01M5DPNXHBYFEGZMZHF5ZAWSMK",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "f580d31aaa525b32ecc1e040dd88c7bfd012ee314b62ab1498280b3d395aa53c"
+      },
+      "repetition": 1,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "3ad3791c44ae4af21c9dd97f598a3471c4fed53813c50b53ecfad38ec5fd1ceb"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "1d00d112f647b26ccd21bab9ef6d081afb80527e6f0b662e1a0ef45cc36dff26",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "fd9e23ca2f3734a8bfd0cdeade5b449ea54bb0208ef41a2b02ece68c047c8551"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_879e42fbf5f23dd9d78cb01b1739147061c0d3c0a5bf4a4d5d2e8822e859a2cf"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fd9e23ca2f3734a8bfd0cdeade5b449ea54bb0208ef41a2b02ece68c047c8551"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fd9e23ca2f3734a8bfd0cdeade5b449ea54bb0208ef41a2b02ece68c047c8551"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "e9fbc6ca7f9e710afda638455fa454b037dae5bbb3fd0aab27fdd56b1a45a453",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e9e1257af6b657a13929bd89bf6239a8ba5b2f2e3ab41c588a543024a55133e6"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "fcdeb02475259ac8f957a0ba3213a8d41edec9338b9b8846ee1c3e30f97df8dc"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "20c422f25eaea0848dae89d5ef75ed697c266bc0d6c7fc034da4e5c4e21d010a"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "2b7dd8fcf316900886ee49ed598beceeceecafce037d63ba8e40b8d0769231ad"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "5fa969b54afaa87f29ef3681a1083bf42937fd627f0b129c9e3df0a13a50ba44"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "ccb86c828f07d9fc9e1674c6bfb044ec39dce8b6338102211a8d20e3ac5f1888"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "af814d9aa8a01a4dbd73bf9a1349020bb5f8efdfc65b251380d152c60ff82e84"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "818c1d4449eeeafdbe1a3f26f915d47a49db546304eddbe7596ef2017399534f"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "72fe206d91531eb5132e61a69757dd7fd6ef975f526d70ca028d9c94b70ad5cb"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "4e5bd20b4f4281266f0340f43bd8b70e5b15b92f726f40ad58fa20f41aadf84b"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b0023259181ca805f027f065897e6e45e58fcfea69daeb660ef115f314a1abb9"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "f8f6542ffe0c201e97be144e0f1d63050216f7f863ec19fe28afdff08c9700a9"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "00c8b5ee57de6f6a6d004ae626ec34bd72e72e5ae81750461eb369420a9b399e"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 260,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "00c8b5ee57de6f6a6d004ae626ec34bd72e72e5ae81750461eb369420a9b399e"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 65,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "00c8b5ee57de6f6a6d004ae626ec34bd72e72e5ae81750461eb369420a9b399e"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "8af81b77c1fbae730d1b068043d13ab2dbe9005433404e2ced7257480953be3c",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "41d253a0d1a776c7e7d129689d2ae364ea63f2d6123a82181d9b2056fe1cd502"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "ecfc08c15a098aabd9c21c4d570d32467feb5444538d6c728684f8b0c46e596f"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a80979cff06ef5a02ed64990817ba19410fed522dc6fa874a2c1276c02068343"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_0a852c238351e11fd219f232d1b7b7064e988f98fe1ebfef89d70e9d96816bb4"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a80979cff06ef5a02ed64990817ba19410fed522dc6fa874a2c1276c02068343"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "ee1fc83fce4af529ec8afa259b7057775548b33cff2d9b57aeae122b7a58e8ca",
+            "lease_id": "probe_01M5DPXABNE7VZ8T8MJ05Z2KBN",
+            "observation_sha256": "6dfcb46534db543f978b0ccbd87c8e3c603ee7579001a623ed009ee7cda6ee89",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "9e3c69517ab7a9fe381652e3b89e147726dfa947ffdf3737d3e1b3797c2d2540",
+            "runtime_sha256": "e113adbb22f3358b5f1572998ee751553ef6c50a209242d8203a354f4f518edf",
+            "score": 0.0,
+            "session_id": "01M5DPXAWXGK84W5S137716VR9",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "585b0d310a28396ae4a95c2906635810a2a024cfbbb56d5214faa99f85d3df27",
+            "lease_id": "probe_01M5DPXDFBAXX3QZCT211ZBCMC",
+            "observation_sha256": "c70bdc20ced63e5903a1695321e9c4ef7fd0ecc6a1f1ca604e40525aa0408bd6",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "4ea30063012a35f3737d8d5f1f44c04aeacbcfff361c92ea02665afac3ee19d5",
+            "runtime_sha256": "e74177cd2bad5998769a4035c4a3cc6c9e9f13be1915a28c2dd40a14a0653ab1",
+            "score": 0.0,
+            "session_id": "01M5DPXE70285V5N5TGXN0SC21",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "7afba052a37df3cea8f767c99e9abd684d5143997cc9deb48354e61a84e2f268"
+      },
+      "repetition": 2,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a80979cff06ef5a02ed64990817ba19410fed522dc6fa874a2c1276c02068343"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "3a5240dbe57f810410372435fc6ba6ab59508ad1a0fecbae82d1d0876d27d2e8",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a6d1101079f9307e03f318cd1cf6606f58ed891b330a2c2332efc6e083c29d2e"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "3f6ffe8db46b02b7bc9e7f4f2679bf6cd62ddd17bdda54facb750958632d5ccd"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a2ceb1890a419cdbad0b98d97656df7fad930bec6398f289bf627c70676753b6"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_f3ef95410c40354a19d96d1fbe28da20f46ada1558a7b089b6c506d3c5a656ec"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a2ceb1890a419cdbad0b98d97656df7fad930bec6398f289bf627c70676753b6"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "9560345ad6f0a14677c8af5840a7bc8e6872156cbbf13ffc0fdb7804d5b2a70f",
+            "lease_id": "probe_01M5DPQW8D23S1T5SRCP0DH1KT",
+            "observation_sha256": "0bf7e547b642504299ab9dbd088ae25f89c99c95bce83abf93839334c5feab5e",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "10b9f0ab6cf045ebdf595717fd34745c361877111cfa038c8db11f0042982c7f",
+            "runtime_sha256": "f8c1455c38f8033f8b9f979844bb5cd38ddb531c40fc58999a6acf8fea1f56db",
+            "score": 0.0,
+            "session_id": "01M5DPQWRKHXG16NKV6HEG120V",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "81be06d4f1c2364003de8002e68f21e281b86999e2e9470e361cc675472d715d",
+            "lease_id": "probe_01M5DPQZ4DP82RXZ1TGTJD956P",
+            "observation_sha256": "bfe3854ffe3560556edf6b1251cd35ab461664a93882d1c81ff00506d0f33712",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "70e473016a3c3f4698e92162291224548e99f7f199e7bc956d3edd41c210da8e",
+            "runtime_sha256": "63857dd537cd032d383e667e3d413f7531fc020988f85236338f291f0b0f8174",
+            "score": 0.0,
+            "session_id": "01M5DPQZMY9GM383RQD87WKS75",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "fd16934c2727e263ba8ce1cc0ffe4128fed76aba92f4477fe471ea2c483f47ad"
+      },
+      "repetition": 1,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a2ceb1890a419cdbad0b98d97656df7fad930bec6398f289bf627c70676753b6"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "c34cb98d6ec722f68854d7942bccd2ecf3d4b1eb8bd8d001558b9fbf0d9978db",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "270c55ac76a303f96a57622d5ae25a45e4ba04df1f63c6cd6be26b5781cfe0f4"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "270c55ac76a303f96a57622d5ae25a45e4ba04df1f63c6cd6be26b5781cfe0f4"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "270c55ac76a303f96a57622d5ae25a45e4ba04df1f63c6cd6be26b5781cfe0f4"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "0bdf2305b68b05122cff4f6adf2416ca0b79eb8710dfe09685213f327da596c1",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "00331e7851eae4e8f1191f18c8d908bcd9e38a97f03d6460f5564d94bdf4285a"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_522f9f28cb30f9adf21a8c4a6bbdce22b3ffa415586c5ac171f579e029d9bbe5"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "00331e7851eae4e8f1191f18c8d908bcd9e38a97f03d6460f5564d94bdf4285a"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "00331e7851eae4e8f1191f18c8d908bcd9e38a97f03d6460f5564d94bdf4285a"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "81cfd31ae3795deffe1a3936af3df2ad65de31e9cb91064163bf7eff794e0dc7",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "542ec3e6c5914cf7d74539ee3b2e774ed882a0415cf43d4c489fe05de7bba36f"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "f184cc7c76551187dadfe5f235a0b077ed92ee51aedc6b1d25c10f49e98a9fa9"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "050724c0cfd9f7370cda70ca140d39f35e93bc049a82fc2cb895ca3d61348dcc"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "91c7756dc9f16c612b10af9c0f8a0c601d59dc670556eeab0f0e581ae197bb2d"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "006b71af325aa7e8db023ffe1873912b5b9530004638cef485f092bf4d85f8b2"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "2a456aa94a039ade5a9cd3cd785c3fbbfd97559169a878964ba63b59e35d2a2d"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e45a0c3daccb678beeb76f92c81c2887f0187678d92b9467169952cb424dadee"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "0a24731c0a4e02099c0f5972d96e5df90698772b9f591c4d1daf240e6b1fea4a"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e7b641a02d9db012c3caa6bb12b90e051820b7d104c7a60f2b16573a09c74c24"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "137ce39668e328375d8afc9291782e3cf55bd31fc4d4a58f7d2108dbc799fe17"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "076bf4214a3cf6647ab51242ba37013008626f354a5af1783181ef51f8a03353"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "c6e5f5eebd399a5f474de83a52a79c38277eeec88e0574bf54d17e3895a3140f"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e4ed263b73b395bddb4967a283d036fa2c02999071dffa804bc3b0fcb12a39fc"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 260,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e4ed263b73b395bddb4967a283d036fa2c02999071dffa804bc3b0fcb12a39fc"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 65,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e4ed263b73b395bddb4967a283d036fa2c02999071dffa804bc3b0fcb12a39fc"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "123224cdfc1c46b6ab55e1e449cccc7a01884399e75f9010d89518f611add7c8",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "4f866fd64c3d8b76b39ceeafa2ca5d47bce409692940f98b2821d77f4a9e0e58"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_79dc918719a26e15712ae6865382a0044267493b8d9a34de211d1462f845f4fc"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "4f866fd64c3d8b76b39ceeafa2ca5d47bce409692940f98b2821d77f4a9e0e58"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "4f866fd64c3d8b76b39ceeafa2ca5d47bce409692940f98b2821d77f4a9e0e58"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "46fae7f79afae8a5f7b7359ac9572d4cc446790eda0d85a6b1405fc81ed0b689",
+      "task_id": "seed-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "c3efe7d440ccfd1c69017e0c0e40deffabeb7505f55e9d5e261d0b0f8acd48e2"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a78f3e407ecbb35204552583ea0f8d892bead750b2477de39f492dcf752c8913"
+        },
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "07f422f5a58a4adff356d41d447145286e5752ed3267666879b964a2ecb0ecd5"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_958ddd789013fe69f8810c9758deb42be9baf644e79af7fcd049070946751ed9"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 80,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "07f422f5a58a4adff356d41d447145286e5752ed3267666879b964a2ecb0ecd5"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": [],
+        "control": [
+          {
+            "attempt": 1,
+            "harness_sha256": "761e9ba08cfe4cb17415f0b1bf8fa6596e89284ab878c843b6bfa00fcc8d3c52",
+            "lease_id": "probe_01M5DPTDY2CASZXW50QATXE7SX",
+            "observation_sha256": "d1e3ad7a0f2147aae10d1ec3f03d95096bc86d7836805d0605a62039601b7958",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "dda6d6a0f3f6e70081c02512f3961b4c0282e558af89123f744b991e82a90665",
+            "runtime_sha256": "bf11a04038f574f6d8db201b7e65e1ae5c537fe7392a0cc7e7c91a1d3b224584",
+            "score": 0.0,
+            "session_id": "01M5DPTEGXT6BD0YT69WPJ5HRK",
+            "verified_success": false
+          },
+          {
+            "attempt": 2,
+            "harness_sha256": "eb540ccbc90b630baeda9856ad6bc692dfcc87941dc8f382056b66adaa7d4ceb",
+            "lease_id": "probe_01M5DPTH7DX5RXG9DYAB07F4EZ",
+            "observation_sha256": "9af445582012d0c54cc93a5194ed2ac2126ddc205a4a5fe27fc05c8ef1be4a7f",
+            "profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+            "regression": false,
+            "run_sha256": "d7762a200498c6627311c73a7113523b9de4a191a5ebe7521ea35fcb5e932582",
+            "runtime_sha256": "d82551611d263dbdb865d5f2f1645b4c9511a7020fd25403514b41848fb6fd74",
+            "score": 0.0,
+            "session_id": "01M5DPTJ4D5JMZQ6M9ZVNXEKP7",
+            "verified_success": false
+          }
+        ],
+        "decision": "baseline",
+        "excluded": [
+          {
+            "candidate": "cand_001_44136fa3",
+            "reason": "unsupported_candidate"
+          }
+        ],
+        "original_profile_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "qualification": "unassessed",
+        "reason": "no_supported_improvement",
+        "selected_sha256": "0d1842fd95493a3235f91d09c03815299d655dbf265d2a5ca98b64a449f1b2c3",
+        "sha256": "2517c1f7c8d80524653bb013d67cc10faf2f46e95b359aaef9121c3858578512"
+      },
+      "repetition": 2,
+      "reserved_requests": 93,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "07f422f5a58a4adff356d41d447145286e5752ed3267666879b964a2ecb0ecd5"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "8d7bbe86893873f173de6368cc078d1f2c9d309c3ad9ee6270a115d1084eac73",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "5aba45f25fc3683244b9e5f1442ffbaa59345c9b1495a3a69428c897d4a75d54"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "5aba45f25fc3683244b9e5f1442ffbaa59345c9b1495a3a69428c897d4a75d54"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "5aba45f25fc3683244b9e5f1442ffbaa59345c9b1495a3a69428c897d4a75d54"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "d4fd3c983c614b0cafd852a35f8ca432351a7fce2a56e45ad404a0ba360a7d93",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 4,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "d8025609ce082c98f21b53b18a75186e8c54e5a35eae31a74676588942907442"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_9c5e03fdd1efd7a21e4648b41cf628ae37ee073855dffe7e3de61b4cadf44064"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 20,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "d8025609ce082c98f21b53b18a75186e8c54e5a35eae31a74676588942907442"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 5,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 4,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "d8025609ce082c98f21b53b18a75186e8c54e5a35eae31a74676588942907442"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "e9de8d24a2c77fab59bed8a5f0cadb4765bbc5f9409f5eaa5703977833be8f51",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    }
+  ],
+  "incomplete_episodes": 0,
+  "projection": "counts_and_content_free_provenance_no_transcripts_credentials_or_task_solutions",
+  "runtime_revision": "0275b4ec0f739a9bfe42b8d96a868d202a91a823",
+  "schema_version": 1,
+  "source_report_bytes_sha256": "27877d98369af6293d176688a3e6bff4b87113d3ec0d4d23abb629dee6206c73",
+  "total_ledger_tokens": 1860,
+  "total_physical_requests": null,
+  "total_tokens": null,
+  "total_unknown_dispatch_usage": null
+}

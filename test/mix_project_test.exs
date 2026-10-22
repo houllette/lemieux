@@ -29,7 +29,9 @@ defmodule Lemieux.MixProjectTest do
     end
 
     assert aliases[:"test.cover"] ==
-             "test --cover --preload-modules --warnings-as-errors --raise"
+             "test --cover --preload-modules --warnings-as-errors --raise --max-cases 1"
+
+    refute aliases[:"test.fast"] =~ "max-cases"
 
     assert Lemieux.MixProject.cli()[:preferred_envs][:"test.cover"] == :test
 

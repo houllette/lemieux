@@ -1,0 +1,89 @@
+{
+  "empty_required_streams": [
+    "allocation",
+    "cache",
+    "graph",
+    "intervals",
+    "journal",
+    "merge",
+    "patch",
+    "reconcile"
+  ],
+  "frozen_digest_matches_empty_inventories": true,
+  "frozen_initial_library_sha256": "a84d9b5380b9d6fcae6a24d4bf422167724ae25ae7dbdc4b3ae15a4bd390830b",
+  "interpretation": "The fixed run predates the presence gate and continued under its original rules. It provides no positive control for prelearned-library transfer; no outcome was changed or replayed.",
+  "lesson_counts": {
+    "allocation": 0,
+    "cache": 0,
+    "graph": 0,
+    "intervals": 0,
+    "journal": 0,
+    "merge": 0,
+    "patch": 0,
+    "reconcile": 0
+  },
+  "passed": false,
+  "required_streams": [
+    "allocation",
+    "cache",
+    "graph",
+    "intervals",
+    "journal",
+    "merge",
+    "patch",
+    "reconcile"
+  ],
+  "retrospective_presence_check": true,
+  "runtime_revision": "8303aacd533cc53fddbd988032100025ba9f98de",
+  "schema_version": 1,
+  "seed_rows": [
+    {
+      "cluster": "graph",
+      "evidence_bytes_sha256": "2316ab830ba008b386378c346df6762f45b983eda7445517cebc84f1cdcc5284",
+      "retained_lessons": 0,
+      "task_id": "seed-graph-1"
+    },
+    {
+      "cluster": "journal",
+      "evidence_bytes_sha256": "a7554aa72413b1c15415fb186289a1175bd0fbff732225f887a73f835f5ca160",
+      "retained_lessons": 0,
+      "task_id": "seed-journal-1"
+    },
+    {
+      "cluster": "cache",
+      "evidence_bytes_sha256": "81330123767acdb79dacf42b53f591cc0910e5a401a7be10198d38904de97470",
+      "retained_lessons": 0,
+      "task_id": "seed-cache-1"
+    },
+    {
+      "cluster": "merge",
+      "evidence_bytes_sha256": "fc0241a33525de6390e7fcd5d2669f075cc4d71456d173e15ee336b8050e11fc",
+      "retained_lessons": 0,
+      "task_id": "seed-merge-1"
+    },
+    {
+      "cluster": "reconcile",
+      "evidence_bytes_sha256": "2ab9d617b8f57e356c54ed6ec01b913ae1d39d80e60580394197223b583ba4f2",
+      "retained_lessons": 0,
+      "task_id": "seed-reconcile-1"
+    },
+    {
+      "cluster": "intervals",
+      "evidence_bytes_sha256": "0b7d3533201c47b63d5fc15bf64802e4a5ddca4719bc9c30f7c4c6564e7daf5f",
+      "retained_lessons": 0,
+      "task_id": "seed-intervals-1"
+    },
+    {
+      "cluster": "allocation",
+      "evidence_bytes_sha256": "5fe8e84e3ef7eb1101f0db668cab19095153cc8fc4e952eb057692168fb31c49",
+      "retained_lessons": 0,
+      "task_id": "seed-allocation-1"
+    },
+    {
+      "cluster": "patch",
+      "evidence_bytes_sha256": "8dec466fd5bdcd600dcf95b7e24cc74aa82cd90d3a1ad7fc8d9ffac176dc1010",
+      "retained_lessons": 0,
+      "task_id": "seed-patch-1"
+    }
+  ]
+}

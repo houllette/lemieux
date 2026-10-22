@@ -34,7 +34,21 @@ page holds only what remains.
   seen (V6).
 - **Harness learning.** Confirm that a learned harness overlay generalizes to
   new tasks and models before recommending regular self-improvement
-  cycles (V9).
+  cycles (V9). Ordinary CLI/TUI sessions now reuse scoped, unconfirmed
+  experience with inspect/undo/opt-out controls. Isolated automatic refinement,
+  independently qualified persistent promotion, and automatic selection of
+  new typed assets remain separate gates; task-local retrieval is not their
+  qualification evidence.
+  The [hosted pilot](qualification/2026-10-20-default-learning/README.md) records
+  stock-path reuse and the unresolved efficacy and recovery work for V2/V9.
+  The [staged study](qualification/2026-10-20-learning-study/README.md) adds
+  calibration, seeded stream comparisons, a pinned repository supplement and
+  explicit power requirements. Independent efficacy remains unestablished.
+  The [research sequence](qualification/2026-10-21-research-sequence/README.md)
+  adds whole-record reflection, an experience-withheld improver control and
+  separate quality/efficiency endpoints. Its hosted profile mechanism passed;
+  reviewed skills were applied, while helper execution and setting changes
+  were not demonstrated. These observations do not establish efficacy.
 
 ## Acceptance and experiments still to run
 

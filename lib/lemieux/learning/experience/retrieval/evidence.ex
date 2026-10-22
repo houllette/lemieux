@@ -27,13 +27,21 @@ defmodule Lemieux.Learning.Experience.Retrieval.Evidence do
     }
   end
 
-  @spec materialize(lessons :: [Lesson.t()], max_bytes :: pos_integer()) ::
+  @spec materialize(
+          lessons :: [Lesson.t()],
+          max_bytes :: pos_integer(),
+          artifact_bytes :: pos_integer()
+        ) ::
           {:ok, map(), [map()]} | {:error, term()}
-  def materialize([], _max_bytes), do: {:ok, %{}, []}
+  def materialize(lessons, max_bytes, artifact_bytes \\ 1024)
+  def materialize([], _max_bytes, _artifact_bytes), do: {:ok, %{}, []}
 
-  def materialize(lessons, max_bytes) do
+  def materialize(lessons, max_bytes, artifact_bytes) do
     per_lesson = div(max_bytes, length(lessons))
-    files = Map.new(lessons, &{&1.id <> ".json", bounded_evidence(&1, per_lesson)})
+
+    files =
+      Map.new(lessons, &{&1.id <> ".json", bounded_evidence(&1, per_lesson, artifact_bytes)})
+
     guards = Enum.flat_map(lessons, &guards/1)
 
     if byte_size(JSON.encode!(files)) <= max_bytes and byte_size(JSON.encode!(guards)) <= 32_768,
@@ -41,7 +49,7 @@ defmodule Lemieux.Learning.Experience.Retrieval.Evidence do
       else: {:error, :retrieval_evidence_limit}
   end
 
-  defp bounded_evidence(lesson, budget) do
+  defp bounded_evidence(lesson, budget, artifact_bytes) do
     observations =
       lesson.experience
       |> Map.take(~w(raw derived evaluations))
@@ -50,7 +58,10 @@ defmodule Lemieux.Learning.Experience.Retrieval.Evidence do
       |> Enum.filter(&(&1["id"] in (lesson.supporting ++ lesson.contradicting)))
       |> Enum.take(8)
 
-    artifacts = lesson.experience["artifacts"] |> Enum.take(3) |> Enum.map(&artifact(lesson, &1))
+    artifacts =
+      lesson.experience["artifacts"]
+      |> Enum.take(3)
+      |> Enum.map(&artifact(lesson, &1, artifact_bytes))
 
     evidence = %{
       "lesson_id" => lesson.id,
@@ -75,12 +86,12 @@ defmodule Lemieux.Learning.Experience.Retrieval.Evidence do
     end
   end
 
-  defp artifact(lesson, descriptor) do
+  defp artifact(lesson, descriptor, maximum) do
     reference = descriptor["reference"]
     bytes = Base.decode64!(lesson.artifacts[reference["sha256"]])
-    excerpt = binary_part(bytes, 0, min(byte_size(bytes), 1024))
+    excerpt = binary_part(bytes, 0, min(byte_size(bytes), maximum))
 
-    %{
+    view = %{
       "id" => reference["id"],
       "sha256" => reference["sha256"],
       "size_bytes" => byte_size(bytes),
@@ -88,6 +99,19 @@ defmodule Lemieux.Learning.Experience.Retrieval.Evidence do
       "excerpt" => Base.encode64(excerpt),
       "truncated" => byte_size(excerpt) < byte_size(bytes)
     }
+
+    # Expanded research disclosure preserves the source reference and full
+    # bytes in the lesson, while exposing readable JSON rather than requiring
+    # a model to reconstruct a large base64 blob. Default bounded views stay small.
+    case {maximum > 1024, JSON.decode(excerpt)} do
+      {true, {:ok, content}} ->
+        view
+        |> Map.drop(~w(excerpt encoding))
+        |> Map.merge(%{"encoding" => "json", "content" => content})
+
+      _bounded_or_not_json ->
+        view
+    end
   end
 
   defp guards(%Lesson{outcome: outcome} = lesson) when outcome in ~w(rejected contradicted) do

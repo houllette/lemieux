@@ -1,0 +1,12 @@
+{
+  "kind": "preflight_guard_abort",
+  "source_revision": "8f357fa",
+  "hosted_dispatches": 0,
+  "authorization_loans_created": 0,
+  "reason": "Elixir not requires a boolean; the provided mechanism path is a string. Failure occurred before registration/authentication/seed dispatch.",
+  "correction": "Use is_nil for optional manifest and mechanism paths. Preserve all mechanism gates, models, task selection, budgets, graders and stopping rules.",
+  "driver_original_sha256": "79ad311c809a8a2bf2cc8eb78e04375dc3605a75a70aea11ad6cafe2c353f6c2",
+  "driver_executed_sha256": "2e51bddd16d360ff9f303e6a79f1594106986cf72e1ed859668df5e07673520c",
+  "qualification_runtime": "unchanged clean frozen 8f357fa checkout",
+  "new_output": "development-journal-merge-driverfixed-8f357fa"
+}

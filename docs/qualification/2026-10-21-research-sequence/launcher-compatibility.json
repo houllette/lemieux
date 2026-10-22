@@ -1,0 +1,15 @@
+{
+  "changed_paths": [
+    "scripts/qualify_learning_study.exs"
+  ],
+  "corpus_tree_unchanged": true,
+  "difference_from_fixed_tracked_driver": "Additional runtime.driver provenance only; no model, budget, grader, gate or stopping-rule change.",
+  "exact_guard_replacement_verified": true,
+  "executed_driver_sha256": "2e51bddd16d360ff9f303e6a79f1594106986cf72e1ed859668df5e07673520c",
+  "fixed_tracked_driver_sha256": "77ffb7aaaeefb0714a3f13790eeb0d0e0463e3555e5fe02ffd89337e70414b1b",
+  "kind": "launcher_compatibility_evidence",
+  "launcher_fix_revision": "18994204c2c30c74f2ff5ed2f4a0bc640f00542b",
+  "library_tree_unchanged": true,
+  "original_driver_sha256": "79ad311c809a8a2bf2cc8eb78e04375dc3605a75a70aea11ad6cafe2c353f6c2",
+  "qualification_runtime_revision": "8f357fab942ab2ec166c216f470d9c00dd68be44"
+}

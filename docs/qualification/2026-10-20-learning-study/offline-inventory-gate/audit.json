@@ -1,0 +1,1763 @@
+{
+  "all_meters_match_ledgers": null,
+  "all_report_rows_match_evidence_hashes": true,
+  "episodes": [
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "c34375b730eea5dde7e9f375e4d1366086004c93251f0c5ddfbc39561b8e112b"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_1ae7df8648d91861379e3dcc616cd4348639a319d265233b392827afe00a5b8f"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c34375b730eea5dde7e9f375e4d1366086004c93251f0c5ddfbc39561b8e112b"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c34375b730eea5dde7e9f375e4d1366086004c93251f0c5ddfbc39561b8e112b"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "758402f436ee8a3add12a48cba9f5ad1fe59f4c8a7c9be039d5942c11d5aa7e2",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "00df3bc10df7d770f899675927fbee7f4ad0e3b4cb62f7abbc9c6fd5d67d9f48"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_66d66250eab9117de132b714c3d31ce188120eb69e2624930287733bdc628879"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "00df3bc10df7d770f899675927fbee7f4ad0e3b4cb62f7abbc9c6fd5d67d9f48"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "00df3bc10df7d770f899675927fbee7f4ad0e3b4cb62f7abbc9c6fd5d67d9f48"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "d8dba81a76ea1f59183213e3057a597440a3d7d10a783dd520ade037ecc1e972",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "2ac893fb29a7c07b1504f3756979bc47e5530e31d42170e4a1ae80b222469ad0"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_2214c0056c619e0835460e778bca156433d269bf38a3bb89a86b971a5e1cdd22"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "2ac893fb29a7c07b1504f3756979bc47e5530e31d42170e4a1ae80b222469ad0"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "2ac893fb29a7c07b1504f3756979bc47e5530e31d42170e4a1ae80b222469ad0"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "4fdb2e8156883804dbcab9f463b7346f1d03906e031f5eab1882083506a9c256",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "1472aa37f5e5b520d5df9df1256b47d88fdf8ed1ec5986a03d016546801b1e87"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "1472aa37f5e5b520d5df9df1256b47d88fdf8ed1ec5986a03d016546801b1e87"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "1472aa37f5e5b520d5df9df1256b47d88fdf8ed1ec5986a03d016546801b1e87"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "c9cea462dcd3f2aa3c5f630fb850180e211310c4c5029304a7c907b5d8df240a",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b133989ba101d241199ae2bc5f7c83ac95978080420d3c8305228df4feb70d54"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_35d4cbdc5217e7e8b3c4777defeeeaa1b9131f4251e9f221aa8cb1a0a62bca70"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b133989ba101d241199ae2bc5f7c83ac95978080420d3c8305228df4feb70d54"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b133989ba101d241199ae2bc5f7c83ac95978080420d3c8305228df4feb70d54"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "cef3f9d88560fbfdc5c86b531220c02350d98a394dac04c832ba6694f351d6fe",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "bad901af8414be25929421dc17e238982545c9847b5f47a39dec8740c56d3ecc"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "bad901af8414be25929421dc17e238982545c9847b5f47a39dec8740c56d3ecc"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "bad901af8414be25929421dc17e238982545c9847b5f47a39dec8740c56d3ecc"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "ffabca6c02ec65fcb3f1788f5ebfe4e65f639e6f21bae7ad1f1d24f16f0bdaec",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "a9fc991e360c5cabcd2b5cc223d3f530196ece05b59c6fa54b2c1f67dc518934"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a9fc991e360c5cabcd2b5cc223d3f530196ece05b59c6fa54b2c1f67dc518934"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "a9fc991e360c5cabcd2b5cc223d3f530196ece05b59c6fa54b2c1f67dc518934"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "14b2a127ece821236bb7973fe29724bfa60062fcb731e4101d412882247250ae",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "52734244fd5e11eb987ad0a0020a8cbc1c77d9f2ea05730a7d64d456de92bbd7"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "52734244fd5e11eb987ad0a0020a8cbc1c77d9f2ea05730a7d64d456de92bbd7"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "52734244fd5e11eb987ad0a0020a8cbc1c77d9f2ea05730a7d64d456de92bbd7"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "bb9f9fc95c91744c806011046c2eca12a681e07c977461266e68737c8bb1a3ed",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "b8367516bfc9d55782275c88ca9217ca5c05c3d0e35d265ff7cb6146ce597801"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_10ca045f8e30118be94cefd3ac45cb005a7ad2dc6bb7d7e18fe29d7d874ec620"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b8367516bfc9d55782275c88ca9217ca5c05c3d0e35d265ff7cb6146ce597801"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b8367516bfc9d55782275c88ca9217ca5c05c3d0e35d265ff7cb6146ce597801"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "05d0e5f01a7060954b0a84fc6b4ba60dda569830beb56eca804a3c852f576c1c",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "21607134a4e6303dc1bce5f379dc28cc8077298b3b87af952ee96af7beb12252"
+        }
+      ],
+      "arm": "updating",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_2738dcf1a2ce4e64328075b478edfbf27a6d2a1c3eee421ea15b772d5b30a639"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "21607134a4e6303dc1bce5f379dc28cc8077298b3b87af952ee96af7beb12252"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "21607134a4e6303dc1bce5f379dc28cc8077298b3b87af952ee96af7beb12252"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "4670be9e26dbe47067e2ea7ec2481461f627f63c74bdf86d1297c2ef310ec6b3",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "46c1891581b1725978d94041558204a971a968110ab342c339b4af9de21fff47"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_30e8e111e38ab592075986faf539a9639c94a39f119dae614dea928bf01fbb0d"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "46c1891581b1725978d94041558204a971a968110ab342c339b4af9de21fff47"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "46c1891581b1725978d94041558204a971a968110ab342c339b4af9de21fff47"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "e4704ac58581f9f7c8fc6dbb9b4fb78c5a982add41292585981ef0b9f3e072dc",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "c4022940a126a42b7f4d10f8d7bddee39e220dab02d7eb87817f6f3d6f038e98"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c4022940a126a42b7f4d10f8d7bddee39e220dab02d7eb87817f6f3d6f038e98"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c4022940a126a42b7f4d10f8d7bddee39e220dab02d7eb87817f6f3d6f038e98"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "79f7976c26718e5771b66da6991a956fe6ce9bd3fc3f7b5de6e2114a3fb4e5a8",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "98b9f961f37e1c2667ea3bbff06e59e413cfe2f7b8ccafa0329972d917ee28aa"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_6f85e62908be6162a9a5405b6829f39f7e3d7ecd1c4e4c36bf781e382b4749fe"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "98b9f961f37e1c2667ea3bbff06e59e413cfe2f7b8ccafa0329972d917ee28aa"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "98b9f961f37e1c2667ea3bbff06e59e413cfe2f7b8ccafa0329972d917ee28aa"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "d1e2401b609c6f1bc108d1ce3403cadf5d3f7b7857180b75a97ee0f66a691797",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "70fefd0f14e8869d667b3f93a5d33bea6fd39e8562cedf96f27d3e40ccf65c8c"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_a28c9062a211f38571f61f1dc8abc94f399b5b8050b27fedc79dd96ff953c368"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "70fefd0f14e8869d667b3f93a5d33bea6fd39e8562cedf96f27d3e40ccf65c8c"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "70fefd0f14e8869d667b3f93a5d33bea6fd39e8562cedf96f27d3e40ccf65c8c"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "2b7cc293f734663b076aecc275ba319eed730fe02b6c7e503ed9515f0f9d37f3",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e894b468352298107379a97b5b78c299746f5dd44a358f32508457313f9483b2"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e894b468352298107379a97b5b78c299746f5dd44a358f32508457313f9483b2"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e894b468352298107379a97b5b78c299746f5dd44a358f32508457313f9483b2"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "4fafd25331f0acecf20ff3720f07e6784ce789ecbcc69147220206015217936a",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "41386dcd4a78296ccb287c42b710cf3914e674cb97c00dc22f22bac1de9ff6c4"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_05fa20787ccfa41c1d25ba36b9d7b0aba2592b91d04048701e3bcfb8281a3b05"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "41386dcd4a78296ccb287c42b710cf3914e674cb97c00dc22f22bac1de9ff6c4"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "41386dcd4a78296ccb287c42b710cf3914e674cb97c00dc22f22bac1de9ff6c4"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "b2a3be2d51b0781a745efe98d5266877623322256db859c523aba5a781a4f445",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "49c8b61dffe965df3505aa92b4ea4aa82858a2f14ab7990228cfc81a938a1e97"
+        }
+      ],
+      "arm": "retry",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "49c8b61dffe965df3505aa92b4ea4aa82858a2f14ab7990228cfc81a938a1e97"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "49c8b61dffe965df3505aa92b4ea4aa82858a2f14ab7990228cfc81a938a1e97"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "5674e398b42fb3faf703805294b73549e7ac4e2dace6ba3eeaa3dfb11ced7017",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "8139bbc01064c19df31d595656c6af6855d1764ea6d50306ed9298f9850bd89b"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_560e447dd9c770c5d9e44b38fe3b86c2deb083bb04fe117cb5c7b9606f453880"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "8139bbc01064c19df31d595656c6af6855d1764ea6d50306ed9298f9850bd89b"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "8139bbc01064c19df31d595656c6af6855d1764ea6d50306ed9298f9850bd89b"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "a59b7ab89275084b9d35aed91bf61c6072711f098497030230fdd61f431c4081",
+      "task_id": "seed-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "09429613452f49c076f0fe51af8e19d9ffe5c02a8a378fd7cca4908a5604d0a6"
+        }
+      ],
+      "arm": "frozen",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_4098b348e5b5dff833d32cb32f16be719ab7aa60485ce191c54a90977723f343"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "09429613452f49c076f0fe51af8e19d9ffe5c02a8a378fd7cca4908a5604d0a6"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "09429613452f49c076f0fe51af8e19d9ffe5c02a8a378fd7cca4908a5604d0a6"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "359780491944adc37a9342f03c6fabc0cb28fe6d2eba8c151b94bad31dcaa5f3",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "fb9bedc9bc03dfbe12005dd98a3b26c4f8d9d9b42f4fab204ba96e710437379e"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fb9bedc9bc03dfbe12005dd98a3b26c4f8d9d9b42f4fab204ba96e710437379e"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "fb9bedc9bc03dfbe12005dd98a3b26c4f8d9d9b42f4fab204ba96e710437379e"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "c81093332373432fb4c6676ff5a92065b6a6a154e09d064dfddab4b679701231",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "6f8ee1f814fc86e38caf83f6b6f73fc2ecbc189bcab3dbeaf8a8be8085b4bec5"
+        }
+      ],
+      "arm": "retrieval",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [
+        "lesson_c6cb4a6fed133261ca9482c5bb10e954559ebc0f63ec55e29fcdae55880e7dcf"
+      ],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 28,
+      "meter_matches_ledger": null,
+      "meter_tokens": null,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "6f8ee1f814fc86e38caf83f6b6f73fc2ecbc189bcab3dbeaf8a8be8085b4bec5"
+      },
+      "original_status": "completed",
+      "physical_dispatches": null,
+      "physical_request_count": null,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 2,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "6f8ee1f814fc86e38caf83f6b6f73fc2ecbc189bcab3dbeaf8a8be8085b4bec5"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "6409ef316aca5ad0103233d4e375de33a8c20a50c86e7d495ec6e24151a764dc",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": null
+    }
+  ],
+  "incomplete_episodes": 0,
+  "projection": "counts_and_content_free_provenance_no_transcripts_credentials_or_task_solutions",
+  "runtime_revision": "e7b968ed93eb967415cf06dd9876aebe4b42478d",
+  "schema_version": 1,
+  "source_report_bytes_sha256": "64fc6bc700f7e38947416fa6c0a44dac22d73f355e61ee26d45081b676ba255d",
+  "total_ledger_tokens": 588,
+  "total_physical_requests": null,
+  "total_tokens": null,
+  "total_unknown_dispatch_usage": null
+}

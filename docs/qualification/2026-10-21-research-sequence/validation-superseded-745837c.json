@@ -1,0 +1,7 @@
+{
+  "kind": "superseded_validation",
+  "revision": "745837c",
+  "status": "stopped_before_completion",
+  "reason": "A hosted trace exposed inconsistent artifact scoring. The owned full-gate process and coverage child were terminated so targeted scoring tests could run serially. This run is not claimed as a passing gate; the final application revision requires its own complete gate.",
+  "preserved_private_log": "lemieux-rsi-repair-precommit-full.log"
+}

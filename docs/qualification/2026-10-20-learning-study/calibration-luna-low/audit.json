@@ -1,0 +1,2915 @@
+{
+  "all_meters_match_ledgers": true,
+  "all_report_rows_match_evidence_hashes": true,
+  "episodes": [
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "c4521741352c83120653f5a3558d99ceee713a98bf1d220a32f8ccf689bc3833"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 34520,
+      "meter_matches_ledger": true,
+      "meter_tokens": 34520,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c4521741352c83120653f5a3558d99ceee713a98bf1d220a32f8ccf689bc3833"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DT9170G8EVB8Z4JVGRXV86": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2741,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000282,
+            "input_tokens": 2722,
+            "output_tokens": 19
+          }
+        },
+        "01M5DT92AEDPZ1PN7TQJM9DNPY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3065,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00017,
+            "input_tokens": 1054,
+            "output_tokens": 91
+          }
+        },
+        "01M5DT94H9BB86R6FXKETCH1DF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3545,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000399,
+            "input_tokens": 3434,
+            "output_tokens": 111
+          }
+        },
+        "01M5DT963A0KY9SX9HRHH84NP4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4351,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000305,
+            "input_tokens": 2324,
+            "output_tokens": 107
+          }
+        },
+        "01M5DT97HZPQ64BGZVNEG1EMGD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4752,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000388,
+            "input_tokens": 2617,
+            "output_tokens": 215
+          }
+        },
+        "01M5DT99MNFSPDZ15MAV77T3P7": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5181,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000489,
+            "input_tokens": 2901,
+            "output_tokens": 360
+          }
+        },
+        "01M5DT9CRAXD0CD2F3EYK7EQ1S": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5360,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000426,
+            "input_tokens": 3283,
+            "output_tokens": 157
+          }
+        },
+        "01M5DT9FT82SRWEKNTSW64KHAA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5525,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00061,
+            "input_tokens": 5382,
+            "output_tokens": 143
+          }
+        }
+      },
+      "physical_request_count": 8,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 8,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c4521741352c83120653f5a3558d99ceee713a98bf1d220a32f8ccf689bc3833"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "c0154b68c1ef6c3673a726f28ac4f6d30588b3fd455e6279ebb4263057ffd6a4",
+      "task_id": "development-cache-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "d0d8c9beb6e3f0a1dea6613ab92cd3887ebb932b9754485c654f2d55d5baae2e"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 44598,
+      "meter_matches_ledger": true,
+      "meter_tokens": 44598,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "d0d8c9beb6e3f0a1dea6613ab92cd3887ebb932b9754485c654f2d55d5baae2e"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTFSTE1K4G070AQ9PA91CH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2744,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000282,
+            "input_tokens": 2725,
+            "output_tokens": 19
+          }
+        },
+        "01M5DTFTWGJCCP3AGND2JTT7SD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3042,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000157,
+            "input_tokens": 1057,
+            "output_tokens": 65
+          }
+        },
+        "01M5DTFWWE5XXFZ4P2NAZHW2MZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3502,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000229,
+            "input_tokens": 1454,
+            "output_tokens": 128
+          }
+        },
+        "01M5DTFYDF1KB4FNSFR12YV4N5": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4456,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000323,
+            "input_tokens": 2411,
+            "output_tokens": 125
+          }
+        },
+        "01M5DTG0486D4JTSF0HM23K4Y8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4657,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000302,
+            "input_tokens": 2714,
+            "output_tokens": 23
+          }
+        },
+        "01M5DTG1S2KYHZQDWNE7ZVG15A": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4760,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000312,
+            "input_tokens": 2817,
+            "output_tokens": 23
+          }
+        },
+        "01M5DTG2TMT969H8MM0PHGB0Z0": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4851,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000336,
+            "input_tokens": 2872,
+            "output_tokens": 59
+          }
+        },
+        "01M5DTG46V46HH6FPP0S9QF07R": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5404,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00058,
+            "input_tokens": 2953,
+            "output_tokens": 531
+          }
+        },
+        "01M5DTG81VJJ0QT1ZVE04NY75P": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5498,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000387,
+            "input_tokens": 3553,
+            "output_tokens": 25
+          }
+        },
+        "01M5DTGACREWB69XT3P8Q1PMY8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5684,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000444,
+            "input_tokens": 3643,
+            "output_tokens": 121
+          }
+        }
+      },
+      "physical_request_count": 10,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 10,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "d0d8c9beb6e3f0a1dea6613ab92cd3887ebb932b9754485c654f2d55d5baae2e"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "71ed7c5e2bec81d3ae353f2f74864da0eff9265b7c1241b8ca5a6fcb38686e9e",
+      "task_id": "development-patch-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "432e19d6c1f6135db07b48b2a43d5099fa1aafecd59ec0e9a48334aa9cf494d1"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 32269,
+      "meter_matches_ledger": true,
+      "meter_tokens": 32269,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "432e19d6c1f6135db07b48b2a43d5099fa1aafecd59ec0e9a48334aa9cf494d1"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DT9N3APFJCNDA36Z70RMJ3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2909,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000175,
+            "input_tokens": 1004,
+            "output_tokens": 113
+          }
+        },
+        "01M5DT9PV1T7VAF9ZW35J3R1MN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3581,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000235,
+            "input_tokens": 1537,
+            "output_tokens": 124
+          }
+        },
+        "01M5DT9S666KGP0QGW5ZQSWDP4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4760,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000466,
+            "input_tokens": 2433,
+            "output_tokens": 407
+          }
+        },
+        "01M5DT9WX8AF7Q05G9HET7ERTQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4807,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000318,
+            "input_tokens": 2862,
+            "output_tokens": 25
+          }
+        },
+        "01M5DT9Z3NJ4FKPCC9KHATXSG4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4845,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00032,
+            "input_tokens": 2905,
+            "output_tokens": 20
+          }
+        },
+        "01M5DTA044GYMAEW1EAXGSPW9Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5589,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000504,
+            "input_tokens": 3373,
+            "output_tokens": 296
+          }
+        },
+        "01M5DTA3PEM4PFWPNJ7FHFWTFD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5778,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000472,
+            "input_tokens": 3691,
+            "output_tokens": 167
+          }
+        }
+      },
+      "physical_request_count": 7,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "432e19d6c1f6135db07b48b2a43d5099fa1aafecd59ec0e9a48334aa9cf494d1"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "7c77041bcf6a98136e81f0875c25943a1b98078510d08980b84eeb0807bc4173",
+      "task_id": "development-cache-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "cbb7d673965d50592ecc91ea77803478836866398badc3c5e9573dc338581b42"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 46136,
+      "meter_matches_ledger": true,
+      "meter_tokens": 46136,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "cbb7d673965d50592ecc91ea77803478836866398badc3c5e9573dc338581b42"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DT64DMJK6AJBV232YYSTR9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2818,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000159,
+            "input_tokens": 931,
+            "output_tokens": 95
+          }
+        },
+        "01M5DT66VJEGR7130ZS17PDHFS": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3291,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000206,
+            "input_tokens": 1248,
+            "output_tokens": 123
+          }
+        },
+        "01M5DT69D1FNX9F8JXCC1ZC8SR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4247,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000293,
+            "input_tokens": 2225,
+            "output_tokens": 102
+          }
+        },
+        "01M5DT6AYBWCBA3G8PDXF69BZ2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4488,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000284,
+            "input_tokens": 2548,
+            "output_tokens": 20
+          }
+        },
+        "01M5DT6C4C57BMFZVHKE4F3DGX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4565,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000298,
+            "input_tokens": 2608,
+            "output_tokens": 37
+          }
+        },
+        "01M5DT6EZP75WW9Q7B1PCF6N40": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4999,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00047,
+            "input_tokens": 2722,
+            "output_tokens": 357
+          }
+        },
+        "01M5DT6HV28K0KPWDSVJ40103R": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5052,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000345,
+            "input_tokens": 3101,
+            "output_tokens": 31
+          }
+        },
+        "01M5DT6MFPQEE3W52J8Z24M12Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5296,
+          "usage": {
+            "cache_read_tokens": 4352,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000228,
+            "input_tokens": 718,
+            "output_tokens": 226
+          }
+        },
+        "01M5DT6PZMB8A4VS52NRWRJ5S8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5588,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000474,
+            "input_tokens": 3447,
+            "output_tokens": 221
+          }
+        },
+        "01M5DT6T7BCGCHSN4SDBVCQ4FN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5792,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000456,
+            "input_tokens": 3747,
+            "output_tokens": 125
+          }
+        }
+      },
+      "physical_request_count": 10,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 10,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "cbb7d673965d50592ecc91ea77803478836866398badc3c5e9573dc338581b42"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "e91a4a82b839dfede5b273ada7323eb4e27af391c816e5f1d18e9d28b2eb5a66",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "0ae9a3a842bd3adc0cc954f308088b4492be5a166c08c497222e27b23ee6fb08"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 29041,
+      "meter_matches_ledger": true,
+      "meter_tokens": 29041,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "0ae9a3a842bd3adc0cc954f308088b4492be5a166c08c497222e27b23ee6fb08"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DT8E9VSY0GY1CQKTTAS3K6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2914,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000337,
+            "input_tokens": 2799,
+            "output_tokens": 115
+          }
+        },
+        "01M5DT8GSJBYX13PH0TS8D2391": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3496,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000202,
+            "input_tokens": 1513,
+            "output_tokens": 63
+          }
+        },
+        "01M5DT8JGB85FS0278Z5JWFZ0K": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4030,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000259,
+            "input_tokens": 2039,
+            "output_tokens": 71
+          }
+        },
+        "01M5DT8KYJAJTH4PZ7SPE7QFSZ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4412,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00038,
+            "input_tokens": 2212,
+            "output_tokens": 280
+          }
+        },
+        "01M5DT8PZHMC7KTN2ECXCYFHAQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4465,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000286,
+            "input_tokens": 2514,
+            "output_tokens": 31
+          }
+        },
+        "01M5DT8S6D69ND3X0S3FWG61BM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4787,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000409,
+            "input_tokens": 2610,
+            "output_tokens": 257
+          }
+        },
+        "01M5DT8W4490BSZXAYNREVQ825": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4937,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000369,
+            "input_tokens": 2896,
+            "output_tokens": 121
+          }
+        }
+      },
+      "physical_request_count": 7,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "0ae9a3a842bd3adc0cc954f308088b4492be5a166c08c497222e27b23ee6fb08"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "d35f96f07431ab6ea8045bd417b4eaceb2407ea3bd16b4f78d7ccd12e5b64ba5",
+      "task_id": "development-journal-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "2fd90cbaf29d2313e45267dcac46d39d30bc2dc42d7b6ba74870c4268057342f"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 26979,
+      "meter_matches_ledger": true,
+      "meter_tokens": 26979,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "2fd90cbaf29d2313e45267dcac46d39d30bc2dc42d7b6ba74870c4268057342f"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTF75NVRS5C18EE1190M5Y": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2932,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000347,
+            "input_tokens": 2797,
+            "output_tokens": 135
+          }
+        },
+        "01M5DTF9HA7292TQPN2SGBPQTQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3569,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000228,
+            "input_tokens": 1539,
+            "output_tokens": 110
+          }
+        },
+        "01M5DTFBKNB7Q144326AQF4SYE": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4334,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000329,
+            "input_tokens": 2243,
+            "output_tokens": 171
+          }
+        },
+        "01M5DTFDDR3A8X0QRDXCJ2H1SJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4749,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000408,
+            "input_tokens": 2565,
+            "output_tokens": 264
+          }
+        },
+        "01M5DTFG2YQ4HPBRNC2CQC413Q": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5306,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000507,
+            "input_tokens": 3014,
+            "output_tokens": 372
+          }
+        },
+        "01M5DTFMX6P89XHWJAW9DQZ4PR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6089,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000484,
+            "input_tokens": 4049,
+            "output_tokens": 120
+          }
+        }
+      },
+      "physical_request_count": 6,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 6,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "2fd90cbaf29d2313e45267dcac46d39d30bc2dc42d7b6ba74870c4268057342f"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "16b98b8d0d1c5e0a426f7d63445fcd467221433c85c9cbd415b826283799adcc",
+      "task_id": "development-allocation-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "67973d885cedba044e57a7684d968c6295d5073501bcb3c67bf8a6d26843bd10"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 33643,
+      "meter_matches_ledger": true,
+      "meter_tokens": 33643,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "67973d885cedba044e57a7684d968c6295d5073501bcb3c67bf8a6d26843bd10"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DT7P64VKPR4QG86KQ9CQ7V": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2801,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00015,
+            "input_tokens": 930,
+            "output_tokens": 79
+          }
+        },
+        "01M5DT7VZQTCEKGSK9YWY2DMAV": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3204,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000185,
+            "input_tokens": 1190,
+            "output_tokens": 94
+          }
+        },
+        "01M5DT7YJ1XVBFVTJMJNDJTT69": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3667,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000239,
+            "input_tokens": 1633,
+            "output_tokens": 114
+          }
+        },
+        "01M5DT7ZZ33QY1RY2V5EWG99S2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4198,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000284,
+            "input_tokens": 2186,
+            "output_tokens": 92
+          }
+        },
+        "01M5DT81DDPW8NJ08VHMJ1JDVM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4370,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000271,
+            "input_tokens": 2432,
+            "output_tokens": 18
+          }
+        },
+        "01M5DT82R0VHJ89Z0NTSY8B6NA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4853,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000443,
+            "input_tokens": 2607,
+            "output_tokens": 326
+          }
+        },
+        "01M5DT85JST5CZ2MC310Q6A413": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5203,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000411,
+            "input_tokens": 3124,
+            "output_tokens": 159
+          }
+        },
+        "01M5DT892A4VFCS918GBHQ2XKS": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5347,
+          "usage": {
+            "cache_read_tokens": 3968,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000226,
+            "input_tokens": 1257,
+            "output_tokens": 122
+          }
+        }
+      },
+      "physical_request_count": 8,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 8,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "67973d885cedba044e57a7684d968c6295d5073501bcb3c67bf8a6d26843bd10"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "7444d923cdb5b1a0051c69d16d163174706c04c572cc3a21fb486cfbed03fd0f",
+      "task_id": "development-journal-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "c092dc3f145273608a93c1dc8c9c59ce67dd1855e95e70e9d0ca5ee5ae6988d0"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 48115,
+      "meter_matches_ledger": true,
+      "meter_tokens": 48115,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c092dc3f145273608a93c1dc8c9c59ce67dd1855e95e70e9d0ca5ee5ae6988d0"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTD1ZB3JFT6AZATHY9V6YC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2803,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00015,
+            "input_tokens": 934,
+            "output_tokens": 77
+          }
+        },
+        "01M5DTD4BCQ5CXXNHKF0B5FCFY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3240,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000203,
+            "input_tokens": 1190,
+            "output_tokens": 130
+          }
+        },
+        "01M5DTD758T4ACNSR7B96DG0X1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4061,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000282,
+            "input_tokens": 2020,
+            "output_tokens": 121
+          }
+        },
+        "01M5DTD95Q8A7757PF1GNK3BP2": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4333,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000272,
+            "input_tokens": 2384,
+            "output_tokens": 29
+          }
+        },
+        "01M5DTDAM7M5JPA2DEQ9Y6FV94": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4785,
+          "usage": {
+            "cache_read_tokens": 4224,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000198,
+            "input_tokens": 313,
+            "output_tokens": 248
+          }
+        },
+        "01M5DTDD00ER4Q6N3V9PVHSJ8R": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5321,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00041,
+            "input_tokens": 3275,
+            "output_tokens": 126
+          }
+        },
+        "01M5DTDFWVN2X9PNBRXBK2QJ20": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5564,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000472,
+            "input_tokens": 3423,
+            "output_tokens": 221
+          }
+        },
+        "01M5DTDJ554NYM784C0SGZTEED": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5616,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000401,
+            "input_tokens": 3665,
+            "output_tokens": 31
+          }
+        },
+        "01M5DTDMRKH627K3F7H9AEPK15": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6087,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000771,
+            "input_tokens": 5681,
+            "output_tokens": 406
+          }
+        },
+        "01M5DTDS8KFT8YYD6GAVMA8QHQ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6305,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00052,
+            "input_tokens": 4229,
+            "output_tokens": 156
+          }
+        }
+      },
+      "physical_request_count": 10,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 10,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c092dc3f145273608a93c1dc8c9c59ce67dd1855e95e70e9d0ca5ee5ae6988d0"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "1449bb4a10161c6a77e8001012bc53517a739149297517deef7049e2485d26c3",
+      "task_id": "development-intervals-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 18,
+          "correct": 18,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "245e1e396624326e1840978c6d1e33f8354dcb496e52d1cb38c473843e91e5c3"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 33677,
+      "meter_matches_ledger": true,
+      "meter_tokens": 33677,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 18,
+        "correct": 18,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "245e1e396624326e1840978c6d1e33f8354dcb496e52d1cb38c473843e91e5c3"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTB4N94821Z88507ZQJF9X": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2913,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000175,
+            "input_tokens": 1008,
+            "output_tokens": 113
+          }
+        },
+        "01M5DTB67F2NHFX33GW8ZX1B64": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3515,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000217,
+            "input_tokens": 1500,
+            "output_tokens": 95
+          }
+        },
+        "01M5DTB7NVQCYEKQSBS1X57EQ1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4368,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000362,
+            "input_tokens": 2204,
+            "output_tokens": 244
+          }
+        },
+        "01M5DTBA4G21G6G719W4A167EW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4940,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000469,
+            "input_tokens": 2651,
+            "output_tokens": 369
+          }
+        },
+        "01M5DTBEBZSHB3YW4A04YAHXSD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5555,
+          "usage": {
+            "cache_read_tokens": 3328,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000288,
+            "input_tokens": 2146,
+            "output_tokens": 81
+          }
+        },
+        "01M5DTBFQZQKDV4D61QW86030A": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6107,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000599,
+            "input_tokens": 3783,
+            "output_tokens": 404
+          }
+        },
+        "01M5DTBN2XCP4P79CX4BQHXCPN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6279,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000506,
+            "input_tokens": 4231,
+            "output_tokens": 128
+          }
+        }
+      },
+      "physical_request_count": 7,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 18,
+        "correct": 18,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 18,
+        "correct": 18,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "245e1e396624326e1840978c6d1e33f8354dcb496e52d1cb38c473843e91e5c3"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "8faed8d63935448d0c730ed8ddba90fac7626e629903c2ec804813b64c465531",
+      "task_id": "development-merge-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "adac61582a0601d2d3fd3bbd097776e26dad7d356d2d5a23851d51e78af2af81"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 31822,
+      "meter_matches_ledger": true,
+      "meter_tokens": 31822,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "adac61582a0601d2d3fd3bbd097776e26dad7d356d2d5a23851d51e78af2af81"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DT6ZZ4J55JPN69Y8TYNAPD": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2896,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000168,
+            "input_tokens": 1004,
+            "output_tokens": 100
+          }
+        },
+        "01M5DT722CG1EYFZ3AZG4W63A9": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3422,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000206,
+            "input_tokens": 1410,
+            "output_tokens": 92
+          }
+        },
+        "01M5DT74V50S77TPXYZ2V4TSP8": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4278,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000295,
+            "input_tokens": 2257,
+            "output_tokens": 101
+          }
+        },
+        "01M5DT76ANE1DX2D0E9D4G0C30": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4895,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000489,
+            "input_tokens": 2544,
+            "output_tokens": 431
+          }
+        },
+        "01M5DT79KW344KY9BE508NV4TX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5130,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00035,
+            "input_tokens": 3185,
+            "output_tokens": 25
+          }
+        },
+        "01M5DT7C11TS8EDV2WN1CQQ949": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5523,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000511,
+            "input_tokens": 3275,
+            "output_tokens": 328
+          }
+        },
+        "01M5DT7FF3R1NFM4113E4HT50E": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5678,
+          "usage": {
+            "cache_read_tokens": 4992,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000169,
+            "input_tokens": 560,
+            "output_tokens": 126
+          }
+        }
+      },
+      "physical_request_count": 7,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "adac61582a0601d2d3fd3bbd097776e26dad7d356d2d5a23851d51e78af2af81"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "4d25c93c069fe76361731deb9befda90973562efe5605ffa8d22560d134d64c4",
+      "task_id": "development-graph-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "092d82e1309b537e4975cd2bf78e62cb67fddefd6a06e5101fa413cd50ecf08b"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 33583,
+      "meter_matches_ledger": true,
+      "meter_tokens": 33583,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "092d82e1309b537e4975cd2bf78e62cb67fddefd6a06e5101fa413cd50ecf08b"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTEKAPTXCE6YJM1GRQ0S3R": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2746,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000121,
+            "input_tokens": 935,
+            "output_tokens": 19
+          }
+        },
+        "01M5DTEMAYEHY059E40ZMGXK18": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3058,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000165,
+            "input_tokens": 1059,
+            "output_tokens": 79
+          }
+        },
+        "01M5DTEP8VFT9D3E2G4S0XYPV6": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3522,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000225,
+            "input_tokens": 1487,
+            "output_tokens": 115
+          }
+        },
+        "01M5DTEQRP090SG1610W5CB3C3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4152,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000298,
+            "input_tokens": 2093,
+            "output_tokens": 139
+          }
+        },
+        "01M5DTESX6PMY7R3MHS8NK6HRH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4495,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000344,
+            "input_tokens": 2407,
+            "output_tokens": 168
+          }
+        },
+        "01M5DTEVWA7KJ425Z4KA2RBQ93": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4927,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000414,
+            "input_tokens": 2771,
+            "output_tokens": 236
+          }
+        },
+        "01M5DTEY6XZ943586HZEZA6JQA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5261,
+          "usage": {
+            "cache_read_tokens": 4608,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000237,
+            "input_tokens": 340,
+            "output_tokens": 313
+          }
+        },
+        "01M5DTF29NM20QG7ZY6NZFZ10J": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5422,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000421,
+            "input_tokens": 3373,
+            "output_tokens": 129
+          }
+        }
+      },
+      "physical_request_count": 8,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 8,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "092d82e1309b537e4975cd2bf78e62cb67fddefd6a06e5101fa413cd50ecf08b"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "72b73201fd903ba22d81fd97be4d27c5a193a2a03fe9b9aa57a3e410bcc4e7c6",
+      "task_id": "development-allocation-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "e2bfa1de5abdf276c67bd080f1390a091a49d253ba4b8a759165e31b6f607996"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 41619,
+      "meter_matches_ledger": true,
+      "meter_tokens": 41619,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e2bfa1de5abdf276c67bd080f1390a091a49d253ba4b8a759165e31b6f607996"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTBTH54A2P3212PX8M82N1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2745,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000121,
+            "input_tokens": 934,
+            "output_tokens": 19
+          }
+        },
+        "01M5DTBVQMKWMQJD25S4P2KNJ4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3042,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000157,
+            "input_tokens": 1058,
+            "output_tokens": 64
+          }
+        },
+        "01M5DTBXCJ0H270XYR24HQ79E3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3469,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000218,
+            "input_tokens": 1438,
+            "output_tokens": 111
+          }
+        },
+        "01M5DTBYYPV4KAK721Q6G3P13W": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4133,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000249,
+            "input_tokens": 2191,
+            "output_tokens": 22
+          }
+        },
+        "01M5DTC018X6EK50B7ZMSW02B3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4174,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000252,
+            "input_tokens": 2235,
+            "output_tokens": 19
+          }
+        },
+        "01M5DTC1J8VKDQPHEG0C5MX3CA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4311,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000269,
+            "input_tokens": 2365,
+            "output_tokens": 26
+          }
+        },
+        "01M5DTC3CKZZS2ME5K25AVH8T3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4510,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000509,
+            "input_tokens": 4366,
+            "output_tokens": 144
+          }
+        },
+        "01M5DTC5J47NYCEWXMWR1Z3Q7G": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4850,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000398,
+            "input_tokens": 2716,
+            "output_tokens": 214
+          }
+        },
+        "01M5DTC7M82SQSBF4G6XH72HYK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5097,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000347,
+            "input_tokens": 3152,
+            "output_tokens": 25
+          }
+        },
+        "01M5DTC9VKTNFTN66XNWPTTKSM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5288,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000406,
+            "input_tokens": 3242,
+            "output_tokens": 126
+          }
+        }
+      },
+      "physical_request_count": 10,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 10,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "e2bfa1de5abdf276c67bd080f1390a091a49d253ba4b8a759165e31b6f607996"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "59382b501e245f9df8a0a5db7be12e8be1d6ec9d270c46beee6cbf3da93fb60c",
+      "task_id": "development-reconcile-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "92ab2fbd697efad6d84ceedaf95609db2ced8734f415ea853d8488764cd9fe18"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 30232,
+      "meter_matches_ledger": true,
+      "meter_tokens": 30232,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "92ab2fbd697efad6d84ceedaf95609db2ced8734f415ea853d8488764cd9fe18"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTCEZQ0RQ73W95J5JYXANR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2894,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000168,
+            "input_tokens": 1002,
+            "output_tokens": 100
+          }
+        },
+        "01M5DTCGFYR906QJBA7AVNW6TM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3437,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000202,
+            "input_tokens": 1440,
+            "output_tokens": 77
+          }
+        },
+        "01M5DTCJP2EJ5BH520RXWA8Y0V": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4161,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000253,
+            "input_tokens": 2218,
+            "output_tokens": 23
+          }
+        },
+        "01M5DTCNGENVV4BN893XDCWHDN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4287,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000293,
+            "input_tokens": 2273,
+            "output_tokens": 94
+          }
+        },
+        "01M5DTCPWYNK3FCDJMGHVFJPBJ": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4578,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000372,
+            "input_tokens": 2440,
+            "output_tokens": 218
+          }
+        },
+        "01M5DTCRZ95V6F051MSKNMBRM4": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5173,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000491,
+            "input_tokens": 2887,
+            "output_tokens": 366
+          }
+        },
+        "01M5DTCXBHNQ1YEDRM3FD72CMG": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5702,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000445,
+            "input_tokens": 3662,
+            "output_tokens": 120
+          }
+        }
+      },
+      "physical_request_count": 7,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 7,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "92ab2fbd697efad6d84ceedaf95609db2ced8734f415ea853d8488764cd9fe18"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "11b282a26ace92e3b08b93bf827c02a952ef73c511e4b2d0ff7554f17d049893",
+      "task_id": "development-reconcile-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "2250a807032a3e8b0228d1c58d9bcf9eeec1ed8c038c5f662fd10f1c4b0135c7"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 38443,
+      "meter_matches_ledger": true,
+      "meter_tokens": 38443,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "2250a807032a3e8b0228d1c58d9bcf9eeec1ed8c038c5f662fd10f1c4b0135c7"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTGF11G57AS68Z7D3HQZDY": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2897,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000168,
+            "input_tokens": 1005,
+            "output_tokens": 100
+          }
+        },
+        "01M5DTGGKSA4CWRD8WGTG397ZK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3448,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000191,
+            "input_tokens": 1480,
+            "output_tokens": 48
+          }
+        },
+        "01M5DTGJCSXV14D8TATV29HD0Q": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3828,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000248,
+            "input_tokens": 1813,
+            "output_tokens": 95
+          }
+        },
+        "01M5DTGM71KTSSDDRA9PPD7ESW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4600,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000303,
+            "input_tokens": 2640,
+            "output_tokens": 40
+          }
+        },
+        "01M5DTGNTFX40CHXHHWS6AN50C": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5469,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000583,
+            "input_tokens": 3027,
+            "output_tokens": 522
+          }
+        },
+        "01M5DTGSKRN2NS5Z35S6E5JBHN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5569,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000396,
+            "input_tokens": 3618,
+            "output_tokens": 31
+          }
+        },
+        "01M5DTGWP5AY8JBK707DB7CCEC": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5827,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000506,
+            "input_tokens": 3667,
+            "output_tokens": 240
+          }
+        },
+        "01M5DTGZMACY98VR9RSFRYDNXM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6805,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000543,
+            "input_tokens": 4797,
+            "output_tokens": 88
+          }
+        }
+      },
+      "physical_request_count": 8,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 8,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "2250a807032a3e8b0228d1c58d9bcf9eeec1ed8c038c5f662fd10f1c4b0135c7"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "d9e53df5afcab83c2c50ad8ecef60e75561527850c82f6618faefadb9c8cd383",
+      "task_id": "development-patch-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 16,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": true,
+          "safety_failures": [],
+          "score": 1.0,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "cd896c60a2c215c30bb55f61c210b762c231e66b82e5b44e61a3f0cb7397e538"
+        }
+      ],
+      "arm": "reference",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 37558,
+      "meter_matches_ledger": true,
+      "meter_tokens": 37558,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "cd896c60a2c215c30bb55f61c210b762c231e66b82e5b44e61a3f0cb7397e538"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTDYBAKHKD1QQDHQ658PJM": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2900,
+          "usage": {
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00033,
+            "input_tokens": 2800,
+            "output_tokens": 100
+          }
+        },
+        "01M5DTDZVJWMEBQ363NTPZ1XKW": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3486,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000228,
+            "input_tokens": 1436,
+            "output_tokens": 130
+          }
+        },
+        "01M5DTE24TGXKPDMD61CEC2SE1": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4218,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000296,
+            "input_tokens": 2180,
+            "output_tokens": 118
+          }
+        },
+        "01M5DTE3PG2E2HHQFF0B3M49GR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4580,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00035,
+            "input_tokens": 2499,
+            "output_tokens": 161
+          }
+        },
+        "01M5DTE5K54PFY45E48X4Z9YYK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5012,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000442,
+            "input_tokens": 2807,
+            "output_tokens": 285
+          }
+        },
+        "01M5DTE862P42A08325TPSA5GN": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5319,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000369,
+            "input_tokens": 3374,
+            "output_tokens": 25
+          }
+        },
+        "01M5DTEAFBXJK6RD0Y375C083G": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5627,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000506,
+            "input_tokens": 3417,
+            "output_tokens": 290
+          }
+        },
+        "01M5DTEDRCEZAH9V5TPHQPXMDP": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6416,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000524,
+            "input_tokens": 4359,
+            "output_tokens": 137
+          }
+        }
+      },
+      "physical_request_count": 8,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 8,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "selected_public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "cd896c60a2c215c30bb55f61c210b762c231e66b82e5b44e61a3f0cb7397e538"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "7167dafd259505a5ffcc65093e934080306ab4aa8b9cc157ad91f55dca041870",
+      "task_id": "development-intervals-1",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "all_attempt_public_grades": [
+        {
+          "checks": 18,
+          "correct": 16,
+          "exit_zero": true,
+          "passed": false,
+          "safety_failures": [],
+          "score": 0.8888888888888888,
+          "workspace_evidence_complete": true,
+          "workspace_evidence_sha256": "050b9cbfbb908dd831da1f0559ca2c5fdd0aad60dd59fa1eff884f433f782391"
+        }
+      ],
+      "arm": "disabled",
+      "candidate_count": 0,
+      "candidates": [],
+      "created_lesson_ids": [],
+      "incomplete_cause": null,
+      "learning_failure": null,
+      "ledger_tokens": 53788,
+      "meter_matches_ledger": true,
+      "meter_tokens": 53788,
+      "original_finish_reason": ":stop",
+      "original_public_grade": {
+        "checks": 18,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8888888888888888,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "050b9cbfbb908dd831da1f0559ca2c5fdd0aad60dd59fa1eff884f433f782391"
+      },
+      "original_status": "completed",
+      "physical_dispatches": {
+        "01M5DTA9MNSE43HWSTXAEZ9ZSK": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 2795,
+          "usage": {
+            "cache_read_tokens": 1792,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000145,
+            "input_tokens": 937,
+            "output_tokens": 66
+          }
+        },
+        "01M5DTABE3VYYGRG0Y608ZPBXA": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 3454,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000216,
+            "input_tokens": 1426,
+            "output_tokens": 108
+          }
+        },
+        "01M5DTADPMFJSY6FFQVJ5VTESX": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4388,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000307,
+            "input_tokens": 2366,
+            "output_tokens": 102
+          }
+        },
+        "01M5DTAGE0SQY7FX96HH2403RH": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 4857,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000412,
+            "input_tokens": 2689,
+            "output_tokens": 248
+          }
+        },
+        "01M5DTAK05CTH0E3GV6J1RA38J": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5421,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00045,
+            "input_tokens": 3299,
+            "output_tokens": 202
+          }
+        },
+        "01M5DTAN0A0DKZC90AREN23TZ3": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5556,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.00041,
+            "input_tokens": 3569,
+            "output_tokens": 67
+          }
+        },
+        "01M5DTAPBZEVJR7W95V04YS9PF": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 5874,
+          "usage": {
+            "cache_read_tokens": 5120,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000234,
+            "input_tokens": 485,
+            "output_tokens": 269
+          }
+        },
+        "01M5DTAT5GXP8MPRM41542N66A": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 6635,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000586,
+            "input_tokens": 4477,
+            "output_tokens": 238
+          }
+        },
+        "01M5DTAWAPZ5N74DDS8HX771QR": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7061,
+          "usage": {
+            "cache_read_tokens": 1920,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000632,
+            "input_tokens": 4894,
+            "output_tokens": 247
+          }
+        },
+        "01M5DTAZGVY0JA5F00S72D5D38": {
+          "status": "reported",
+          "terminal": true,
+          "tokens": 7747,
+          "usage": {
+            "cache_read_tokens": 4096,
+            "cache_write_tokens": 0,
+            "cost_usd": 0.000452,
+            "input_tokens": 3535,
+            "output_tokens": 116
+          }
+        }
+      },
+      "physical_request_count": 10,
+      "promotion": {
+        "decision": null,
+        "reason": null,
+        "rollback": null,
+        "sha256": null
+      },
+      "promotion_count": 0,
+      "qualification_complete": true,
+      "refinement": {
+        "composition": null,
+        "control": null,
+        "decision": null,
+        "excluded": null,
+        "original_profile_sha256": null,
+        "qualification": null,
+        "reason": null,
+        "selected_sha256": null,
+        "sha256": null
+      },
+      "repetition": 1,
+      "reserved_requests": 10,
+      "rollback_count": 0,
+      "selected_finish_reason": ":stop",
+      "selected_private_grade": {
+        "checks": 18,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8888888888888888
+      },
+      "selected_public_grade": {
+        "checks": 18,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.8888888888888888,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "050b9cbfbb908dd831da1f0559ca2c5fdd0aad60dd59fa1eff884f433f782391"
+      },
+      "selected_status": "completed",
+      "source_evidence_bytes_sha256": "c560b8283ad98264213f1285bcb44376cb2d1df0198e1da8e446216603b59b7b",
+      "task_id": "development-merge-1",
+      "unknown_dispatch_usage": 0
+    }
+  ],
+  "incomplete_episodes": 0,
+  "projection": "counts_and_content_free_provenance_no_transcripts_credentials_or_task_solutions",
+  "runtime_revision": "8303aacd533cc53fddbd988032100025ba9f98de",
+  "schema_version": 1,
+  "source_report_bytes_sha256": "938f3f51f129cc1ad63cea2b81199280c16012262e0d1510af829c472ecec06d",
+  "total_ledger_tokens": 596023,
+  "total_physical_requests": 131,
+  "total_tokens": 596023,
+  "total_unknown_dispatch_usage": 0
+}

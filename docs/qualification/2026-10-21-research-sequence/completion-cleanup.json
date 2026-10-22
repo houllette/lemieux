@@ -1,0 +1,29 @@
+{
+  "all_access_only_auth_loans_removed": {
+    "asset-8f": true,
+    "combined-c381": true,
+    "development-8f": true,
+    "excluded-57a": true,
+    "preceding-0f1": true,
+    "profile-8f": true
+  },
+  "bench_inspection_read_only": true,
+  "frozen_application_worktree_clean": true,
+  "hosted_development_exit_status": 0,
+  "observed_at": "2026-10-21T21:04:09.909307+00:00",
+  "original_auth_write_operations": 0,
+  "preexisting_containers_preserved": [
+    {
+      "created": "2026-10-20T17:25:24.080405959Z",
+      "name": "lmx-qual-01m5d5hbyc2cer2waf0cktn4g3",
+      "outside_current_sequence": true,
+      "preserved": true,
+      "state": "created"
+    }
+  ],
+  "private_raw_traces_solutions_and_credentials_published": false,
+  "remaining_containers_for_sequence": 0,
+  "schema_version": 1,
+  "user_checkout_branch": "feat/session-watches-50",
+  "user_checkout_clean": true
+}
