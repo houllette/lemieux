@@ -271,7 +271,7 @@ session would apply.
 | `Lemieux.Extensions.ApplyPatch` | `apply_patch` in place of `edit`, for GPT-5-family models | `apply_patch` | new sessions | new sessions |
 | `Lemieux.Extensions.Planning` | The `todo` plan ([Plans](workflows.md#session-plans)) | `planning` | new sessions | new sessions |
 | `Lemieux.Extensions.Workspace` | Persona, instructions, memory, skills, plugins, the learned overlay | `workspace` | unless bare | yes |
-| `Lemieux.Extensions.EnvironmentContext` | The date, platform, shell, directory and git state at the end of the prompt | `environment_context` | default | default |
+| `Lemieux.Extensions.EnvironmentContext` | The date, platform, shell, directory, sanitized Git origin and git state at the end of the prompt | `environment_context` | default | default |
 | `Lemieux.Extensions.Continuation` | Sends the model back to its unfinished plan, or past an answer cut off at the output limit, and optionally asks it to check the request as written before it ends ([Continue](workflows.md#continue-unfinished-work)) | `continuation` | default | default |
 | `Lemieux.Extensions.Verify` | The project's check after a turn that edited files ([Verify](workflows.md#verify-after-changes)) | `verify` | default | default |
 | `Lemieux.Extensions.Budget` | Tells the model what is left of `--max-requests`, and says nothing without it ([Budget](workflows.md#tell-the-model-what-is-left)) | `budget` | default | default |

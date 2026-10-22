@@ -41,6 +41,11 @@ defmodule Lemieux.Ixway do
   concrete model because policy can route elsewhere. Local monetary budgets
   therefore fail closed on unknown estimates; use Ixway key budgets and
   routing cost constraints for managed pools.
+
+  Inference declares `x-ixway-harness: lemieux` independently of configurable
+  application names and model aliases. An explicit lowercase host header wins;
+  only its first declaration is sent. This is client-reported attribution,
+  never an authorization grant.
   """
 
   alias Lemieux.Ixway.LogFilter
@@ -574,9 +579,12 @@ defmodule Lemieux.Ixway do
   end
 
   defp request_headers(connection, request) do
+    harness =
+      List.keyfind(connection.headers, "x-ixway-harness", 0, {"x-ixway-harness", "lemieux"})
+
     headers =
-      [{"user-agent", "Lemieux-Ixway/1"}, {"x-ixway-application", "lemieux"}] ++
-        connection.headers
+      [{"user-agent", "Lemieux-Ixway/1"}, {"x-ixway-application", "lemieux"}, harness] ++
+        Enum.reject(connection.headers, &(elem(&1, 0) == "x-ixway-harness"))
 
     headers = if request.tools == [], do: headers, else: require_tools(headers)
 

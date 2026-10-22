@@ -24,13 +24,13 @@ defmodule Lemieux.Extensions.EnvironmentContext do
   changed per request would move the end of the system prompt on every
   call and break every provider's prompt cache from that point on, which is
   the one part of a request that is otherwise identical from turn to turn.
-  The price is that the git status is the status *when the session started*,
+  The price is that the git status and origin describe *when the session started*,
   and the block says so: the model runs `git status` when it needs the
   current one, exactly as it would have without the block.
 
   ## Bounded, and never a lock
 
-  The status is capped at twenty entries and the git command at two seconds,
+  The status is capped at twenty entries and all git discovery at two seconds,
   so a repository with a hundred thousand untracked files or a hung
   filesystem costs a line saying so rather than a slow start. Git runs with
   `GIT_OPTIONAL_LOCKS=0`: `git status` otherwise refreshes the index and
@@ -46,6 +46,13 @@ defmodule Lemieux.Extensions.EnvironmentContext do
   session started there. One past the two seconds is left to finish and
   remove its copy, not killed half-way.
 
+  The origin is read as local configuration data through the same hardened
+  Git entry point, without includes or `remote get-url`'s URL rewriting. Only
+  a sanitized `host/owner/repository` enters the block: no credentials, port,
+  query or fragment. Missing, local, malformed or ambiguous origins are omitted.
+  This is context for the paired BEAM-host directory, independent of any
+  gateway's authorization project, and makes no network request.
+
   ## Resume
 
   The block sits between markers, and `apply/2` removes a previous block
@@ -57,6 +64,7 @@ defmodule Lemieux.Extensions.EnvironmentContext do
   import Kernel, except: [apply: 2]
 
   alias Lemieux.Checkpoint.Git
+  alias Lemieux.Extensions.EnvironmentContext.Remote
   alias Lemieux.Harness
 
   @start "<!-- lmx-environment:start -->"
@@ -180,13 +188,16 @@ defmodule Lemieux.Extensions.EnvironmentContext do
   # on the first line, so the repository costs a single status however much
   # the block says about it.
   defp git(cwd) do
-    case status(cwd) do
-      {:ok, output} -> {status_lines(output), true}
+    case snapshot(cwd) do
+      {:ok, output, remote} -> {remote_lines(remote) ++ status_lines(output), true}
       {:error, :not_a_repository} -> {["- Git: not a repository"], false}
       {:error, :timeout} -> {["- Git: status took too long to read at startup"], false}
       {:error, :unavailable} -> {["- Git: not installed"], false}
     end
   end
+
+  defp remote_lines(nil), do: []
+  defp remote_lines(remote), do: ["- Git remote: #{remote}"]
 
   defp status_lines(output) do
     {branch, changes} =
@@ -223,11 +234,14 @@ defmodule Lemieux.Extensions.EnvironmentContext do
     if String.valid?(clipped), do: clipped <> "…", else: String.replace_invalid(clipped) <> "…"
   end
 
-  defp status(cwd) do
-    task = Task.async(fn -> Git.status(cwd) end)
+  defp snapshot(cwd) do
+    task =
+      Task.async(fn ->
+        with {:ok, output} <- Git.status(cwd), do: {:ok, output, Remote.read(cwd)}
+      end)
 
     case Task.yield(task, @git_timeout_ms) || Task.ignore(task) do
-      {:ok, {:ok, output}} -> {:ok, output}
+      {:ok, {:ok, output, remote}} -> {:ok, output, remote}
       {:ok, {:error, :git_not_found}} -> {:error, :unavailable}
       {:ok, {:error, _not_a_repository}} -> {:error, :not_a_repository}
       nil -> {:error, :timeout}

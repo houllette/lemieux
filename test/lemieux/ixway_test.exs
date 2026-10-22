@@ -18,6 +18,38 @@ defmodule Lemieux.IxwayTest do
     refute inspect(Ixway.provider(connection)) =~ "gateway.example"
   end
 
+  test "native inference declares one harness independently of application and model names" do
+    request = Request.new("ixway:team/coding")
+    assert {:ok, {_model, options}} = Ixway.target(connection(), request, [])
+    headers = options[:req_http_options][:headers]
+
+    assert Enum.filter(headers, &(elem(&1, 0) == "x-ixway-harness")) ==
+             [{"x-ixway-harness", "lemieux"}]
+
+    assert {"x-ixway-application", "lemieux"} in headers
+  end
+
+  test "the explicit host harness wins without duplicate declarations" do
+    config = %{
+      connection()
+      | headers: [
+          {"x-ixway-harness", "embedded-host"},
+          {"x-ixway-harness", "duplicate"},
+          {"x-ixway-session-id", "host-session"}
+        ]
+    }
+
+    request = Request.new("ixway:team/coding", context: %{session_id: "root-session"})
+    assert {:ok, {_model, options}} = Ixway.target(config, request, [])
+    headers = options[:req_http_options][:headers]
+
+    assert Enum.filter(headers, &(elem(&1, 0) == "x-ixway-harness")) ==
+             [{"x-ixway-harness", "embedded-host"}]
+
+    assert {"x-ixway-session-id", "host-session"} in headers
+    assert {"x-ixway-conversation-id", "root-session"} in headers
+  end
+
   test "rejects ambiguous endpoints and mixed transport policies" do
     for endpoint <- [
           "gateway.example",
@@ -349,6 +381,7 @@ defmodule Lemieux.IxwayTest do
     assert :ok = Provider.run(provider, request, &send(parent, {:event, &1}))
     assert_receive {:inference, headers, body}
     assert headers["authorization"] == "Bearer gateway-key"
+    assert headers["x-ixway-harness"] == "lemieux"
     assert headers["x-ixway-required-capabilities"] == "tools"
     assert headers["x-ixway-session-id"] == "ixbench-run-1"
     assert headers["x-ixway-conversation-id"] == "session-1"
