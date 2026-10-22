@@ -592,7 +592,7 @@ defmodule Lemieux.MixProject do
         # `precommit` has already run `test`.
         "cmd mix test.distributed",
         "cmd scripts/check_package.sh",
-        "cmd scripts/check_example.sh builder capture computer_use hello research review security systemone_compaction verifier",
+        "cmd scripts/check_example.sh builder capture computer_use hello portable_procedure research review security systemone_compaction verifier",
         "cmd python3 -m unittest discover -s test -p 'test_*.py'"
       ],
       # The release host is a separate Mix project with its own lock, so a

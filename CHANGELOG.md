@@ -42,6 +42,14 @@ API.
   Complete bytes, helpers, runtime bindings and current digest approval are
   checked through the real loader. New kinds remain gated from automatic use.
   Learned procedures cannot shadow loaded skills or replace a host skill loader.
+- Typed assets can be preserved as source inside native Mix extensions and
+  loaded after export with their original identity. Receiving hosts revalidate
+  the complete tree and current policy, supply fresh digest approval and retain
+  exact harness rollback. The existing confirmation and CodeGate export path
+  remains authoritative; asset source grants no activation or efficacy claim.
+  A runnable offline example verifies the exported package in fresh sessions
+  and a fresh Mix dependency consumer, retaining artifacts, identity, request
+  counts and rollback evidence for review.
 - Qualified native exports carry portable source/runtime/evidence identities.
   Migration: confirmed export now requires a complete dependency/capability
   manifest and explicit CodeGate/reviewer JSON bound to the source inventory;
