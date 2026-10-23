@@ -30,6 +30,11 @@ API.
 
 ### Features
 
+- Repository learning qualification isolates the installed verifier from
+  workspace import shadows, freezes required check counts and supports an
+  on-demand immutable path contract. A provider-free fixture preparer preserves
+  exact dataset source and validates positive/negative public and private controls.
+
 - Hosted learning qualification shares a durable request, token and time
   allowance across calibration, mechanism, development and confirmation.
   Supply the same `--allowance-dir` and explicitly authorized total limits

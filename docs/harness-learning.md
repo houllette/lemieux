@@ -115,6 +115,12 @@ the other stages. Every physical task and learning dispatch uses that shared
 allowance. An offline rehearsal uses `--variants 1 --repetitions 2` without
 `--allow-live`; its scripted proposer abstains and sends no hosted requests.
 
+The [repository development qualification](qualification/2026-10-23-repository-learning/README.md)
+retains calibration failures, the source-preserving preparation recipe and
+positive/negative grader controls. Imported manifests may name an immutable
+JSON path contract with `immutable_contract`, and must freeze public/private
+`minimum_checks` before execution to reject incomplete verification counts.
+
 `scripts/qualify_learning_study.exs --research` selects a separate experimental
 lane. It reflects on complete public task records, including successful tasks,
 rejected probes and uncertainty; each retained hypothesis cites checked JSON
