@@ -503,6 +503,13 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         )
     }
 
+    prepared_record = Reflection.prepare(record)
+
+    if prepared_record != record do
+      :ok = Installation.write(Path.join(state.dir, "reflection-original.json"), record)
+    end
+
+    record = prepared_record
     :ok = Installation.write(Path.join(state.dir, "reflection-input.json"), record)
 
     provider =

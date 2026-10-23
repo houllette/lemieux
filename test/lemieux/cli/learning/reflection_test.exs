@@ -1,12 +1,148 @@
 defmodule Lemieux.CLI.Learning.ReflectionTest do
   use ExUnit.Case, async: true
   alias Lemieux.CLI.Learning.Reflection
+  alias Lemieux.CLI.Learning.Reflection.SharedText
   alias Lemieux.Contract
   alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Experience.Retrieval.Evidence
   alias Lemieux.Providers.Scripted
   alias LemieuxTest.LessonFixtures, as: F
   @moduletag :tmp_dir
+
+  test "retained compacted evidence keeps valid citations and expands to the exact complete source" do
+    text = String.duplicate("complete source evidence λ\n", 500)
+
+    observation = %{
+      "source_observation_sha256" => Contract.sha256("captured source"),
+      "transcript" =>
+        for index <- 1..90 do
+          %{
+            "id" => "entry-#{index}",
+            "type" => "tool_result",
+            "seq" => index,
+            "payload" => %{"output" => text}
+          }
+        end
+    }
+
+    record = %{"original" => observation, "selected" => observation}
+
+    attrs = %{
+      "kind" => "procedure",
+      "outcome" => "insufficient_evidence",
+      "mechanism" => "Inspect the complete retained source before adapting the workflow.",
+      "applicability" => ["workflow"],
+      "source_pointers" => ["/text_table/t0"]
+    }
+
+    assert byte_size(Contract.encode!(record)) > Reflection.source_limit()
+
+    assert {:ok, lesson} =
+             Reflection.build(
+               record,
+               "large",
+               %{scope: F.scope(), lesson_context: F.context()},
+               attrs
+             )
+
+    assert lesson.qualification == "unconfirmed"
+    assert :ok = Lesson.verify(lesson)
+    assert {:ok, ^lesson} = lesson |> Lesson.encode!() |> Lesson.decode()
+    assert {:ok, evidence, []} = Evidence.materialize([lesson], 2_097_152, 1_048_576)
+    [artifact] = evidence[lesson.id <> ".json"]["artifacts"]
+    refute artifact["truncated"]
+    assert artifact["content"]["text_table"]["t0"] == text
+    assert {:ok, ^record} = SharedText.expand(artifact["content"])
+  end
+
+  test "compaction cannot admit unknown source fields or unrepeated oversized text", %{
+    tmp_dir: dir
+  } do
+    supervisor = :"reflection_bound_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
+    text = String.duplicate("one complete public output ", 50_000)
+
+    private = %{
+      "original" => %{
+        "transcript" =>
+          List.duplicate(
+            %{
+              "id" => "entry",
+              "seq" => 1,
+              "type" => "tool_result",
+              "payload" => %{"output" => String.duplicate("bounded public ", 40_000)}
+            },
+            3
+          )
+      },
+      "private_grades" => %{"passed" => true}
+    }
+
+    assert Reflection.prepare(private) != private
+
+    for record <- [%{"original" => %{"answer" => text}}, private] do
+      provider = Scripted.new([Scripted.complete("must not dispatch")])
+
+      assert {:error, :reflection_incomplete_or_invalid} =
+               Reflection.distill(record,
+                 model: "test:model",
+                 effort: "default",
+                 cwd: dir,
+                 supervisor: supervisor,
+                 sessions_dir: Path.join(dir, "sessions"),
+                 provider: provider
+               )
+
+      assert Scripted.requests(provider) == []
+    end
+  end
+
+  test "repeated complete public text fits the existing wire bound without losing source bytes",
+       %{tmp_dir: dir} do
+    supervisor = :"reflection_compact_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
+    output = String.duplicate("complete public output with unicode λ\n", 400)
+
+    entries =
+      for index <- 1..80 do
+        %{
+          "id" => "entry-#{index}",
+          "type" => "tool_result",
+          "seq" => index,
+          "payload" => %{"output" => output, "unique" => "observation-#{index}"}
+        }
+      end
+
+    record = %{"original" => %{"transcript" => entries}}
+    assert byte_size(Contract.encode!(record)) > Reflection.source_limit()
+
+    hypothesis = %{
+      "kind" => "procedure",
+      "outcome" => "insufficient_evidence",
+      "mechanism" => "Review the complete public evidence before changing the workflow.",
+      "applicability" => ["workflow"],
+      "source_pointers" => ["/text_table/t0"]
+    }
+
+    provider =
+      Scripted.new([
+        Scripted.complete(JSON.encode!(%{"lessons" => [hypothesis]}),
+          usage: %{"input_tokens" => 2, "output_tokens" => 2}
+        )
+      ])
+
+    assert {:ok, [^hypothesis], _} =
+             Reflection.distill(record,
+               model: "test:model",
+               effort: "default",
+               cwd: dir,
+               supervisor: supervisor,
+               sessions_dir: Path.join(dir, "sessions"),
+               provider: provider
+             )
+
+    assert length(Scripted.requests(provider)) == 1
+  end
 
   test "a malformed citation receives one bounded repair and a second malformed answer refuses",
        %{tmp_dir: dir} do

@@ -180,3 +180,28 @@ records metadata screening of 483 candidate repository names and GitHub fork
 metadata for the first 120. No source/evaluator controls or transitive history
 and exposure qualification are established by that screening. The number of
 qualified independent streams remains zero; no confirmation request has run.
+
+
+## Complete reflection records
+
+The [next hosted scope](hosted-source-bound-failure.json) completed an actual
+profile and skill application with restoration, but its 1,261,606-byte complete
+reflection source exceeded the preregistered 1 MiB source bound. Its 395 physical
+requests and 2,972,660 tokens remain fully accounted for. The requested learning
+opt-out took effect after the admitted experiment finished; the intervened
+sample is not efficacy evidence. Its source, report and failed receipt remain
+unchanged.
+
+The [lossless component check](lossless-source-component.json) encodes that
+record in 969,181 bytes and reconstructs its exact original digest. Complete
+repeated observations and text are stored once, with every occurrence retained
+in place through references. Citations resolve to real entries or shared-text
+pointers. Canonical reconstruction rejects altered, missing, unused or cyclic
+references and bounds expansion separately at 8 MiB. The existing 1 MiB source
+wire limit, lesson wire limit and quality/verification thresholds stay fixed.
+The host retains both original and encoded source files. Unrepeated oversized
+sources still abstain before a provider call.
+
+Research protocol v4 registers this encoding before any new hosted work. Earlier
+scopes are not rescored or continued, and a new matching hosted mechanism receipt
+is required before a larger study can advance.

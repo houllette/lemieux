@@ -12,6 +12,7 @@ defmodule Lemieux.CLI.Learning.Reflection do
   allowance. No model work or executable adoption happens in `build/5`.
   """
   alias Lemieux.Agent.Session
+  alias Lemieux.CLI.Learning.Reflection.SharedText
   alias Lemieux.Contract
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Extension.Profile
@@ -27,9 +28,24 @@ defmodule Lemieux.CLI.Learning.Reflection do
   @spec source_limit() :: pos_integer()
   def source_limit, do: @source_limit
 
+  @doc "Prepares bounded source bytes, sharing repeated text without dropping trajectory positions."
+  @spec prepare(record :: map()) :: map()
+  def prepare(record) do
+    if byte_size(Contract.encode!(record)) > @source_limit,
+      do: SharedText.compact(record),
+      else: record
+  end
+
   @system """
   You are Lemieux's experience reflector. Read the complete public task record,
   including original execution, every available probe, composition and selection.
+  When text_encoding is lossless_shared_text/v1, {"$text":"tN"} refers to the
+  exact text at text_table/tN. All occurrences remain in their original order.
+  {"$observation":"oN"} refers to a complete repeated observation at
+  observation_table/oN, including its transcript and source identity.
+  {"$object":[[key,value],...]} escapes original objects with reserved keys.
+  Follow those data references; cite entry pointers or exact text-table pointers
+  from the citation index. Repeated text is not removed from the source.
   Retain concrete reusable workflow knowledge from successes, errors, rejected
   experiments and unresolved uncertainty. Describe conditions, observed behavior,
   a practical procedure or counterexample, and limitations. Separate observations
@@ -87,6 +103,8 @@ defmodule Lemieux.CLI.Learning.Reflection do
 
   @spec distill(record :: map(), opts :: keyword()) :: {:ok, [map()], map()} | {:error, term()}
   def distill(record, opts) do
+    record = prepare(record)
+
     profile =
       Profile.quota(
         %{
@@ -175,20 +193,39 @@ defmodule Lemieux.CLI.Learning.Reflection do
   @doc "Lists stable, valid citation pointers beside event identities so a reflector need not count array positions."
   @spec citation_index(record :: map()) :: [map()]
   def citation_index(record) do
-    original = index_observation(record["original"] || %{}, "/original")
-    selected = index_observation(record["selected"] || %{}, "/selected")
+    table = record["observation_table"] || %{}
+    original = index_observation(record["original"] || %{}, "/original", table)
+    selected = index_observation(record["selected"] || %{}, "/selected", table)
 
     probes =
       (record["probes"] || [])
       |> Enum.with_index()
       |> Enum.flat_map(fn {probe, index} ->
-        index_observation(probe["observation"] || %{}, "/probes/#{index}/observation")
+        index_observation(probe["observation"] || %{}, "/probes/#{index}/observation", table)
       end)
 
-    original ++ selected ++ probes
+    shared =
+      table
+      |> Enum.sort()
+      |> Enum.flat_map(fn {key, observation} ->
+        index_observation(observation, "/observation_table/" <> key, %{})
+      end)
+
+    texts =
+      (record["text_table"] || %{})
+      |> Enum.sort()
+      |> Enum.map(fn {key, _text} ->
+        %{"pointer" => "/text_table/" <> key, "type" => "shared_text", "entry_id" => key}
+      end)
+
+    Enum.uniq_by(original ++ selected ++ probes ++ shared ++ texts, & &1["pointer"])
   end
 
-  defp index_observation(observation, prefix) do
+  defp index_observation(%{"$observation" => key}, _prefix, table) do
+    index_observation(table[key] || %{}, "/observation_table/" <> key, %{})
+  end
+
+  defp index_observation(observation, prefix, _table) do
     (observation["transcript"] || [])
     |> Enum.with_index()
     |> Enum.map(fn {entry, index} ->
@@ -230,6 +267,8 @@ defmodule Lemieux.CLI.Learning.Reflection do
           opts :: keyword()
         ) :: {:ok, Lesson.t()} | {:error, term()}
   def build(record, task_id, context, hypothesis, opts \\ []) do
+    record = prepare(record)
+
     with :ok <- valid_record(record), :ok <- valid_hypothesis(hypothesis, record) do
       bytes = Contract.encode!(record)
 
@@ -305,10 +344,14 @@ defmodule Lemieux.CLI.Learning.Reflection do
   end
 
   defp valid_record(record) when is_map(record) do
-    if Map.has_key?(record, "original") and Enum.all?(Map.keys(record), &(&1 in @record_keys)) and
-         byte_size(Contract.encode!(record)) <= @source_limit,
-       do: :ok,
-       else: {:error, :invalid_reflection_record}
+    with true <- byte_size(Contract.encode!(record)) <= @source_limit,
+         {:ok, original} <- SharedText.expand(record),
+         true <- Map.has_key?(original, "original"),
+         true <- Enum.all?(Map.keys(original), &(&1 in @record_keys)) do
+      :ok
+    else
+      _invalid -> {:error, :invalid_reflection_record}
+    end
   end
 
   defp valid_record(_record), do: {:error, :invalid_reflection_record}

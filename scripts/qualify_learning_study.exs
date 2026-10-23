@@ -269,11 +269,13 @@ runtime =
   if research do
     Map.merge(runtime, %{
       "research_protocol" => %{
-        "id" => "whole_record_research/v3",
+        "id" => "whole_record_research/v4",
         "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
         "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",
         "reflection_source_bytes" => Reflection.source_limit(),
+        "reflection_source_encoding" => Reflection.SharedText.encoding(),
+        "reflection_expanded_source_bytes" => Reflection.SharedText.maximum_expanded_bytes(),
         "editor_model" => editor_model,
         "editor_effort" => editor_effort,
         "support_policy" => %{
