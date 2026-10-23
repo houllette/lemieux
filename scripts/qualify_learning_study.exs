@@ -55,7 +55,7 @@ study_limits = [
   max_time_ms: opts[:max_total_time_ms]
 ]
 
-if live and
+if (live or is_binary(opts[:allowance_dir])) and
      not (is_binary(opts[:allowance_dir]) and
             Enum.all?(study_limits, fn {_key, value} -> is_integer(value) and value > 0 end)),
    do:
@@ -446,7 +446,7 @@ template = build_plan.(Contract.digest(%{"lessons" => []}), runtime)
   })
 
 study_allowance =
-  if live do
+  if opts[:allowance_dir] do
     {:ok, handle} = StudyAllowance.open(opts[:allowance_dir], study_limits)
     handle
   end
@@ -465,60 +465,61 @@ try do
     fixture = Map.fetch!(config.fixtures, context["task"]["id"])
 
     provider = fn role ->
-      cond do
-        live ->
-          StudyAllowance.provider(
-            study_allowance,
-            role,
+      raw =
+        cond do
+          live ->
             Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
               role: role,
               cost_mode: :quota
             )
-          )
 
-        research ->
-          LemieuxQualificationReference.provider(role, fixture, model, effort, requests)
+          research ->
+            LemieuxQualificationReference.provider(role, fixture, model, effort, requests)
 
-        fixture[:offline_oracle] ->
-          # Reference implementations remain host-only. This branch is
-          # unreachable for a hosted provider and makes no efficacy claim.
-          usage = %{"input_tokens" => 2, "output_tokens" => 2}
+          fixture[:offline_oracle] ->
+            # Reference implementations remain host-only. This branch is
+            # unreachable for a hosted provider and makes no efficacy claim.
+            usage = %{"input_tokens" => 2, "output_tokens" => 2}
 
-          Scripted.new([
-            Scripted.tool_call("reproduce", "bash", %{"command" => "python checks.py"},
-              usage: usage
-            ),
-            Scripted.tool_call("read-source", "read", %{"path" => "src/project/core.py"},
-              usage: usage
-            ),
-            Scripted.tool_call("read-built", "read", %{"path" => ".build/project/core.py"},
-              usage: usage
-            ),
-            Scripted.tool_call(
-              "source",
-              "write",
-              %{"path" => "src/project/core.py", "content" => fixture.offline_oracle},
-              usage: usage
-            ),
-            Scripted.tool_call(
-              "built",
-              "write",
-              %{"path" => ".build/project/core.py", "content" => fixture.offline_oracle},
-              usage: usage
-            ),
-            Scripted.tool_call("verify", "bash", %{"command" => "python checks.py"},
-              usage: usage
-            ),
-            Scripted.complete("offline reference repair", usage: usage)
-          ])
+            Scripted.new([
+              Scripted.tool_call("reproduce", "bash", %{"command" => "python checks.py"},
+                usage: usage
+              ),
+              Scripted.tool_call("read-source", "read", %{"path" => "src/project/core.py"},
+                usage: usage
+              ),
+              Scripted.tool_call("read-built", "read", %{"path" => ".build/project/core.py"},
+                usage: usage
+              ),
+              Scripted.tool_call(
+                "source",
+                "write",
+                %{"path" => "src/project/core.py", "content" => fixture.offline_oracle},
+                usage: usage
+              ),
+              Scripted.tool_call(
+                "built",
+                "write",
+                %{"path" => ".build/project/core.py", "content" => fixture.offline_oracle},
+                usage: usage
+              ),
+              Scripted.tool_call("verify", "bash", %{"command" => "python checks.py"},
+                usage: usage
+              ),
+              Scripted.complete("offline reference repair", usage: usage)
+            ])
 
-        true ->
-          Scripted.new([
-            Scripted.complete("offline mechanics",
-              usage: %{"input_tokens" => 2, "output_tokens" => 2}
-            )
-          ])
-      end
+          true ->
+            Scripted.new([
+              Scripted.complete("offline mechanics",
+                usage: %{"input_tokens" => 2, "output_tokens" => 2}
+              )
+            ])
+        end
+
+      if study_allowance,
+        do: StudyAllowance.provider(study_allowance, role, raw),
+        else: raw
     end
 
     current =

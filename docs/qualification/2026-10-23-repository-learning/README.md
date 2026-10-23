@@ -152,3 +152,21 @@ use, setting disclosure, and matched experience withholding. Both retain all
 six arms and two repetitions, loader use, fixed verification and rollback.
 This is scripted mechanics evidence only. The repository horizon remains 48;
 no quality threshold or model output limit was changed to obtain this result.
+
+The shared allowance can also wrap the scripted rehearsal. This exercises the
+same admission roles before hosted work: the physical recorder retains
+`asset_proposer` and `asset_critic`, while the controller admits their semantic
+`proposer` and `critic` roles. The second hosted scope exposed the missing
+mapping before its first asset request could dispatch; its incomplete records
+remain unchanged. Use a separate, new allowance directory for offline work:
+
+```sh
+mix run scripts/qualify_learning_study.exs --research --stage mechanism \
+  --task-requests 12 --streams graph --assets \
+  --allowance-dir tmp/new-scripted-allowance \
+  --max-total-requests 5000 --max-total-tokens 50000000 \
+  --max-total-time-ms 43200000 --output tmp/new-scripted-mechanism
+```
+
+Without `--allow-live`, this selects only Scripted providers and borrows no
+Codex credentials. It validates routing and accounting, not model capability.

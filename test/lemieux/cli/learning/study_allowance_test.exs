@@ -1,11 +1,46 @@
 defmodule Lemieux.CLI.Learning.StudyAllowanceTest do
   use ExUnit.Case, async: true
   alias Lemieux.CLI.Learning.Journal
+  alias Lemieux.CLI.Learning.Recording
   alias Lemieux.CLI.Learning.StudyAllowance
   alias Lemieux.Provider
   alias Lemieux.Providers.Scripted
   alias Lemieux.Request
   @moduletag :tmp_dir
+
+  test "asset roles retain physical detail while sharing the ordinary proposer and critic allowance",
+       %{tmp_dir: dir} do
+    limits = [max_requests: 2, max_tokens: 100, max_time_ms: 600_000]
+    raw = Scripted.new(List.duplicate(Scripted.complete("ok", usage: usage()), 3))
+    meter = start_supervised!({Agent, fn -> %{} end})
+    request = Request.new("test:model", params: [max_tokens: 16])
+    assert {:ok, allowance} = StudyAllowance.open(Path.join(dir, "allowance"), limits)
+
+    for role <- [:asset_proposer, :asset_critic] do
+      recording = Recording.new(meter, raw, role: role, cost_mode: :quota)
+
+      assert :ok =
+               Provider.run(StudyAllowance.provider(allowance, role, recording), request, fn _ ->
+                 :ok
+               end)
+    end
+
+    snapshot = StudyAllowance.snapshot(allowance)
+    assert snapshot["accounting"]["requests"] == 2
+    assert snapshot["accounting"]["tokens"] == 14
+
+    assert Enum.sort(Enum.map(snapshot["records"], fn {_, record} -> record["role"] end)) ==
+             ["critic", "proposer"]
+
+    assert meter |> Agent.get(&Map.values/1) |> Enum.map(& &1["role"]) |> Enum.sort() ==
+             ["asset_critic", "asset_proposer"]
+
+    assert {:error, _} =
+             Provider.run(StudyAllowance.provider(allowance, :task, raw), request, fn _ -> :ok end)
+
+    assert length(Scripted.requests(raw)) == 2
+    assert :ok = StudyAllowance.close(allowance)
+  end
 
   test "all stages and roles consume one durable allowance without resetting it", %{tmp_dir: dir} do
     limits = [max_requests: 2, max_tokens: 100, max_time_ms: 60_000]

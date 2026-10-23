@@ -111,10 +111,18 @@ defmodule Lemieux.CLI.Learning.StudyAllowance do
           Lemieux.Provider.t()
   def provider(handle, role, provider),
     do:
-      Controller.provider(handle.controller, role, provider,
+      Controller.provider(handle.controller, controller_role(role), provider,
         token_bound: &token_bound/1,
         timeout_ms: handle.timeout_ms
       )
+
+  # The physical recorder retains asset-specific roles. The shared controller
+  # admits its fixed semantic roles; passing asset_proposer through unchanged
+  # refused the first typed-asset call before dispatch and poisoned the child
+  # experiment's aggregate usage, despite a complete physical ledger.
+  defp controller_role(:asset_proposer), do: :proposer
+  defp controller_role(:asset_critic), do: :critic
+  defp controller_role(role), do: role
 
   defp token_bound(%Request{params: params} = request) do
     case Keyword.get(params, :max_tokens) do
