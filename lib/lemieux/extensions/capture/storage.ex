@@ -52,7 +52,7 @@ defmodule Lemieux.Extensions.Capture.Storage do
 
     with :ok <- ancestors(dir), {:ok, names} <- names(dir), true <- length(names) <= 4096 do
       names
-      |> Enum.filter(&String.starts_with?(&1, "capture_"))
+      |> Enum.filter(&committed?(&1, "capture_"))
       |> Enum.sort()
       |> Enum.reduce_while({:ok, []}, &read_record(&1, &2, root, scope))
     else
@@ -130,7 +130,7 @@ defmodule Lemieux.Extensions.Capture.Storage do
     with :ok <- ancestors(directory(root, scope)),
          {:ok, names} <- names(directory(root, scope)) do
       cutoff = DateTime.add(DateTime.utc_now(), -days * 86_400)
-      checkpoints = names |> Enum.filter(&String.starts_with?(&1, "input_")) |> Enum.sort(:desc)
+      checkpoints = names |> Enum.filter(&committed?(&1, "input_")) |> Enum.sort(:desc)
 
       Enum.reduce_while(
         Enum.with_index(checkpoints),
@@ -139,6 +139,12 @@ defmodule Lemieux.Extensions.Capture.Storage do
       )
     end
   end
+
+  # Hard-link publication temporarily leaves .partial files beside records;
+  # a killed bounded writer can leave one permanently. They are not commits.
+  # Malformed names/content ending in .json still reach strict read validation.
+  defp committed?(name, prefix),
+    do: String.starts_with?(name, prefix) and String.ends_with?(name, ".json")
 
   defp remove_checkpoint({name, index}, :ok, root, scope, cutoff, maximum) do
     with {:ok, record} <- read(root, scope, name),
