@@ -50,6 +50,16 @@ defmodule Lemieux.CLI.Learning.Container do
   @impl true
   def credentials(_state), do: {:scrub, []}
 
+  # Permission auto mode asks the environment about confinement. Commands here
+  # always use the networkless, capability-dropped container below; advertising
+  # that existing host seam avoids asking once per probe without bypassing deny
+  # rules or changing the inherited permission handle.
+  @spec sandboxed?(state :: map()) :: boolean()
+  def sandboxed?(%{image: "sha256:" <> _, user: user, workdir: workdir})
+      when is_binary(user) and workdir in ["/workspace", "/app"], do: true
+
+  def sandboxed?(_invalid), do: false
+
   # Logical container paths must refer to the same workspace as file tools.
   # Local still performs symlink-aware confinement after this translation.
   defp mapped(state, cwd, path) when is_binary(path) do

@@ -223,6 +223,77 @@ defmodule Lemieux.CLI.Learning.LoopTest do
     assert length(Scripted.requests(provider)) == 1
   end
 
+  test "small, dollar-limited and unmeasured jobs abstain without extra requests", ctx do
+    for {limits, measured?, reason} <- [
+          {[max_requests: 124], true, "insufficient_frozen_experiment_allowance"},
+          {[max_requests: 192, max_cost_usd: 1.0], true, "finite_unpriced_job_required"},
+          {[max_requests: 192], false, "parent_usage_unknown"}
+        ] do
+      usage =
+        if measured?,
+          do: [usage: %{"input_tokens" => 2, "output_tokens" => 2, "cost_usd" => 0.001}],
+          else: []
+
+      provider =
+        Scripted.new(
+          [
+            Scripted.tool_call("fail", "bash", %{"command" => "make test"}, usage),
+            Scripted.complete("observed", usage)
+          ],
+          estimated_cost_usd: 0.001
+        )
+
+      {:ok, session} =
+        Runtime.start_session(
+          ctx.options,
+          Keyword.merge(ctx.host, provider: provider, job_limits: limits, max_requests: 8)
+        )
+
+      assert {:ok, _} = Session.await(session, "Investigate the failing test", timeout: :infinity)
+      assert length(Scripted.requests(provider)) == 2
+      assert {:ok, info} = Loop.inspect(ctx.options.host.state_dir, ctx.cwd)
+      assert info["last"]["reason"] == reason
+      assert info["learning_requests"] == 0
+      assert Session.budget(session).job.requests == 2
+      GenServer.stop(session)
+    end
+  end
+
+  test "an interrupted learning intent survives resume and cannot authorize a retry", ctx do
+    provider =
+      Scripted.new([
+        Scripted.tool_call("fail", "bash", %{"command" => "make test"},
+          usage: %{"input_tokens" => 2, "output_tokens" => 2}
+        ),
+        Scripted.complete("observed", usage: %{"input_tokens" => 2, "output_tokens" => 2})
+      ])
+
+    host = Keyword.merge(ctx.host, provider: provider, job_limits: [max_requests: 192])
+    {:ok, session} = Runtime.start_session(ctx.options, host)
+    id = Session.id(session)
+
+    assert {:ok, _} =
+             Session.put_document(session, "lmx.learning.refinement", 0, %{
+               "complete" => false,
+               "slots" => 28,
+               "prompts" => [],
+               "pending" => "interrupted"
+             })
+
+    GenServer.stop(session)
+
+    {:ok, resumed} = Runtime.start_session(Runtime.resume_options(ctx.options, id), host)
+    assert {:ok, _} = Session.await(resumed, "Investigate the failing test", timeout: :infinity)
+    assert length(Scripted.requests(provider)) == 2
+    assert {:ok, info} = Loop.inspect(ctx.options.host.state_dir, ctx.cwd)
+    assert info["last"]["reason"] == "learning_requires_recovery"
+
+    assert {:ok, %{value: %{"complete" => false}}} =
+             Session.document(resumed, "lmx.learning.refinement")
+
+    GenServer.stop(resumed)
+  end
+
   defp run(ctx, provider, prompt, interactive) do
     host = Keyword.merge(ctx.host, provider: provider, interactive?: interactive, max_requests: 5)
     assert {:ok, session} = Runtime.start_session(ctx.options, host)

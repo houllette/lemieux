@@ -163,6 +163,34 @@ jobs:
   # compiler, and a type-checker false positive an old patch still has is
   # not this code's defect. The Hex package job below compiles the package,
   # as a dependency, on 1.19.0 itself.
+  learning-replay:
+    name: Stock learning replay
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: learning-replay
+          python: "true"
+      - name: Prepare the isolated replay image
+        run: docker build -t lemieux-learning-replay:1 priv/learning
+      - name: Prove stock learning and container cleanup without hosted requests
+        env:
+          LEMIEUX_TEST_CONTAINERS: "1"
+        run: >-
+          mix test test/lemieux/cli/learning/stock_refinement_test.exs
+          test/lemieux/cli/learning/container_test.exs --warnings-as-errors --max-cases 1
+      - name: Retain replay and controller evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stock-learning-replay
+          path: tmp/Lemieux.CLI.Learning.StockRefinementTest/
+          retention-days: 14
+
   floor:
     name: Elixir floor (1.19 / OTP 28)
     runs-on: ubuntu-24.04

@@ -1268,6 +1268,7 @@ defmodule Lemieux.Session do
   `requests` against `max_requests`, counted as `info/1` counts them; and the
   `:deadline_ms` the host gave, with `time_left_ms` of it on the session's
   clock (`0` once it has passed). A bound the host did not set is `nil`.
+  `job` is the inclusive shared ledger snapshot, or `nil` without one.
   `Lemieux.Extensions.Budget` reads this to tell the model what it has left.
   """
   @spec budget(session :: session()) :: %{
@@ -1276,7 +1277,8 @@ defmodule Lemieux.Session do
           requests: non_neg_integer(),
           max_requests: pos_integer() | nil,
           deadline_ms: pos_integer() | nil,
-          time_left_ms: non_neg_integer() | nil
+          time_left_ms: non_neg_integer() | nil,
+          job: map() | nil
         }
   def budget(session), do: GenServer.call(session, :budget)
 

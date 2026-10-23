@@ -3,16 +3,46 @@ defmodule Lemieux.CLI.Learning.Recording do
   @behaviour Lemieux.Provider
   alias Lemieux.Contract
   alias Lemieux.Provider
+  alias Lemieux.Session.Accounting
   alias Lemieux.Usage
 
   @spec new(meter :: pid(), provider :: Provider.t(), opts :: keyword()) :: Provider.t()
   def new(meter, provider, opts \\ []),
     do:
       {__MODULE__,
-       %{meter: meter, provider: provider, role: opts[:role], cost_mode: opts[:cost_mode]}}
+       %{
+         meter: meter,
+         provider: provider,
+         role: opts[:role],
+         cost_mode: opts[:cost_mode],
+         authorized?: opts[:authorized?],
+         admission: opts[:admission]
+       }}
 
   @impl true
+  def run(%{admission: {limiter, key, root}} = state, request, emit) do
+    # Admission can wait. Check revocation inside its lease, immediately before
+    # physical dispatch, rather than caching approval while in the queue.
+    Accounting.run_provider(
+      {__MODULE__, %{state | admission: nil}},
+      limiter,
+      key,
+      root,
+      request,
+      %{},
+      emit
+    )
+  end
+
   def run(state, request, emit) do
+    if is_nil(state.authorized?) or state.authorized?.() == true do
+      dispatch(state, request, emit)
+    else
+      {:error, %{provider_code: "learning_disabled", message: "Learning authority changed"}}
+    end
+  end
+
+  defp dispatch(state, request, emit) do
     id = Lemieux.ID.generate()
 
     :ok =

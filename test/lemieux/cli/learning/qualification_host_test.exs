@@ -5,6 +5,8 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   alias Lemieux.CLI.Learning.QualificationHost, as: Host
   alias Lemieux.Contract
   alias Lemieux.Environment.Local
+  alias Lemieux.JobBudget
+  alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Experience.Lessons
   alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
   alias Lemieux.Providers.Scripted
@@ -126,6 +128,45 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   end
 
   defp usage, do: %{"input_tokens" => 2, "output_tokens" => 2}
+
+  test "an inherited controller keeps the episode inside the caller's remaining allowance", ctx do
+    budget = start_supervised!({JobBudget, [max_requests: 1]})
+
+    controller =
+      start_supervised!(
+        {Controller,
+         [
+           job_id: "stock-host",
+           job_budget: budget,
+           max_tokens: 1_000_000,
+           max_time_ms: 2_000_000,
+           cost_mode: :quota,
+           learning: [
+             max_requests: 1,
+             max_tokens: 1_000_000,
+             max_time_ms: 2_000_000,
+             max_cost_usd: nil
+           ]
+         ]}
+      )
+
+    raw = task_provider(true)
+
+    config =
+      ctx.config
+      |> Map.put(:controller, controller)
+      |> Map.put(:attempt_role, :probe)
+      |> Map.put(:provider, fn _ -> raw end)
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "disabled"))
+    refute row["passed"]
+    assert length(Scripted.requests(raw)) == 1
+    assert JobBudget.snapshot(budget).requests == 1
+    assert Controller.snapshot(controller)["accounting"]["learning_requests"] == 1
+    assert Process.alive?(controller)
+    assert Process.alive?(budget)
+    assert Lemieux.sessions(config.supervisor) == []
+  end
 
   test "large source-backed context receives a larger admission estimate before dispatch" do
     request = %Request{

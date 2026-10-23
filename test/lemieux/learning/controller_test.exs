@@ -453,6 +453,55 @@ defmodule Lemieux.Learning.ControllerTest do
     assert :ok = JobBudget.settle(budget, lease, 0.08)
   end
 
+  test "a host may join an existing ledger only with complete matching prior accounting" do
+    budget = budget()
+    assert {:ok, lease} = JobBudget.reserve(budget, 0.1, 1)
+    assert :ok = JobBudget.settle(budget, lease, 0.08)
+
+    for opts <- [
+          [],
+          [prior_usage: %{requests: 0, tokens: 0}],
+          [prior_usage: %{requests: 1, tokens: nil}]
+        ] do
+      unknown = controller(budget, opts)
+
+      assert {:skip, %{"reason" => "usage_unknown"}} =
+               Controller.reserve(unknown, "unknown-parent", :proposer, estimate())
+    end
+
+    exhausted = controller(budget, prior_usage: %{requests: 1, tokens: 95})
+
+    assert {:skip, %{"reason" => "token_allowance_exhausted"}} =
+             Controller.reserve(exhausted, "over-token-cap", :proposer, estimate())
+
+    joined = controller(budget, prior_usage: %{requests: 1, tokens: 60})
+    assert {:ok, _} = Controller.reserve(joined, "auxiliary", :proposer, estimate())
+    assert :ok = Controller.reconcile(joined, "auxiliary", usage())
+    assert Controller.snapshot(joined)["accounting"]["tokens"] == 68
+    assert JobBudget.snapshot(budget).requests == 2
+    assert JobBudget.snapshot(budget).spent_usd == 0.16
+  end
+
+  test "a prior-usage declaration cannot settle an active parent or erase interrupted work" do
+    budget = budget()
+    assert {:ok, lease} = JobBudget.reserve(budget, 0.1, 1)
+    unknown = controller(budget, prior_usage: %{requests: 1, tokens: 8})
+
+    assert {:skip, %{"reason" => "usage_unknown"}} =
+             Controller.reserve(unknown, "active-parent", :proposer, estimate())
+
+    assert :ok = JobBudget.settle(budget, lease, 0.08)
+
+    joined = controller(budget, prior_usage: %{requests: 1, tokens: 8})
+    assert {:ok, _} = Controller.reserve(joined, "interrupted", :probe, estimate())
+    recorded = Controller.snapshot(joined)
+    GenServer.stop(joined)
+    restored = controller(budget, recorded: recorded, prior_usage: %{requests: 2, tokens: 16})
+    assert Controller.snapshot(restored)["accounting"]["tokens"] == nil
+    assert {:skip, _} = Controller.reserve(restored, "do-not-replay", :probe, estimate())
+    assert JobBudget.snapshot(budget).requests == 2
+  end
+
   test "status and absent-provider capability checks make no model request" do
     controller = controller(budget())
 

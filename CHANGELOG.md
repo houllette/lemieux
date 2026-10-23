@@ -9,6 +9,11 @@ API.
 
 ## Unreleased
 
+- Run a bounded stock verification-replay refinement from the shared CLI/TUI
+  host when a finite whole-job allowance, cached isolated image and current
+  policy permit it. Supported guidance is temporary and source-backed;
+  inspection, undo, opt-out and recovery preserve outer accounting.
+
 ### Dependencies
 
 - Require ReqLLM 1.29.0, which verifies TLS certificates and hostnames on
