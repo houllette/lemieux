@@ -1034,17 +1034,20 @@ defmodule Lemieux.CLI.Runtime do
          # Arbitrary hooks, executable extensions and remote environments need
          # their own relocation contract. A stock replay must not silently drop
          # a policy that constrained the original task.
-         replay_policy?:
-           loaded == [] and is_nil(options.hooks_config) and
-             not Enum.any?(
-               [:tools, :host_tools, :harness, :messages, :guard],
-               &Keyword.has_key?(opts, &1)
-             ) and
-             Keyword.get(opts, :extensions, []) == [] and
-             Keyword.get(opts, :hooks, []) == [] and
-             Config.get(options.config, "hooks", %{}) == %{}
+         replay_policy?: replay_policy?(options, opts, loaded)
        ]}
     end
+  end
+
+  defp replay_policy?(options, opts, loaded) do
+    loaded == [] and is_nil(options.hooks_config) and is_nil(options.system) and
+      is_nil(opts[:system]) and replay_options?(opts) and
+      Config.get(options.config, "hooks", %{}) == %{}
+  end
+
+  defp replay_options?(opts) do
+    not Enum.any?([:tools, :host_tools, :harness, :messages, :guard], &Keyword.has_key?(opts, &1)) and
+      Keyword.get(opts, :extensions, []) == [] and Keyword.get(opts, :hooks, []) == []
   end
 
   defp web_spec(options, context, disabled, profile?) do

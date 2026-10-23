@@ -15,7 +15,7 @@ When a task records a reproducible verification failure, the stock host can
 also run a fixed isolated propose/probe/compose experiment. This needs an
 existing finite whole-job request limit: `--max-total-requests N`. Learning
 consumes at most a quarter of that job's slots, capped at 48 across its tasks.
-The frozen experiment needs 32 slots, so limits below 128 abstain; remaining
+The frozen experiment needs 48 slots, so limits below 192 abstain; remaining
 ordinary work still has to fit. It never creates a second allowance. For example:
 
 ```sh
@@ -30,12 +30,13 @@ Docker, a missing cached image, an unreproduced failure, an incompatible project
 or insufficient allowance causes abstention before any learning dispatch.
 The local image name resolves to an immutable image ID for each experiment.
 Commands run in fresh unprivileged, networkless, read-only containers with only
-the isolated workspace mounted. Verification files and instructions stay fixed.
+the isolated workspace mounted. Replay requires complete captured input bytes
+within the configured capture bounds; larger or incomplete captures abstain. Verification files and instructions stay fixed.
 Dollar-limited jobs abstain until the complete experiment can be priced.
 
 A supported result appends at most 2 KiB of prompt/tool-description data to a
-retry of the same task and retains a scoped lesson for later tasks. Both the
-unchanged controls and candidate execute repeated fresh probes and composition
+retry of the same task and retains a scoped lesson for later tasks. Each trial permits four requests for reading, editing, verification and completion.
+Both the unchanged controls and candidate execute repeated fresh probes and composition
 checks. A command pass establishes that replay's observed outcome; it proves
 neither overall correctness nor transfer. New asset kinds, generated code and
 persistent activation remain qualification-gated. No scheduler is installed.
@@ -74,8 +75,8 @@ Cancellation or interrupted/missing usage leaves an explicit recovery intent;
 resume and fork do not replay that work or refund its consumed slots. Inspect
 the referenced evidence before any manual recovery. Current permission handles,
 source lineage and verifier bytes are checked before every physical dispatch.
-Custom or remembered permission rules, executable hooks/extensions and modified
-executors require a relocation contract and therefore abstain. No background learning task survives a completed
+Custom prompts or remembered permission rules, executable hooks/extensions and
+modified executors require a relocation contract and therefore abstain. No background learning task survives a completed
 hook or session shutdown.
 
 The offline review is executable with no model credentials:

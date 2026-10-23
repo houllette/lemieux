@@ -236,21 +236,34 @@ defmodule Lemieux.CLI.Learning.StockRefinementTest do
       String.contains?(request.system, "harness proposer") ->
         propose(request, turns)
 
-      String.contains?(request.system, @guidance) and turns == 0 ->
-        Scripted.tool_call("repair", "bash", %{"command" => "printf fixed > value && make test"},
-          usage: usage()
-        )
-
-      String.contains?(request.system, @guidance) and turns == 2 ->
-        Scripted.tool_call("repair", "bash", %{"command" => "printf fixed > value && make test"},
-          usage: usage()
-        )
+      String.contains?(request.system, @guidance) ->
+        guided(request)
 
       turns == 0 ->
         Scripted.tool_call("verify", "bash", %{"command" => "make test"}, usage: usage())
 
       true ->
         Scripted.complete("done", usage: usage())
+    end
+  end
+
+  defp guided(request) do
+    results = Enum.filter(request.entries, &(&1.type == :tool_result))
+
+    cond do
+      not Enum.any?(results, &(&1.payload["name"] == "read")) ->
+        Scripted.tool_call("read-value", "read", %{"path" => "value"}, usage: usage())
+
+      not Enum.any?(results, &(&1.payload["name"] == "write")) ->
+        Scripted.tool_call("write-value", "write", %{"path" => "value", "content" => "fixed"},
+          usage: usage()
+        )
+
+      not Enum.any?(results, &(&1.payload["call_id"] == "verify-repair")) ->
+        Scripted.tool_call("verify-repair", "bash", %{"command" => "make test"}, usage: usage())
+
+      true ->
+        Scripted.complete("verified", usage: usage())
     end
   end
 
@@ -267,7 +280,7 @@ defmodule Lemieux.CLI.Learning.StockRefinementTest do
            end)
 
     profile =
-      QualificationHost.baseline("test:model", "default", 2)
+      QualificationHost.baseline("test:model", "default", 4)
       |> update_in(["options", "system"], &(&1 <> @guidance))
 
     Scripted.tool_call(

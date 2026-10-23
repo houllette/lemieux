@@ -3,7 +3,7 @@ defmodule Lemieux.CLI.Learning.TaskLocal do
   The stock host's synchronous, bounded verification-replay refinement.
 
   A finite whole-job request allowance authorizes at most a quarter of its
-  slots (capped at 48) for learning. The fixed experiment needs 32 slots;
+  slots (capped at 48) for learning. The fixed experiment needs 48 slots;
   smaller allocations abstain without shrinking its repetitions. Dollar-limited
   jobs abstain until a fully priced experiment can be admitted. Each physical
   dispatch rechecks current host policy, source lineage and verifier bytes.
@@ -38,7 +38,9 @@ defmodule Lemieux.CLI.Learning.TaskLocal do
 
   @namespace "lmx.learning.refinement"
   @image "lemieux-learning-replay:1"
-  @minimum 32
+  @trial_requests 4
+  @refinement_requests 16 + 6 * @trial_requests
+  @minimum @refinement_requests + 2 * @trial_requests
   @time 480_000
 
   @spec run(context :: map(), config :: map()) :: :allow | {:deny, String.t()}
@@ -229,9 +231,9 @@ defmodule Lemieux.CLI.Learning.TaskLocal do
       provider: provider,
       controller: controller,
       attempt_role: :probe,
-      task_requests: 2,
-      refinement_requests: 28,
-      refinement_tokens: 28 * 131_072,
+      task_requests: @trial_requests,
+      refinement_requests: @refinement_requests,
+      refinement_tokens: @refinement_requests * 131_072,
       refinement_time_ms: div(cap.time_ms, 2),
       task_time_ms: cap.time_ms,
       probe_when: :verification_failed,
@@ -240,7 +242,14 @@ defmodule Lemieux.CLI.Learning.TaskLocal do
       opaque_paths: true,
       capture_workspace: true,
       return_refinement: true,
-      host: inherited_policy(config.permission_spec)
+      host:
+        Keyword.put(
+          inherited_policy(config.permission_spec),
+          :params,
+          snapshot.params
+          |> Keyword.take([:temperature, :top_p, :seed, :presence_penalty, :frequency_penalty])
+          |> Keyword.put(:max_tokens, 8192)
+        )
     }
 
     episode = %{
@@ -334,7 +343,11 @@ defmodule Lemieux.CLI.Learning.TaskLocal do
          "proposed" <- refinement["decision"],
          {:ok, delta} <-
            ProfileDelta.changes(
-             QualificationHost.baseline(snapshot.model, snapshot.reasoning_effort, 2),
+             QualificationHost.baseline(
+               snapshot.model,
+               snapshot.reasoning_effort,
+               @trial_requests
+             ),
              refinement["selected_profile"]
            ),
          true <- bounded?(delta),
@@ -400,7 +413,7 @@ defmodule Lemieux.CLI.Learning.TaskLocal do
              QualificationHost.baseline(
                request.model,
                Keyword.get(request.params, :reasoning_effort, "default"),
-               2
+               @trial_requests
              ),
              evidence["refinement"]["selected_profile"]
            ),

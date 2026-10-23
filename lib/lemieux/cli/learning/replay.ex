@@ -77,6 +77,7 @@ defmodule Lemieux.CLI.Learning.Replay do
            prompt:
              prompt <>
                "\nThis is an isolated replay of a recorded verification failure. " <>
+               "Read the captured repository instructions, including any AGENTS.md, before changing files. " <>
                "Preserve these existing verification and instruction files byte-for-byte: " <>
                paths <>
                ". Repair the implementation, then run the recorded verification command: " <>
