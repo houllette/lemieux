@@ -1,0 +1,272 @@
+{
+  "kind": "provider_free_development_fixture_controls",
+  "hosted_requests": 0,
+  "independent_confirmation": "not_run",
+  "source_selection": "metadata-based frozen ranking; earliest three eligible tasks per selected repository",
+  "cases": [
+    {
+      "id": "encode-typesystem-16",
+      "cluster": "encode-typesystem",
+      "manifest_sha256": "0319c05b8eef3e6edde627f42351ce652f8742be63e3dbdc928ce7bb9524fd48",
+      "source_sha256": "9c8a6e6c215490c5d57c71307c03ea732fdf58ad5f0c3133659fed33c312a188",
+      "private_tests_sha256": "240587a6d5acdc1f74d529565380b3eb530b146032e2afcbfdc0a25e9b251c36",
+      "image": "sha256:a3913160302d6d6f794da8025e8083275de3d885ebe0dd9b61235cc74ecbaa86",
+      "controls_sha256": "c486ee6d408b2b711b1ef4a4958881877064ddd3dd55bc3fb1ace6cb141c1468",
+      "public_check_sha256": "78e166679c54f7b873cc7fdbb5d80e93b8790b071042e9bd65a646f45551e514",
+      "minimum_checks": {
+        "private": 12,
+        "public": 1
+      },
+      "controls": {
+        "negative_private": {
+          "passed": false,
+          "checks": 12,
+          "correct": 11,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "negative_public": {
+          "passed": false,
+          "checks": 1,
+          "correct": 0,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_private": {
+          "passed": true,
+          "checks": 12,
+          "correct": 12,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_public": {
+          "passed": true,
+          "checks": 1,
+          "correct": 1,
+          "verification_complete": true,
+          "safety_failures": []
+        }
+      }
+    },
+    {
+      "id": "encode-typesystem-65",
+      "cluster": "encode-typesystem",
+      "manifest_sha256": "67e6d5811197a073798e36c8624e995d0c38d4cddc3f1f6a77f84a595b572650",
+      "source_sha256": "0247b7a16d7b794ba289b98ded3a20a6cf6071378edf3d1f62ccc16a4ccc43e3",
+      "private_tests_sha256": "7b41874329a9bca228663414fcf2e52e7e23640eda80aebeeebe44389076d44b",
+      "image": "sha256:a3913160302d6d6f794da8025e8083275de3d885ebe0dd9b61235cc74ecbaa86",
+      "controls_sha256": "0b7b55665801f71ecc98d2f161be9af4d0d563b412ba38de5dcae19cb9e8dad2",
+      "public_check_sha256": "d644121f2fdb67d7da1ee31044d64c33b128bc264112b787481caabe977e9113",
+      "minimum_checks": {
+        "private": 18,
+        "public": 1
+      },
+      "controls": {
+        "negative_private": {
+          "passed": false,
+          "checks": 18,
+          "correct": 17,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "negative_public": {
+          "passed": false,
+          "checks": 1,
+          "correct": 0,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_private": {
+          "passed": true,
+          "checks": 18,
+          "correct": 18,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_public": {
+          "passed": true,
+          "checks": 1,
+          "correct": 1,
+          "verification_complete": true,
+          "safety_failures": []
+        }
+      }
+    },
+    {
+      "id": "encode-typesystem-122",
+      "cluster": "encode-typesystem",
+      "manifest_sha256": "796b35dc09bfe6677858aaa2c7a0cd512d088e09346844b43a9ae9603d017591",
+      "source_sha256": "c6cf20f3c147395b948f7032f0057e8c959d567d0f0694c6a30196dd1f648134",
+      "private_tests_sha256": "276dfbabb2d19501845075cd1b94980e5c987e3dc7fb81ae99039abb6e46935d",
+      "image": "sha256:a3913160302d6d6f794da8025e8083275de3d885ebe0dd9b61235cc74ecbaa86",
+      "controls_sha256": "c9bdb6612f7a5f32ba80ae4f86e4ec0195d848d5338ed3e319358057e31852d8",
+      "public_check_sha256": "18c475b15ea9c3cd50b50b7ff87a2481e5c0ddb4fa09e42c8fdb351e0b811751",
+      "minimum_checks": {
+        "private": 18,
+        "public": 1
+      },
+      "controls": {
+        "negative_private": {
+          "passed": false,
+          "checks": 18,
+          "correct": 16,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "negative_public": {
+          "passed": false,
+          "checks": 1,
+          "correct": 0,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_private": {
+          "passed": true,
+          "checks": 18,
+          "correct": 18,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_public": {
+          "passed": true,
+          "checks": 1,
+          "correct": 1,
+          "verification_complete": true,
+          "safety_failures": []
+        }
+      }
+    },
+    {
+      "id": "hgrecco-pint-652",
+      "cluster": "hgrecco-pint",
+      "manifest_sha256": "a6bb09fd4ebacb9fd4d4cad3a475de9640eaeb1c98a820209426611f8354e14a",
+      "source_sha256": "c71ffad41071ea0b437f5057f2e1eac88351dc4acc7cc29c3cc566fbeb07924c",
+      "private_tests_sha256": "be86b0ad7d44b09e44bd596be305c1e186a4366ab128e1f7184d032bf0aa582f",
+      "image": "sha256:af752c01c98b245c4089982f2f8ba8dc3b98f999ee5d34d2cc666061df808f4d",
+      "controls_sha256": "aca38a17c5ddf1c8b5a68d645ff826e6aa98c65bcdd0c6544ea851815ae22e72",
+      "public_check_sha256": "d3a962095f9d50828fc74505acfdd41a24ef7a33e139a640499ca3aeed4e35c7",
+      "minimum_checks": {
+        "private": 43,
+        "public": 1
+      },
+      "controls": {
+        "negative_private": {
+          "passed": false,
+          "checks": 43,
+          "correct": 41,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "negative_public": {
+          "passed": false,
+          "checks": 1,
+          "correct": 0,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_private": {
+          "passed": true,
+          "checks": 43,
+          "correct": 43,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_public": {
+          "passed": true,
+          "checks": 1,
+          "correct": 1,
+          "verification_complete": true,
+          "safety_failures": []
+        }
+      }
+    },
+    {
+      "id": "hgrecco-pint-920",
+      "cluster": "hgrecco-pint",
+      "manifest_sha256": "a32009c74f6bc974a4912752ae1a9872938cb7a0eb67220b97a7bca860b87044",
+      "source_sha256": "b4064ded28bc43e690c25f02090e35aad5258647c1c1150fc7674f11704db834",
+      "private_tests_sha256": "27f9274d97d12b19fdeac866d8b8995dbbed6e7f25e8b8576c042121d2346c56",
+      "image": "sha256:af752c01c98b245c4089982f2f8ba8dc3b98f999ee5d34d2cc666061df808f4d",
+      "controls_sha256": "31732708073c631c08d481f6e5d053e762f8ee902cbf472322654f377f561609",
+      "public_check_sha256": "e92b841ff130334ce5b434b0feb27871b01dd598b59c4fb8719c6c440ea50506",
+      "minimum_checks": {
+        "private": 51,
+        "public": 1
+      },
+      "controls": {
+        "negative_private": {
+          "passed": false,
+          "checks": 51,
+          "correct": 50,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "negative_public": {
+          "passed": false,
+          "checks": 1,
+          "correct": 0,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_private": {
+          "passed": true,
+          "checks": 51,
+          "correct": 51,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_public": {
+          "passed": true,
+          "checks": 1,
+          "correct": 1,
+          "verification_complete": true,
+          "safety_failures": []
+        }
+      }
+    },
+    {
+      "id": "hgrecco-pint-948",
+      "cluster": "hgrecco-pint",
+      "manifest_sha256": "007d3cd720ccf7472912b252b42409131f340e53e662f17294c274b5b75ff8b9",
+      "source_sha256": "07cc049792360c85b52fd11cc337cc7badf5eb5d0810b147bf57e0bd36bd0fbb",
+      "private_tests_sha256": "072b99fc698ab37ce58965425f5ab023953cbda5605a7cd89bfc01b96b5adcec",
+      "image": "sha256:af752c01c98b245c4089982f2f8ba8dc3b98f999ee5d34d2cc666061df808f4d",
+      "controls_sha256": "09d231bf9fd18ce6b50cd12d24358944705786922438b853288e27897e7d4f6d",
+      "public_check_sha256": "3235bced8684e74d62da084dad968a4e65464788061b731eb11730a55560b2f9",
+      "minimum_checks": {
+        "private": 6,
+        "public": 1
+      },
+      "controls": {
+        "negative_private": {
+          "passed": false,
+          "checks": 6,
+          "correct": 4,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "negative_public": {
+          "passed": false,
+          "checks": 1,
+          "correct": 0,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_private": {
+          "passed": true,
+          "checks": 6,
+          "correct": 6,
+          "verification_complete": true,
+          "safety_failures": []
+        },
+        "positive_public": {
+          "passed": true,
+          "checks": 1,
+          "correct": 1,
+          "verification_complete": true,
+          "safety_failures": []
+        }
+      }
+    }
+  ]
+}

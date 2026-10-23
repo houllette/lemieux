@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "hosted_mechanism_seed_accounting_failure/v1",
+  "source_revision": "56103c8a6328d764d6b38331087f492346432485",
+  "stage": "mechanism",
+  "task_requests": 12,
+  "executor": {
+    "model": "openai_codex:gpt-6.1-sol",
+    "effort": "high",
+    "physical_requests": 11,
+    "tokens": 62409
+  },
+  "editor": {
+    "model": "openai_codex:gpt-6-astra",
+    "effort": "high",
+    "physical_requests": 1,
+    "tokens": 57499
+  },
+  "physical_total": {
+    "requests": 12,
+    "tokens": 119908,
+    "global_usage_complete": true
+  },
+  "seed": {
+    "passed": true,
+    "visible_verification_passed": true,
+    "private_confirmation_passed": true,
+    "qualification_complete": true,
+    "workspace_evidence_complete": true,
+    "requests": 12,
+    "tokens": null,
+    "safety_failures": []
+  },
+  "reflection": {
+    "complete": true,
+    "lesson_count": 3
+  },
+  "target_executions": 0,
+  "reason": "completion_was_forwarded_before_nested_controller_usage_settlement",
+  "disposition": "retained_sealed_new_runtime_and_output_required_no_replay",
+  "efficacy": "unassessed",
+  "artifacts": {
+    "row_sha256": "9884ec087101ec570917da9ec6ae7da072491cea2cdcf308e81d7f8163a67782",
+    "evidence_sha256": "699692f958b06eb76b398af1d04f6579e0ae2ea7a3a5068ea80300f35a72a435",
+    "registration_sha256": "1125c6d799e886fca25f0fc5e8e1735fa54ede2b60dff2ee9f360372ef967f18"
+  }
+}

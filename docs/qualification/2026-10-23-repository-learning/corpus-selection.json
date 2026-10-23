@@ -1,0 +1,154 @@
+{
+  "kind": "development_curation_registration_and_exposure",
+  "independent_confirmation": "not_run",
+  "registrations": {
+    "source.json": {
+      "dataset": "nebius/SWE-rebench",
+      "revision": "89cdfbab4ab1bd8f5a658bb212d1b63624f4f881",
+      "file": "data/filtered-00000-of-00001.parquet",
+      "sha256": "b2f037217a849732bf2e9b9d2b59d11561d03b4191a55c3142e1e58248817cfa",
+      "bytes": 33886640,
+      "exposure": "metadata-only inventory; no case text, patch or test patch disclosed to model"
+    },
+    "fresh-development-registration.json": {
+      "kind": "development_only_fresh_domain_selection",
+      "seed": "lemieux-development-new-domains-v1/2026-10-23",
+      "source": {
+        "dataset": "nebius/SWE-rebench",
+        "revision": "89cdfbab4ab1bd8f5a658bb212d1b63624f4f881",
+        "file": "data/filtered-00000-of-00001.parquet",
+        "sha256": "b2f037217a849732bf2e9b9d2b59d11561d03b4191a55c3142e1e58248817cfa",
+        "bytes": 33886640,
+        "exposure": "metadata-only inventory; no case text, patch or test patch disclosed to model"
+      },
+      "filters": [
+        "exclude all 18 previously inspected local SWE repositories",
+        "pytest command",
+        "1..10 fail-to-pass tests and at most 100 pass-to-pass tests",
+        "at most five modified files",
+        "safe supported pytest selectors",
+        "at least two eligible tasks per repository"
+      ],
+      "ordering": "SHA256(seed/repository); first two repositories; earliest two tasks per repository by created_at then instance ID",
+      "exposure": "metadata selection only; selected case text and patches not yet disclosed to model",
+      "claim": "development only; no independent confirmation",
+      "selected": [
+        {
+          "repo": "encode/typesystem",
+          "instance_id": "encode__typesystem-16",
+          "image": "swerebench/sweb.eval.x86_64.encode_1776_typesystem-16"
+        },
+        {
+          "repo": "encode/typesystem",
+          "instance_id": "encode__typesystem-65",
+          "image": "swerebench/sweb.eval.x86_64.encode_1776_typesystem-65"
+        },
+        {
+          "repo": "hgrecco/pint",
+          "instance_id": "hgrecco__pint-652",
+          "image": "swerebench/sweb.eval.x86_64.hgrecco_1776_pint-652"
+        },
+        {
+          "repo": "hgrecco/pint",
+          "instance_id": "hgrecco__pint-920",
+          "image": "swerebench/sweb.eval.x86_64.hgrecco_1776_pint-920"
+        }
+      ],
+      "ranked_replacements": [
+        "PyCQA/flake8",
+        "zopefoundation/persistent",
+        "jaraco/zipp",
+        "scipp/scippnexus",
+        "csiro-coasts/emsarray",
+        "hasgeek/coaster",
+        "pimutils/khal",
+        "alexgolec/tda-api",
+        "encode/httpx",
+        "ibis-project/ibis"
+      ],
+      "replacement_policy": "apparatus/control failure only, retain every failed preparation before replacement; never replace based on hosted quality"
+    },
+    "fresh-development-causal-registration-v2.json": {
+      "kind": "development_causal_stream_selection/v2",
+      "prior_registration_sha256": "0cb66adeef7eae698741311e8a047c791aa44ab68840fb6b3959fdcb2007940d",
+      "change_before_hosted_execution": "Keep the same repository ranking and filters; extend each repository to its earliest three eligible tasks so one seed precedes two targets and frozen versus updating can differ causally. No hosted outcomes informed this change.",
+      "source": {
+        "dataset": "nebius/SWE-rebench",
+        "revision": "89cdfbab4ab1bd8f5a658bb212d1b63624f4f881",
+        "file": "data/filtered-00000-of-00001.parquet",
+        "sha256": "b2f037217a849732bf2e9b9d2b59d11561d03b4191a55c3142e1e58248817cfa",
+        "bytes": 33886640,
+        "exposure": "metadata-only inventory; no case text, patch or test patch disclosed to model"
+      },
+      "claim": "developer_exposed_development_only_not_independent_confirmation",
+      "selected": [
+        {
+          "repo": "encode/typesystem",
+          "instance_id": "encode__typesystem-16",
+          "docker_image": "swerebench/sweb.eval.x86_64.encode_1776_typesystem-16",
+          "created_at": "2019-02-28 17:03:18"
+        },
+        {
+          "repo": "encode/typesystem",
+          "instance_id": "encode__typesystem-65",
+          "docker_image": "swerebench/sweb.eval.x86_64.encode_1776_typesystem-65",
+          "created_at": "2019-03-30 13:25:54"
+        },
+        {
+          "repo": "encode/typesystem",
+          "instance_id": "encode__typesystem-122",
+          "docker_image": "swerebench/sweb.eval.x86_64.encode_1776_typesystem-122",
+          "created_at": "2021-11-18 08:48:50"
+        },
+        {
+          "repo": "hgrecco/pint",
+          "instance_id": "hgrecco__pint-652",
+          "docker_image": "swerebench/sweb.eval.x86_64.hgrecco_1776_pint-652",
+          "created_at": "2018-07-13 07:23:40"
+        },
+        {
+          "repo": "hgrecco/pint",
+          "instance_id": "hgrecco__pint-920",
+          "docker_image": "swerebench/sweb.eval.x86_64.hgrecco_1776_pint-920",
+          "created_at": "2019-12-08 16:13:05"
+        },
+        {
+          "repo": "hgrecco/pint",
+          "instance_id": "hgrecco__pint-948",
+          "docker_image": "swerebench/sweb.eval.x86_64.hgrecco_1776_pint-948",
+          "created_at": "2019-12-22 02:02:28"
+        }
+      ],
+      "phase_rule": "earliest task per repository is seed; next two tasks are ordered targets"
+    },
+    "fresh-development-exposure.json": {
+      "kind": "development_exposure",
+      "at": "2026-10-23T20:32:06.244874+00:00",
+      "cases": [
+        "encode__typesystem-16",
+        "encode__typesystem-65",
+        "hgrecco__pint-652",
+        "hgrecco__pint-920"
+      ],
+      "consumer": "qualification curator",
+      "fields_disclosed": [
+        "problem_statement"
+      ],
+      "private_patch_disclosed": false,
+      "claim": "developer_exposed; excluded from independent confirmation"
+    },
+    "fresh-development-additional-exposure.json": {
+      "at": "2026-10-23T20:46:47.073162+00:00",
+      "consumer": "qualification curator",
+      "cases": [
+        "encode__typesystem-122",
+        "hgrecco__pint-948"
+      ],
+      "fields_disclosed": [
+        "problem_statement"
+      ],
+      "private_patch_disclosed": false,
+      "claim": "development_only_excluded_from_independent_confirmation"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "audit_sha256": "b53aa295ea1f3c9d627f84625df3fe99e4448a02e247b55b3747d5cdeb75a89f",
+  "case_text_disclosed_by_this_preparation": false,
+  "duplicate_fork_roots": {},
+  "fork_chains_checked": 1,
+  "github_audited_names": 120,
+  "github_missing_names": [],
+  "history_and_exposure_qualification": "pending",
+  "identical_selected_base_commits_across_roots": 0,
+  "inference_calls": 0,
+  "kind": "confirmation_pool_preparation_status/v1",
+  "metadata_repository_names": 483,
+  "parent_response_sha256": "64badbdd0edc5a48b7cbd39956c6d51a8c8c549365730527dbdc12ad1cce1a53",
+  "qualified_independent_streams": 0,
+  "reservation_sha256": "979bb9e0a017207678941c1d8be41f45dee14384d3c79456d64e023b6c87bc46",
+  "schema_version": 1,
+  "scope": "candidate_metadata_preparation_only_no_confirmation_or_efficacy",
+  "source_and_grader_controls": "pending",
+  "terminal_parent_is_fork": false
+}

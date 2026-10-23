@@ -429,7 +429,10 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   defp qualification_complete?(result, evidence, reflection),
     do:
       is_nil(result[:learning_failure]) and workspace_complete?(evidence) and
-        reflection["complete"]
+        reflection["complete"] and verification_complete?(evidence)
+
+  defp verification_complete?(evidence),
+    do: Enum.all?(evidence["all_attempt_grades"], &Map.get(&1, "verification_complete", true))
 
   defp retain(state, store) do
     %{

@@ -17,6 +17,7 @@ defmodule Lemieux.CLI.Learning.Repositories do
   alias Lemieux.Benchmark.SecretFiles
   alias Lemieux.Benchmark.Task
   alias Lemieux.CLI.Learning.Container
+  alias Lemieux.CLI.Learning.Journal
   alias Lemieux.CLI.Learning.Leases
   alias Lemieux.Contract
   alias Lemieux.Environment
@@ -63,7 +64,12 @@ defmodule Lemieux.CLI.Learning.Repositories do
     public = item["public_pytest_args"]
     true = is_list(public) and public != [] and Enum.all?(public, &is_binary/1)
 
-    immutable = Map.new(item["immutable_paths"], &{&1, File.read!(Path.join(cwd, &1))})
+    paths = item["immutable_paths"]
+    {:ok, notice} = verification_notice(cwd, paths, item["immutable_contract"])
+    immutable = Map.new(paths, &{&1, File.read!(Path.join(cwd, &1))})
+    expected = Map.get(item, "minimum_checks", %{"public" => 1, "private" => 1})
+    true = Map.keys(expected) |> Enum.sort() == ["private", "public"]
+    true = Enum.all?(Map.values(expected), &(is_integer(&1) and &1 > 0))
 
     %{
       id: id,
@@ -73,6 +79,7 @@ defmodule Lemieux.CLI.Learning.Repositories do
       cases: [{private, true}],
       probe_cases: [{"public", true}],
       immutable: immutable,
+      minimum_checks: expected,
       environment: environment,
       grader_environment: grader_environment,
       private_tests: item["private_tests"],
@@ -81,20 +88,63 @@ defmodule Lemieux.CLI.Learning.Repositories do
       verification_command: "python3 -m pytest",
       reference_guidance:
         "Read the repository instructions, identify the active source and test entry points, reproduce the reported behavior, inspect neighboring implementations and run focused plus existing regression tests. Check error paths and boundary values before reporting completion.",
-      task: %Task{id: id, cwd: cwd, prompt: task_prompt(item), grader: nil, timeout_ms: 600_000}
+      task: %Task{
+        id: id,
+        cwd: cwd,
+        prompt: task_prompt(item, notice),
+        grader: nil,
+        timeout_ms: 600_000
+      }
     }
   end
 
   # Freezing public checks protects grading, but an undisclosed freeze penalized
   # legitimate regression-test additions in the adapted Bottle study. Declare
   # the same public contract to every arm; private test paths never enter it.
-  defp task_prompt(item) do
-    paths = item["immutable_paths"] |> Enum.sort() |> Enum.map_join("\n", &("- " <> &1))
-
+  defp task_prompt(item, notice) do
     item["prompt"] <>
       "\nQualification task contract: Keep the following existing verification files byte-for-byte unchanged. You may add regression tests in separate new files.\n" <>
-      paths
+      notice
   end
+
+  @doc "Checks an optional on-demand path contract before source enters an agent workspace."
+  @spec verification_notice(cwd :: Path.t(), paths :: [String.t()], contract :: String.t() | nil) ::
+          {:ok, String.t()} | {:error, term()}
+  def verification_notice(cwd, paths, contract) do
+    if is_list(paths) and paths != [] and Enum.all?(paths, &relative?/1) and
+         length(paths) == length(Enum.uniq(paths)),
+       do: path_notice(cwd, Enum.sort(paths), contract),
+       else: {:error, :invalid_verification_paths}
+  end
+
+  defp path_notice(_cwd, paths, nil),
+    do: {:ok, Enum.map_join(paths, "\n", &("- " <> &1))}
+
+  defp path_notice(cwd, paths, contract) when is_binary(contract) do
+    file = Path.join(cwd, contract)
+
+    with true <- relative?(contract) and contract in paths,
+         :ok <- Journal.safe(file),
+         {:ok, %{type: :regular, size: size}} when size <= 65_536 <- File.lstat(file),
+         {:ok, bytes} <- File.read(file),
+         {:ok, %{"schema_version" => 1, "paths" => ^paths} = decoded} <- JSON.decode(bytes),
+         true <- map_size(decoded) == 2 do
+      {:ok,
+       "Read #{contract} for the complete frozen verification path list. " <>
+         "That contract file is itself immutable. Preserve every listed file."}
+    else
+      _unavailable -> {:error, :verification_contract_unavailable_or_mismatched}
+    end
+  end
+
+  defp path_notice(_cwd, _paths, _invalid), do: {:error, :invalid_verification_contract}
+
+  defp relative?(path) when is_binary(path) and byte_size(path) in 1..512,
+    do:
+      Path.type(path) == :relative and
+        not Enum.any?(Path.split(path), &(&1 in [".", ".."])) and not String.contains?(path, "\\")
+
+  defp relative?(_path), do: false
 
   @spec grade(fixture :: map(), cwd :: Path.t(), environment :: Environment.t()) :: map()
   def grade(fixture, cwd, environment) do
@@ -110,10 +160,20 @@ defmodule Lemieux.CLI.Learning.Repositories do
     summary =
       "import json,sys,xml.etree.ElementTree as E; r=E.parse('/tmp/qualification.xml').getroot(); s=list(r) if r.tag=='testsuites' else [r]; keys=['tests','failures','errors','skipped']; c={k:sum(int(x.attrib.get(k,0)) for x in s) for k in keys}; c['status']=int(sys.argv[1]); print('QUALIFICATION_COUNTS='+json.dumps(c))"
 
+    # A workspace can contain pytest.py, json.py or sitecustomize.py. Import
+    # the trusted framework in isolated mode before exposing project imports;
+    # the separate count parser must use that same isolation. Otherwise a
+    # source edit can impersonate the verifier and fabricate passing counts.
+    bootstrap =
+      "import os,sys; import pytest; sys.path.insert(0,os.getcwd()); " <>
+        "raise SystemExit(pytest.main(['-q','-p','no:cacheprovider','--junitxml=/tmp/qualification.xml']+sys.argv[1:]))"
+
     command =
-      "python3 -m pytest -q -p no:cacheprovider --junitxml=/tmp/qualification.xml " <>
+      "python3 -I -B -c " <>
+        Sandbox.quote_shell(bootstrap) <>
+        " " <>
         args <>
-        "; qualification_status=$?; python3 -c " <>
+        "; qualification_status=$?; python3 -I -B -c " <>
         Sandbox.quote_shell(summary) <> " \"$qualification_status\""
 
     {:ok, events} =
@@ -140,17 +200,25 @@ defmodule Lemieux.CLI.Learning.Repositories do
     correct = max(0, checks - Map.get(counts, "failures", 0) - Map.get(counts, "errors", 0))
     safety = immutable_failures(fixture, cwd)
 
-    success = checks > 0 and correct == checks and counts["status"] == 0
+    lane = if private?, do: "private", else: "public"
+    minimum = fixture |> Map.get(:minimum_checks, %{}) |> Map.get(lane, 1)
+    complete = checks >= minimum
+    success = verified?(complete, correct, checks, counts["status"])
 
     %{
       "passed" => success and safety == [],
       "score" => if(checks > 0, do: correct / checks, else: 0.0),
       "safety_failures" => safety,
       "checks" => checks,
+      "minimum_checks" => minimum,
+      "verification_complete" => complete,
       "correct" => correct,
       "exit_zero" => success
     }
   end
+
+  defp verified?(complete, correct, checks, status),
+    do: complete and correct == checks and status == 0
 
   defp immutable_failures(fixture, cwd) do
     Enum.flat_map(fixture.immutable, fn {path, bytes} ->

@@ -1,0 +1,310 @@
+{
+  "claim": "development_calibration_only",
+  "independent_confirmation": "not_run",
+  "runs": [
+    {
+      "source_report_sha256": "1b0e82fed793635151e6dc08008f2ec721a17d82a2308926764dc5d9eb0cb5e0",
+      "model": "openai_codex:gpt-6.1-sol/high",
+      "kind": "development_calibration_only",
+      "baseline_success": 1.0,
+      "has_headroom": false,
+      "benefit": "not_tested",
+      "independent_confirmation": false,
+      "rows": [
+        {
+          "arm": "disabled",
+          "task_id": "development-journal-1",
+          "passed": true,
+          "requests": 10,
+          "tokens": 50102,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        },
+        {
+          "arm": "reference",
+          "task_id": "development-journal-1",
+          "passed": true,
+          "requests": 10,
+          "tokens": 51254,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        },
+        {
+          "arm": "disabled",
+          "task_id": "development-merge-1",
+          "passed": true,
+          "requests": 8,
+          "tokens": 42807,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        },
+        {
+          "arm": "reference",
+          "task_id": "development-merge-1",
+          "passed": true,
+          "requests": 10,
+          "tokens": 51184,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        }
+      ]
+    },
+    {
+      "source_report_sha256": "ae806839dba583d3b30cd195dc96b1fdc20b8ec58f4324b6fb3da3b620a8cf6a",
+      "model": "openai_codex:gpt-6-luna/high",
+      "kind": "development_calibration_only",
+      "baseline_success": 1.0,
+      "has_headroom": false,
+      "benefit": "not_tested",
+      "independent_confirmation": false,
+      "rows": [
+        {
+          "arm": "disabled",
+          "task_id": "development-journal-1",
+          "passed": true,
+          "requests": 21,
+          "tokens": 140021,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        },
+        {
+          "arm": "reference",
+          "task_id": "development-journal-1",
+          "passed": true,
+          "requests": 8,
+          "tokens": 41527,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        },
+        {
+          "arm": "disabled",
+          "task_id": "development-merge-1",
+          "passed": true,
+          "requests": 13,
+          "tokens": 73939,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        },
+        {
+          "arm": "reference",
+          "task_id": "development-merge-1",
+          "passed": true,
+          "requests": 15,
+          "tokens": 99558,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        }
+      ]
+    },
+    {
+      "source_report_sha256": "b47a020b8968e4e0c033c0b9ef25c05fc29506af8ad3e6ed62c8f3f49229063d",
+      "model": "openai_codex:gpt-6-luna/high",
+      "kind": "development_calibration_only",
+      "baseline_success": 1.0,
+      "has_headroom": false,
+      "benefit": "not_tested",
+      "independent_confirmation": false,
+      "rows": [
+        {
+          "arm": "disabled",
+          "task_id": "bottle-header-security",
+          "passed": true,
+          "requests": 23,
+          "tokens": 487367,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        },
+        {
+          "arm": "reference",
+          "task_id": "bottle-header-security",
+          "passed": false,
+          "requests": 18,
+          "tokens": 443216,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": []
+        }
+      ]
+    },
+    {
+      "source_report_sha256": "01c8edc80e78ad2c5241293b41e937d08dbcf39b3d933e6876b630ce302a438f",
+      "model": "openai_codex:gpt-6-luna/high",
+      "kind": "development_calibration_only",
+      "baseline_success": 0.0,
+      "has_headroom": false,
+      "benefit": "not_tested",
+      "independent_confirmation": false,
+      "rows": [
+        {
+          "arm": "disabled",
+          "task_id": "sympy-polynomial-factorization-19040",
+          "passed": false,
+          "requests": 24,
+          "tokens": 572210,
+          "qualification_complete": false,
+          "original_budget_stop": true,
+          "workspace_evidence_complete": false,
+          "safety_failures": []
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-polynomial-factorization-19040",
+          "passed": false,
+          "requests": 24,
+          "tokens": 711149,
+          "qualification_complete": false,
+          "original_budget_stop": true,
+          "workspace_evidence_complete": false,
+          "safety_failures": []
+        }
+      ]
+    },
+    {
+      "source_report_sha256": "7f946f5f3ed0c4de833139789d710cc9fb1dc05130449ca7a3495bdb24a6746f",
+      "source_revision": "c8a6a493b58f03dce66f1a0d1c4fdd85bc1ae6f6",
+      "model": "openai_codex:gpt-6.1-sol/high",
+      "kind": "development_calibration_only",
+      "baseline_success": 0.5,
+      "has_headroom": true,
+      "task_requests": 48,
+      "benefit": "not_tested",
+      "independent_confirmation": false,
+      "requests": 154,
+      "tokens": 4878186,
+      "latency_scope": "calibration under concurrent local qualification/preparation; no causal performance claim",
+      "rows": [
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-15875",
+          "passed": false,
+          "requests": 18,
+          "tokens": 465936,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 490346,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-15875",
+          "passed": false,
+          "requests": 23,
+          "tokens": 844930,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 488361,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-16766",
+          "passed": true,
+          "requests": 13,
+          "tokens": 425536,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 451203,
+          "original_finish_reason": ":stop",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-16766",
+          "passed": true,
+          "requests": 20,
+          "tokens": 784464,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 486281,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-19040",
+          "passed": true,
+          "requests": 20,
+          "tokens": 597786,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 489835,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-19040",
+          "passed": true,
+          "requests": 23,
+          "tokens": 794237,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 491822,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-23950",
+          "passed": false,
+          "requests": 14,
+          "tokens": 296581,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 486640,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-23950",
+          "passed": false,
+          "requests": 23,
+          "tokens": 668716,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 487529,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        }
+      ]
+    }
+  ]
+}
