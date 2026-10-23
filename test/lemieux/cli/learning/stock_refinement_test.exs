@@ -114,7 +114,12 @@ defmodule Lemieux.CLI.Learning.StockRefinementTest do
       assert {:ok, undone} = Loop.inspect(home, ctx.cwd)
       assert undone["blocked"] != []
       provider = Scripted.new([Scripted.complete("ordinary", usage: usage())])
-      {:ok, third} = Runtime.start_session(options, Keyword.merge(ctx.host, provider: provider))
+
+      {:ok, third} =
+        Runtime.start_session(
+          options,
+          Keyword.merge(ctx.host, provider: provider, interactive?: interactive)
+        )
 
       assert {:ok, _} =
                Session.await(third, "Investigate the recurring failing test", timeout: :infinity)
