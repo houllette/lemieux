@@ -491,9 +491,26 @@ defmodule Lemieux.Learning.RefinementTest do
         "minimum_repetitions" => 2
       })
       |> Keyword.put(:assess, assess)
+      |> Keyword.put(:on_incomplete, fn cause ->
+        send(owner, {:incomplete_refinement, cause})
+        :ok
+      end)
       |> Keyword.put(:provider, bounded_provider(fn _ -> true end))
 
-    assert {:ok, _receipt} = Refinement.run(ctx.handle, "artifact-sources", ctx.plan, opts)
+    result = Refinement.run(ctx.handle, "artifact-sources", ctx.plan, opts)
+
+    assert match?({:ok, _receipt}, result),
+           inspect(
+             %{
+               result: result,
+               messages: Process.info(self(), :messages),
+               checkpoint: Checkpoint.status(ctx.handle, "artifact-sources"),
+               controller: Controller.snapshot(ctx.controller)
+             },
+             limit: 100,
+             printable_limit: 4096
+           )
+
     assert_receive {:artifact_source, observation, identity, assessment}
 
     assert {:ok, record} =
@@ -758,10 +775,40 @@ defmodule Lemieux.Learning.RefinementTest do
       ])
     end
 
-    opts = options(ctx, ["GOOD"]) |> Keyword.put(:provider, provider)
+    opts =
+      options(ctx, ["GOOD"])
+      |> Keyword.put(:provider, provider)
+      |> Keyword.put(:on_incomplete, fn cause ->
+        send(owner, {:incomplete_refinement, cause})
+        :ok
+      end)
+
     pid = spawn(fn -> Refinement.run(ctx.handle, "cancelled", ctx.plan, opts) end)
     assert_receive {:leased, path}
-    assert_receive {:request_running, request}
+
+    request =
+      try do
+        assert_receive {:request_running, request}
+        request
+      rescue
+        error in ExUnit.AssertionError ->
+          details = {
+            Process.info(pid, :current_stacktrace),
+            Process.info(self(), :messages),
+            Checkpoint.status(ctx.handle, "cancelled"),
+            Controller.snapshot(ctx.controller)
+          }
+
+          reraise %{
+                    error
+                    | message:
+                        error.message <>
+                          "\nRefinement diagnostics: " <>
+                          inspect(details, limit: 100, printable_limit: 4096)
+                  },
+                  __STACKTRACE__
+      end
+
     request_monitor = Process.monitor(request)
     caller_monitor = Process.monitor(pid)
     Process.exit(pid, :kill)
