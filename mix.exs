@@ -148,7 +148,7 @@ defmodule Lemieux.MixProject do
       # through req_llm; hand-rolled provider adapters are out of scope by
       # decision, so "add a provider" is an upstream concern rather than a
       # module in this tree.
-      {:req_llm, "~> 1.28"},
+      {:req_llm, "~> 1.29"},
       # Already in the tree through req_llm, and declared here because the MCP
       # client's HTTP transport calls it directly. Depending on a transitive
       # dependency works right up until the package that brought it swaps it

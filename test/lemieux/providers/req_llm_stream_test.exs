@@ -51,24 +51,24 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
                       1.0e-10
     end
 
-    test "a stream preserves explicitly incomplete pricing context, and is priced at list rates" do
-      # The context reaches ReqLLM untouched — it cannot price the request
-      # with it — and the adapter prices the usage at the model's list rates,
-      # saying so, rather than leaving the session's spend unknown.
+    test "a stream derives confirmed endpoint pricing facts with an empty explicit context" do
+      # ReqLLM 1.29 derives the Messages API fact from the actual endpoint.
+      # An empty caller context must not discard those confirmed facts or
+      # replace successfully calculated pricing with the list-rate fallback.
       owner = self()
       provider = anthropic(owner, 200, sse(complete_answer("Unpriced.")))
       request = claude_request(params: [pricing_context: %{}])
 
       assert :ok = Provider.run(provider, request, &send(owner, &1))
       assert_receive {:usage, usage}
-      assert usage["pricing"]["status"] == "list_rates"
-      assert usage["total_cost"] == nil
+      assert usage["pricing"]["status"] == "priced"
+      assert is_number(usage["total_cost"])
 
-      assert_in_delta usage["cost_usd"],
+      assert_in_delta usage["total_cost"],
                       (usage["input_tokens"] + usage["output_tokens"] * 5) / 1_000_000,
                       1.0e-10
 
-      assert Lemieux.Usage.cost_usd(usage) == usage["cost_usd"]
+      assert Lemieux.Usage.cost_usd(usage) == usage["total_cost"]
     end
 
     test "a direct stream to a model whose tariff ReqLLM cannot resolve is priced at list rates" do

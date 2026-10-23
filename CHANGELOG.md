@@ -11,6 +11,11 @@ API.
 
 ### Dependencies
 
+- Require ReqLLM 1.29.0, which verifies TLS certificates and hostnames on
+  secure WebSocket connections, including the Codex subscription transport
+  ([upstream advisory](https://github.com/agentjido/req_llm/security/advisories/GHSA-6vww-5m28-f26v)).
+  Align the standalone host and example locks with its LLMDB 2026.10.6 catalog.
+
 - Update ReqLLM to 1.28.0 and its required LLMDB catalog to 2026.10.5 across
   the library, standalone host, bundled compaction extension and tracked
   example locks. This includes upstream Codex reasoning/terminal-stream
