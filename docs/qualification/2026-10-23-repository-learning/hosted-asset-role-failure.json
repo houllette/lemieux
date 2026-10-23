@@ -1,0 +1,36 @@
+{
+  "all_physical_usage_known": true,
+  "allowance_lock_removed": true,
+  "artifacts_sha256": {
+    "operator-stop-request.json": "a1dafc03304f58dfd0b680464a7170ef6479b9f749f88c5a65fbd344afc60c84",
+    "plan.json": "ab336f6af88ab1063338aa1f43011696c78c486dd780e51c74ad15ece86e4b8d",
+    "registration.json": "0671618679d845ba83a0dd408c18651d1abc3d2e45a457d4fe4e61d61d32253c",
+    "report.json": "5b895318b8b504bbd934201d93c2caeeb20a22500a419f82542ba566961b435f"
+  },
+  "auth_loan_removed": true,
+  "calls_by_role": {
+    "composition": 23,
+    "probe": 87,
+    "proposer": 13,
+    "reflection": 2,
+    "task": 155
+  },
+  "editor": "openai_codex:gpt-6-astra/high",
+  "efficacy": "unassessed_operator_intervened_in_failed_scope",
+  "executor": "openai_codex:gpt-6.1-sol/high",
+  "failure": "asset_proposer_rejected_as_invalid_attempt_before_dispatch",
+  "global_allowance_reset": false,
+  "incomplete_qualification_rows": 2,
+  "kind": "hosted_asset_role_admission_failure/v1",
+  "operator_action": "learning_opt_out_after_first_incomplete_row_fixed_ordinary_sample_completed",
+  "passing_artifacts": 13,
+  "profile_promotions": 1,
+  "profile_rollbacks": 1,
+  "rows_including_seed": 13,
+  "schema_version": 1,
+  "scope_physical_requests": 280,
+  "scope_tokens": 1919829,
+  "source_revision": "fed42f7145d554eb751d3a56e6726474ab756e01",
+  "typed_asset_applications": 0,
+  "unknown_inner_usage_rows": 1
+}

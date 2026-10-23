@@ -1,0 +1,33 @@
+{
+  "all_receipts_completed": true,
+  "artifacts_sha256": {
+    "mechanism.json": "e5fc52f2ca6f0edd777885253c2de595e6c951fda136ae2e004b7733831d25c4",
+    "plan.json": "fd5b453a683d44f890dbd8cfc2566347d2817a341cfec7a5188b5eeb23678cb8",
+    "registration.json": "390c6ba0cc00cb446fa3fa4fa1aa0cc806bc9eca2bba0ce3f53d087af1639d23",
+    "report.json": "39196c25f5a00f8a81b513aba13a749accf6264238a1f4d06f121c17930d4edd"
+  },
+  "checks": {
+    "experience_withheld": true,
+    "helper_executed": true,
+    "observed_lesson_to_execution": true,
+    "procedure_exercised": true,
+    "profile_exercised": true,
+    "retained_seed_lessons": true,
+    "setting_exercised": true
+  },
+  "codex_auth_borrowed": false,
+  "efficacy": "unassessed_scripted_mechanics_only",
+  "execution_revision": "8bc5778fcdb0e95c708a4e032d28fb7691f8e5b3",
+  "execution_tree_clean": false,
+  "kind": "scripted_shared_allowance_mechanism/v1",
+  "model_requests": 0,
+  "schema_version": 1,
+  "scripted_dispatches": 1054,
+  "scripted_tokens": 4216,
+  "source_bytes_frozen_in": "fff18cb",
+  "status": "passed",
+  "tested_source_sha256": {
+    "lib/lemieux/cli/learning/study_allowance.ex": "7c6852aedafcaeb5aca79903c9376a206cb2bc9e59676e0d57641d28f402e53e",
+    "scripts/qualify_learning_study.exs": "28efa07718e3a6aefaadac60e1dd92594acaeac835e8e69232b1b595657a3a77"
+  }
+}

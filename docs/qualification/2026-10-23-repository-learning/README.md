@@ -156,9 +156,13 @@ no quality threshold or model output limit was changed to obtain this result.
 The shared allowance can also wrap the scripted rehearsal. This exercises the
 same admission roles before hosted work: the physical recorder retains
 `asset_proposer` and `asset_critic`, while the controller admits their semantic
-`proposer` and `critic` roles. The second hosted scope exposed the missing
+`proposer` and `critic` roles. The [second hosted scope](hosted-asset-role-failure.json) exposed the missing
 mapping before its first asset request could dispatch; its incomplete records
-remain unchanged. Use a separate, new allowance directory for offline work:
+remain unchanged. Its 280 physical calls and 1,919,829 tokens are fully known.
+Further learning was opted out after the failure; the intervened sample makes
+no efficacy claim. The [shared offline rehearsal](offline-shared-allowance-mechanism.json)
+then passed every mechanism check and settled all 1,054 Scripted dispatches,
+without borrowing credentials or changing the hosted allowance. Use a separate, new allowance directory for offline work:
 
 ```sh
 mix run scripts/qualify_learning_study.exs --research --stage mechanism \
@@ -170,3 +174,9 @@ mix run scripts/qualify_learning_study.exs --research --stage mechanism \
 
 Without `--allow-live`, this selects only Scripted providers and borrows no
 Codex credentials. It validates routing and accounting, not model capability.
+
+The [confirmation preparation status](confirmation-preparation-status.json)
+records metadata screening of 483 candidate repository names and GitHub fork
+metadata for the first 120. No source/evaluator controls or transitive history
+and exposure qualification are established by that screening. The number of
+qualified independent streams remains zero; no confirmation request has run.
