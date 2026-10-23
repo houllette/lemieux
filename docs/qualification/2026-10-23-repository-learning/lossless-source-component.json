@@ -8,7 +8,9 @@
   "original_record_bytes": 1261606,
   "qualification": "offline_component_only",
   "schema_version": 1,
+  "source_bytes_frozen_in": "a6d1015",
   "source_wire_limit": 1048576,
+  "static_gate_followup": "A later commit removes an unreachable private non-map fallback. The shared codec and model-input logic are unchanged.",
   "tested_source_sha256": {
     "lib/lemieux/cli/learning/qualification_host.ex": "61966d9ea662039ba2e0d93b2ef909ea06a6bce627720632e19a93315dd81738",
     "lib/lemieux/cli/learning/reflection.ex": "c77e776791d89e3d79f284342cdb83db8472501f9fe53b078cd1d86b49134bbb",

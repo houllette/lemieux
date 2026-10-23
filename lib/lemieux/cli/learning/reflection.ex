@@ -354,8 +354,6 @@ defmodule Lemieux.CLI.Learning.Reflection do
     end
   end
 
-  defp valid_record(_record), do: {:error, :invalid_reflection_record}
-
   defp valid_hypothesis(hypothesis, record) when is_map(hypothesis) do
     with true <- Enum.sort(Map.keys(hypothesis)) == Enum.sort(@hypothesis_keys),
          true <- hypothesis["kind"] in ~w(procedure proposer_lesson),
