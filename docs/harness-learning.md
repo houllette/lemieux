@@ -86,6 +86,20 @@ and independently powered confirmation retain their separate registration and
 exposure requirements. Every hosted invocation still requires explicit user
 authorization and `--allow-live`.
 
+Hosted study stages also require `--allowance-dir`, `--max-total-requests`,
+`--max-total-tokens` and `--max-total-time-ms`. Supply the explicitly authorized
+limits and the same private allowance directory on every invocation, including
+calibration, mechanism and development. The directory checkpoints one outer
+ledger and controller before dispatch; restarting a stage does not replenish
+requests, tokens or its original deadline. Every role, failure and cancellation
+uses this allowance. Each request must have an explicit output-token bound.
+These ceilings are admission bounds; provider overruns are recorded and close
+further admission. Unknown usage, interrupted work, a changed limit, a partial
+checkpoint or an existing owner lock withholds further work. Inspect the
+retained accounting before recovery; creating a new allowance requires a new
+authorization. No auth token or executable provider state is stored there.
+The finite decision-history bound can stop a study before its request ceiling.
+
 The [recorded research sequence](qualification/2026-10-21-research-sequence/README.md)
 separates observed profile adaptation, reviewed skill use and unestablished
 efficacy. Helper execution and setting changes were not observed in its hosted

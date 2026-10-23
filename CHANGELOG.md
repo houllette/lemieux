@@ -25,6 +25,12 @@ API.
 
 ### Features
 
+- Hosted learning qualification shares a durable request, token and time
+  allowance across calibration, mechanism, development and confirmation.
+  Supply the same `--allowance-dir` and explicitly authorized total limits
+  for each stage. Interrupted or unknown accounting stops new dispatch;
+  starting another stage cannot reset consumed quota or the original deadline.
+
 - Native Ixway inference declares its harness identity, preserving an explicit
   host declaration without duplicates. New startup environment snapshots pair
   the BEAM host's working directory with a sanitized Git origin, omitting
