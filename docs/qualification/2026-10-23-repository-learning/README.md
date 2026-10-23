@@ -13,8 +13,18 @@ Bottle repository task. The first harder SymPy calibration reached its
 and pytest cache writes also exceeded the changed-workspace evidence limit.
 Those failed runs remain recorded; incomplete evidence is not a pass.
 
-The next protocol must freeze a normal 48-request horizon before execution,
-disable interpreter/test cache writes in the prepared image, and disclose the
+The subsequent Sol 6.1/high calibration froze a normal 48-request horizon before execution.
+Its disabled arm passed two of four previously exposed SymPy cases, with all
+eight disabled/reference executions fully accounted for and complete workspace
+evidence. The 154 new requests used 4,878,186 tokens. This establishes task
+headroom, not improvement; agent finish reasons are retained separately from
+artifact correctness. Concurrent local gates/preparation make its latency a
+calibration diagnostic rather than a causal performance comparison. The
+[summary](calibration-summary.json) preserves successes and failures.
+
+The apparatus changes
+
+disable interpreter/test cache writes in the prepared image and and disclose the
 large immutable verification list on demand. The complete file list remains
 checked. These changes reduce incidental context and filesystem work; they do
 not establish improved task outcomes. A new runtime/image/manifest requires new
@@ -120,3 +130,16 @@ Those controls establish a usable development apparatus, not learning benefit.
 The broader metadata inventory has many more repository names, but fork/history
 independence, exposure, source closures, images and grader controls still need
 qualification before any independent cohort is claimed.
+
+
+## Offline learning mechanism
+
+The [mechanics summary](offline-mechanism-summary.json) retains both canaries.
+The eight-request combined canary correctly withheld a full demonstration:
+its procedure/helper path needs eleven requests, including the normal repair
+and verification. The twelve-request canary passes every dataflow check:
+retained seed, committed exposure, changed profile, actual procedure and helper
+use, setting disclosure, and matched experience withholding. Both retain all
+six arms and two repetitions, loader use, fixed verification and rollback.
+This is scripted mechanics evidence only. The repository horizon remains 48;
+no quality threshold or model output limit was changed to obtain this result.

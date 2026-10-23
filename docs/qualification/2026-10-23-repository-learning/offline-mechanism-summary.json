@@ -1,0 +1,43 @@
+{
+  "claim": "scripted_mechanics_only_no_efficacy",
+  "runs": [
+    {
+      "horizon": 8,
+      "model": "test:model",
+      "hosted_requests": 0,
+      "source_revision": "9d280aa3af9c2091a9aa452d82db74c86232f853",
+      "source_report_sha256": "0279b5b60b3702f670fe7aa366178384cd1766e47bf2dcae9942ae0191721f6f",
+      "source_mechanism_sha256": "7e040b82fa204c47d7ae87eb07357dc928f9079095b02f38325481e8b0990f76",
+      "status": "not_demonstrated",
+      "checks": {
+        "experience_withheld": true,
+        "helper_executed": false,
+        "observed_lesson_to_execution": true,
+        "procedure_exercised": false,
+        "profile_exercised": true,
+        "retained_seed_lessons": true,
+        "setting_exercised": true
+      },
+      "interpretation": "observed_dataflow_and_execution_not_causal_efficacy"
+    },
+    {
+      "horizon": 12,
+      "model": "test:model",
+      "hosted_requests": 0,
+      "source_revision": "9d280aa3af9c2091a9aa452d82db74c86232f853",
+      "source_report_sha256": "57d190bec0966fa6b9744a39a7b53136a5e3a248ed4ee779ada2defb95827758",
+      "source_mechanism_sha256": "e72065c543e900af0c7518f786b521598a6f8e9b02f959da2bed7b8214a46342",
+      "status": "passed",
+      "checks": {
+        "experience_withheld": true,
+        "helper_executed": true,
+        "observed_lesson_to_execution": true,
+        "procedure_exercised": true,
+        "profile_exercised": true,
+        "retained_seed_lessons": true,
+        "setting_exercised": true
+      },
+      "interpretation": "observed_dataflow_and_execution_not_causal_efficacy"
+    }
+  ]
+}

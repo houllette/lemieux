@@ -177,6 +177,134 @@
           "safety_failures": []
         }
       ]
+    },
+    {
+      "source_report_sha256": "7f946f5f3ed0c4de833139789d710cc9fb1dc05130449ca7a3495bdb24a6746f",
+      "source_revision": "c8a6a493b58f03dce66f1a0d1c4fdd85bc1ae6f6",
+      "model": "openai_codex:gpt-6.1-sol/high",
+      "kind": "development_calibration_only",
+      "baseline_success": 0.5,
+      "has_headroom": true,
+      "task_requests": 48,
+      "benefit": "not_tested",
+      "independent_confirmation": false,
+      "requests": 154,
+      "tokens": 4878186,
+      "latency_scope": "calibration under concurrent local qualification/preparation; no causal performance claim",
+      "rows": [
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-15875",
+          "passed": false,
+          "requests": 18,
+          "tokens": 465936,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 490346,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-15875",
+          "passed": false,
+          "requests": 23,
+          "tokens": 844930,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 488361,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-16766",
+          "passed": true,
+          "requests": 13,
+          "tokens": 425536,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 451203,
+          "original_finish_reason": ":stop",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-16766",
+          "passed": true,
+          "requests": 20,
+          "tokens": 784464,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 486281,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-19040",
+          "passed": true,
+          "requests": 20,
+          "tokens": 597786,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 489835,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-19040",
+          "passed": true,
+          "requests": 23,
+          "tokens": 794237,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 491822,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "disabled",
+          "task_id": "sympy-sympy-23950",
+          "passed": false,
+          "requests": 14,
+          "tokens": 296581,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 486640,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        },
+        {
+          "arm": "reference",
+          "task_id": "sympy-sympy-23950",
+          "passed": false,
+          "requests": 23,
+          "tokens": 668716,
+          "qualification_complete": true,
+          "original_budget_stop": false,
+          "workspace_evidence_complete": true,
+          "safety_failures": [],
+          "latency_ms": 487529,
+          "original_finish_reason": ":agent_timeout",
+          "visible_verification_passed": true
+        }
+      ]
     }
   ]
 }
