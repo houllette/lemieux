@@ -22,14 +22,23 @@ artifact correctness. Concurrent local gates/preparation make its latency a
 calibration diagnostic rather than a causal performance comparison. The
 [summary](calibration-summary.json) preserves successes and failures.
 
-The apparatus changes
-
-disable interpreter/test cache writes in the prepared image and and disclose the
-large immutable verification list on demand. The complete file list remains
+The apparatus disables interpreter/test cache writes in the prepared image and
+discloses the large immutable verification list on demand. The complete file list remains
 checked. These changes reduce incidental context and filesystem work; they do
 not establish improved task outcomes. A new runtime/image/manifest requires new
 controls and calibration. The separately selected editor is Astra/high; the
 calibrations above did not exercise an improver and do not qualify that model.
+
+The [first hosted mechanism seed](hosted-mechanism-accounting-failure.json)
+passed its visible and private checks and Astra produced three pointer-backed
+lessons. The driver then stopped before any target execution because its inner
+reflection receipt had unknown usage. All twelve physical calls and 119,908
+tokens were recorded by the shared allowance. A deterministic regression
+identified completion being forwarded before nested controllers settled; the
+repair delays only terminal events. The original archive and unknown inner
+receipt stay sealed. A new frozen runtime and output are required for another
+mechanism run. This seed establishes no learning benefit or new-kind
+qualification.
 
 ## Grader boundaries
 
