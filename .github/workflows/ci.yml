@@ -352,6 +352,7 @@ jobs:
           project: ${{ matrix.path }}
           cache-key: example-${{ matrix.example }}
           deps: "false"
+          python: "true"
       - name: Check the example against this checkout
         env:
           EXAMPLE: ${{ matrix.example }}
