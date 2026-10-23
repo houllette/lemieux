@@ -222,6 +222,180 @@ defmodule Lemieux.ExtensionConfirmationTest do
     assert output =~ "confirmed-consumer-ok"
   end
 
+  @tag timeout: :timer.minutes(3)
+  test "a typed procedure survives confirmation, source export, fresh loading and exact rollback",
+       context do
+    {source, version, profile} = typed_source(context.tmp_dir)
+
+    assert {:ok, control} =
+             Build.freeze(source, Path.join(context.tmp_dir, "typed-control"), profile)
+
+    enabled = put_in(profile, ["options", "enabled"], true)
+
+    assert {:ok, candidate} =
+             Build.freeze(source, Path.join(context.tmp_dir, "typed-candidate"), enabled)
+
+    context = typed_corpus(%{context | control: control, candidate: candidate})
+    assert {:ok, confirmation} = prepare(context)
+    assert {:ok, %{"verdict" => "pass"}} = Confirmation.run(confirmation)
+
+    assert {:ok, inventory} =
+             Tree.read(Path.join(candidate.root, "source/lemieux-extension-export.json"))
+
+    digest = Contract.digest(inventory["files"])
+
+    gate = %{
+      "content_sha256" => digest,
+      "evidence" =>
+        Map.new(
+          CodeGate.required_evidence(),
+          &{&1, %{"passed" => true, "digest" => Contract.sha256("fixture-" <> &1)}}
+        )
+    }
+
+    review = %{
+      "actor" => "fixture-reviewer",
+      "content_sha256" => digest,
+      "decision" => "approved_for_export"
+    }
+
+    package = Path.join(context.tmp_dir, "typed-export")
+
+    assert {:ok, receipt} =
+             Confirmation.export(confirmation, package, code_gate: gate, review: review)
+
+    assert :ok = Confirmation.verify_export(confirmation, package, receipt)
+
+    # Freeze the exported project again: execution must read its packaged asset
+    # through the real skill loader, with no original in-memory version.
+    assert {:ok, installed} =
+             Build.freeze(package, Path.join(context.tmp_dir, "typed-installed"), enabled)
+
+    File.write!(
+      Path.join(context.tmp_dir, "records.json"),
+      JSON.encode!([" alpha ", "", " beta "])
+    )
+
+    input = %{prompt: "Normalize records", cwd: context.tmp_dir, timeout_ms: 10_000}
+    assert {:ok, result} = Build.run(installed, input)
+
+    assert JSON.decode!(File.read!(Path.join(context.tmp_dir, "normalized.json"))) == [
+             "alpha",
+             "",
+             "beta"
+           ]
+
+    assert [%{"id" => id, "sha256" => asset_digest}] = result["resolved_assets"]
+    assert id == version.id
+    assert asset_digest == version.digest
+    assert result["rolled_back"] == true
+    assert receipt["qualification"] == "confirmed"
+    assert receipt["production_active"] == false
+  end
+
+  defp typed_source(root) do
+    source = Path.join(root, "typed-source")
+    template = Path.expand("examples/extensions/portable_procedure")
+
+    for file <- ~w(mix.exs LICENSE lib/portable_procedure.ex lemieux-extension.json) do
+      target = Path.join(source, file)
+      File.mkdir_p!(Path.dirname(target))
+      File.cp!(Path.join(template, file), target)
+    end
+
+    File.mkdir!(Path.join(source, "priv"))
+
+    attrs = %{
+      "kind" => "skill",
+      "payload" => %{"name" => "preserve-records"},
+      "requires_tools" => ["write"],
+      "triggers" => ["normalize records"],
+      "files" =>
+        Map.new(~w(SKILL.md references/rules.json), fn file ->
+          {file, File.read!(Path.join([template, "procedure", file]))}
+        end)
+    }
+
+    version = typed_asset_source(root, Path.join(source, "priv/learned"), attrs, template)
+
+    profile = %{
+      "execution" => "scripted",
+      "model" => "test:portable-procedure",
+      "tools" => ["read", "write"],
+      "options" => %{"enabled" => false, "asset_sha256" => version.digest}
+    }
+
+    {source, version, profile}
+  end
+
+  defp typed_corpus(context) do
+    tasks =
+      Enum.map(context.corpus.manifest.tasks, fn task ->
+        records =
+          if task.id == "fresh-b", do: [" gamma ", "", " delta "], else: [" alpha ", "", " beta "]
+
+        File.write!(Path.join(task.cwd, "records.json"), JSON.encode!(records))
+
+        %{
+          "id" => task.id,
+          "cwd" => task.cwd,
+          "prompt" => "Normalize records",
+          "timeout_ms" => 10_000,
+          "metadata" => %{"cluster_id" => task.id},
+          "grader" => %{"command" => ["grade", "{cwd}"]}
+        }
+      end)
+
+    File.write!(Path.join(context.evaluator, "grade"), """
+    #!/bin/sh
+    exec python3 - "$1" <<'CHECK'
+    import json, sys
+    from pathlib import Path
+    root = Path(sys.argv[1])
+    expected = [s.strip() for s in json.loads((root / "records.json").read_text())]
+    observed = json.loads((root / "normalized.json").read_text())
+    raise SystemExit(0 if observed == expected else 1)
+    CHECK
+    """)
+
+    {:ok, manifest} = Manifest.from_map(%{"version" => 1, "tasks" => tasks}, context.tmp_dir)
+
+    {:ok, corpus} =
+      Corpus.new(manifest, %{"dev" => :development, "fresh-a" => :holdout, "fresh-b" => :holdout})
+
+    %{context | corpus: corpus}
+  end
+
+  defp typed_asset_source(root, destination, attrs, template) do
+    # Frozen consumers execute original disk BEAMs. Create the source with the
+    # same validator, including under coverage, without weakening its binding.
+    request = Path.join(root, "typed-asset-input.json")
+    File.write!(request, JSON.encode!(attrs))
+
+    script = """
+    [request, destination, owner] = System.argv()
+    Code.require_file(owner)
+    context = PortableProcedure.context()
+    {:ok, version} = Lemieux.Learning.Asset.new(JSON.decode!(File.read!(request)), context)
+    :ok = Lemieux.Learning.Asset.Source.write(version, destination, context)
+    IO.write(JSON.encode!(%{"id" => version.id, "digest" => version.digest}))
+    """
+
+    paths = Enum.flat_map(:code.get_path(), &["-pa", List.to_string(&1)])
+    owner = Path.join(template, "lib/portable_procedure.ex")
+
+    {output, status} =
+      System.cmd(
+        "elixir",
+        ["--erl", "+S 2:2"] ++ paths ++ ["-e", script, request, destination, owner],
+        stderr_to_stdout: true
+      )
+
+    assert status == 0, output
+    %{"id" => id, "digest" => digest} = JSON.decode!(output)
+    %{id: id, digest: digest}
+  end
+
   test "quota confirmation reserves all attempts and fails closed on missing request evidence",
        context do
     quota_policy = %{

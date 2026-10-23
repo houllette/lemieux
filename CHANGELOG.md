@@ -11,6 +11,11 @@ API.
 
 ### Dependencies
 
+- Require ReqLLM 1.29.0, which verifies TLS certificates and hostnames on
+  secure WebSocket connections, including the Codex subscription transport
+  ([upstream advisory](https://github.com/agentjido/req_llm/security/advisories/GHSA-6vww-5m28-f26v)).
+  Align the standalone host and example locks with its LLMDB 2026.10.6 catalog.
+
 - Update ReqLLM to 1.28.0 and its required LLMDB catalog to 2026.10.5 across
   the library, standalone host, bundled compaction extension and tracked
   example locks. This includes upstream Codex reasoning/terminal-stream
@@ -42,6 +47,14 @@ API.
   Complete bytes, helpers, runtime bindings and current digest approval are
   checked through the real loader. New kinds remain gated from automatic use.
   Learned procedures cannot shadow loaded skills or replace a host skill loader.
+- Typed assets can be preserved as source inside native Mix extensions and
+  loaded after export with their original identity. Receiving hosts revalidate
+  the complete tree and current policy, supply fresh digest approval and retain
+  exact harness rollback. The existing confirmation and CodeGate export path
+  remains authoritative; asset source grants no activation or efficacy claim.
+  A runnable offline example verifies the exported package in fresh sessions
+  and a fresh Mix dependency consumer, retaining artifacts, identity, request
+  counts and rollback evidence for review.
 - Qualified native exports carry portable source/runtime/evidence identities.
   Migration: confirmed export now requires a complete dependency/capability
   manifest and explicit CodeGate/reviewer JSON bound to the source inventory;

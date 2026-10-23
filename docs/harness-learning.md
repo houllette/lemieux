@@ -112,6 +112,58 @@ The initial trusted configuration surface is only search catalog disclosure
 cannot select modules, commands, models, routes, environments or permissions.
 Profile-only campaigns and reviewed overlays retain their existing format.
 
+To include a typed asset in a native Mix extension, write its source tree into
+the owning project before freezing the build:
+
+```elixir
+alias Lemieux.Learning.Asset.Source
+
+source = Path.join(project, "priv/learned")
+# The parent directory must exist; the destination must be new.
+:ok = Source.write(version, source, current_context)
+```
+
+Declare `priv/learned/asset.json` and **every** file under
+`priv/learned/files/` in the existing `lemieux-extension.json`. Include the
+complete helper/dependency graph and capabilities for qualified exports. These
+files travel through the same source-preserving export, frozen build,
+confirmation and CodeGate path as the extension's owner-supplied Elixir source.
+There is no additional package format or generated executable wrapper.
+
+The installed host verifies the package and retained confirmation using the
+existing export APIs, obtains its current context and explicitly approves the
+asset digest. It then loads through the normal harness seam:
+
+```elixir
+{:ok, version, _files} = Source.read(installed_source, current_context)
+# Approval comes from the current host's policy/review, outside the package.
+context = Map.put(current_context, :approved_digests, approved_digests)
+base = Lemieux.Harness.new(system: "Host instructions", tools: authorized_tools)
+{:ok, effective} =
+  Lemieux.Harness.assemble(base, [
+    {Lemieux.Learning.Asset.Extension, source: installed_source, context: context}
+  ])
+{:ok, ^base} = Lemieux.Harness.assemble(base, []) # exact host-owned rollback
+```
+
+The reconstructed version keeps its ID, digest and creation time. Loading
+rechecks scope, runtime binding, validator, tools, trust, dependencies and the
+actual skill loader. Changed files, unexpected source files, symlinks,
+incompatible runtime metadata and conflicting in-memory/source options refuse
+use. Source carries no approval or active registry pointer. Its asset remains
+labelled `unconfirmed`: confirming an owning native extension does not prove
+independent efficacy for each contained asset. Scripted confirmation tests
+establish this workflow's mechanics; they do not complete the hosted
+qualification gates.
+
+For a complete runnable review, see the
+[portable procedure example](../examples/extensions/portable_procedure/README.md).
+`mix run examples/portable_asset.exs --output NEW_DIRECTORY` exports owner-supplied
+native source, runs original/adapted/restored harnesses in fresh consumers and
+retains a digest-bearing review report. It exercises the real session and skill
+tool and verifies resulting files. It leaves the package unassessed and reports
+missing independent confirmation and CodeGate evidence explicitly.
+
 Confirmed native exports now carry `lemieux-extension-qualification.json` with
 their exact source/build/confirmation/report identities and frozen profile.
 `Extension.Export.verify/1` checks package integrity;

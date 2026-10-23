@@ -5,6 +5,9 @@ defmodule Lemieux.Learning.Asset.Extension do
   An explicitly selected typed asset through the normal harness seam.
 
   Hosts supply the materialized version, current context and explicit approval.
+  Alternatively, `:source` names a portable `Lemieux.Learning.Asset.Source`
+  tree; it is mutually exclusive with `:version` and `:root`. Loading source
+  revalidates the receiving context and still requires explicit digest approval.
   An automatic host must additionally qualify this kind before selecting it.
   Nothing in a stored asset can select this module or grant that approval.
   Reassembly without this extension restores the original harness; callers can
@@ -23,11 +26,25 @@ defmodule Lemieux.Learning.Asset.Extension do
   alias Lemieux.Harness
   alias Lemieux.Learning.Asset
   alias Lemieux.Learning.Asset.Reader
+  alias Lemieux.Learning.Asset.Source
   alias Lemieux.Tool
   alias Lemieux.Tool.Override
 
   @impl true
   def init(opts) do
+    initialize(Keyword.fetch(opts, :source), opts)
+  end
+
+  defp initialize({:ok, source}, opts) do
+    with false <- Keyword.has_key?(opts, :version) or Keyword.has_key?(opts, :root),
+         {:ok, version, root} <- Source.read(source, Keyword.fetch!(opts, :context)) do
+      initialize(:error, Keyword.merge(opts, version: version, root: root))
+    else
+      _invalid -> {:error, :invalid_typed_asset_source_options}
+    end
+  end
+
+  defp initialize(:error, opts) do
     version = Keyword.fetch!(opts, :version)
     context = Keyword.fetch!(opts, :context)
 
