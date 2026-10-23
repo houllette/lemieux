@@ -310,8 +310,9 @@ stock ordinary-use experience lane. It runs paired disabled/default streams in
 fixed workspace identities, through shared CLI assembly and the real private
 lesson store, with no learning hook, campaign or prompt injection supplied by
 the evaluator. Each task has 32 request slots and an eight-minute deadline;
-learning creates zero additional requests. The same networkless container and
-independent host grader apply. Its plan is written before dispatch, and every
+the recall-only scenarios create zero additional requests. The stock bounded replay
+scenario is covered separately by `stock_refinement_test.exs` and its CI artifact.
+The same networkless container and independent host grader apply. Its plan is written before dispatch, and every
 episode retains intent, transcript, usage, grading, learning status and digest.
 It reports whether subsequent tasks actually received experience. This is
 development mechanics/non-regression evidence, not an independent benefit claim.

@@ -14,8 +14,12 @@ defmodule Lemieux.Learning.Controller do
   against a provider misreporting or exceeding them. Actual overruns and missing
   usage are retained and close further admission. Quota mode may leave dollars
   unknown, but never substitutes zero or relaxes the outer dollar ceiling.
-  Hosts must route all token-consuming work through this controller from the
-  beginning of the job. Previously untracked parent usage stays unknown.
+  Hosts route token-consuming work through this controller. A host joining an
+  existing ledger may supply `:prior_usage`, a map with the complete measured
+  `requests` and `tokens` before this controller starts. The request count must
+  match the settled outer ledger exactly; missing, mismatched or active parent
+  work stays unknown. This is current host accounting, not restored authority.
+  Later untracked parent requests still stop admission.
 
   `run/5` guards child lifetime and time; `reserve/4` is for a host that enforces
   the returned deadline itself. Failed, retried and cancelled dispatches consume
@@ -264,7 +268,7 @@ defmodule Lemieux.Learning.Controller do
       max_stagnant: Keyword.get(opts, :max_uninformative, 2),
       max_records: Keyword.get(opts, :max_records, 512),
       initial_requests: outer.requests,
-      initial_tokens: if(outer.requests == 0, do: 0),
+      initial_tokens: prior_tokens(opts, outer),
       persist: opts[:persist],
       persist_failed: false
     }
@@ -274,6 +278,21 @@ defmodule Lemieux.Learning.Controller do
       {:ok, persist(state)}
     else
       {:error, reason} -> {:stop, reason}
+    end
+  end
+
+  defp prior_tokens(opts, outer) do
+    case {Contract.json(opts[:prior_usage]), outer.requests, outer.active} do
+      {nil, 0, 0} ->
+        0
+
+      {%{"requests" => requests, "tokens" => tokens} = prior, requests, 0}
+      when map_size(prior) == 2 and is_integer(requests) and requests >= 0 and
+             is_integer(tokens) and tokens >= 0 ->
+        tokens
+
+      _unknown ->
+        nil
     end
   end
 

@@ -55,6 +55,7 @@ for name in "$@"; do
       had_lock=true
     fi
     scratch=""
+    nif_cache=""
     # Invoked by the EXIT trap below, which ShellCheck cannot see: 0.9 reports
     # that as unreachable code (SC2317), 0.10 and later as an unused function.
     # shellcheck disable=SC2317,SC2329
@@ -62,10 +63,22 @@ for name in "$@"; do
       if [ "$had_lock" = true ]; then cp "$lock_backup" mix.lock; else rm -f mix.lock; fi
       rm -f "$lock_backup"
       if [ -n "$scratch" ]; then rm -rf "$scratch"; fi
+      if [ -n "$nif_cache" ]; then rm -rf "$nif_cache"; fi
     }
     trap cleanup EXIT
 
     mix deps.get
+
+    # GitHub release headers can exceed httpc's fixed download limit. Curl
+    # fills this job-owned cache with the exact package checksum; Rustler
+    # still verifies that checksum itself before extracting/loading the NIF.
+    if [ "${CI:-}" = "true" ]; then
+      nif_cache=$(mktemp -d "${TMPDIR:-/tmp}/lemieux-nifs.XXXXXXXX")
+      nif_version=$(elixir -e 'IO.puts(:erlang.system_info(:nif_version))')
+      python3 "$root/scripts/cache_terminal_nif.py" deps/ex_ratatui "$nif_cache" \
+        --nif-version "$nif_version"
+      export RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH="$nif_cache"
+    fi
 
     case $name in
       # These two define their own `check` alias, which is the contract.

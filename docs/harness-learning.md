@@ -9,20 +9,43 @@ is required. The library still starts no Lemieux processes when installed.
 `--config none` without `LMX_HOME` has no personal state and disables this lane.
 Explicit profiles and the extension builder retain their selected behavior.
 
-The default lane allocates **zero additional inference requests**. It selects
-at most two bounded hypotheses, commits source-case exposure before disclosure,
-and inserts untrusted context before the ordinary request's admission and
-accounting checks. This can change a later task's behavior. It does not prove
-that a suggestion works, create an independent budget, execute a replay,
-or authorize tools, networking, credentials or scheduling. Isolated
-propose/probe/compose and persistent promotion retain their explicit host
-allowance, isolation, confirmation and rollback contracts. The ordinary lane
-records `abstained_no_authorized_isolated_probe` for that operation; retrieval
-alone must not be reported as a successful refinement experiment.
+Recall selects at most two bounded hypotheses, commits source-case exposure
+before disclosure, and inserts untrusted context before ordinary admission.
+When a task records a reproducible verification failure, the stock host can
+also run a fixed isolated propose/probe/compose experiment. This needs an
+existing finite whole-job request limit: `--max-total-requests N`. Learning
+consumes at most a quarter of that job's slots, capped at 48 across its tasks.
+The frozen experiment needs 48 slots, so limits below 192 abstain; remaining
+ordinary work still has to fit. It never creates a second allowance. For example:
+
+```sh
+# Explicit preparation, once; tasks never pull or build images themselves.
+docker build -t lemieux-learning-replay:1 priv/learning
+lmx run --max-total-requests 192 "Investigate this failing test"
+```
+
+The image recipe is shipped under `priv/learning` in the library package.
+It supplies Python, make, Bash and Git, without project dependencies. Missing
+Docker, a missing cached image, an unreproduced failure, an incompatible project
+or insufficient allowance causes abstention before any learning dispatch.
+The local image name resolves to an immutable image ID for each experiment.
+Reproduction uses a disposable copy, so verifier cache writes cannot change
+the frozen inputs used by later probes.
+Commands run in fresh unprivileged, networkless, read-only containers with only
+the isolated workspace mounted. Replay requires complete captured input bytes
+within the configured capture bounds; larger or incomplete captures abstain. Verification files and instructions stay fixed.
+Dollar-limited jobs abstain until the complete experiment can be priced.
+
+A supported result appends at most 2 KiB of prompt/tool-description data to a
+retry of the same task and retains a scoped lesson for later tasks. Each trial permits four requests for reading, editing, verification and completion.
+Both the unchanged controls and candidate execute repeated fresh probes and composition
+checks. A command pass establishes that replay's observed outcome; it proves
+neither overall correctness nor transfer. New asset kinds, generated code and
+persistent activation remain qualification-gated. No scheduler is installed.
 
 ```sh
 lmx learning inspect              # no provider is created or contacted
-lmx learning undo                 # block the last recalled lesson set
+lmx learning undo                 # block the last adaptation and its dependent lessons
 lmx learning off                  # persistent opt-out for this workspace
 lmx learning on                   # remove that workspace opt-out
 ```
@@ -30,7 +53,7 @@ lmx learning on                   # remove that workspace opt-out
 The same live session exposes `/status learning inspect`,
 `/status learning undo` and `/status learning off`. Inspection reports scope,
 retained/blocked identities, qualification, evidence directory, the latest
-decision and zero extra inference requests. The standalone command works
+decision, physical learning requests and inclusive measured usage (or unknown). The standalone command works
 without provider credentials. `undo` restores the next request's original
 system prompt and blocks the recalled lessons; it cannot retract a request
 already sent. Exposure receipts remain immutable evidence. Separate reviewed
@@ -48,9 +71,32 @@ Lessons bind to the current workspace, model, complete authorized catalog and
 environment identity. A changed binding, ambiguous lesson, missing source,
 unavailable storage or policy, lock conflict, or exceeded bound retains the
 ordinary request. The journal stops at 1,000 evidence files; archive retained
-state deliberately before starting a fresh history. A killed writer can leave
-`control.lock`; inspect its owner and journal before removing the lock. No
-background learning task survives a completed hook or session shutdown.
+state deliberately before starting a fresh history. Local recall and retention
+have a five-second deadline; incomplete work abstains. A proven dead local
+writer's `control.lock` can be reclaimed through the transcript store's owner
+protocol. Foreign and legacy directory locks require owner inspection.
+A session intent precedes inference and a controller journal records reservations.
+Cancellation or interrupted/missing usage leaves an explicit recovery intent;
+resume and fork do not replay that work or refund its consumed slots. Inspect
+the referenced evidence before any manual recovery. Current permission handles,
+source lineage and verifier bytes are checked before every physical dispatch.
+Custom prompts or remembered permission rules, executable hooks/extensions and
+modified executors require a relocation contract and therefore abstain. No background learning task survives a completed
+hook or session shutdown.
+
+The offline review is executable with no model credentials:
+
+```sh
+docker build -t lemieux-learning-replay:1 priv/learning
+LEMIEUX_TEST_CONTAINERS=1 mix test test/lemieux/cli/learning/stock_refinement_test.exs
+```
+
+It covers the stock headless and interactive assembly, supported adaptation,
+outer accounting, exact undo, consumed-allocation recovery and cancellation.
+Its scripted provider is a mechanism fixture, not efficacy evidence. Captures,
+exposures, request snapshots, fixed-verifier grades, controller checkpoints and
+rollback records remain under that test's `tmp/` evidence directory. CI retains
+the directory as the `stock-learning-replay` artifact.
 
 ### Explicit research qualification
 
@@ -75,7 +121,7 @@ quality gain. This rule is a search heuristic, not a significance test.
 Receipts carry `experimental_task_local`; applying
 them requires the host's additional `experimental_task_local` capability.
 They cannot authorize persistent canaries, even with a confirmation document.
-The ordinary strict rule and zero-extra-request product defaults are unchanged.
+The ordinary lane retains the strict rule and its inherited whole-job allocation.
 
 Start with `--stage mechanism --research --task-requests 8`, which selects the
 developer-exposed graph workflow for a small six-arm canary. The

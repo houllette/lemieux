@@ -973,7 +973,7 @@ defmodule Lemieux.CLI.Runtime do
        recipe
        |> with_lmx_equipment(options, context, catalog?(context, elixir, profile?))
        |> Enum.concat(a2ui: if(Keyword.get(opts, :a2ui, false), do: Lemieux.Extensions.A2UI))
-       |> Enum.concat(learning: learning(options, context, profile?))
+       |> Enum.concat(learning: learning(options, opts, context, profile?, loaded))
        |> Enum.concat(Enum.map(loaded, &{:loaded, &1.spec}))
        |> Enum.concat(checkpoints: checkpoints(options, context))
        |> Enum.concat(capture: capture(options, context, profile?))
@@ -1018,7 +1018,7 @@ defmodule Lemieux.CLI.Runtime do
     end)
   end
 
-  defp learning(options, context, profile?) do
+  defp learning(options, opts, context, profile?, loaded) do
     disabled = disabled(options)
     settings = Config.get(options.config, "learning", true)
     capture = capture(options, context, profile?)
@@ -1026,8 +1026,28 @@ defmodule Lemieux.CLI.Runtime do
     if not is_nil(capture) and not MapSet.member?(disabled, "capture") and
          not MapSet.member?(disabled, "learning") do
       {Lemieux.CLI.Learning.Loop,
-       [home: options.host.state_dir, capture: capture, enabled: settings != false]}
+       [
+         home: options.host.state_dir,
+         capture: capture,
+         enabled: settings != false,
+         permission_spec: permissions_spec(options, context),
+         # Arbitrary hooks, executable extensions and remote environments need
+         # their own relocation contract. A stock replay must not silently drop
+         # a policy that constrained the original task.
+         replay_policy?: replay_policy?(options, opts, loaded)
+       ]}
     end
+  end
+
+  defp replay_policy?(options, opts, loaded) do
+    loaded == [] and is_nil(options.hooks_config) and is_nil(options.system) and
+      is_nil(opts[:system]) and replay_options?(opts) and
+      Config.get(options.config, "hooks", %{}) == %{}
+  end
+
+  defp replay_options?(opts) do
+    not Enum.any?([:tools, :host_tools, :harness, :messages, :guard], &Keyword.has_key?(opts, &1)) and
+      Keyword.get(opts, :extensions, []) == [] and Keyword.get(opts, :hooks, []) == []
   end
 
   defp web_spec(options, context, disabled, profile?) do

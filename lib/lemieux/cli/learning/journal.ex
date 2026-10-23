@@ -2,6 +2,7 @@ defmodule Lemieux.CLI.Learning.Journal do
   @moduledoc false
   alias Lemieux.CLI.Learning.Installation
   alias Lemieux.Contract
+  alias Lemieux.Store.JSONL
 
   @limit 524_288
 
@@ -73,8 +74,10 @@ defmodule Lemieux.CLI.Learning.Journal do
       lesson_id?(id) and is_list(parents) and
         length(parents) <= 2 and Enum.all?(parents, &lesson_id?/1)
 
-  # A killed writer may leave a lock. Refuse learning until the owner inspects
-  # that directory; guessing that an unfamiliar PID is dead can lose undo state.
+  # Bounded workers are killed on timeout, bypassing their `after` cleanup.
+  # Reuse the transcript store's exact local-owner/token protocol so a proven
+  # dead writer cannot strand undo. Foreign and legacy directory locks refuse
+  # takeover; their state is not evidence that an owner has exited.
   # Immutable receipts precede the single atomic control-file replacement.
   @spec update(root :: Path.t(), change :: function()) :: :ok | {:error, term()}
   def update(root, change) do
@@ -83,21 +86,23 @@ defmodule Lemieux.CLI.Learning.Journal do
     with :ok <- safe(root),
          :ok <- File.mkdir_p(root),
          :ok <- File.chmod(root, 0o700),
-         :ok <- File.mkdir(lock) do
+         :ok <- lock_file(lock),
+         {:ok, claim} <- JSONL.lock(%{dir: root}, "control") do
       try do
-        with :ok <-
-               write(lock, "owner.json", %{
-                 "os_pid" => System.pid(),
-                 "process" => inspect(self()),
-                 "created_at" => DateTime.to_iso8601(DateTime.utc_now())
-               }),
-             {:ok, control} <- control(root),
+        with {:ok, control} <- control(root),
              {:ok, next} <- change.(control),
              do: write(root, "control.json", next)
       after
-        File.rm(Path.join(lock, "owner.json"))
-        File.rmdir(lock)
+        JSONL.unlock(%{dir: root}, "control", claim)
       end
+    end
+  end
+
+  defp lock_file(path) do
+    case File.lstat(path) do
+      {:ok, %{type: :regular}} -> :ok
+      {:error, :enoent} -> :ok
+      _ambiguous -> {:error, :unsafe_learning_lock}
     end
   end
 

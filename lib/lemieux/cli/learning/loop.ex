@@ -1,18 +1,13 @@
 defmodule Lemieux.CLI.Learning.Loop do
   @moduledoc """
-  The first-party host's bounded ordinary-use experience lane.
+  The first-party host's bounded ordinary-use experience and refinement lane.
 
-  Only task-local, explicitly unconfirmed context is selected automatically.
-  Captured observations do not prove an edit works, authorize a command, or
-  qualify a persistent overlay. The original request is retained on every
-  storage, policy, relevance or validation failure. There is no inference
-  allocation, probe executor, timer or background worker in this lane. Context
-  enters the ordinary request before its existing admission/accounting checks.
-
-  The controller/refinement/promotion APIs remain the separately authorized
-  isolated-probe lane. In particular, retrieval is not a successful refinement
-  probe. Ordinary sessions record that abstention instead of inventing evidence
-  or silently creating a second budget. New asset kinds stay qualification-gated.
+  Scoped observations enter ordinary requests as untrusted hypotheses. A
+  captured verification failure can trigger a fixed isolated experiment within
+  the existing finite whole-job allowance. Supported text guidance is temporary;
+  persistent activation and new asset kinds retain their qualification gates.
+  Unsupported policy, unknown usage, unavailable isolation and small allowances
+  abstain. No timer, scheduler or background inference is installed.
 
   Settings and undo are re-read at every request, including resume. Undo blocks
   the last selected lessons and restores the next request's exact base prompt;
@@ -26,6 +21,8 @@ defmodule Lemieux.CLI.Learning.Loop do
   alias Lemieux.CLI.Learning.CapturedLesson
   alias Lemieux.CLI.Learning.Journal
   alias Lemieux.CLI.Learning.Observation
+  alias Lemieux.CLI.Learning.RefinementLesson
+  alias Lemieux.CLI.Learning.TaskLocal
   alias Lemieux.Contract
   alias Lemieux.Contribution
   alias Lemieux.Entry
@@ -54,7 +51,9 @@ defmodule Lemieux.CLI.Learning.Loop do
          home: Keyword.fetch!(opts, :home),
          capture_root: capture.dir,
          capture_hooks: Capture.apply(%Harness{}, capture).hooks,
-         enabled: Keyword.get(opts, :enabled, true)
+         enabled: Keyword.get(opts, :enabled, true),
+         permission_spec: opts[:permission_spec],
+         replay_policy?: Keyword.get(opts, :replay_policy?, false)
        }}
     end
   end
@@ -69,17 +68,24 @@ defmodule Lemieux.CLI.Learning.Loop do
     harness
     |> Harness.append_hooks(
       prepare_next_turn: fn request, context ->
-        case Worker.run(fn -> prepare(request, context, state) end, 500) do
+        # Several private fsyncs form the exposure/undo transaction. A 500 ms
+        # deadline interrupted it under Linux CI load; bound the whole local
+        # operation at five seconds and abstain without changing the request.
+        case Worker.run(fn -> prepare(request, context, state) end, 5000) do
           {:ok, {:ok, updated}} -> {:ok, updated}
           _unavailable -> {:ok, request}
         end
       end,
       stop: fn reason, context ->
-        Worker.run(fn -> retain(reason, context, state) end, 500)
-        :allow
+        Worker.run(fn -> retain(reason, context, state) end, 5000)
+
+        case Worker.run(fn -> refine(context, state) end, 480_000) do
+          {:ok, {:deny, feedback}} -> {:deny, feedback}
+          _abstained -> :allow
+        end
       end,
       session_end: fn reason, context ->
-        Worker.run(fn -> retain(reason, context, state) end, 500)
+        Worker.run(fn -> retain(reason, context, state) end, 5000)
         :ok
       end
     )
@@ -90,10 +96,10 @@ defmodule Lemieux.CLI.Learning.Loop do
   def describe(state),
     do: %{
       "enabled" => state.enabled,
-      "learning_requests" => 0,
+      "learning_requests" => "within_finite_job_allowance",
       "persistent_activation" => false,
       "qualification" => "unconfirmed",
-      "refinement" => "requires_authorized_isolated_host"
+      "refinement" => "bounded_verification_replay"
     }
 
   @spec inspect(home :: Path.t(), cwd :: Path.t()) :: {:ok, map()} | {:error, term()}
@@ -110,8 +116,9 @@ defmodule Lemieux.CLI.Learning.Loop do
          "blocked" => control["blocked"],
          "last" => control["last"],
          "evidence_directory" => root,
-         "learning_requests" => 0,
-         "refinement" => "abstained_no_authorized_isolated_probe",
+         "learning_requests" => Map.get(control["last"] || %{}, "learning_requests", 0),
+         "accounting" => get_in(control, ["last", "accounting"]),
+         "refinement" => get_in(control, ["last", "reason"]) || "awaiting_experience",
          "persistent_activation" => false
        }}
     end
@@ -129,7 +136,8 @@ defmodule Lemieux.CLI.Learning.Loop do
 
   defp undo_control(control, root) do
     case control["last"] do
-      %{"action" => "task_local_context", "lesson_ids" => ids} = last ->
+      %{"action" => action, "lesson_ids" => ids} = last
+      when action in ~w(task_local_context task_local_refinement) ->
         receipt =
           Journal.seal(%{
             "action" => "undo",
@@ -164,7 +172,7 @@ defmodule Lemieux.CLI.Learning.Loop do
           state: :ready,
           badge: if(enabled, do: "learning", else: "learning off"),
           message:
-            "#{info["retained"]} scoped observations; #{action}; 0 extra requests; unconfirmed"
+            "#{info["retained"]} scoped observations; #{action}; #{info["learning_requests"] || "unknown"} learning requests; unconfirmed"
         }
 
       _unavailable ->
@@ -249,7 +257,31 @@ defmodule Lemieux.CLI.Learning.Loop do
               JSON.encode!(selected.notes) <>
               "\nCheck applicability against current files and policy. No persistent change is qualified."
 
-      {:ok, %{request | system: (request.system || "") <> text}}
+      updated = %{request | system: (request.system || "") <> text}
+
+      config =
+        refinement_config(root, context, state, %{
+          "binding" => binding,
+          "prompt_id" => prompt.id,
+          "lesson_ids" => receipt["lesson_ids"]
+        })
+
+      case TaskLocal.apply(updated, context, config) do
+        {:ok, adapted, evidence} ->
+          record(
+            root,
+            Map.merge(evidence, %{
+              "base_system_sha256" => Contract.sha256(request.system || ""),
+              "phase" => "prepared"
+            })
+            |> Journal.seal()
+          )
+
+          {:ok, adapted}
+
+        :unavailable ->
+          {:ok, updated}
+      end
     else
       _abstain -> {:ok, request}
     end
@@ -311,9 +343,32 @@ defmodule Lemieux.CLI.Learning.Loop do
   end
 
   defp retain_record(record, root, context, meta) do
+    authority = authority(root, context, meta)
+
+    with {:ok, sources} <- source_lessons(store(root, context.cwd), meta["lesson_ids"] || []) do
+      with {:ok, ids} <-
+             CapturedLesson.retain(
+               [record],
+               context.cwd,
+               record["session_id"] <> ":" <> record["prompt_id"],
+               store(root, context.cwd),
+               authority,
+               actor: "lmx",
+               source_lessons: sources,
+               applicability: [
+                 "test verification failure recovery",
+                 record["command"] || "tool correction"
+               ]
+             ) do
+        Journal.update(root, &register(&1, ids, meta))
+      end
+    end
+  end
+
+  defp authority(root, context, meta) do
     scope = Storage.scope(context.cwd)
 
-    authority = fn ->
+    fn ->
       with {:ok, control} <- Journal.control(root),
            true <- control["enabled"] and source_allowed?(control, meta) do
         now = DateTime.utc_now()
@@ -336,25 +391,110 @@ defmodule Lemieux.CLI.Learning.Loop do
         _disabled -> {:error, :learning_disabled}
       end
     end
+  end
 
-    with {:ok, sources} <- source_lessons(store(root, context.cwd), meta["lesson_ids"] || []) do
-      with {:ok, ids} <-
-             CapturedLesson.retain(
-               [record],
-               context.cwd,
-               record["session_id"] <> ":" <> record["prompt_id"],
-               store(root, context.cwd),
-               authority,
-               actor: "lmx",
-               source_lessons: sources,
-               applicability: [
-                 "test verification failure recovery",
-                 record["command"] || "tool correction"
-               ]
-             ) do
-        Journal.update(root, &register(&1, ids, meta))
-      end
+  defp refine(context, state) do
+    root = root(state.home, context.cwd)
+
+    with true <- permitted?(state, context),
+         %{job: job} when not is_nil(job) <- Session.budget(context.session),
+         {:ok, meta} <- Journal.read(root, binding_file(context)),
+         {:ok, records} <- Capture.history(state.capture_root, context.cwd),
+         %{} = capture <-
+           Enum.find(
+             records,
+             &(&1["session_id"] == context.session_id and &1["prompt_id"] == meta["prompt_id"] and
+                 &1["kind"] == "verification_failure")
+           ) do
+      TaskLocal.run(
+        context,
+        Map.put(refinement_config(root, context, state, meta), :capture, capture)
+      )
+    else
+      _unavailable -> :allow
     end
+  end
+
+  defp refinement_config(root, context, state, meta) do
+    authorized? = fn ->
+      with true <- permitted?(state, context),
+           {:ok, control} <- Journal.control(root),
+           true <- control["enabled"] and source_allowed?(control, meta),
+           do: true,
+           else: (_disabled -> false)
+    end
+
+    %{
+      root: root,
+      source_ids: meta["lesson_ids"] || [],
+      scope: Storage.scope(context.cwd),
+      binding: meta["binding"],
+      session_id: context.session_id,
+      prompt_id: meta["prompt_id"],
+      policy?: state.replay_policy?,
+      permission_spec: state.permission_spec,
+      authorized?: authorized?,
+      allowed_sources?: fn ids ->
+        case Journal.control(root) do
+          {:ok, control} -> source_allowed?(control, %{"lesson_ids" => ids})
+          _unavailable -> false
+        end
+      end,
+      record: fn receipt ->
+        receipt =
+          Map.merge(
+            %{
+              "lesson_ids" => meta["lesson_ids"] || [],
+              "session_id" => context.session_id,
+              "prompt_id" => meta["prompt_id"]
+            },
+            receipt
+          )
+          |> Journal.seal()
+
+        record(root, receipt)
+      end,
+      proposer_notes: fn -> proposer_notes(root, context, meta) end,
+      retain: fn receipt ->
+        with {:ok, sources} <- source_lessons(store(root, context.cwd), meta["lesson_ids"] || []),
+             {:ok, ids} <-
+               RefinementLesson.retain(
+                 receipt,
+                 context.session_id <> ":" <> meta["prompt_id"],
+                 store(root, context.cwd),
+                 authority(root, context, meta),
+                 source_lessons: sources
+               ),
+             :ok <- Journal.update(root, &register(&1, ids, meta)),
+             do: {:ok, ids}
+      end
+    }
+  end
+
+  defp proposer_notes(root, context, meta) do
+    library_store = store(root, context.cwd)
+
+    with {:ok, library} <- Retrieval.freeze(library_store, Storage.scope(context.cwd)),
+         library = library |> Map.put("lesson_ids", meta["lesson_ids"] || []) |> Journal.seal(),
+         {:ok, selected} <-
+           Retrieval.retrieve(
+             library_store,
+             library,
+             %{"task" => "coding test verification failure recovery"},
+             meta["binding"],
+             %{
+               "id" => "lmx-" <> Lemieux.ID.generate(),
+               "consumer_role" => "proposer",
+               "consumer_id" => context.session_id,
+               "model" => meta["binding"]["model"],
+               "at" => DateTime.to_iso8601(DateTime.utc_now())
+             },
+             fn _scope, exposure -> audit(root, Exposure.to_map(exposure)) end,
+             max_results: 2,
+             max_note_bytes: 512
+           ),
+         :ok <- audit(root, selected.receipt),
+         do: Observation.project(library_store, selected.notes)
   end
 
   defp source_allowed?(control, meta),

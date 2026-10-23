@@ -70,7 +70,12 @@ defmodule Lemieux.CLI.Learning.RefinementLesson do
                }
              ]
            }) do
-      suffix = get_in(receipt, ["selected_profile", "options", "system"]) || ""
+      options = receipt["selected_profile"]["options"]
+
+      guidance =
+        (options["system"] || "") <>
+          "\nTool descriptions: " <>
+          JSON.encode!(options["tool_descriptions"] || %{})
 
       Lesson.new(bundle, %{reference.sha256 => bytes}, %{
         "key" => "refinement-" <> receipt["sha256"],
@@ -84,7 +89,7 @@ defmodule Lemieux.CLI.Learning.RefinementLesson do
         "applicability" => ["coding verification failure recovery repository workflow"],
         "mechanism" =>
           "Repeated task-local probes selected this profile under the recorded search policy. A verified tie is not a quality improvement. Recheck its assumptions on the new repository; it proves no transfer and grants no activation authority. Retained profile guidance: " <>
-            String.slice(suffix, 0, 2048),
+            String.slice(guidance, 0, 2048),
         "supporting" => ["finding"],
         "contradicting" => [],
         "candidate_ids" => [],

@@ -68,34 +68,51 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
          {:ok, source} <- Leases.source_digest(fixture.task.cwd),
          true <- source == context["task"]["source_sha256"] do
       cap = context["allowance"]
-      {:ok, budget} = JobBudget.start_link(max_requests: cap["requests"])
-      {:ok, grades} = Agent.start_link(fn -> [] end)
 
-      {:ok, controller} =
-        Controller.start_link(
-          job_id: Contract.sha256(dir),
-          job_budget: budget,
-          max_tokens: cap["tokens"],
-          max_time_ms: cap["time_ms"],
-          max_records: 4096,
-          cost_mode: :quota,
-          learning: [
-            max_requests: config[:learning_requests] || cap["requests"],
-            max_tokens: cap["tokens"],
-            max_time_ms: cap["time_ms"],
-            max_cost_usd: nil
-          ]
-        )
-
-      try do
-        execute(Map.put(config, :grades, grades), context, fixture, dir, controller)
-      after
-        GenServer.stop(controller)
-        GenServer.stop(budget)
-        Agent.stop(grades)
+      if controller = config[:controller] do
+        execute_controlled(config, context, fixture, dir, controller)
+      else
+        owned_episode(config, context, fixture, dir, cap)
       end
     else
       error -> {:error, {:episode_inputs_unavailable, error}}
+    end
+  end
+
+  defp owned_episode(config, context, fixture, dir, cap) do
+    {:ok, budget} = JobBudget.start_link(max_requests: cap["requests"])
+
+    {:ok, controller} =
+      Controller.start_link(
+        job_id: Contract.sha256(dir),
+        job_budget: budget,
+        max_tokens: cap["tokens"],
+        max_time_ms: cap["time_ms"],
+        max_records: 4096,
+        cost_mode: :quota,
+        learning: [
+          max_requests: config[:learning_requests] || cap["requests"],
+          max_tokens: cap["tokens"],
+          max_time_ms: cap["time_ms"],
+          max_cost_usd: nil
+        ]
+      )
+
+    try do
+      execute_controlled(config, context, fixture, dir, controller)
+    after
+      GenServer.stop(controller)
+      GenServer.stop(budget)
+    end
+  end
+
+  defp execute_controlled(config, context, fixture, dir, controller) do
+    {:ok, grades} = Agent.start_link(fn -> [] end)
+
+    try do
+      execute(Map.put(config, :grades, grades), context, fixture, dir, controller)
+    after
+      Agent.stop(grades)
     end
   end
 
@@ -111,7 +128,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         "--no-web-fetch",
         "--no-project-mcp",
         "--permission-mode",
-        "off",
+        config[:permission_mode] || "off",
         "--model",
         config.model
       ])
@@ -150,6 +167,8 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       reasoning_effort: config.effort,
       params: [max_tokens: 8192]
     ]
+
+    host = Keyword.merge(host, Map.get(config, :host, []))
 
     {:ok, prepared} = Evaluation.prepare(options, host, surface: @surface)
     baseline = baseline(config.model, config.effort, task_requests(config))
@@ -368,38 +387,44 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
     :ok = Installation.write(Path.join(dir, "evidence.json"), evidence)
     accounting = evidence["controller"]["accounting"]
 
-    {:ok,
-     %{
-       "arm" => context["arm"],
-       "task_id" => fixture.id,
-       "repetition" => context["repetition"],
-       "passed" => selected_grade["passed"] and result.selected.grade["passed"],
-       "private_confirmation_passed" => selected_grade["passed"],
-       "visible_verification_passed" => result.selected.grade["passed"],
-       "candidate_count" => candidate_count(result),
-       "promotion_count" => promotion_count(result),
-       "rollback_count" => promotion_count(result),
-       "original_budget_stop" => original.observation["finish_reason"] == ":max_turns",
-       "selected_budget_stop" => result.selected.observation["finish_reason"] == ":max_turns",
-       "probe_budget_stops" => probe_budget_stops(result),
-       "asset_candidate_count" => asset_candidate_count(result),
-       "asset_application_count" => asset_application_count(result),
-       "asset_restoration_count" => asset_restoration_count(result),
-       "qualification_complete" => qualification_complete?(result, evidence, reflection),
-       "workspace_evidence_complete" => workspace_complete?(evidence),
-       "requests" => if(metered, do: map_size(metered), else: accounting["requests"]),
-       "tokens" => accounting["tokens"],
-       "allocated_requests" => accounting["requests"],
-       "requests_kind" => if(metered, do: "physical_dispatches", else: "reserved_slots"),
-       "latency_ms" => System.monotonic_time(:millisecond) - started,
-       "cost_usd" => nil,
-       "safety_failures" =>
-         evidence["all_attempt_grades"] |> Enum.flat_map(& &1["safety_failures"]) |> Enum.uniq(),
-       "exposed_case_ids" => sources,
-       "created_lesson_ids" => created,
-       "evidence_sha256" => Contract.digest(evidence)
-     }}
+    row = %{
+      "arm" => context["arm"],
+      "task_id" => fixture.id,
+      "repetition" => context["repetition"],
+      "passed" => selected_grade["passed"] and result.selected.grade["passed"],
+      "private_confirmation_passed" => selected_grade["passed"],
+      "visible_verification_passed" => result.selected.grade["passed"],
+      "candidate_count" => candidate_count(result),
+      "promotion_count" => promotion_count(result),
+      "rollback_count" => promotion_count(result),
+      "original_budget_stop" => original.observation["finish_reason"] == ":max_turns",
+      "selected_budget_stop" => result.selected.observation["finish_reason"] == ":max_turns",
+      "probe_budget_stops" => probe_budget_stops(result),
+      "asset_candidate_count" => asset_candidate_count(result),
+      "asset_application_count" => asset_application_count(result),
+      "asset_restoration_count" => asset_restoration_count(result),
+      "qualification_complete" => qualification_complete?(result, evidence, reflection),
+      "workspace_evidence_complete" => workspace_complete?(evidence),
+      "requests" => if(metered, do: map_size(metered), else: accounting["requests"]),
+      "tokens" => accounting["tokens"],
+      "allocated_requests" => accounting["requests"],
+      "requests_kind" => if(metered, do: "physical_dispatches", else: "reserved_slots"),
+      "latency_ms" => System.monotonic_time(:millisecond) - started,
+      "cost_usd" => nil,
+      "safety_failures" =>
+        evidence["all_attempt_grades"] |> Enum.flat_map(& &1["safety_failures"]) |> Enum.uniq(),
+      "exposed_case_ids" => sources,
+      "created_lesson_ids" => created,
+      "evidence_sha256" => Contract.digest(evidence)
+    }
+
+    {:ok, returned_refinement(row, config, result.refinement)}
   end
+
+  defp returned_refinement(row, %{return_refinement: true}, receipt),
+    do: Map.put(row, "task_local_refinement", receipt)
+
+  defp returned_refinement(row, _config, _receipt), do: row
 
   defp qualification_complete?(result, evidence, reflection),
     do:

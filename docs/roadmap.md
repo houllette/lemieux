@@ -35,10 +35,11 @@ page holds only what remains.
 - **Harness learning.** Confirm that a learned harness overlay generalizes to
   new tasks and models before recommending regular self-improvement
   cycles (V9). Ordinary CLI/TUI sessions now reuse scoped, unconfirmed
-  experience with inspect/undo/opt-out controls. Isolated automatic refinement,
-  independently qualified persistent promotion, and automatic selection of
-  new typed assets remain separate gates; task-local retrieval is not their
-  qualification evidence.
+  experience with inspect/undo/opt-out controls. Supported verification failures
+  can trigger a fixed isolated refinement inside an existing finite job allowance.
+  Independent efficacy, qualified persistent promotion and automatic selection
+  of new typed assets remain separate gates; scripted task-local replay is not
+  their qualification evidence.
   The [hosted pilot](qualification/2026-10-20-default-learning/README.md) records
   stock-path reuse and the unresolved efficacy and recovery work for V2/V9.
   The [staged study](qualification/2026-10-20-learning-study/README.md) adds
