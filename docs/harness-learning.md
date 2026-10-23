@@ -69,8 +69,11 @@ Lessons bind to the current workspace, model, complete authorized catalog and
 environment identity. A changed binding, ambiguous lesson, missing source,
 unavailable storage or policy, lock conflict, or exceeded bound retains the
 ordinary request. The journal stops at 1,000 evidence files; archive retained
-state deliberately before starting a fresh history. A killed writer can leave
-`control.lock`; inspect its owner and journal before removing the lock. A session intent precedes inference and a controller journal records reservations.
+state deliberately before starting a fresh history. Local recall and retention
+have a five-second deadline; incomplete work abstains. A proven dead local
+writer's `control.lock` can be reclaimed through the transcript store's owner
+protocol. Foreign and legacy directory locks require owner inspection.
+A session intent precedes inference and a controller journal records reservations.
 Cancellation or interrupted/missing usage leaves an explicit recovery intent;
 resume and fork do not replay that work or refund its consumed slots. Inspect
 the referenced evidence before any manual recovery. Current permission handles,

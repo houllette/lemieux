@@ -68,13 +68,16 @@ defmodule Lemieux.CLI.Learning.Loop do
     harness
     |> Harness.append_hooks(
       prepare_next_turn: fn request, context ->
-        case Worker.run(fn -> prepare(request, context, state) end, 500) do
+        # Several private fsyncs form the exposure/undo transaction. A 500 ms
+        # deadline interrupted it under Linux CI load; bound the whole local
+        # operation at five seconds and abstain without changing the request.
+        case Worker.run(fn -> prepare(request, context, state) end, 5000) do
           {:ok, {:ok, updated}} -> {:ok, updated}
           _unavailable -> {:ok, request}
         end
       end,
       stop: fn reason, context ->
-        Worker.run(fn -> retain(reason, context, state) end, 500)
+        Worker.run(fn -> retain(reason, context, state) end, 5000)
 
         case Worker.run(fn -> refine(context, state) end, 480_000) do
           {:ok, {:deny, feedback}} -> {:deny, feedback}
@@ -82,7 +85,7 @@ defmodule Lemieux.CLI.Learning.Loop do
         end
       end,
       session_end: fn reason, context ->
-        Worker.run(fn -> retain(reason, context, state) end, 500)
+        Worker.run(fn -> retain(reason, context, state) end, 5000)
         :ok
       end
     )
