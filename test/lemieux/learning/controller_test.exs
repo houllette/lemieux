@@ -7,6 +7,76 @@ defmodule Lemieux.Learning.ControllerTest do
   alias Lemieux.Providers.Scripted
   alias Lemieux.Request
 
+  defmodule TerminalBeforeReturn do
+    @behaviour Lemieux.Provider
+    @impl true
+    def estimate_cost(_owner, _request), do: 0.001
+    @impl true
+    def run({owner, terminal, result}, _request, emit) do
+      emit.({:text_delta, "done"})
+      emit.({:usage, %{"input_tokens" => 2, "output_tokens" => 3, "cost_usd" => 0.001}})
+      emit.(terminal)
+      send(owner, {:provider_return_held, self()})
+
+      receive do
+        :release -> result
+      after
+        60_000 -> {:error, :fixture_expired}
+      end
+    end
+  end
+
+  test "nested providers settle every allowance before exposing terminal completion" do
+    assert_terminal_settled({:done, :stop}, :ok)
+  end
+
+  test "nested providers settle usage before forwarding the original typed error" do
+    reason = %{provider_code: "upstream_error", message: "original provider failure"}
+    assert_terminal_settled({:error, reason}, {:error, reason})
+  end
+
+  defp assert_terminal_settled(terminal, result) do
+    inner = controller(budget())
+    outer = controller(budget())
+    owner = self()
+
+    provider =
+      Controller.provider(inner, :reflection, {TerminalBeforeReturn, {owner, terminal, result}},
+        token_bound: fn _ -> 8 end
+      )
+
+    provider = Controller.provider(outer, :reflection, provider, token_bound: fn _ -> 8 end)
+
+    task =
+      Task.async(fn ->
+        Provider.run(provider, Request.new("test:model"), fn
+          ^terminal ->
+            send(
+              owner,
+              {:settled_terminal, Controller.snapshot(inner)["accounting"]["tokens"],
+               Controller.snapshot(outer)["accounting"]["tokens"]}
+            )
+
+          event ->
+            send(owner, {:streamed, event})
+        end)
+      end)
+
+    assert_receive {:provider_return_held, worker}
+
+    try do
+      assert_receive {:streamed, {:text_delta, "done"}}
+      assert_receive {:streamed, {:usage, _}}
+      refute_receive {:settled_terminal, _, _}, 100
+      send(worker, :release)
+      assert ^result = Task.await(task)
+      assert_receive {:settled_terminal, 5, 5}
+    after
+      send(worker, :release)
+      Task.shutdown(task, :brutal_kill)
+    end
+  end
+
   defp budget(opts \\ []) do
     start_supervised!(
       Supervisor.child_spec(

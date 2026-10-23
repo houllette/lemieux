@@ -49,7 +49,8 @@ defmodule Lemieux.Learning.Controller.Provider do
       {:ok, {:error, :controller_work_incomplete}, _receipt} ->
         denied("host_work_interrupted", "controller_work_incomplete")
 
-      {:ok, result, _receipt} ->
+      {:ok, {result, terminals}, _receipt} ->
+        Enum.each(terminals, emit)
         result
 
       {:skip, receipt} ->
@@ -71,18 +72,33 @@ defmodule Lemieux.Learning.Controller.Provider do
 
     result =
       Provider.run(provider, request, fn event ->
-        if match?({:usage, _}, event), do: send(owner, {ref, event})
-        emit.(event)
+        case event do
+          {terminal, _} when terminal in [:done, :error] ->
+            send(owner, {ref, event})
+
+          {:usage, _} ->
+            send(owner, {ref, event})
+            emit.(event)
+
+          _streamed ->
+            emit.(event)
+        end
       end)
 
-    {result, reported(ref, nil)}
+    {usage, terminals} = reported(ref, nil, [])
+    {{result, terminals}, facts(usage)}
   end
 
-  defp reported(ref, previous) do
+  # A session may stop its provider worker as soon as it receives completion.
+  # Hold only terminal events until this controller (and every nested wrapper)
+  # has settled usage. Forwarding completion early stranded a successful Astra
+  # reflection's inner receipt as unknown despite a complete physical meter.
+  defp reported(ref, previous, terminals) do
     receive do
-      {^ref, {:usage, usage}} -> reported(ref, usage)
+      {^ref, {:usage, usage}} -> reported(ref, usage, terminals)
+      {^ref, event} -> reported(ref, previous, [event | terminals])
     after
-      0 -> facts(previous)
+      0 -> {previous, Enum.reverse(terminals)}
     end
   end
 
