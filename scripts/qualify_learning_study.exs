@@ -10,6 +10,7 @@ alias Lemieux.CLI.Learning.Recording
 alias Lemieux.CLI.Learning.Repositories
 alias Lemieux.CLI.Learning.Reflection
 alias Lemieux.CLI.Learning.StudyBudget
+alias Lemieux.CLI.Learning.StudyAllowance
 alias Lemieux.Contract
 alias Lemieux.Learning.Experience.Lessons
 alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
@@ -38,11 +39,29 @@ Code.require_file(Application.app_dir(:lemieux, "priv/qualification/reference.ex
       streams: :string,
       assets: :boolean,
       asset_only: :boolean,
-      mechanism: :string
+      mechanism: :string,
+      allowance_dir: :string,
+      max_total_requests: :integer,
+      max_total_tokens: :integer,
+      max_total_time_ms: :integer
     ]
   )
 
 live = opts[:allow_live] == true
+
+study_limits = [
+  max_requests: opts[:max_total_requests],
+  max_tokens: opts[:max_total_tokens],
+  max_time_ms: opts[:max_total_time_ms]
+]
+
+if live and
+     not (is_binary(opts[:allowance_dir]) and
+            Enum.all?(study_limits, fn {_key, value} -> is_integer(value) and value > 0 end)),
+   do:
+     raise(
+       "Hosted stages require --allowance-dir and positive --max-total-requests, --max-total-tokens and --max-total-time-ms from the authorized study allowance"
+     )
 
 if live and opts[:offline_smoke],
   do: raise("The offline smoke subset cannot select a hosted provider")
@@ -210,6 +229,14 @@ runtime = %{
     "task_requests" => requests
   },
   "transport_max_retries" => 0,
+  "study_allowance" =>
+    if(live,
+      do: %{
+        "id" => Contract.sha256(Path.expand(opts[:allowance_dir])),
+        "limits" => Map.new(study_limits),
+        "policy" => "durable_shared_across_stages_no_replay_on_unknown_usage"
+      }
+    ),
   "inference_route" => if(live, do: "codex_subscription", else: "scripted"),
   "cost_kind" => "subscription_quota_not_api_billing",
   "cost_estimate_policy" => "subscription_dollars_informational_no_usd_admission_estimate",
@@ -418,17 +445,20 @@ template = build_plan.(Contract.digest(%{"lessons" => []}), runtime)
     "stopping" => "complete_fixed_seed_prefix_then_complete_target_sample"
   })
 
-auth =
+study_allowance =
   if live do
-    {:ok, path, _summary} =
-      CodexAuth.prepare(path: Path.join(root, ".auth/oauth.json"), min_validity_hours: 2)
-
-    path
+    {:ok, handle} = StudyAllowance.open(opts[:allowance_dir], study_limits)
+    handle
   end
 
+auth = if live, do: Path.join(root, ".auth/oauth.json")
 System.at_exit(fn _ -> if auth, do: CodexAuth.cleanup(auth) end)
 
 try do
+  if live do
+    {:ok, ^auth, _summary} = CodexAuth.prepare(path: auth, min_validity_hours: 2)
+  end
+
   execute = fn context, config ->
     IO.puts("episode #{context["repetition"]}/#{context["task"]["id"]}/#{context["arm"]}")
     {:ok, meter} = Agent.start_link(fn -> %{} end)
@@ -437,9 +467,13 @@ try do
     provider = fn role ->
       cond do
         live ->
-          Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
-            role: role,
-            cost_mode: :quota
+          StudyAllowance.provider(
+            study_allowance,
+            role,
+            Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
+              role: role,
+              cost_mode: :quota
+            )
           )
 
         research ->
@@ -685,6 +719,10 @@ try do
         }
       end)
     )
+    |> Map.put(
+      "study_allowance",
+      if(study_allowance, do: StudyAllowance.snapshot(study_allowance))
+    )
     |> Map.delete("sha256")
     |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
 
@@ -707,4 +745,5 @@ try do
   )
 after
   if auth, do: CodexAuth.cleanup(auth)
+  if study_allowance, do: StudyAllowance.close(study_allowance)
 end
