@@ -9,6 +9,8 @@ alias Lemieux.CLI.Learning.Installation
 alias Lemieux.CLI.Learning.Leases
 alias Lemieux.CLI.Learning.Loop
 alias Lemieux.CLI.Learning.Recording
+alias Lemieux.CLI.Learning.StudyAllowance
+alias Lemieux.CLI.Learning.WorkspaceEvidence
 alias Lemieux.CLI.Options
 alias Lemieux.CLI.Runtime.Evaluation
 alias Lemieux.Contract
@@ -24,11 +26,30 @@ alias Lemieux.Store.JSONL
       model: :string,
       effort: :string,
       variants: :integer,
-      repetitions: :integer
+      repetitions: :integer,
+      allowance_dir: :string,
+      max_total_requests: :integer,
+      max_total_tokens: :integer,
+      max_total_time_ms: :integer
     ]
   )
 
 live = opts[:allow_live] == true
+
+limits = [
+  max_requests: opts[:max_total_requests],
+  max_tokens: opts[:max_total_tokens],
+  max_time_ms: opts[:max_total_time_ms]
+]
+
+if live and
+     not (is_binary(opts[:allowance_dir]) and
+            Enum.all?(limits, fn {_, n} -> is_integer(n) and n > 0 end)),
+   do:
+     raise(
+       "Hosted product qualification requires the shared --allowance-dir and all three authorized total limits"
+     )
+
 model = opts[:model] || if(live, do: "openai_codex:gpt-6-luna", else: "test:model")
 effort = opts[:effort] || if(live, do: "low", else: "default")
 variants = opts[:variants] || 2
@@ -55,7 +76,7 @@ root = Path.expand(opts[:output] || "tmp/learning-stream-#{Lemieux.ID.generate()
 :ok = File.chmod(root, 0o700)
 
 {:ok, environment} =
-  Container.new("python@sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059")
+  Container.new("lemieux-learning-replay:1")
 
 fixtures = Fixtures.materialize(Path.join(root, "sources"), variants)
 
@@ -84,8 +105,18 @@ plan = %{
   "arms" => ["disabled", "ordinary"],
   "requests_per_task" => 32,
   "time_ms_per_task" => 480_000,
-  "learning_requests" => 0,
+  "job_requests_per_task" => 192,
+  "learning_slots_per_job" => 48,
+  "learning_requests" => "measured_within_inherited_job",
+  "study_allowance" =>
+    if(live,
+      do: %{
+        "id" => Contract.sha256(Path.expand(opts[:allowance_dir])),
+        "limits" => Map.new(limits)
+      }
+    ),
   "inference_route" => if(live, do: "codex_subscription", else: "scripted"),
+  "cost_kind" => "subscription_quota_not_api_billing",
   "transport_max_retries" => 0,
   "stopping" => "fixed_complete_sample",
   "decision" => "mechanics_and_nonregression_only_no_benefit_claim",
@@ -100,18 +131,22 @@ plan = Map.put(plan, "sha256", Contract.digest(plan))
 :ok = Installation.write(Path.join(root, "plan.json"), plan)
 {:ok, _} = Lemieux.Supervisor.start_link(name: Lemieux.StreamQualificationSupervisor)
 
-auth =
+allowance =
   if live do
-    {:ok, path, _summary} =
-      CodexAuth.prepare(path: Path.join(root, ".auth/oauth.json"), min_validity_hours: 2)
-
-    path
+    {:ok, handle} = StudyAllowance.open(opts[:allowance_dir], limits)
+    handle
   end
+
+auth = if live, do: Path.join(root, ".auth/oauth.json")
 
 System.at_exit(fn _ -> if auth, do: CodexAuth.cleanup(auth) end)
 Logger.configure(level: :warning)
 
 try do
+  if live do
+    {:ok, ^auth, _summary} = CodexAuth.prepare(path: auth, min_validity_hours: 2)
+  end
+
   rows =
     for repetition <- 1..repetitions,
         fixture <- fixtures,
@@ -156,18 +191,30 @@ try do
       provider =
         if live,
           do:
-            Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
-              cost_mode: :quota
+            StudyAllowance.provider(
+              allowance,
+              :task,
+              Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
+                cost_mode: :quota
+              )
             ),
           else:
-            Scripted.new([
-              Scripted.tool_call("check", "bash", %{"command" => "make test"},
-                usage: %{"input_tokens" => 2, "output_tokens" => 2}
-              ),
-              Scripted.complete("offline control",
-                usage: %{"input_tokens" => 2, "output_tokens" => 2}
+            Scripted.new(
+              List.duplicate(
+                fn request ->
+                  usage = %{"input_tokens" => 2, "output_tokens" => 2}
+                  checked? = Enum.any?(request.entries, &(&1.type == :tool_result))
+
+                  if checked? or String.contains?(request.system || "", "harness proposer"),
+                    do: Scripted.complete("offline abstention; no candidate", usage: usage),
+                    else:
+                      Scripted.tool_call("check", "bash", %{"command" => "make test"},
+                        usage: usage
+                      )
+                end,
+                100
               )
-            ])
+            )
 
       host = [
         cwd: cwd,
@@ -179,6 +226,7 @@ try do
         max_requests: 32,
         max_turns: 32,
         max_cost_usd: nil,
+        job_limits: [max_requests: 192],
         reasoning_effort: effort,
         params: [max_tokens: 8192],
         interactive?: false
@@ -198,12 +246,36 @@ try do
 
         grade = Fixtures.grade(fixture, cwd, environment)
         {:ok, info} = Loop.inspect(home, cwd)
+        workspace = WorkspaceEvidence.capture(fixture.task.cwd, cwd)
+
+        checkpoint =
+          observation["transcript"]
+          |> Enum.reverse()
+          |> Enum.find(fn entry ->
+            entry["type"] == "extension_state" and
+              entry["payload"]["namespace"] == "lmx.learning.refinement"
+          end)
+
+        learning =
+          if checkpoint,
+            do: checkpoint["payload"]["value"],
+            else: %{"complete" => true, "physical_requests" => 0, "slots" => 0}
+
+        dispatches = if live, do: Agent.get(meter, & &1), else: %{}
+
+        measured? =
+          Enum.all?(dispatches, fn {_, record} ->
+            record["terminal"] == true and is_integer(record["tokens"])
+          end)
 
         :ok =
           Installation.write(Path.join(root, name <> "-evidence.json"), %{
             "observation" => observation,
             "grade" => grade,
-            "learning" => info
+            "learning" => info,
+            "learning_checkpoint" => learning,
+            "physical_dispatches" => dispatches,
+            "workspace" => workspace
           })
 
         dispatched =
@@ -225,7 +297,11 @@ try do
           "usage" => observation["usage"],
           "latency_ms" => System.monotonic_time(:millisecond) - started,
           "context_received" => saw_context,
-          "learning_requests" => 0,
+          "learning_requests" => if(learning["complete"], do: learning["physical_requests"] || 0),
+          "learning_slots" => learning["slots"],
+          "qualification_complete" =>
+            measured? and learning["complete"] and workspace["complete"],
+          "workspace_sha256" => workspace["sha256"],
           "retained" => info["retained"],
           "last" => info["last"],
           "evidence_sha256" => Contract.digest(observation)
@@ -246,6 +322,7 @@ try do
     "claim" => "development_product_path",
     "benefit" => "unassessed",
     "rows" => rows,
+    "study_allowance" => if(allowance, do: StudyAllowance.snapshot(allowance)),
     "arms" =>
       Map.new(["disabled", "ordinary"], fn arm ->
         selected = Enum.filter(rows, &(&1["arm"] == arm))
@@ -265,4 +342,5 @@ try do
   IO.puts(JSON.encode!(Map.take(report, ~w(sha256 model effort arms benefit))))
 after
   if auth, do: CodexAuth.cleanup(auth)
+  if allowance, do: StudyAllowance.close(allowance)
 end

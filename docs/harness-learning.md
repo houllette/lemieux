@@ -100,6 +100,21 @@ the directory as the `stock-learning-replay` artifact.
 
 ### Explicit research qualification
 
+`scripts/qualify_learning_stream.exs` supplements the matched research arms
+with the actual stock host, its private store and an inherited 192-slot job
+per task. It uses the explicitly prepared `lemieux-learning-replay:1` image for
+both ordinary tasks and replay. Its ordinary arm records actual learning calls,
+allocated slots, inclusive usage and bounded changed-file bytes; incomplete
+accounting or workspace evidence refuses complete qualification. The developer
+fixtures and two-arm supplement establish mechanics and non-regression only.
+They cannot establish a benefit over equal-budget retries.
+
+Hosted product runs require the same `--allowance-dir` and three authorized
+`--max-total-requests`, `--max-total-tokens` and `--max-total-time-ms` limits as
+the other stages. Every physical task and learning dispatch uses that shared
+allowance. An offline rehearsal uses `--variants 1 --repetitions 2` without
+`--allow-live`; its scripted proposer abstains and sends no hosted requests.
+
 `scripts/qualify_learning_study.exs --research` selects a separate experimental
 lane. It reflects on complete public task records, including successful tasks,
 rejected probes and uncertainty; each retained hypothesis cites checked JSON
