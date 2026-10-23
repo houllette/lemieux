@@ -88,13 +88,14 @@ defmodule Lemieux.CLI.Learning.TaskLocal do
              allowed?(config.permission_spec, fixture, environment),
              :replay_command_or_rules_not_authorized
            ),
-         %{
-           "passed" => false,
-           "exit_zero" => false,
-           "safety_failures" => [],
-           "exit_status" => exit_status
-         } <-
-           Replay.grade(fixture, fixture.task.cwd, environment),
+         {:ok,
+          %{
+            "passed" => false,
+            "exit_zero" => false,
+            "safety_failures" => [],
+            "exit_status" => exit_status
+          }} <-
+           Replay.reproduce(fixture, environment),
          :ok <-
            check(
              exit_status not in [126, 127] and exit_status in fixture.expected_exit_statuses,

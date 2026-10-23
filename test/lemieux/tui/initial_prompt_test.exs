@@ -28,12 +28,26 @@ defmodule Lemieux.TUI.InitialPromptTest do
       )
 
     loading = :sys.get_state(app).user_state
-    %{app: app, task: loading.resume.initial_task.pid, loading: loading}
+    %{app: app, task: loading.resume.initial_task.pid, session: session, loading: loading}
   end
 
-  defp up(%{app: app, task: task}) do
+  defp up(%{app: app, task: task, session: session}) do
     send(task, :go)
-    :ok = LemieuxTest.Sync.state(app, &(&1.user_state.id == "02FIRSTPROMPT"))
+
+    try do
+      :ok = LemieuxTest.Sync.state(app, &(&1.user_state.id == "02FIRSTPROMPT"))
+    rescue
+      error in ExUnit.AssertionError ->
+        # Preserve the failing wait while retaining the blocked startup phase
+        # and stand-in requests; CI alone has observed this under Linux load.
+        details =
+          {Process.info(task, :current_stacktrace), Process.info(session, :messages),
+           :sys.get_state(app).user_state.id}
+
+        reraise %{error | message: error.message <> "\nStartup diagnostics: #{inspect(details)}"},
+                __STACKTRACE__
+    end
+
     :sys.get_state(app).user_state
   end
 

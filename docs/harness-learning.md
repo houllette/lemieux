@@ -29,6 +29,8 @@ It supplies Python, make, Bash and Git, without project dependencies. Missing
 Docker, a missing cached image, an unreproduced failure, an incompatible project
 or insufficient allowance causes abstention before any learning dispatch.
 The local image name resolves to an immutable image ID for each experiment.
+Reproduction uses a disposable copy, so verifier cache writes cannot change
+the frozen inputs used by later probes.
 Commands run in fresh unprivileged, networkless, read-only containers with only
 the isolated workspace mounted. Replay requires complete captured input bytes
 within the configured capture bounds; larger or incomplete captures abstain. Verification files and instructions stay fixed.

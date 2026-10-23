@@ -1,5 +1,6 @@
 defmodule Lemieux.CLI.Learning.ReplayTest do
   use ExUnit.Case, async: true
+  alias Lemieux.CLI.Learning.Leases
   alias Lemieux.CLI.Learning.Replay
   alias Lemieux.Contract
   alias Lemieux.Entry
@@ -92,6 +93,29 @@ defmodule Lemieux.CLI.Learning.ReplayTest do
     assert Replay.current?(replay, Environment.local(), ctx.source)
     File.write!(Path.join(ctx.source, "Makefile"), String.duplicate("changed", 100_000))
     refute Replay.current?(replay, Environment.local(), ctx.source)
+  end
+
+  test "reproducing a Python failure cannot mutate the frozen replay source", ctx do
+    File.write!(Path.join(ctx.source, "helper.py"), "value = 'broken'\n")
+
+    File.write!(
+      Path.join(ctx.source, "check.py"),
+      "import helper\nassert helper.value == 'fixed'\n"
+    )
+
+    File.write!(Path.join(ctx.source, "Makefile"), "test:\n\t@python3 check.py\n")
+
+    assert {:ok, replay} =
+             Replay.new(record(ctx), [ctx.entry], ctx.destination, authorized?: fn -> true end)
+
+    assert {:ok, digest} = Leases.source_digest(ctx.destination)
+    assert {:ok, grade} = Replay.reproduce(replay, Environment.local())
+    assert grade["exit_status"] == 2
+    assert grade["safety_failures"] == []
+    refute grade["passed"]
+    assert {:ok, ^digest} = Leases.source_digest(ctx.destination)
+    refute File.exists?(Path.join(ctx.destination, "__pycache__"))
+    assert Path.wildcard(Path.join(Path.dirname(ctx.destination), "preflight-*")) == []
   end
 
   defp record(ctx) do

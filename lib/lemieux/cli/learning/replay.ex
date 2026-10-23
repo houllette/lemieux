@@ -8,6 +8,7 @@ defmodule Lemieux.CLI.Learning.Replay do
   establishes that command's outcome on this replay, not task correctness,
   independent confirmation or transfer to another task.
   """
+  alias Lemieux.Agent.Resource
   alias Lemieux.Benchmark.Task
   alias Lemieux.Benchmark.WorkspaceSnapshot
   alias Lemieux.CLI.Learning.Journal
@@ -120,6 +121,37 @@ defmodule Lemieux.CLI.Learning.Replay do
   end
 
   defp matching_chunk(_extra, _expected), do: {:halt, false}
+
+  @doc "Reproduces in a disposable copy so verifier cache writes cannot change frozen inputs."
+  @spec reproduce(fixture :: map(), environment :: Environment.t()) ::
+          {:ok, map()} | {:error, term()}
+  def reproduce(fixture, environment) do
+    destination = Path.join(Path.dirname(fixture.task.cwd), "preflight-" <> Lemieux.ID.generate())
+
+    with {:ok, cwd, guardian} <-
+           Resource.acquire(
+             fn _ -> copy(fixture.task.cwd, destination) end,
+             &remove/1,
+             abort: fn -> remove(destination) end
+           ) do
+      try do
+        {:ok, grade(fixture, cwd, environment)}
+      after
+        Resource.release(guardian)
+      end
+    end
+  end
+
+  defp copy(source, destination) do
+    with {:ok, _} <- File.cp_r(source, destination), do: {:ok, destination}
+  end
+
+  defp remove(path) do
+    case File.rm_rf(path) do
+      {:ok, _} -> :ok
+      {:error, reason, _} -> {:error, reason}
+    end
+  end
 
   @spec grade(fixture :: map(), cwd :: Path.t(), environment :: Environment.t()) :: map()
   def grade(fixture, cwd, environment) do
