@@ -67,7 +67,10 @@ public/private results. Preparation refuses a passing original or a failing
 oracle. Private snapshots and gold patches stay under the private output root;
 never point an agent at that root. Each task sees only its copied `source`.
 This adapter runs a SWE-derived pytest subset, not the official SWE-bench
-benchmark evaluator. Function-selector and environment compatibility are
+benchmark evaluator. Function families include all parameter variants and same-named functions in
+the copied selected files. Node IDs also retain unmodified selected test files
+and their parent conftest files. This deliberately differs from official
+benchmark selection. Function-selector and environment compatibility are
 qualification preconditions; unsupported instances are retained as apparatus
 failures before hosted work.
 
@@ -76,3 +79,44 @@ repository history cannot supply four independent streams. A causal ordering
 can test retention and reuse, while uncertainty and generalization remain
 limited by the single repository domain. Independent material must be frozen
 and exposure-audited separately before confirmation.
+
+
+## Fresh development domains
+
+The [selection and exposure record](corpus-selection.json) pins [SWE-rebench](https://huggingface.co/datasets/nebius/SWE-rebench/tree/89cdfbab4ab1bd8f5a658bb212d1b63624f4f881)
+revision `89cdfbab4ab1bd8f5a658bb212d1b63624f4f881` and the filtered Parquet
+SHA-256 before case text was read. Metadata selection excludes the 18 locally
+inspected SWE repositories, ranks eligible repositories by a fixed hash seed,
+and takes chronological cases. Before hosted execution, the same rule was
+extended from two to three cases per repository: one seed must precede two
+targets for frozen and updating libraries to differ causally. This change used
+no hosted outcomes. Case text was then disclosed to the curator; private
+patches were handled by preparation code and never disclosed to a model.
+
+The two new domains are `encode/typesystem` (16, 65, 122) and `hgrecco/pint`
+(652, 920, 948). These are development cases, excluded from independent
+confirmation. They were newly selected for this experiment; no claim is made
+about model pretraining exposure. The [control summary](fresh-domain-controls.json)
+contains exact source, image, private-grader and public-check identities.
+
+`priv/qualification/python_repository.Dockerfile` prepares an immutable serving
+image from an explicitly pinned source image, exact compatible pytest version,
+distribution and import-module name. Both image interpreters must be unable to
+find the target package after removal. Source trees are exported separately
+from each exact dataset base. Serving images stay identical within a repository
+stream; changing an image requires fresh controls and registration.
+
+The reference implementation is projected onto the same frozen verification
+and instruction bytes as every candidate. An oracle's docs/configuration edits
+cannot invalidate the apparatus or relax the contract. Symlinks introduced by
+a patch are refused before their targets are read. The Pint keyword-argument
+reproduction and definitions side-effect check were corrected during provider-free
+preparation; their earlier failed controls remain retained. The security check
+observes absence of a harmless temporary-file callback, allowing parser-specific
+rejection behavior. It does not require a particular exception class.
+
+All six final fixtures pass positive/negative public and private controls.
+Those controls establish a usable development apparatus, not learning benefit.
+The broader metadata inventory has many more repository names, but fork/history
+independence, exposure, source closures, images and grader controls still need
+qualification before any independent cohort is claimed.

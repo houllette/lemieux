@@ -45,8 +45,16 @@ def safe_extract(data, destination):
 
 
 def file_digests(directory):
-    return {str(p.relative_to(directory)): digest(p) for p in directory.rglob("*")
-            if p.is_file() and ".git" not in p.relative_to(directory).parts}
+    result = {}
+    for path in directory.rglob("*"):
+        relative = path.relative_to(directory)
+        if ".git" in relative.parts:
+            continue
+        if path.is_symlink():
+            raise ValueError("patch/source contains a symlink")
+        if path.is_file():
+            result[str(relative)] = digest(path)
+    return result
 
 
 def apply_patch(directory, patch):
@@ -73,6 +81,44 @@ def verification_file(path):
     return (path.name.startswith("test_") or path.name == "conftest.py" or
             "tests" in path.parts or path.suffix in {".md", ".rst", ".sh", ".lock"} or
             path.name in {"Makefile", "setup.cfg", "setup.py", "pyproject.toml", "pytest.ini"})
+
+
+def project_oracle(source, oracle, patch, frozen):
+    """Apply the reference implementation under the same immutable contract."""
+    shutil.copytree(source, oracle)
+    apply_patch(oracle, patch)
+    for name in frozen:
+        target = oracle / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / name, target)
+
+
+def pytest_selection(selectors):
+    """Select complete function families; oracle controls freeze actual counts.
+
+    Node IDs retain their test-file closure. Parameter variants and identically
+    named functions in the copied files are all tested, not official benchmark
+    parity. Never interpolate raw dataset selectors into pytest configuration.
+    """
+    paths, names = set(), []
+    if not selectors:
+        raise ValueError("empty pytest selection")
+    for selector in selectors:
+        parts = selector.split("::")
+        name = parts[-1].split("[", 1)[0]
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError("unsupported pytest function selector")
+        if len(parts) > 1:
+            path = PurePosixPath(parts[0])
+            if (path.suffix != ".py" or path.is_absolute() or
+                    any(p in {"", ".", ".."} or not re.fullmatch(r"[A-Za-z0-9_.-]+", p)
+                        for p in parts[0].split("/")) or
+                    not all(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", p) for p in parts[1:-1])):
+                raise ValueError("unsafe or unsupported pytest node ID")
+            paths.add(str(path))
+        if name not in names:
+            names.append(name)
+    return sorted(paths), names
 
 
 def main():
@@ -126,9 +172,16 @@ def main():
     preparation = root / "private-test-preparation"
     shutil.copytree(source, preparation)
     changed_tests = apply_patch(preparation, patches["tests"])
+    selected_paths, selectors = pytest_selection(instance["FAIL_TO_PASS"] + instance["PASS_TO_PASS"])
     private = root / "private-tests"
     private.mkdir()
-    for name in changed_tests:
+    selected_files = set(changed_tests) | set(selected_paths)
+    for name in list(selected_files):
+        for parent in PurePosixPath(name).parents:
+            candidate = str(parent / "conftest.py")
+            if (preparation / candidate).is_file():
+                selected_files.add(candidate)
+    for name in sorted(selected_files):
         path = PurePosixPath(name)
         if not verification_file(path) or not (preparation / name).is_file():
             raise ValueError(f"unsupported private test change: {name}")
@@ -137,13 +190,9 @@ def main():
         shutil.copyfile(preparation / name, target)
     if (source / "conftest.py").is_file():
         shutil.copyfile(source / "conftest.py", private / "conftest.py")
-    selectors = list(dict.fromkeys(instance["FAIL_TO_PASS"] + instance["PASS_TO_PASS"]))
-    if not selectors or not all(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", x) for x in selectors):
-        raise ValueError("this adapter requires simple pytest function selectors")
     (private / "pytest.ini").write_text('[pytest]\naddopts = -k "' + ' or '.join(selectors) + '"\n')
     oracle = root / "oracle"
-    shutil.copytree(source, oracle)
-    apply_patch(oracle, patches["gold"])
+    project_oracle(source, oracle, patches["gold"], frozen)
     template = {
         "schema_version": 1,
         "metadata": {
@@ -152,6 +201,8 @@ def main():
             "source_image": args.source_image, "source_archive_sha256": hashlib.sha256(archive).hexdigest(),
             "public_check_sha256": hashlib.sha256(public_check).hexdigest(),
             "grading": "SWE-derived private pytest subset; not the official SWE-bench evaluator",
+            "selectors_policy": "complete_function_families_in_selected_files/v1",
+            "oracle_policy": "reference_implementation_with_original_immutable_bytes/v1",
             "independent_confirmation": "not_run",
         },
         "tasks": [{
