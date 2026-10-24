@@ -327,7 +327,7 @@ defmodule Lemieux.Learning.Controller do
 
   defp runtime_configuration?(state, max_time) do
     Enum.all?([state.max_tokens, max_time], &ceiling?/1) and state.cost_mode in [:metered, :quota] and
-      state.max_records in 1..4096 and state.max_stagnant in 1..32
+      state.max_records in 1..8192 and state.max_stagnant in 1..32
   end
 
   defp learning_configuration?(learning),

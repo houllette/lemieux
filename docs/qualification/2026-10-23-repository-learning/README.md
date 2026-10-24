@@ -325,3 +325,64 @@ baseline exactly. Both identities, complete files, provenance, frozen-build
 digests and consumer results are retained. The packet remains unassessed:
 independent effectiveness, per-kind defaults and CodeGate qualification are
 still pending.
+
+## Completed v5 mechanism and interrupted Pint calibration
+
+The [text-skill mechanism](hosted-text-skill-mechanism-v5.json) completed its seed
+and twelve target rows across six arms and two repetitions. All 639 physical
+calls and 6,602,336 tokens are measured, including proposer, critic, probes and
+reflection. Six skills were applied and restored; all six selected executions
+read the actual `SKILL.md`. The required seed retention, experience withholding,
+lesson reuse and procedure checks were observed. Profile changes, helper
+execution and setting changes were neither required nor observed.
+
+This is one exposed synthetic Graph stream at a twelve-request task horizon.
+The registered quality and efficiency endpoints remain inconclusive. Updating
+used 186 requests including acquisition, versus 21 each for disabled and retry,
+and 194 for the experience-withheld improver. Mechanics passing does not show
+an improvement in capability or efficiency. The native packet above preserves
+one actual selected skill from this completed scope.
+
+The [matching v5 Pint calibration](pint-calibration-v5-incomplete.json) is
+incomplete. Four calls report 15,401 tokens; a fifth ended with a server overload
+without final usage. The shared allowance then refused dispatch, and five later
+rows made no calls. The raw report's zero score is retained as an unusable
+historical value. No ability score or headroom decision follows from this run.
+The old row-level `qualification_complete` field describes retained artifacts;
+it did not establish known token accounting. The corrected driver requires all
+declared pairs, measured usage and actual dispatch before scoring a calibration,
+retains incomplete reports, and exits unsuccessfully. Future physical records
+also retain selected request identifiers and bounded failure categories without
+raw provider details or credential headers.
+
+The [approved allowance amendment](allowance-amendment-v2.json) increases the
+same accumulated totals to 7,500 requests, 100 million tokens and 24 hours from
+the original start. Its deadline is 2026-10-24 16:48:24.112 UTC. The amendment
+preserves all 2,323 prior physical requests, 26,773,752 known tokens, one unknown
+charge, and the historical checkpoint bytes. It makes no new model call. The
+versioned registration atomically stores authority and accounting together;
+older readers refuse it. Record capacity is bounded at 8,192 and checkpoint
+size at 4 MiB. Unknown usage continues to block admission. No estimate is
+substituted for the missing charge.
+
+The [provider-free capacity component](pint-source-capacity-component.json)
+also identifies remaining apparatus work before a large Pint study. A composite
+of six distinct prior coding observations and two repetitions round-trips
+exactly but encodes to 1,154,735 bytes, above the unchanged 1 MiB source bound.
+This mixed-case codec stress is not a complete future experiment and does not
+predict its exact size. Short tuple and line-body syntax prototypes also remained
+above the bound; they are not implemented codecs. No new source format is
+qualified by this component.
+
+Project the sealed private v5 runs without editing them or sending requests:
+
+```sh
+python3 docs/qualification/2026-10-23-repository-learning/project-v5.py \
+  PRIVATE_ARTIFACT_PARENT NEW_PUBLIC_OUTPUT_DIRECTORY
+```
+
+The fixed Pint six-arm, two-repetition, 48-request study has not started.
+Unknown-charge handling, source capacity, a fresh matching mechanism for any
+changed runtime, independent source/evaluator/image closures and controls, and
+powered independent confirmation remain outstanding. No per-kind default or
+release readiness claim is made.

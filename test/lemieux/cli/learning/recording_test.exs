@@ -4,6 +4,7 @@ defmodule Lemieux.CLI.Learning.RecordingTest do
   alias Lemieux.JobBudget
   alias Lemieux.Learning.Controller
   alias Lemieux.Provider
+  alias Lemieux.Provider.Interrupted
   alias Lemieux.Providers.Scripted
   alias Lemieux.Request
 
@@ -157,5 +158,61 @@ defmodule Lemieux.CLI.Learning.RecordingTest do
     bounded = Controller.provider(capped_controller, :task, provider, token_bound: fn _ -> 20 end)
     assert {:error, _} = Provider.run(bounded, request, fn _ -> :ok end)
     assert map_size(Agent.get(meter, & &1)) == 2
+  end
+
+  test "an interrupted physical call retains safe failure evidence and stays unmeasured" do
+    error = %Interrupted{
+      provider: "openai_codex",
+      finish_reason: :error,
+      code: "server_is_overloaded",
+      detail: "do-not-retain-raw-detail"
+    }
+
+    metadata = %{
+      request_id: "local-request",
+      status: 200,
+      headers: %{
+        "x-request-id" => ["provider-request"],
+        "authorization" => ["do-not-retain"],
+        "set-cookie" => ["do-not-retain"]
+      }
+    }
+
+    raw = Scripted.new([[{:response_metadata, metadata}, {:error, error}]])
+    meter = start_supervised!({Agent, fn -> %{} end})
+    provider = Recording.new(meter, raw, role: :task, cost_mode: :quota)
+    assert :ok = Provider.run(provider, Request.new("test:model"), fn _event -> :ok end)
+    [record] = Agent.get(meter, &Map.values/1)
+    assert record["status"] == "unknown"
+    assert record["terminal"]
+    assert record["tokens"] == nil and record["usage"] == nil
+
+    assert record["failure"] == %{
+             "category" => "server",
+             "code" => "server_is_overloaded",
+             "http_status" => nil
+           }
+
+    assert record["response_metadata"]["request_id"] == "local-request"
+    assert record["response_metadata"]["headers"] == %{"x-request-id" => ["provider-request"]}
+    refute inspect(record) =~ "do-not-retain"
+  end
+
+  test "a failed call retains authoritative partial usage rather than refunding it" do
+    raw =
+      Scripted.new([
+        [{:usage, %{"input_tokens" => 4, "output_tokens" => 3}}, {:error, :unavailable}]
+      ])
+
+    meter = start_supervised!({Agent, fn -> %{} end})
+
+    assert :ok =
+             Provider.run(Recording.new(meter, raw), Request.new("test:model"), fn _ -> :ok end)
+
+    [record] = Agent.get(meter, &Map.values/1)
+    assert record["status"] == "reported"
+    assert record["tokens"] == 7
+    assert record["terminal"]
+    assert record["failure"]["category"] == "other"
   end
 end

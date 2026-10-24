@@ -50,6 +50,11 @@ page holds only what remains.
   separate quality/efficiency endpoints. Its hosted profile mechanism passed;
   reviewed skills were applied, while helper execution and setting changes
   were not demonstrated. These observations do not establish efficacy.
+  The [repository qualification](qualification/2026-10-23-repository-learning/README.md)
+  adds complete learned-skill export, a fresh native consumer and rollback,
+  measured v5 text-skill use, and an interrupted Pint calibration. Its expanded
+  accumulated allowance preserves an unknown charge that still blocks live
+  dispatch. Capability improvement and independent confirmation remain pending.
 
 ## Acceptance and experiments still to run
 

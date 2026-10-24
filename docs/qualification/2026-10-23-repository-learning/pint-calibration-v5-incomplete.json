@@ -1,0 +1,122 @@
+{
+  "authoritative_missing_usage": "not_recovered",
+  "baseline_success": null,
+  "benefit": "unassessed",
+  "corpus": "developer_exposed_hgrecco_pint",
+  "default_activation": false,
+  "editor": "openai_codex:gpt-6-astra/high",
+  "execution_complete": false,
+  "executor": "openai_codex:gpt-6.1-sol/high",
+  "failure": "server_is_overloaded_then_shared_allowance_usage_unknown",
+  "failure_evidence": "retained_driver_warning_and_unmeasured_physical_receipt",
+  "has_headroom": null,
+  "independent_confirmation": "not_run",
+  "inference_route": "codex_subscription",
+  "interpretation": "Infrastructure interruption and admission refusal; no ability score or headroom inference.",
+  "kind": "incomplete_development_calibration",
+  "known_tokens": 15401,
+  "known_usage_requests": 4,
+  "physical_requests": 5,
+  "plan_sha256": "083a011fbb97f71edbaec5282bc72404a70b41eb75039c1d502db230b68cf277",
+  "raw_artifacts_modified": false,
+  "raw_report_baseline_success_unusable": 0.0,
+  "roles": {
+    "task": {
+      "known_tokens": 15401,
+      "requests": 5,
+      "unknown_requests": 1
+    }
+  },
+  "rows": [
+    {
+      "arm": "disabled",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "c1f46cbd28ef4765ca9c25cce913cbacc3d5b12987a92a8f536b5bbf2a377f35",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 5,
+      "task_id": "hgrecco-pint-652",
+      "tokens": null
+    },
+    {
+      "arm": "reference",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "5c99612b2bb97a9e8e83c1e47e691158d609654529f05eb44020bb87c630134a",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 0,
+      "task_id": "hgrecco-pint-652",
+      "tokens": null
+    },
+    {
+      "arm": "disabled",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "69be0560d4e2ff57d05a7c269a6ed734c43ade4fb76de9c36271581c3bde65c2",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 0,
+      "task_id": "hgrecco-pint-920",
+      "tokens": null
+    },
+    {
+      "arm": "reference",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "366b28bf5edfcd7f537fb801a31c2ae40ec004a103c78ecf348cf4ec995db35a",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 0,
+      "task_id": "hgrecco-pint-920",
+      "tokens": null
+    },
+    {
+      "arm": "disabled",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "7269ff7876a0e1222601b25b9aa31344226e8041ef67025a0c9b047df8a369a5",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 0,
+      "task_id": "hgrecco-pint-948",
+      "tokens": null
+    },
+    {
+      "arm": "reference",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "5cbae66b73527c5044bd949299065a12c5d13e0ae411421843785fd1b90f7563",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 0,
+      "task_id": "hgrecco-pint-948",
+      "tokens": null
+    }
+  ],
+  "schema_version": 1,
+  "source_evidence_bytes_sha256": [
+    "366b28bf5edfcd7f537fb801a31c2ae40ec004a103c78ecf348cf4ec995db35a",
+    "69be0560d4e2ff57d05a7c269a6ed734c43ade4fb76de9c36271581c3bde65c2",
+    "5c99612b2bb97a9e8e83c1e47e691158d609654529f05eb44020bb87c630134a",
+    "7269ff7876a0e1222601b25b9aa31344226e8041ef67025a0c9b047df8a369a5",
+    "c1f46cbd28ef4765ca9c25cce913cbacc3d5b12987a92a8f536b5bbf2a377f35",
+    "5cbae66b73527c5044bd949299065a12c5d13e0ae411421843785fd1b90f7563"
+  ],
+  "source_plan_bytes_sha256": "3c0104938e89ae8afa990701a285c74ee6bf590cb778040583178c8dee251b6b",
+  "source_report_bytes_sha256": "2d2b792ef6e5dd2ba8dbe50b2818b1d6363c668817f9b504683f8ba00ae60bbc",
+  "source_revision": "9099669c1f18fc2ff22e6cc2ef421d2432e18ade",
+  "status": "incomplete",
+  "task_horizon": 48,
+  "tokens": null,
+  "unknown_token_rows": 6,
+  "unknown_usage_requests": 1,
+  "zero_dispatch_rows": 5
+}
