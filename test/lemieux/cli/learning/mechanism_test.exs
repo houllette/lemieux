@@ -3,6 +3,47 @@ defmodule Lemieux.CLI.Learning.MechanismTest do
   alias Lemieux.CLI.Learning.Mechanism
   alias Lemieux.Contract
 
+  test "v6 requires its declared scope and cannot reuse a v5 receipt" do
+    runtime = %{
+      "revision" => "revision",
+      "inference_route" => "codex_subscription",
+      "research_protocol" => %{
+        "id" => "whole_record_research/v6",
+        "profile_search" => false,
+        "asset_search" => %{"kinds" => ["skill"], "helper_extensions" => []}
+      }
+    }
+
+    required = Mechanism.requirements(runtime)
+
+    receipt =
+      seal(%{
+        "kind" => "observed_learning_mechanism/v1",
+        "status" => "passed",
+        "required_checks" => required,
+        "checks" => Map.new(required, fn {key, _} -> {key, true} end),
+        "binding" => Map.merge(runtime, %{"model" => "model", "effort" => "high"})
+      })
+
+    assert :ok = Mechanism.gate(receipt, runtime, "model", "high")
+
+    assert {:error, :matching_mechanism_required} =
+             Mechanism.gate(
+               seal(Map.put(receipt, "required_checks", %{})),
+               runtime,
+               "model",
+               "high"
+             )
+
+    legacy =
+      receipt
+      |> put_in(["binding", "research_protocol", "id"], "whole_record_research/v5")
+      |> seal()
+
+    assert {:error, :matching_mechanism_required} =
+             Mechanism.gate(legacy, runtime, "model", "high")
+  end
+
   test "text-skill scope cannot qualify helper source, configuration or a profile search" do
     runtime = %{
       "revision" => String.duplicate("a", 40),

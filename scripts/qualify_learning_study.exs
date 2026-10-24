@@ -290,23 +290,24 @@ runtime =
   if research do
     Map.merge(runtime, %{
       "research_protocol" => %{
-        "id" => "whole_record_research/v5",
+        "id" => "whole_record_research/v6",
         "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
         "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",
         "reflection_source_bytes" => Reflection.source_limit(),
-        "reflection_source_encoding" => Reflection.SharedValues.encoding(),
+        "reflection_source_encoding" => Reflection.SharedTuples.encoding(),
         "reflection_source_formats" => [
           "plain_json",
           "lossless_shared_text/v1",
-          "lossless_shared_values/v2"
+          "lossless_shared_values/v2",
+          "lossless_shared_tuples/v3"
         ],
         "reflection_source_selection" => "smallest_canonical_supported_encoding",
         "host_work_heap_words" => %{
           "request_and_reader" => 8_000_000,
           "whole_experiment" => 32_000_000
         },
-        "reflection_expanded_source_bytes" => Reflection.SharedValues.maximum_expanded_bytes(),
+        "reflection_expanded_source_bytes" => Reflection.SharedTuples.maximum_expanded_bytes(),
         "editor_model" => editor_model,
         "editor_effort" => editor_effort,
         "support_policy" => %{

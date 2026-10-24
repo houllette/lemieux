@@ -1,7 +1,7 @@
 defmodule Lemieux.CLI.Learning.ReflectionTest do
   use ExUnit.Case, async: true
   alias Lemieux.CLI.Learning.Reflection
-  alias Lemieux.CLI.Learning.Reflection.SharedValues
+  alias Lemieux.CLI.Learning.Reflection.SharedTuples
   alias Lemieux.Contract
   alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Experience.Retrieval.Evidence
@@ -26,13 +26,20 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     }
 
     record = %{"original" => observation, "selected" => observation}
+    prepared = Reflection.prepare(record)
+
+    pointer =
+      prepared
+      |> Reflection.citation_index()
+      |> Enum.find(&(&1["type"] == "shared_text"))
+      |> Map.fetch!("pointer")
 
     attrs = %{
       "kind" => "procedure",
       "outcome" => "insufficient_evidence",
       "mechanism" => "Inspect the complete retained source before adapting the workflow.",
       "applicability" => ["workflow"],
-      "source_pointers" => ["/text_table/t0"]
+      "source_pointers" => [pointer]
     }
 
     assert byte_size(Contract.encode!(record)) > Reflection.source_limit()
@@ -51,8 +58,8 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     assert {:ok, evidence, []} = Evidence.materialize([lesson], 2_097_152, 1_048_576)
     [artifact] = evidence[lesson.id <> ".json"]["artifacts"]
     refute artifact["truncated"]
-    assert artifact["content"]["text_table"]["t0"] == text
-    assert {:ok, ^record} = SharedValues.expand(artifact["content"])
+    assert artifact["content"] == prepared
+    assert {:ok, ^record} = SharedTuples.expand(artifact["content"])
   end
 
   test "compaction cannot admit unknown source fields or unrepeated oversized text", %{
@@ -116,12 +123,19 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     record = %{"original" => %{"transcript" => entries}}
     assert byte_size(Contract.encode!(record)) > Reflection.source_limit()
 
+    pointer =
+      record
+      |> Reflection.prepare()
+      |> Reflection.citation_index()
+      |> Enum.find(&(&1["type"] == "shared_text"))
+      |> Map.fetch!("pointer")
+
     hypothesis = %{
       "kind" => "procedure",
       "outcome" => "insufficient_evidence",
       "mechanism" => "Review the complete public evidence before changing the workflow.",
       "applicability" => ["workflow"],
-      "source_pointers" => ["/text_table/t0"]
+      "source_pointers" => [pointer]
     }
 
     provider =
