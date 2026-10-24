@@ -96,8 +96,9 @@ defmodule Lemieux.CLI.Learning.Mechanism do
 
   defp scoped_requirements?(
          receipt,
-         %{"research_protocol" => %{"id" => "whole_record_research/v5"}} = runtime
-       ),
+         %{"research_protocol" => %{"id" => id}} = runtime
+       )
+       when id in ["whole_record_research/v5", "whole_record_research/v6"],
        do: receipt["required_checks"] == requirements(runtime)
 
   defp scoped_requirements?(_receipt, _runtime), do: true
