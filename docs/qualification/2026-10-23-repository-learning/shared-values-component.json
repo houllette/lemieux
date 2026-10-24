@@ -32,7 +32,7 @@
       "value_entries": 499
     }
   ],
-  "source_module_sha256": "cbccc66157e6a598bd7b36867346e34bafafad2b9a935dc10ec124cddc0c801c",
+  "source_module_sha256": "41b2e91bd091e057eaff9bca45305ce17a441a0ea104fc8e5c83c658a59d4951",
   "source_reader_heap_words": 8000000,
   "source_wire_limit": 1048576
 }

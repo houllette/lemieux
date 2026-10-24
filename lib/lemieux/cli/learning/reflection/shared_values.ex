@@ -64,7 +64,7 @@ defmodule Lemieux.CLI.Learning.Reflection.SharedValues do
          %{} = values <- record["value_table"],
          %{} = schemas <- record["schema_table"],
          size when is_integer(size) and size in 0..@maximum <- record["raw_record_bytes"],
-         tables = %{texts: texts, values: values, schemas: schemas, active: MapSet.new()},
+         tables = %{texts: texts, values: values, schemas: schemas, active: %{}},
          {:ok, original, ^size} <- decode(Map.drop(record, @fields), tables),
          true <- Contract.digest(original) == record["raw_record_sha256"],
          true <- compact(original) == record do
@@ -266,10 +266,10 @@ defmodule Lemieux.CLI.Learning.Reflection.SharedValues do
   end
 
   defp decode(%{"$value" => key} = value, tables) when map_size(value) == 1 do
-    with false <- MapSet.member?(tables.active, key),
-         true <- MapSet.size(tables.active) < 128,
+    with false <- Map.has_key?(tables.active, key),
+         true <- map_size(tables.active) < 128,
          {:ok, item} <- Map.fetch(tables.values, key) do
-      decode(item, %{tables | active: MapSet.put(tables.active, key)})
+      decode(item, %{tables | active: Map.put(tables.active, key, true)})
     else
       _invalid -> {:error, :invalid_shared_values}
     end
