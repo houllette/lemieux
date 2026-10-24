@@ -289,6 +289,34 @@ defmodule Lemieux.Learning.ControllerTest do
     end
   end
 
+  test "a bounded multi-stage experiment is not killed by the source-reader heap ceiling" do
+    controller =
+      controller(budget(),
+        max_time_ms: 120_000,
+        learning: [max_requests: 3, max_tokens: 40, max_time_ms: 60_000, max_cost_usd: 0.4]
+      )
+
+    plan = %{
+      "sha256" => String.duplicate("a", 64),
+      "budget" => %{
+        "maximum_tokens" => 30,
+        "maximum_time_ms" => 60_000,
+        "maximum_cost_usd" => 0.3
+      }
+    }
+
+    required = %{tokens: 30, time_ms: 60_000, cost_usd: 0.3, requests: 2}
+
+    assert {:ok, {1_100_000, 1_100_000, {1, 1, 1}}, %{"status" => "completed"}} =
+             Controller.experiment(controller, "bounded-host-records", plan, required, fn _ ->
+               source = Enum.to_list(1..1_100_000)
+               mapped = Enum.map(source, &{&1, &1, &1})
+               {length(source), length(mapped), hd(mapped)}
+             end)
+
+    assert Controller.snapshot(controller)["accounting"]["tokens"] == 0
+  end
+
   test "a whole frozen experiment reserves its shared outer allocation before child work" do
     budget = budget()
     controller = controller(budget)

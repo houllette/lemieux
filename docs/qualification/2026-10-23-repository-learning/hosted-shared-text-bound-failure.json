@@ -1,0 +1,28 @@
+{
+  "all_physical_usage_known": true,
+  "artifacts_sha256": {
+    "operator-stop-request.json": "b742daa1b5513bef305f5b812b5cdf2a63bf09767c69875676a059728c7b18de",
+    "plan.json": "f7519ceb9e1ff373d9186eb0b8bb4906332c3fe4d68b8ed1a65a4334f8610d47",
+    "registration.json": "a1dd2b4bebad0ef4199772c22dcc4964f25984ee8ba532fd01abbcf23f5cf689",
+    "report.json": "ac34b33ac06078ed2efd66703073bdb56eeab602725ad226114eaae163dd8faf"
+  },
+  "asset_applications": 1,
+  "asset_restorations": 1,
+  "credential_loan_removed": true,
+  "efficacy": "unassessed_incomplete_intervened_scope",
+  "encoded_record_bytes": 1105017,
+  "incomplete_qualification_rows": 2,
+  "kind": "lossless_v1_source_bound_development_failure/v1",
+  "observed_skill_tool_reads": 0,
+  "operator_action": "opt_out_after_first_incomplete_row_two_rows_incomplete_remaining_ordinary_results_retained",
+  "passing_artifacts": 13,
+  "profile_applications": 1,
+  "raw_record_bytes": 1439787,
+  "refused_before_reflection_dispatch": true,
+  "registered_source_wire_bound": 1048576,
+  "rows_including_seed": 13,
+  "schema_version": 1,
+  "scope_physical_requests": 364,
+  "scope_tokens": 2701359,
+  "source_revision": "a6d1015fa8e2a60ba294b371787abb7998290ba8"
+}

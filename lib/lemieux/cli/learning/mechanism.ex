@@ -25,24 +25,29 @@ defmodule Lemieux.CLI.Learning.Mechanism do
       withheld = Enum.filter(records, &(&1.evidence["context"]["arm"] == "no_experience"))
       profile? = get_in(plan, ["runtime", "research_protocol", "profile_search"]) == true
       assets? = is_map(get_in(plan, ["runtime", "research_protocol", "asset_search"]))
+      required = requirements(plan["runtime"])
 
-      checks = %{
+      observed = %{
         "retained_seed_lessons" =>
           report["warmup_rows"] != [] and
             Enum.all?(report["warmup_rows"], &(&1["created_lesson_ids"] != [])),
         "experience_withheld" => withheld != [] and Enum.all?(withheld, &withheld?/1),
         "observed_lesson_to_execution" => Enum.any?(updating, &chain?(&1, profile?, assets?)),
-        "profile_exercised" => not profile? or Enum.any?(updating, &profile?/1),
-        "procedure_exercised" => not assets? or Enum.any?(updating, &procedure?/1),
-        "helper_executed" => not assets? or Enum.any?(updating, &helper?/1),
-        "setting_exercised" => not assets? or Enum.any?(updating, &setting?/1)
+        "profile_exercised" => Enum.any?(updating, &profile?/1),
+        "procedure_exercised" => Enum.any?(updating, &procedure?/1),
+        "helper_executed" => Enum.any?(updating, &helper?/1),
+        "setting_exercised" => Enum.any?(updating, &setting?/1)
       }
+
+      checks = Map.new(observed, fn {key, value} -> {key, value or not required[key]} end)
 
       receipt = %{
         "schema_version" => 1,
         "kind" => "observed_learning_mechanism/v1",
         "status" => if(Enum.all?(checks, &elem(&1, 1)), do: "passed", else: "not_demonstrated"),
         "checks" => checks,
+        "required_checks" => required,
+        "observed_checks" => observed,
         "binding" => binding(plan["runtime"], plan["model"], plan["effort"]),
         "plan_sha256" => plan["sha256"],
         "report_sha256" => report["sha256"],
@@ -56,6 +61,24 @@ defmodule Lemieux.CLI.Learning.Mechanism do
     end
   end
 
+  @doc "The declared kind/helper scope determines which additional mechanisms must be observed."
+  @spec requirements(runtime :: map()) :: map()
+  def requirements(runtime) do
+    asset = get_in(runtime, ["research_protocol", "asset_search"]) || %{}
+    kinds = asset["kinds"] || []
+    skill? = "skill" in kinds
+
+    %{
+      "retained_seed_lessons" => true,
+      "experience_withheld" => true,
+      "observed_lesson_to_execution" => true,
+      "profile_exercised" => get_in(runtime, ["research_protocol", "profile_search"]) == true,
+      "procedure_exercised" => skill?,
+      "helper_executed" => skill? and (asset["helper_extensions"] || []) != [],
+      "setting_exercised" => "configuration" in kinds
+    }
+  end
+
   @spec gate(receipt :: map(), runtime :: map(), model :: String.t(), effort :: String.t()) ::
           :ok | {:error, term()}
   def gate(receipt, runtime, model, effort) do
@@ -63,12 +86,21 @@ defmodule Lemieux.CLI.Learning.Mechanism do
          "observed_learning_mechanism/v1" <- receipt["kind"],
          "passed" <- receipt["status"],
          true <- receipt["binding"] == binding(runtime, model, effort),
+         true <- scoped_requirements?(receipt, runtime),
          true <- Enum.all?(receipt["checks"], &elem(&1, 1)) do
       :ok
     else
       _invalid -> {:error, :matching_mechanism_required}
     end
   end
+
+  defp scoped_requirements?(
+         receipt,
+         %{"research_protocol" => %{"id" => "whole_record_research/v5"}} = runtime
+       ),
+       do: receipt["required_checks"] == requirements(runtime)
+
+  defp scoped_requirements?(_receipt, _runtime), do: true
 
   defp binding(runtime, model, effort),
     do: %{
@@ -139,7 +171,7 @@ defmodule Lemieux.CLI.Learning.Mechanism do
   defp consumed?(record, profile?, assets?),
     do:
       (profile? and profile?(record) and proposer_read?(record)) or
-        (assets? and procedure?(record) and asset_experience?(record))
+        (assets? and (procedure?(record) or setting?(record)) and asset_experience?(record))
 
   defp profile?(record) do
     receipt = record.evidence["refinement"] || %{}
@@ -180,7 +212,11 @@ defmodule Lemieux.CLI.Learning.Mechanism do
   end
 
   defp procedure?(record),
-    do: Enum.any?(results(record), &(&1["name"] == "skill" and is_nil(&1["arguments"]["file"])))
+    do:
+      Enum.any?(
+        results(record),
+        &(&1["name"] == "skill" and &1["arguments"]["file"] in [nil, "SKILL.md"])
+      )
 
   defp helper?(record) do
     helpers =

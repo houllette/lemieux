@@ -209,7 +209,8 @@ defmodule Lemieux.CLI.Learning.AssetLane do
       tools: Enum.map(tools, &Tool.name/1),
       description_tools: ~w(read write edit bash),
       settings_allowlist: ["search.glob_after_requests"],
-      helper_extensions: [".py"],
+      helper_extensions: Map.get(config, :asset_helper_extensions, [".py"]),
+      allowed_asset_kinds: Map.get(config, :asset_kinds, ["skill", "configuration"]),
       approved_digests: []
     }
   end

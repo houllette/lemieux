@@ -39,6 +39,8 @@ Code.require_file(Application.app_dir(:lemieux, "priv/qualification/reference.ex
       streams: :string,
       assets: :boolean,
       asset_only: :boolean,
+      asset_kinds: :string,
+      asset_helpers: :boolean,
       mechanism: :string,
       allowance_dir: :string,
       max_total_requests: :integer,
@@ -72,6 +74,24 @@ research = opts[:research] == true
 assets = opts[:assets] == true
 if assets and not research, do: raise("Asset experiments require --research")
 if opts[:asset_only] == true and not assets, do: raise("--asset-only requires --assets")
+
+if not assets and (opts[:asset_kinds] || not is_nil(opts[:asset_helpers])),
+  do: raise("Asset kind/helper scope requires --assets")
+
+asset_kinds =
+  if opts[:asset_kinds],
+    do: opts[:asset_kinds] |> String.split(",", trim: true) |> Enum.map(&String.trim/1),
+    else: ["skill", "configuration"]
+
+true =
+  asset_kinds != [] and Enum.uniq(asset_kinds) == asset_kinds and
+    Enum.all?(asset_kinds, &(&1 in ["skill", "configuration"]))
+
+asset_helpers =
+  if opts[:asset_helpers] == false or "skill" not in asset_kinds, do: [], else: [".py"]
+
+asset_protocol = AssetSearch.protocol(kinds: asset_kinds, helper_extensions: asset_helpers)
+
 if stage == "mechanism" and not research, do: raise("Mechanism stage requires --research")
 
 if stage == "confirmation" and is_nil(opts[:manifest]),
@@ -269,13 +289,23 @@ runtime =
   if research do
     Map.merge(runtime, %{
       "research_protocol" => %{
-        "id" => "whole_record_research/v4",
+        "id" => "whole_record_research/v5",
         "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
         "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",
         "reflection_source_bytes" => Reflection.source_limit(),
-        "reflection_source_encoding" => Reflection.SharedText.encoding(),
-        "reflection_expanded_source_bytes" => Reflection.SharedText.maximum_expanded_bytes(),
+        "reflection_source_encoding" => Reflection.SharedValues.encoding(),
+        "reflection_source_formats" => [
+          "plain_json",
+          "lossless_shared_text/v1",
+          "lossless_shared_values/v2"
+        ],
+        "reflection_source_selection" => "smallest_canonical_supported_encoding",
+        "host_work_heap_words" => %{
+          "request_and_reader" => 8_000_000,
+          "whole_experiment" => 32_000_000
+        },
+        "reflection_expanded_source_bytes" => Reflection.SharedValues.maximum_expanded_bytes(),
         "editor_model" => editor_model,
         "editor_effort" => editor_effort,
         "support_policy" => %{
@@ -292,7 +322,7 @@ runtime =
         "efficacy" =>
           "separate_quality_and_efficiency_endpoints_no_changed_historical_thresholds",
         "endpoints" => Endpoints.policy(),
-        "asset_search" => if(assets, do: AssetSearch.protocol()),
+        "asset_search" => if(assets, do: asset_protocol),
         "profile_search" => opts[:asset_only] != true
       },
       "probe_terminal_rule" => "verified_accounted_artifact_grade",
@@ -360,6 +390,8 @@ config =
         probe_when: :all_observations,
         terminal_rule: :artifact_outcome,
         asset_search: assets,
+        asset_kinds: asset_kinds,
+        asset_helper_extensions: asset_helpers,
         profile_search: opts[:asset_only] != true,
         support_policy: runtime["research_protocol"]["support_policy"],
         refinement_requests: research_budget.profile_requests
@@ -734,7 +766,12 @@ try do
   if stage == "mechanism" do
     {:ok, mechanism} = Mechanism.audit(root, plan, report)
     :ok = Installation.write(Path.join(root, "mechanism.json"), mechanism)
-    IO.puts(JSON.encode!(Map.take(mechanism, ~w(status checks interpretation))))
+
+    IO.puts(
+      JSON.encode!(
+        Map.take(mechanism, ~w(status checks required_checks observed_checks interpretation))
+      )
+    )
   end
 
   if not live and stage != "calibration" do

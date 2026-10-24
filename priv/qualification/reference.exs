@@ -8,8 +8,18 @@ defmodule LemieuxQualificationReference do
   @usage %{"input_tokens" => 2, "output_tokens" => 2}
   @helper "from pathlib import Path\nprint('workspace files:', len(list(Path('.').rglob('*.py'))))\n"
 
-  def provider(:asset_proposer, _fixture, _model, _effort, _requests),
-    do: Scripted.new([Scripted.complete(JSON.encode!(%{"assets" => assets()}), usage: @usage)])
+  def provider(:asset_proposer, _fixture, _model, _effort, _requests) do
+    Scripted.new([
+      fn request ->
+        entry = request.entries |> Enum.filter(&(&1.type == :user)) |> List.last()
+        input = JSON.decode!(entry.payload["text"])
+        kinds = input["allowed_asset_kinds"] || ["skill", "configuration"]
+        selected = assets() |> Enum.filter(&(&1["kind"] in kinds))
+        selected = Enum.map(selected, &helper_policy(&1, input["helper_extensions"] || []))
+        Scripted.complete(JSON.encode!(%{"assets" => selected}), usage: @usage)
+      end
+    ])
+  end
 
   def provider(:asset_critic, _fixture, _model, _effort, _requests) do
     Scripted.new([
@@ -35,11 +45,19 @@ defmodule LemieuxQualificationReference do
       "outcome" => "insufficient_evidence",
       "mechanism" =>
         "Read development entry points, repair active source, regenerate the executed copy and verify both paths.",
-      "applicability" => ["coding verification failure recovery repository workflow"],
-      "source_pointers" => ["/original/transcript/0"]
+      "applicability" => ["coding verification failure recovery repository workflow"]
     }
 
-    Scripted.new([Scripted.complete(JSON.encode!(%{"lessons" => [hypothesis]}), usage: @usage)])
+    Scripted.new([
+      fn request ->
+        entry = request.entries |> Enum.filter(&(&1.type == :user)) |> List.last()
+        marker = "\nCitation index (copy exact pointer strings; seq is NOT an array index):\n"
+        [_source, index] = String.split(entry.payload["text"], marker, parts: 2)
+        [pointer | _] = JSON.decode!(index)
+        hypothesis = Map.put(hypothesis, "source_pointers", [pointer["pointer"]])
+        Scripted.complete(JSON.encode!(%{"lessons" => [hypothesis]}), usage: @usage)
+      end
+    ])
   end
 
   def provider(:proposer, fixture, model, effort, requests) do
@@ -106,7 +124,7 @@ defmodule LemieuxQualificationReference do
 
   defp next(request, fixture) do
     skill? = Enum.any?(request.tools, &(Tool.name(&1) == "skill"))
-    steps = if skill?, do: helper_steps(), else: []
+    steps = if skill?, do: helper_steps(request), else: []
 
     steps =
       steps ++
@@ -137,13 +155,41 @@ defmodule LemieuxQualificationReference do
     end
   end
 
-  defp helper_steps do
-    [
-      {"skill-body", "skill", %{"name" => "source-workflow"}},
-      {"skill-helper", "skill", %{"name" => "source-workflow", "file" => "helpers/inventory.py"}},
-      {"copy-helper", "write", %{"path" => "inventory.py", "content" => @helper}},
-      {"run-helper", "bash", %{"command" => "python inventory.py"}}
-    ]
+  defp helper_policy(%{"kind" => "skill"} = asset, []) do
+    files = %{
+      "SKILL.md" =>
+        "---\nname: source-workflow\ndescription: Use for repository workflow and generated source.\n---\nRead authoritative source and executed artifacts, repair source, regenerate the runtime and verify both paths. This is unconfirmed guidance.\n"
+    }
+
+    Map.put(asset, "files", files)
+  end
+
+  defp helper_policy(asset, _allowed), do: asset
+
+  defp helper_steps(request) do
+    body = tool_output(request, "skill-body")
+    first = [{"skill-body", "skill", %{"name" => "source-workflow", "file" => "SKILL.md"}}]
+
+    if is_nil(body) or String.contains?(body, "helpers/inventory.py") do
+      code = tool_output(request, "skill-helper") || ""
+
+      first ++
+        [
+          {"skill-helper", "skill",
+           %{"name" => "source-workflow", "file" => "helpers/inventory.py"}},
+          {"copy-helper", "write", %{"path" => "inventory.py", "content" => code}},
+          {"run-helper", "bash", %{"command" => "python inventory.py"}}
+        ]
+    else
+      first
+    end
+  end
+
+  defp tool_output(request, id) do
+    case Enum.find(request.entries, &(&1.type == :tool_result and &1.payload["call_id"] == id)) do
+      nil -> nil
+      entry -> entry.payload["output"] |> String.split("\n\n", parts: 2) |> List.last()
+    end
   end
 
   defp called?(request, id),

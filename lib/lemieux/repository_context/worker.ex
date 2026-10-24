@@ -4,10 +4,17 @@ defmodule Lemieux.RepositoryContext.Worker do
   # The guardian owns the worker's lifetime. Task.async_nolink alone leaves
   # work alive when a session cancels the tool that is awaiting it.
   @spec run(work :: (-> term()), timeout_ms :: pos_integer()) :: {:ok, term()} | {:error, atom()}
-  def run(work, timeout_ms) do
+  def run(work, timeout_ms), do: run(work, timeout_ms, [])
+
+  @spec run(work :: (-> term()), timeout_ms :: pos_integer(), opts :: keyword()) ::
+          {:ok, term()} | {:error, atom()}
+  def run(work, timeout_ms, opts) do
     owner = self()
     token = make_ref()
-    {guardian, monitor} = spawn_monitor(fn -> guard(owner, token, work, timeout_ms) end)
+    heap_words = Keyword.get(opts, :max_heap_words, 8_000_000)
+
+    {guardian, monitor} =
+      spawn_monitor(fn -> guard(owner, token, work, timeout_ms, heap_words) end)
 
     receive do
       {^token, outcome} ->
@@ -19,14 +26,14 @@ defmodule Lemieux.RepositoryContext.Worker do
     end
   end
 
-  defp guard(owner, token, work, timeout) do
+  defp guard(owner, token, work, timeout, heap_words) do
     owner_ref = Process.monitor(owner)
     guardian = self()
 
     {worker, worker_ref} =
       :erlang.spawn_opt(
         fn -> send(guardian, {:result, self(), boundary(work)}) end,
-        [:monitor, {:max_heap_size, %{size: 8_000_000, kill: true, error_logger: false}}]
+        [:monitor, {:max_heap_size, %{size: heap_words, kill: true, error_logger: false}}]
       )
 
     receive do

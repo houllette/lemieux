@@ -79,6 +79,7 @@ defmodule Lemieux.Learning.AssetSourceTest do
 
     assert id == version.id
     assert digest == version.digest
+    assert loaded.system =~ "read SKILL.md with the skill tool"
     assert [loader] = loaded.host_tools
 
     assert {:ok, "Skill: check-records\nFile: references/checks.md\n\nPreserve empty fields.\n"} =

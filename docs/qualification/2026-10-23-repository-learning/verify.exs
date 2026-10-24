@@ -65,7 +65,7 @@ false = provenance["source_scope"]["reflection_complete"]
 true = provenance["original_created_at"] == "not_retained_in_asset_search_wire_record"
 
 archival = read.("offline-selected-source-archival.json")
-source = Path.expand("../../../lib/lemieux/cli/learning/asset_lane.ex", __DIR__)
+source = Path.join(__DIR__, "selected-source-archival-driver-v1.ex.txt")
 true = archival["asset_lane_source_sha256"] == Contract.sha256(File.read!(source))
 true = Enum.all?(archival["checks"], &elem(&1, 1))
 true = archival["selected_source_trees_verified"] == 12
@@ -76,6 +76,23 @@ true = archival["scripted_tokens"] == 4216
 true = archival["hosted_requests"] == 0
 false = archival["credential_loan_created"]
 true = archival["qualification"] == "unassessed_scripted_mechanics"
+
+component = read.("shared-values-component.json")
+true = component["hosted_requests"] == 0
+true = component["source_wire_limit"] == 1_048_576
+true = component["lesson_wire_limit"] == 2_097_152
+true = component["expanded_limit"] == 8_388_608
+
+true =
+  Enum.all?(
+    component["records"],
+    &(&1["encoded_bytes"] <= 1_048_576 and &1["complete_disclosure_roundtrip"])
+  )
+
+stock = read.("stock-live-supplement.json")
+true = stock["rows"] == 8 and stock["qualification_complete_rows"] == 8
+true = stock["physical_requests"] == 70
+true = stock["benefit"] == "unassessed"
 
 IO.puts(
   "Public ancestry and learned-skill integrity checks passed; qualification remains unassessed."
