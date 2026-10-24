@@ -234,6 +234,38 @@ true = capacity["encoded_bytes"] > capacity["source_wire_limit"]
 false = capacity["fits_source_wire"]
 false = capacity["unimplemented_syntax_prototypes"]["complete_codec_or_decoder"]
 
+tuples = read.("shared-tuples-component.json")
+true = tuples["driver_sha256"] == file_digest.("shared-tuples-component-driver-v1.ex.txt")
+true = tuples["hosted_requests"] == 0 and tuples["complete_disclosure_roundtrip"]
+true = tuples["lesson_storage_roundtrip"]
+true = tuples["raw_bytes"] == 2_043_862 and tuples["encoded_bytes"] == 1_041_756
+true = tuples["raw_sha256"] == capacity["raw_sha256"]
+true = tuples["encoded_bytes"] <= tuples["source_wire_limit"]
+
+true =
+  tuples["lesson_bytes"] == 1_391_849 and tuples["lesson_bytes"] <= tuples["lesson_wire_limit"]
+
+true = tuples["expanded_limit"] == 8_388_608
+
+rehearsal = read.("offline-shared-tuples-mechanism-v6.json")
+true = rehearsal["source_tree_clean"] and rehearsal["execution_complete"]
+true = rehearsal["scripted_dispatches"] == 436 and rehearsal["synthetic_tokens"] == 1744
+true = rehearsal["rows"] == 12 and rehearsal["warmup_rows"] == 1
+true = rehearsal["selected_source_trees"] == 6
+true = rehearsal["asset_applications"] == 6 and rehearsal["asset_restorations"] == 6
+true = rehearsal["mechanism"]["status"] == "passed"
+true = rehearsal["unknown_token_accounting"] == 0 and rehearsal["hosted_requests"] == 0
+true = rehearsal["protocol"] == "whole_record_research/v6"
+false = rehearsal["credential_loan_created"]
+false = rehearsal["shared_hosted_allowance_used"]
+true = rehearsal["benefit"] == "not_assessed"
+true = rehearsal["independent_confirmation"] == "not_run"
+
+for check <- ~w(profile_exercised helper_executed setting_exercised) do
+  false = rehearsal["mechanism"]["required_checks"][check]
+  false = rehearsal["mechanism"]["observed_checks"][check]
+end
+
 IO.puts(
   "Public ancestry and learned-skill integrity checks passed; qualification remains unassessed."
 )

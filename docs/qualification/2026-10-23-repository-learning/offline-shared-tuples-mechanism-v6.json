@@ -1,0 +1,56 @@
+{
+  "asset_applications": 6,
+  "asset_restorations": 6,
+  "benefit": "not_assessed",
+  "credential_loan_created": false,
+  "credential_policy": "not_invoked_scripted_route",
+  "execution_complete": true,
+  "hosted_requests": 0,
+  "independent_confirmation": "not_run",
+  "inference_route": "scripted",
+  "kind": "frozen_scripted_v6_rehearsal",
+  "mechanism": {
+    "observed_checks": {
+      "experience_withheld": true,
+      "helper_executed": false,
+      "observed_lesson_to_execution": true,
+      "procedure_exercised": true,
+      "profile_exercised": false,
+      "retained_seed_lessons": true,
+      "setting_exercised": false
+    },
+    "required_checks": {
+      "experience_withheld": true,
+      "helper_executed": false,
+      "observed_lesson_to_execution": true,
+      "procedure_exercised": true,
+      "profile_exercised": false,
+      "retained_seed_lessons": true,
+      "setting_exercised": false
+    },
+    "sha256": "eb1b7e441967b07e8fa715894f7dcbffae6d797c97bb7cd96aedd1bfc1b32989",
+    "status": "passed"
+  },
+  "plan_sha256": "b762005a24dea4d8767a0fb36aab99fd81bab13dfa525af8ad78b49ec12b94e3",
+  "protocol": "whole_record_research/v6",
+  "qualification": "unassessed_scripted_mechanics",
+  "roles": {
+    "critic": 6,
+    "probe": 276,
+    "proposer": 6,
+    "reflection": 9,
+    "task": 139
+  },
+  "rows": 12,
+  "scripted_dispatches": 436,
+  "selected_source_trees": 6,
+  "shared_hosted_allowance_used": false,
+  "source_codec_sha256": "dadd67050af6b62c1a40e416615abc7d9db0c7d231675e0c34b80c5d5f72d264",
+  "source_report_bytes_sha256": "30320277984be3569705130e4d3462067f228cde0fe1655be0581f4a444d77fa",
+  "source_revision": "19b6b815c693ab5c157c2b5a1985811c5ab1d36f",
+  "source_script_sha256": "20d8c61d8c7bf3db92f7875b2a3555a428409b2e2d6bcf290a6390fced79384c",
+  "source_tree_clean": true,
+  "synthetic_tokens": 1744,
+  "unknown_token_accounting": 0,
+  "warmup_rows": 1
+}

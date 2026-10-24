@@ -386,3 +386,51 @@ Unknown-charge handling, source capacity, a fresh matching mechanism for any
 changed runtime, independent source/evaluator/image closures and controls, and
 powered independent confirmation remain outstanding. No per-kind default or
 release readiness claim is made.
+
+## Bounded tuple source and a frozen v6 rehearsal
+
+The [tuple component](shared-tuples-component.json) reconstructs the same
+2,043,862-byte Pint composite whose v2 encoding exceeded the source bound above.
+Short references and shared numbered-line bodies preserve all original numbers,
+tabs, newlines, text and trajectory positions. The readable wire representation
+is 1,041,756 bytes. The original digest remains
+`b399e180e346235ae4816d5bb33d6124fc314190e32039934844c9c212caac16`.
+
+The real reflection builder stores that complete source in a 1,391,849-byte
+unconfirmed lesson. Lesson encode/decode and the actual retrieval reader return
+the full artifact without truncation, and expansion reproduces the original
+digest. Existing canonical plain, v1 and v2 readers remain unchanged. Tests cover
+literal tag escapes, malformed JSON shapes, missing/changed/cyclic/unused tables,
+reference amplification, valid citations and a source at the exact 8 MiB
+expanded ceiling. A small independently bounded intermediate wrapper permits
+that exact-limit source; the expanded-source ceiling remains unchanged.
+
+This is still a mixed-case codec component, not a future complete experiment or
+capability result. Its successful wire size does not guarantee that every future
+source will fit. Larger unshared records still refuse retention. The source,
+lesson and expanded limits remain 1 MiB, 2 MiB and 8 MiB respectively.
+
+The [retained provider-free driver](shared-tuples-component-driver-v1.ex.txt)
+accepts an existing complete public source JSON and a new summary filename. Its
+fixture context constructs unconfirmed data for archival testing; it grants no
+receiving-host authority and invokes no provider:
+
+```sh
+MIX_ENV=test mix run \
+  docs/qualification/2026-10-23-repository-learning/shared-tuples-component-driver-v1.ex.txt \
+  PRIVATE_PUBLIC_RECORD_JSON NEW_COMPONENT_SUMMARY_JSON
+```
+
+The [v6 Scripted rehearsal](offline-shared-tuples-mechanism-v6.json) ran on clean
+source revision `19b6b815c693ab5c157c2b5a1985811c5ab1d36f`, with twelve target
+rows and one seed across six arms and two repetitions. Its isolated simulation
+allowance recorded 436 completed Scripted calls and 1,744 synthetic tokens.
+Six source trees were archived, six skills applied and six restored. All declared
+text-skill mechanisms passed; profile, helper and setting mechanisms were neither
+required nor observed. No credentials were borrowed or hosted allowance used.
+This tests apparatus and dataflow, with no effectiveness inference.
+
+Protocol v6 registers the new format before hosted work. It requires a new
+matching hosted mechanism and calibration before the larger study. The previous
+v5 hosted receipt cannot satisfy its changed binding. No v6 hosted request or
+independent confirmation is included in this packet.

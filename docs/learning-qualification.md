@@ -91,6 +91,12 @@ counts. A larger allowance is an upper bound, not a commitment to consume it.
 Whole-record reflection admits at most 1 MiB of complete public source bytes;
 the lesson wire limit remains 2 MiB and retrieval's total disclosure remains
 2 MiB. Oversized records refuse retention rather than silently discard evidence.
+The registered v6 format adds readable tuple dictionaries and exact numbered-line
+body sharing. It retains all occurrences and original bytes; canonical expansion
+must match the source digest within a separate 8 MiB expanded limit. Plain, v1
+and v2 sources keep their existing readers. A new format/runtime needs a fresh
+matching hosted mechanism before a larger hosted study; old receipts do not
+qualify the new binding.
 Subscription qualification suppresses API-dollar admission estimates while
 retaining all reported usage and informational dollar values. Token, request,
 time and any separately configured outer dollar ceilings remain enforced.

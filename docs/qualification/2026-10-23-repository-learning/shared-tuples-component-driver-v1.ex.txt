@@ -1,0 +1,82 @@
+alias Lemieux.CLI.Learning.Reflection
+alias Lemieux.CLI.Learning.Reflection.SharedTuples
+alias Lemieux.CLI.Learning.Reflection.SharedValues
+alias Lemieux.Contract
+alias Lemieux.Learning.Experience.Lesson
+alias Lemieux.Learning.Experience.Retrieval.Evidence
+alias Lemieux.RepositoryContext.Worker
+alias LemieuxTest.LessonFixtures, as: F
+
+[source, output] = System.argv()
+false = File.exists?(output)
+original = source |> File.read!() |> JSON.decode!()
+
+{:ok, summary} =
+  Worker.run(
+    fn ->
+      encoded = Reflection.prepare(original)
+      {:ok, ^original} = SharedTuples.expand(encoded)
+      true = byte_size(Contract.encode!(encoded)) <= Reflection.source_limit()
+      index = Reflection.citation_index(encoded)
+      pointer = Enum.find(index, &(&1["type"] == "tool_result"))["pointer"]
+      true = is_binary(pointer)
+
+      attrs = %{
+        "kind" => "procedure",
+        "outcome" => "insufficient_evidence",
+        "mechanism" =>
+          "Review all retained coding observations before forming a reusable hypothesis.",
+        "applicability" => ["coding workflow"],
+        "source_pointers" => [pointer]
+      }
+
+      {:ok, lesson} =
+        Reflection.build(
+          original,
+          "provider-free-codec-component",
+          %{scope: F.scope(), lesson_context: F.context()},
+          attrs
+        )
+
+      {:ok, ^lesson} = lesson |> Lesson.encode!() |> Lesson.decode()
+      {:ok, files, []} = Evidence.materialize([lesson], 2_097_152, 1_048_576)
+      [artifact] = files[lesson.id <> ".json"]["artifacts"]
+      false = artifact["truncated"]
+      true = artifact["content"] == encoded
+      {:ok, ^original} = SharedTuples.expand(artifact["content"])
+
+      %{
+        "kind" => "complete_source_tuple_codec_component",
+        "qualification" => "unassessed_provider_free_component",
+        "hosted_requests" => 0,
+        "raw_bytes" => byte_size(Contract.encode!(original)),
+        "raw_sha256" => Contract.digest(original),
+        "encoding" => encoded["text_encoding"],
+        "v2_or_older_bytes" => byte_size(Contract.encode!(SharedValues.compact(original))),
+        "encoded_bytes" => byte_size(Contract.encode!(encoded)),
+        "encoded_sha256" => Contract.digest(encoded),
+        "source_wire_limit" => Reflection.source_limit(),
+        "lesson_wire_limit" => 2_097_152,
+        "expanded_limit" => SharedTuples.maximum_expanded_bytes(),
+        "lesson_bytes" => byte_size(Lesson.encode!(lesson)),
+        "complete_disclosure_roundtrip" => true,
+        "lesson_storage_roundtrip" => true,
+        "citation_count" => length(index),
+        "line_entries" => length(encoded["line_table"] || []),
+        "driver_sha256" => Contract.sha256(File.read!(__ENV__.file)),
+        "interpretation" =>
+          "Six distinct prior coding observations and two repetitions; not a full future experiment or model capability evidence."
+      }
+    end,
+    120_000, max_heap_words: 32_000_000)
+
+File.write!(output, Contract.encode!(summary) <> "\n")
+
+IO.puts(
+  Contract.encode!(
+    Map.take(
+      summary,
+      ~w(encoded_bytes lesson_bytes complete_disclosure_roundtrip hosted_requests)
+    )
+  )
+)
