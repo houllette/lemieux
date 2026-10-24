@@ -1,0 +1,33 @@
+{
+  "arms": {
+    "disabled": {
+      "passed": 4,
+      "requests": 35,
+      "tasks": 4,
+      "tasks_receiving_experience": 0
+    },
+    "ordinary": {
+      "passed": 4,
+      "requests": 35,
+      "tasks": 4,
+      "tasks_receiving_experience": 2
+    }
+  },
+  "artifacts_sha256": {
+    "plan.json": "f45e60555457fd6f2aeca9bbc328c70a76b0053507b18f956921e3304d4080cf",
+    "report.json": "4665f7e64e0df9f2988ae0f412fdb95fc237b7b94905dbe99919262f30367dbd"
+  },
+  "benefit": "unassessed",
+  "effort": "high",
+  "independent_confirmation": "not_run",
+  "interpretation": "actual_default_host_path_retention_and_reuse_no_efficacy_or_canvas_automation_claim",
+  "kind": "stock_product_live_development_supplement/v1",
+  "learning_requests": 4,
+  "model": "openai_codex:gpt-6.1-sol",
+  "physical_requests": 70,
+  "qualification_complete_rows": 8,
+  "rows": 8,
+  "schema_version": 1,
+  "source_revision": "a6d1015fa8e2a60ba294b371787abb7998290ba8",
+  "tokens": 339816
+}

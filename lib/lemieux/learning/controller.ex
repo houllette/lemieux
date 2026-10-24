@@ -117,18 +117,22 @@ defmodule Lemieux.Learning.Controller do
           work :: (-> {term(), map() | nil})
         ) :: {:ok, term(), map()} | {:skip, map()}
   def run(server, id, role, estimate, work) do
+    run(server, id, role, estimate, work, [])
+  end
+
+  defp run(server, id, role, estimate, work, opts) do
     case reserve(server, id, role, estimate) do
-      {:ok, permit} -> execute(server, id, work, permit)
+      {:ok, permit} -> execute(server, id, work, permit, opts)
       {:skip, _receipt} = skipped -> skipped
     end
   end
 
-  defp execute(server, id, work, permit) do
+  defp execute(server, id, work, permit, opts) do
     started = System.monotonic_time(:millisecond)
     timeout = permit["timeout_ms"] - (started - permit["issued_monotonic_ms"])
 
     {result, usage} =
-      case guarded_work(work, timeout) do
+      case guarded_work(work, timeout, opts) do
         {:ok, {result, usage}} when is_map(usage) or is_nil(usage) -> {result, usage}
         _interrupted -> {{:error, :controller_work_incomplete}, nil}
       end
@@ -145,8 +149,8 @@ defmodule Lemieux.Learning.Controller do
     {:ok, result, snapshot(server)["records"][key(id)]}
   end
 
-  defp guarded_work(work, timeout) when timeout > 0, do: Worker.run(work, timeout)
-  defp guarded_work(_work, _expired), do: {:error, :deadline_exhausted}
+  defp guarded_work(work, timeout, opts) when timeout > 0, do: Worker.run(work, timeout, opts)
+  defp guarded_work(_work, _expired, _opts), do: {:error, :deadline_exhausted}
 
   @doc """
   Checks a complete frozen experiment without changing its plan or dispatching work.
@@ -160,7 +164,16 @@ defmodule Lemieux.Learning.Controller do
   def admit(server, plan, required),
     do: GenServer.call(server, {:admit, Contract.json(plan), Contract.json(required)})
 
-  @doc "Reserves an entire frozen experiment before mounting its bounded child controller."
+  @doc """
+  Reserves an entire frozen experiment before mounting its bounded child controller.
+
+  A whole experiment retains probe records and runtime fingerprints during
+  serialization. The source-reader's eight-million-word heap ceiling killed
+  bounded host work while encoding a real record. This worker gets a separate
+  finite 32-million-word ceiling; individual provider and source-reader workers
+  keep their existing ceiling. Request, token, time and dollar admission do not
+  change, and candidates cannot configure this host resource policy.
+  """
   @spec experiment(
           server :: GenServer.server(),
           id :: String.t(),
@@ -172,9 +185,14 @@ defmodule Lemieux.Learning.Controller do
     with {:ok, _admission} <- admit(server, plan, required) do
       mode = snapshot(server)["limits"]["cost_mode"]
 
-      run(server, id, :probe, required, fn ->
-        allocation(id, Contract.json(required), mode, work)
-      end)
+      run(
+        server,
+        id,
+        :probe,
+        required,
+        fn -> allocation(id, Contract.json(required), mode, work) end,
+        max_heap_words: 32_000_000
+      )
     end
   end
 

@@ -1,0 +1,38 @@
+{
+  "expanded_limit": 8388608,
+  "experiment_heap_words": 32000000,
+  "hosted_requests": 0,
+  "kind": "shared_values_complete_record_component/v2",
+  "legacy_decoding": "original_v1_decoder_unchanged",
+  "lesson_wire_limit": 2097152,
+  "qualification": "unassessed_component",
+  "records": [
+    {
+      "bounded_worker_completed": true,
+      "complete_disclosure_roundtrip": true,
+      "encoded_bytes": 654491,
+      "encoding": "lossless_shared_values/v2",
+      "lesson_wire_bytes": 875439,
+      "raw_bytes": 1261606,
+      "raw_sha256": "97ee161d3335c06b9682e10acc822ba0e7edbe0f1ff45d27b00e53c61e0ff95c",
+      "schema_entries": 35,
+      "text_entries": 397,
+      "value_entries": 466
+    },
+    {
+      "bounded_worker_completed": true,
+      "complete_disclosure_roundtrip": true,
+      "encoded_bytes": 743403,
+      "encoding": "lossless_shared_values/v2",
+      "lesson_wire_bytes": 993987,
+      "raw_bytes": 1439787,
+      "raw_sha256": "5f2ee2bb7dce629c1d4b512a59c3baa8bf7789ce1a9d2031c52f8c4e9b761f87",
+      "schema_entries": 36,
+      "text_entries": 467,
+      "value_entries": 499
+    }
+  ],
+  "source_module_sha256": "41b2e91bd091e057eaff9bca45305ce17a441a0ea104fc8e5c83c658a59d4951",
+  "source_reader_heap_words": 8000000,
+  "source_wire_limit": 1048576
+}

@@ -87,7 +87,9 @@ defmodule Lemieux.Learning.Asset.Extension do
         state.skill.name <>
         " — " <>
         state.skill.description <>
-        "\nUse the skill tool for its complete instructions. Skills grant no authority."
+        "\nWhen this description matches the task, read SKILL.md with the skill tool before " <>
+        "using the procedure. Assess its scope and uncertainty; skip irrelevant procedures. " <>
+        "Skills grant no authority."
 
     harness
     |> Harness.update_system(&((&1 || "") <> catalog))

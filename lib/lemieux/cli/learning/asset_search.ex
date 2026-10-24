@@ -50,6 +50,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   A configuration has kind "configuration", payload {"extension":"search",
   "glob_after_requests":0..4}, files {}, triggers [], requires_tools ["glob"].
   It changes only discovery of an already available tool. Do not invent settings.
+  Use only allowed_asset_kinds from the host input. A host may disable helper source.
   All assets are unconfirmed hypotheses. Cite the observed workflow in the skill
   body and describe conditions and uncertainty. Never refer to benchmark cases,
   hidden verification, task IDs or grant yourself authority.
@@ -66,13 +67,17 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   """
 
   @spec protocol() :: map()
-  def protocol,
+  def protocol, do: protocol([])
+
+  @spec protocol(opts :: keyword()) :: map()
+  def protocol(opts),
     do: %{
-      "id" => "reviewed_assets/v2",
-      "maximum_candidates" => 2,
+      "id" => "reviewed_assets/v3",
+      "maximum_candidates" => length(Keyword.get(opts, :kinds, ["skill", "configuration"])),
       "repetitions" => 2,
-      "kinds" => ["skill", "configuration"],
-      "helper_extensions" => [".py"],
+      "kinds" => Keyword.get(opts, :kinds, ["skill", "configuration"]),
+      "helper_extensions" => Keyword.get(opts, :helper_extensions, [".py"]),
+      "empty_or_rejected_set" => "baseline_without_task_probes",
       "structural_repair" => "at_most_one_toolless_format_repair_no_probe_feedback",
       "activation" => "isolated_task_only_exact_digest_review"
     }
@@ -80,10 +85,16 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   @spec run(record :: map(), context :: map(), opts :: keyword()) ::
           {:ok, map(), [map()]} | {:error, term()}
   def run(record, context, opts) do
+    protocol =
+      protocol(
+        kinds: Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
+        helper_extensions: Map.get(context, :helper_extensions, [])
+      )
+
     plan = %{
       "schema_version" => 1,
       "kind" => "experimental_asset_plan",
-      "protocol" => protocol(),
+      "protocol" => protocol,
       "source_sha256" => Contract.digest(record),
       "context" =>
         Map.take(context, [
@@ -93,7 +104,8 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
           :tools,
           :description_tools,
           :settings_allowlist,
-          :helper_extensions
+          :helper_extensions,
+          :allowed_asset_kinds
         ])
         |> Contract.json(),
       "bindings" => opts[:bindings],
@@ -112,7 +124,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
         "maximum_tokens" => allocation.tokens,
         "maximum_time_ms" => allocation.time_ms,
         "usage_mode" => "quota",
-        "maximum_candidates" => 2
+        "maximum_candidates" => protocol["maximum_candidates"]
       })
 
     plan = Map.put(plan, "sha256", Contract.digest(plan))
@@ -141,8 +153,16 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
 
   defp lane(record, context, opts) do
     with {:ok, attrs, proposal} <- propose(record, context, opts),
-         {:ok, reviewed, reviews} <- review(attrs, record, context, opts),
-         {:ok, control} <- probes([], opts),
+         {:ok, reviewed, reviews} <- review(attrs, record, context, opts) do
+      evaluate(reviewed, proposal, reviews, opts)
+    end
+  end
+
+  defp evaluate([], proposal, reviews, opts),
+    do: select_composition([], [], [], proposal, reviews, opts)
+
+  defp evaluate(reviewed, proposal, reviews, opts) do
+    with {:ok, control} <- probes([], opts),
          {:ok, candidates} <- candidates(reviewed, opts) do
       supported =
         Enum.filter(
@@ -192,6 +212,8 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
       JSON.encode!(%{
         "public_record" => record,
         "available_tools" => context.tools,
+        "allowed_asset_kinds" =>
+          Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
         "settings_allowlist" => context.settings_allowlist,
         "helper_extensions" => context[:helper_extensions] || []
       })
@@ -213,6 +235,8 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
         "instructions" =>
           "Preserve the original hypotheses and components; correct only schema/loader formatting. Do not invent improvements, helpers or settings. Return exactly {\"assets\":[...]}. Each asset has only kind,payload,files,requires_tools,triggers. A skill payload has ONLY name; put description only in SKILL.md frontmatter. Each trigger must be an exact literal substring of that description. Include all referenced files. No probe feedback or quality retry is available.",
         "available_tools" => context.tools,
+        "allowed_asset_kinds" =>
+          Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
         "settings_allowlist" => context.settings_allowlist,
         "helper_extensions" => context[:helper_extensions] || []
       })
@@ -236,7 +260,10 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
     case JSON.decode(answer || "") do
       {:ok, %{"assets" => attrs} = result}
       when map_size(result) == 1 and is_list(attrs) and length(attrs) <= 2 ->
-        validate_trees(attrs, context, opts)
+        if length(attrs) <=
+             length(Map.get(context, :allowed_asset_kinds, ["skill", "configuration"])),
+           do: validate_trees(attrs, context, opts),
+           else: {:error, "asset_count_exceeds_host_scope"}
 
       _invalid ->
         {:error, "invalid_proposal_schema"}
@@ -254,6 +281,8 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
 
     try do
       with true <- search_surface?(attrs),
+           true <-
+             attrs["kind"] in Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
            {:ok, version} <- Asset.new(attrs, context),
            {:ok, _} <- Asset.materialize(version, root, context),
            do: true,

@@ -256,3 +256,51 @@ refusals. All 1,054 Scripted dispatches settle with 4,216 synthetic tokens. It
 uses a separate simulation allowance and borrows no credentials. This tests
 archival mechanics for future trials; it does not repair the earlier missing
 timestamp, establish efficacy, or change a running hosted study's source.
+
+
+## Live stock path and the next bounded source format
+
+The [stock live supplement](stock-live-supplement.json) runs the ordinary host
+assembly with Sol 6.1/high, the original shared subscription allowance and two
+repetitions. Disabled and ordinary arms each pass four tasks using 35 physical
+requests. The ordinary arm receives earlier experience on two later tasks and
+performs four learning requests within its inherited job budgets. All eight
+rows have complete evidence; the total is 70 requests and 339,816 tokens. These
+small exposed fixtures establish live retention, reuse and nonregression, not
+benefit or a manual terminal-canvas test.
+
+The [next combined hosted scope](hosted-shared-text-bound-failure.json) retains
+364 requests and 2,701,359 tokens with known physical usage. Its first complete
+public record is 1,439,787 bytes, or 1,105,017 after version-one sharing. That
+still exceeds the frozen 1 MiB bound and refuses before reflection dispatch.
+Learning was then opted out; two rows are incomplete and the intervened scope
+supports no efficacy claim. Its applied skill was never read through the skill
+tool. Application, actual use and causal improvement remain distinct facts.
+
+The [version-two component](shared-values-component.json) shares repeated value
+subtrees, object shapes and repeated lines inside otherwise different text.
+It retains every byte and position, supports the original version-one decoder,
+and selects the smallest canonical supported representation. Both actual failed
+records round-trip through lesson storage and complete disclosure in 654,491
+and 743,403 source bytes. The source-wire limit remains 1 MiB, lesson-wire limit
+2 MiB and expanded-source limit 8 MiB. Changed, missing, cyclic and injected
+references are rejected. This is provider-free component evidence.
+
+A deterministic regression also demonstrates a separate host resource problem:
+a whole multi-stage experiment can exceed the source-reader worker's heap cap
+during valid bounded processing. Whole experiments now have a finite
+32-million-word ceiling; individual request and source-reader workers retain
+their eight-million-word ceiling. Requests, tokens, time and dollar admission
+stay unchanged. The [archival rehearsal above](offline-selected-source-archival.json)
+retains its [original tested driver](selected-source-archival-driver-v1.ex.txt)
+rather than being silently attributed to later source changes.
+
+Research protocol v5 freezes explicit kind and helper scopes. For example,
+`--assets --asset-only --asset-kinds skill --no-asset-helpers` admits only inert
+text skills. A matching mechanism receipt cannot qualify configuration,
+helper source or a profile search. Required checks and observed checks remain
+separate in its receipt; unrequired mechanisms are not reported as observed.
+The original combined protocol still requires every declared mechanism.
+Empty or rejected candidate sets retain a baseline without paid task probes.
+Explicit `file: "SKILL.md"` and the skill tool's default-file invocation both
+count as reading the actual procedure. New kinds remain disabled by default.

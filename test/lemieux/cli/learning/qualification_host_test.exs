@@ -687,6 +687,56 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     assert Lemieux.sessions(config.supervisor) == []
   end
 
+  test "a text-skill-only scope rejects configuration before critic or task probes", ctx do
+    provider = fn
+      :asset_proposer ->
+        Scripted.new([
+          Scripted.complete(
+            JSON.encode!(%{
+              "assets" => [
+                %{
+                  "kind" => "configuration",
+                  "payload" => %{"extension" => "search", "glob_after_requests" => 0},
+                  "requires_tools" => ["glob"],
+                  "files" => %{},
+                  "triggers" => []
+                }
+              ]
+            }),
+            usage: usage()
+          )
+        ])
+
+      role when role in [:asset_critic, :probe] ->
+        flunk("excluded kinds must not reach critic or task probes")
+
+      _role ->
+        task_provider(true)
+    end
+
+    config =
+      Map.merge(ctx.config, %{
+        asset_search: true,
+        profile_search: false,
+        asset_kinds: ["skill"],
+        asset_helper_extensions: [],
+        asset_tokens: 1_000_000,
+        provider: provider,
+        support_policy: %{
+          "id" => "experimental_mean/v2",
+          "verified_ties" => true,
+          "minimum_gain" => 0.1,
+          "minimum_repetitions" => 2
+        }
+      })
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"] and row["qualification_complete"]
+    assert row["asset_candidate_count"] == 0
+    assert row["asset_application_count"] == 0
+    assert Lemieux.sessions(config.supervisor) == []
+  end
+
   test "invalid asset formatting receives only one metered repair and never reaches critic or activation",
        ctx do
     owner = self()

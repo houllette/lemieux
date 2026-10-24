@@ -3,6 +3,54 @@ defmodule Lemieux.CLI.Learning.MechanismTest do
   alias Lemieux.CLI.Learning.Mechanism
   alias Lemieux.Contract
 
+  test "text-skill scope cannot qualify helper source, configuration or a profile search" do
+    runtime = %{
+      "revision" => String.duplicate("a", 40),
+      "inference_route" => "codex_subscription",
+      "research_protocol" => %{
+        "id" => "whole_record_research/v5",
+        "stage" => "mechanism",
+        "profile_search" => false,
+        "asset_search" => %{"kinds" => ["skill"], "helper_extensions" => []}
+      }
+    }
+
+    required = Mechanism.requirements(runtime)
+    assert required["procedure_exercised"]
+    refute required["helper_executed"]
+    refute required["setting_exercised"]
+    refute required["profile_exercised"]
+
+    receipt =
+      seal(%{
+        "kind" => "observed_learning_mechanism/v1",
+        "status" => "passed",
+        "required_checks" => required,
+        "checks" => Map.new(required, fn {key, _} -> {key, true} end),
+        "binding" => %{
+          "revision" => runtime["revision"],
+          "inference_route" => runtime["inference_route"],
+          "research_protocol" => Map.delete(runtime["research_protocol"], "stage"),
+          "model" => "model",
+          "effort" => "high"
+        }
+      })
+
+    assert :ok = Mechanism.gate(receipt, runtime, "model", "high")
+
+    for changed <- [
+          put_in(runtime, ["research_protocol", "asset_search", "helper_extensions"], [".py"]),
+          put_in(runtime, ["research_protocol", "asset_search", "kinds"], ["configuration"]),
+          put_in(runtime, ["research_protocol", "profile_search"], true)
+        ] do
+      assert {:error, :matching_mechanism_required} =
+               Mechanism.gate(receipt, changed, "model", "high")
+    end
+
+    assert {:error, :matching_mechanism_required} =
+             Mechanism.gate(seal(%{receipt | "required_checks" => %{}}), runtime, "model", "high")
+  end
+
   test "larger runs require the same frozen mechanism, model, editor and inference route" do
     runtime = %{
       "revision" => String.duplicate("a", 40),

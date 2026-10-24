@@ -1,7 +1,7 @@
 defmodule Lemieux.CLI.Learning.ReflectionTest do
   use ExUnit.Case, async: true
   alias Lemieux.CLI.Learning.Reflection
-  alias Lemieux.CLI.Learning.Reflection.SharedText
+  alias Lemieux.CLI.Learning.Reflection.SharedValues
   alias Lemieux.Contract
   alias Lemieux.Learning.Experience.Lesson
   alias Lemieux.Learning.Experience.Retrieval.Evidence
@@ -52,7 +52,7 @@ defmodule Lemieux.CLI.Learning.ReflectionTest do
     [artifact] = evidence[lesson.id <> ".json"]["artifacts"]
     refute artifact["truncated"]
     assert artifact["content"]["text_table"]["t0"] == text
-    assert {:ok, ^record} = SharedText.expand(artifact["content"])
+    assert {:ok, ^record} = SharedValues.expand(artifact["content"])
   end
 
   test "compaction cannot admit unknown source fields or unrepeated oversized text", %{
