@@ -266,6 +266,18 @@ for check <- ~w(profile_exercised helper_executed setting_exercised) do
   false = rehearsal["mechanism"]["observed_checks"][check]
 end
 
+reserve = read.("approved-usage-reserve.json")
+:ok = Contract.verify_digest(reserve["receipt"], "sha256")
+true = reserve["receipt"]["tokens"] == 2_000_000
+true = reserve["requests"] == 2323 and reserve["unknown_requests"] == 1
+true = reserve["known_tokens"] == 26_773_752 and reserve["budget_tokens"] == 28_773_752
+true = reserve["records_unchanged"] and reserve["actual_accounting_unchanged"]
+true = reserve["limits_unchanged"] and reserve["historical_checkpoint_bytes_unchanged"]
+true = reserve["deadline_ms"] == amendment["deadline_ms"]
+true = reserve["new_hosted_requests"] == 0
+true = reserve["failed_calibration_qualification"] == "incomplete"
+nil = reserve["actual_tokens"]
+
 IO.puts(
   "Public ancestry and learned-skill integrity checks passed; qualification remains unassessed."
 )

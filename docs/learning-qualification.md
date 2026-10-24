@@ -407,6 +407,15 @@ A retryable provider failure can lack a terminal usage report. The controller th
 refuses further calls with `usage_unknown`, including the session's ordinary retry.
 Quota mode does not waive unknown-token accounting. Retain the original result and
 the in-doubt checkpoint; explicit host reconciliation needs trustworthy usage facts.
+For a quota-mode task request, a host can separately approve a conservative
+budget reserve with `StudyAllowance.reserve_unknown/5`. The receipt binds the
+exact unknown record and approval; measured usage remains unknown. Admission
+charges known tokens plus that reserve against the existing cap, without changing
+request counts or the original deadline. This is budget authorization, not usage
+reconciliation or qualification of the interrupted task. Any later uncovered
+unknown request closes admission again. Version-two controller checkpoints keep
+these facts separate and are refused by older readers. Learning calls and
+dollar-limited work retain their original unknown-usage refusal.
 Do not replace unknown usage with zero or replay the experiment automatically.
 Whole-experiment admission preserves the same underlying stop/skip reason rather
 than reporting every refusal as unaffordable. Distinguish `usage_unknown`,

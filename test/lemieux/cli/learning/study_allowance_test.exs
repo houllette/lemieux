@@ -194,6 +194,197 @@ defmodule Lemieux.CLI.Learning.StudyAllowanceTest do
 
   defp usage, do: %{"input_tokens" => 4, "output_tokens" => 3}
 
+  test "a reserve cannot reopen an expired allowance or change its deadline", %{tmp_dir: dir} do
+    path = Path.join(dir, "expired-reserve")
+    limits = [max_requests: 3, max_tokens: 1000, max_time_ms: 600_000]
+
+    raw =
+      Scripted.new([Scripted.error(:unavailable), Scripted.complete("forbidden", usage: usage())])
+
+    request = Request.new("test:model", params: [max_tokens: 16])
+    assert {:ok, first} = StudyAllowance.open(path, limits)
+
+    assert :ok =
+             Provider.run(StudyAllowance.provider(first, :task, raw), request, fn _ -> :ok end)
+
+    [{id, _record}] = Map.to_list(StudyAllowance.snapshot(first)["records"])
+    assert :ok = StudyAllowance.close(first)
+    checkpoint_path = Path.join(path, "controller.json")
+
+    expired =
+      checkpoint_path
+      |> File.read!()
+      |> JSON.decode!()
+      |> Map.put("deadline_ms", System.system_time(:millisecond) - 1)
+      |> Journal.seal()
+
+    File.write!(checkpoint_path, JSON.encode!(expired))
+    assert {:ok, _} = StudyAllowance.reserve_unknown(path, limits, id, 200, "approval")
+    assert {:ok, restored} = StudyAllowance.open(path, limits)
+    assert StudyAllowance.snapshot(restored)["deadline_ms"] == expired["deadline_ms"]
+
+    assert {:error, _} =
+             Provider.run(StudyAllowance.provider(restored, :task, raw), request, fn _ -> :ok end)
+
+    assert length(Scripted.requests(raw)) == 1
+    assert :ok = StudyAllowance.close(restored)
+  end
+
+  test "altered reserves, changed unknown records and false upper totals refuse reopening", %{
+    tmp_dir: dir
+  } do
+    path = Path.join(dir, "tampered-reserve")
+    limits = [max_requests: 3, max_tokens: 1000, max_time_ms: 600_000]
+    raw = Scripted.new([Scripted.error(:unavailable)])
+    assert {:ok, first} = StudyAllowance.open(path, limits)
+
+    assert :ok =
+             Provider.run(
+               StudyAllowance.provider(first, :task, raw),
+               Request.new("test:model", params: [max_tokens: 16]),
+               fn _ -> :ok end
+             )
+
+    [{id, _record}] = Map.to_list(StudyAllowance.snapshot(first)["records"])
+    assert :ok = StudyAllowance.close(first)
+    assert {:ok, _} = StudyAllowance.reserve_unknown(path, limits, id, 200, "approval")
+    registration = Path.join(path, "authorization.json")
+    original = registration |> File.read!() |> JSON.decode!()
+    checkpoint = original["checkpoint"]
+
+    changed_receipt =
+      checkpoint["token_reserves"][id]
+      |> Map.put("record_sha256", String.duplicate("0", 64))
+      |> Journal.seal()
+
+    for changed <- [
+          put_in(checkpoint, ["token_reserves", id, "tokens"], 1),
+          put_in(checkpoint, ["token_reserves", id], changed_receipt),
+          put_in(checkpoint, ["records", id, "role"], "reflection"),
+          put_in(checkpoint, ["limits", "cost_mode"], "metered"),
+          Map.put(checkpoint, "budget_tokens", 0),
+          Map.put(checkpoint, "schema_version", 1)
+        ] do
+      envelope = original |> Map.put("checkpoint", Journal.seal(changed)) |> Journal.seal()
+      File.write!(registration, JSON.encode!(envelope))
+      assert {:error, _} = StudyAllowance.open(path, limits)
+    end
+  end
+
+  test "reserves refuse already measured tasks and unmeasured learning calls", %{tmp_dir: dir} do
+    limits = [max_requests: 3, max_tokens: 1000, max_time_ms: 600_000]
+
+    for {role, step} <- [
+          {:reflection, Scripted.error(:unavailable)},
+          {:task, Scripted.complete("known", usage: usage())}
+        ] do
+      path = Path.join(dir, to_string(role))
+      assert {:ok, first} = StudyAllowance.open(path, limits)
+
+      assert :ok =
+               Provider.run(
+                 StudyAllowance.provider(first, role, Scripted.new([step])),
+                 Request.new("test:model", params: [max_tokens: 16]),
+                 fn _ -> :ok end
+               )
+
+      [{id, _record}] = Map.to_list(StudyAllowance.snapshot(first)["records"])
+      assert :ok = StudyAllowance.close(first)
+      assert {:error, _} = StudyAllowance.reserve_unknown(path, limits, id, 200, "approval")
+    end
+  end
+
+  test "approved reserve preserves unknown facts across restart and covers only its exact request",
+       %{tmp_dir: dir} do
+    path = Path.join(dir, "reserved-unknown")
+    limits = [max_requests: 5, max_tokens: 1000, max_time_ms: 600_000]
+
+    raw =
+      Scripted.new([
+        Scripted.error(:unavailable),
+        Scripted.complete("ok", usage: usage()),
+        Scripted.error(:unavailable),
+        Scripted.complete("forbidden", usage: usage())
+      ])
+
+    request = Request.new("test:model", params: [max_tokens: 16])
+    assert {:ok, first} = StudyAllowance.open(path, limits)
+
+    assert :ok =
+             Provider.run(StudyAllowance.provider(first, :task, raw), request, fn _ -> :ok end)
+
+    prior = StudyAllowance.snapshot(first)
+    [{id, record}] = Map.to_list(prior["records"])
+    assert :ok = StudyAllowance.close(first)
+    archived = File.read!(Path.join(path, "controller.json"))
+
+    assert {:ok, receipt} =
+             StudyAllowance.reserve_unknown(path, limits, id, 200, "explicit user approval")
+
+    assert receipt["record_sha256"] == Lemieux.Contract.digest(record)
+    assert {:ok, restored} = StudyAllowance.open(path, limits)
+    current = StudyAllowance.snapshot(restored)
+    assert current["records"] == prior["records"]
+    assert current["accounting"] == prior["accounting"]
+    assert current["budget_tokens"] == 200
+    assert current["deadline_ms"] == prior["deadline_ms"]
+    assert current["schema_version"] == 2
+
+    assert :ok =
+             Provider.run(StudyAllowance.provider(restored, :task, raw), request, fn _ -> :ok end)
+
+    assert StudyAllowance.snapshot(restored)["budget_tokens"] == 207
+    assert StudyAllowance.snapshot(restored)["accounting"]["tokens"] == nil
+    assert :ok = StudyAllowance.close(restored)
+    assert {:ok, again} = StudyAllowance.open(path, limits)
+    assert StudyAllowance.snapshot(again)["budget_tokens"] == 207
+
+    assert :ok =
+             Provider.run(StudyAllowance.provider(again, :task, raw), request, fn _ -> :ok end)
+
+    assert StudyAllowance.snapshot(again)["budget_tokens"] == nil
+
+    assert {:error, _} =
+             Provider.run(StudyAllowance.provider(again, :task, raw), request, fn _ -> :ok end)
+
+    assert length(Scripted.requests(raw)) == 3
+    assert :ok = StudyAllowance.close(again)
+    assert File.read!(Path.join(path, "controller.json")) == archived
+    assert {:error, _} = StudyAllowance.reserve_unknown(path, limits, id, 200, "duplicate")
+  end
+
+  test "reserves consume the existing token cap and require explicit inactive ownership", %{
+    tmp_dir: dir
+  } do
+    path = Path.join(dir, "reserve-cap")
+    limits = [max_requests: 3, max_tokens: 100, max_time_ms: 600_000]
+
+    raw =
+      Scripted.new([Scripted.error(:unavailable), Scripted.complete("forbidden", usage: usage())])
+
+    request = Request.new("test:model", params: [max_tokens: 16])
+    assert {:ok, first} = StudyAllowance.open(path, limits)
+
+    assert :ok =
+             Provider.run(StudyAllowance.provider(first, :task, raw), request, fn _ -> :ok end)
+
+    [{id, _record}] = Map.to_list(StudyAllowance.snapshot(first)["records"])
+    assert {:error, _} = StudyAllowance.reserve_unknown(path, limits, id, 100, "locked")
+    assert :ok = StudyAllowance.close(first)
+    assert {:error, _} = StudyAllowance.reserve_unknown(path, limits, id, 100, "")
+    assert {:error, _} = StudyAllowance.reserve_unknown(path, limits, "missing", 100, "approval")
+    assert {:error, _} = StudyAllowance.reserve_unknown(path, limits, id, 1, "under reservation")
+    assert {:ok, _} = StudyAllowance.reserve_unknown(path, limits, id, 100, "explicit approval")
+    assert {:ok, restored} = StudyAllowance.open(path, limits)
+    assert StudyAllowance.snapshot(restored)["budget_tokens"] == 100
+
+    assert {:error, _} =
+             Provider.run(StudyAllowance.provider(restored, :task, raw), request, fn _ -> :ok end)
+
+    assert length(Scripted.requests(raw)) == 1
+    assert :ok = StudyAllowance.close(restored)
+  end
+
   test "neither registration format persists a checkpoint that its reader cannot reopen", %{
     tmp_dir: dir
   } do

@@ -1,0 +1,28 @@
+{
+  "actual_accounting_unchanged": true,
+  "actual_tokens": null,
+  "budget_tokens": 28773752,
+  "deadline_ms": 1792860504112,
+  "failed_calibration_qualification": "incomplete",
+  "future_unknown_policy": "uncovered_usage_closes_admission",
+  "historical_checkpoint_bytes_sha256": "ffdd7f54dc0ee49406dc2137ba837efcfbedf0349f5ddef500060af71bafd84d",
+  "historical_checkpoint_bytes_unchanged": true,
+  "kind": "approved_unknown_task_budget_reserve",
+  "known_tokens": 26773752,
+  "limits_unchanged": true,
+  "new_hosted_requests": 0,
+  "prior_authorization_sha256": "d00b2ffddb3a1af7dec9d78855254f7807246b29c2357aacfa82b8fadbdd5b67",
+  "prior_checkpoint_sha256": "2c3c55bb097309448b8b3a812f7ac2bfcd06efb4fa083ed4bb8c2c18a55cac72",
+  "receipt": {
+    "approval": "User explicitly approved the proposed 2,000,000-token reserve from the existing 100,000,000 total allowance; actual usage remains unknown and a later unmeasured request stops admission.",
+    "approved_at_ms": 1792845661068,
+    "id": "attempt/7e8c95886080e265a33ed2547d02034f6c27389f7337dcdf4d3fae43343f6f08",
+    "prior_checkpoint_sha256": "2c3c55bb097309448b8b3a812f7ac2bfcd06efb4fa083ed4bb8c2c18a55cac72",
+    "record_sha256": "0072d28dd0397013ae0a2c47e171e6e6dae152ea6ad94b44935ff026308ba38f",
+    "sha256": "5e5d996e41b482330ac03ca837580da15f948c3c8e4f462f83176cb3e20575e0",
+    "tokens": 2000000
+  },
+  "records_unchanged": true,
+  "requests": 2323,
+  "unknown_requests": 1
+}

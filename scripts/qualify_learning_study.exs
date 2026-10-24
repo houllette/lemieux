@@ -255,7 +255,9 @@ runtime = %{
       do: %{
         "id" => Contract.sha256(Path.expand(opts[:allowance_dir])),
         "limits" => Map.new(study_limits),
-        "policy" => "durable_shared_across_stages_no_replay_on_unknown_usage"
+        "policy" => "durable_shared_actual_usage_and_explicit_budget_reserves",
+        "uncertainty_policy" => "uncovered_unmeasured_usage_closes_admission",
+        "reserve_scope" => "user_approved_exact_quota_task_record_only"
       }
     ),
   "inference_route" => if(live, do: "codex_subscription", else: "scripted"),
@@ -491,8 +493,8 @@ auth = if live, do: Path.join(root, ".auth/oauth.json")
 System.at_exit(fn _ -> if auth, do: CodexAuth.cleanup(auth) end)
 
 try do
-  if study_allowance && is_nil(StudyAllowance.snapshot(study_allowance)["accounting"]["tokens"]),
-    do: raise("Shared allowance has unmeasured usage; reconcile it before any new stage")
+  if study_allowance && is_nil(StudyAllowance.admission_tokens(study_allowance)),
+    do: raise("Shared allowance has uncovered unmeasured usage; admission remains closed")
 
   if live do
     {:ok, ^auth, _summary} = CodexAuth.prepare(path: auth, min_validity_hours: 2)

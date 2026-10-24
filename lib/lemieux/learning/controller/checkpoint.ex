@@ -1,16 +1,19 @@
 defmodule Lemieux.Learning.Controller.Checkpoint do
   @moduledoc false
   alias Lemieux.Contract
+  alias Lemieux.Learning.Controller.Accounting
 
   @spec verify(recorded :: map(), job_id :: String.t(), maximum :: pos_integer()) ::
           :ok | {:error, term()}
   def verify(recorded, job_id, maximum) when is_map(recorded) do
     with true <- byte_size(JSON.encode!(recorded)) <= 4_194_304,
          :ok <- Contract.verify_digest(recorded, "sha256"),
-         %{"schema_version" => 1, "job_id" => ^job_id, "records" => records, "seen" => seen} <-
+         %{"schema_version" => version, "job_id" => ^job_id, "records" => records, "seen" => seen} <-
            recorded,
+         true <- version in [1, 2],
          true <- is_map(records) and map_size(records) <= maximum + 1,
          true <- Enum.all?(records, &valid_record?/1),
+         true <- reserves?(recorded, records, version),
          true <- is_list(seen) and length(seen) <= maximum and Enum.all?(seen, &digest?/1),
          true <- count?(recorded["initial_tokens"]) and count?(recorded["initial_requests"]),
          true <- is_integer(recorded["deadline_ms"]) and recorded["deadline_ms"] >= 0,
@@ -27,6 +30,18 @@ defmodule Lemieux.Learning.Controller.Checkpoint do
   end
 
   def verify(_invalid, _job_id, _maximum), do: {:error, :invalid_controller_checkpoint}
+
+  defp reserves?(recorded, _records, 1), do: Map.get(recorded, "token_reserves", %{}) == %{}
+
+  defp reserves?(recorded, records, 2) do
+    reserves = recorded["token_reserves"]
+
+    get_in(recorded, ["limits", "cost_mode"]) == "quota" and
+      is_map(reserves) and map_size(reserves) > 0 and
+      Accounting.valid_reserves?(reserves, records) and
+      recorded["budget_tokens"] ==
+        Accounting.budget_tokens(records, recorded["initial_tokens"], reserves)
+  end
 
   defp valid_record?(
          {id,

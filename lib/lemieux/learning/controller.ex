@@ -276,6 +276,7 @@ defmodule Lemieux.Learning.Controller do
       learning: learning,
       cost_mode: Keyword.get(opts, :cost_mode, :metered),
       records: %{},
+      token_reserves: %{},
       seen: [],
       refs: %{},
       leases: %{},
@@ -355,7 +356,8 @@ defmodule Lemieux.Learning.Controller do
 
   defp restore(state, recorded) do
     with :ok <- Checkpoint.verify(recorded, state.job_id, state.max_records),
-         1 <- recorded["schema_version"],
+         true <- recorded["schema_version"] in [1, 2],
+         true <- recorded["schema_version"] == 1 or state.cost_mode == :quota,
          true <- recorded["job_id"] == state.job_id,
          records when is_map(records) <- recorded["records"],
          true <- map_size(records) <= state.max_records + 1 do
@@ -365,6 +367,7 @@ defmodule Lemieux.Learning.Controller do
        %{
          state
          | records: records,
+           token_reserves: Map.get(recorded, "token_reserves", %{}),
            seen: recorded["seen"],
            deadline: min(state.deadline, recorded["deadline_ms"]),
            mono_deadline:
@@ -724,11 +727,14 @@ defmodule Lemieux.Learning.Controller do
     outer = Contract.json(JobBudget.snapshot(state.budget))
     accounting = Accounting.summarize(state.records, state.initial_tokens)
 
+    tracked? =
+      is_integer(outer["requests"]) and is_integer(state.initial_requests) and
+        outer["requests"] == state.initial_requests + accounting["requests"]
+
     accounting =
-      if is_integer(outer["requests"]) and is_integer(state.initial_requests) and
-           outer["requests"] == state.initial_requests + accounting["requests"],
-         do: accounting,
-         else: Map.put(accounting, "tokens", nil)
+      if tracked?,
+        do: accounting,
+        else: Map.put(accounting, "tokens", nil)
 
     base = %{
       "schema_version" => 1,
@@ -750,6 +756,25 @@ defmodule Lemieux.Learning.Controller do
       "accounting" => accounting,
       "job_budget" => outer
     }
+
+    base =
+      if map_size(state.token_reserves) > 0 do
+        Map.merge(base, %{
+          "schema_version" => 2,
+          "token_reserves" => state.token_reserves,
+          "budget_tokens" =>
+            if(tracked?,
+              do:
+                Accounting.budget_tokens(
+                  state.records,
+                  state.initial_tokens,
+                  state.token_reserves
+                )
+            )
+        })
+      else
+        base
+      end
 
     Map.put(base, "sha256", Contract.digest(base))
   end
