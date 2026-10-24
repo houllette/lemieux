@@ -1,0 +1,44 @@
+{
+  "content": {
+    "binding": {
+      "effort": "high",
+      "environment_sha256": "71e801874e60b655aff1f6305cf535c72f02c8936cee3173069c2a81884131b0",
+      "model": "openai_codex:gpt-6.1-sol",
+      "repository": "qualification-study/92021ec535278ee51d8e19f33ee046fba9b05972bc45465076f0445bd1b8399b",
+      "runtime_sha256": "7734e37b36fe6ec14ebbfdeb40172f6055dce921dfe31b02616432ff8a733831",
+      "tools_sha256": "c7763850a87cea39ae446bb601c5703bcd35c901a50de8955507cda976f70300"
+    },
+    "files": {
+      "SKILL.md": "---\nname: verify-generated-runtime-repairs\ndescription: Use when repairing a feature whose CLI imports a generated runtime, when source and runtime disagree, or when immutable tests and tooling require verification without edits.\n---\n\n## Hypothesis and observed evidence\n\nTracing the actual execution path, repairing authoritative source, and verifying both regeneration and the unchanged interface may prevent a source-only repair from leaving the delivered runtime stale.\n\nIn the observed workflow, development instructions identified source under `src/project` and a CLI importing `.build/project`. Reading both trees revealed different placeholders. The existing checks failed before repair. Editing source, running the existing build script, and rerunning checks succeeded; additional comparisons exercised both source and the JSON CLI. Byte comparisons checked generated Python against source, and protected-file hashes checked preservation. Git was unavailable. An initial recursive search of the repository parent encountered permission errors; repository-scoped discovery avoided that expansion.\n\nThese observations support trying this procedure, not assuming it transfers unchanged. Earlier authorized experience also suggests bounded independent-reference comparisons and input-preservation checks, but a failing check alone does not identify the defect.\n\n## Procedure tree\n\n### 1. Establish scope before editing\n\n- Confirm the execution working directory and available project interpreter rather than assuming host paths match tool paths.\n- Read repository instructions and the issue. Inspect applicable ancestor instruction files directly; keep recursive discovery inside the repository unless evidence requires broader scope.\n- Read the behavior contract, entry point, imported implementation, and build instructions. Batch independent reads.\n- Identify editable source, generated outputs, and protected files. Do not infer permission to change runners, tests, documentation, or build tooling.\n- Before edits or builds, record protected-file paths and content hashes in session output or permitted temporary storage. Include directory membership when additions or deletions matter. A later snapshot only establishes preservation from that later point.\n\n### 2. Trace the failing execution path\n\n- Run existing verification and inspect its exit status and failure details.\n- If the entry point imports generated files, inspect those files as well as their authoritative source.\n- If source and runtime differ, distinguish stale generation from a source defect; both may exist.\n- If there is no generated runtime, skip regeneration-specific steps rather than inventing a build requirement.\n\n### 3. Repair the authoritative implementation\n\n- Make the smallest contract-driven source change consistent with surrounding code.\n- Preserve the public interface and protected files. Do not repair stale output by placing implementation in the runner or generator.\n- Separate required behavior from unspecified malformed-input behavior; do not silently turn defensive choices into new contract requirements.\n\n### 4. Rebuild and verify in dependency order\n\n- Read the existing build command and its effects before running it. Use the repository's environment and existing tooling, without installations.\n- Run the documented build, then existing checks. Stop and investigate a failed build before treating downstream results as meaningful.\n- Exercise the unchanged entry point in a fresh subprocess so import caching cannot conceal stale generated code.\n- For copy-based generation, compare relative file sets and bytes in both directions, excluding only justified transient artifacts. For transforming generators, use their documented consistency checks instead of assuming byte equality.\n\n### 5. Supplement sparse checks without changing maintained tests\n\n- When the input space is small, use bounded exhaustive enumeration against a simpler, independently written reference. Otherwise use deterministic samples and targeted boundaries.\n- Derive checks from the current contract, not from observed implementation outputs. Apply permutations or duplicate-record transformations only when the contract makes them invariant.\n- Check input preservation where required. Exercise multiple inputs through the real batch interface and bound serialized batch sizes to avoid command-line limits.\n- Keep large-depth or scale checks separate, and state whether they ran against source or through the CLI. Use ephemeral standard-library verification rather than leaving scratch files behind.\n\n### 6. Review and report evidence precisely\n\n- Recheck protected hashes and membership, source/runtime consistency, and the allowed change scope.\n- If Git is available, inspect the diff without modifying version-control state. If unavailable, report that limitation; hashes are not a substitute for an earlier snapshot or a full diff.\n- Report commands actually run, comparison scope, and interface coverage. A finite reference comparison cannot establish correctness for all inputs; the reference can also be wrong. Preserve explicit uncertainty about unspecified behavior and untested environments.\n"
+    },
+    "kind": "skill",
+    "payload": {
+      "name": "verify-generated-runtime-repairs"
+    },
+    "qualification": "unconfirmed",
+    "requires_tools": [
+      "read",
+      "glob",
+      "bash",
+      "edit"
+    ],
+    "schema_version": 1,
+    "scope": {
+      "id": "qualification-study/92021ec535278ee51d8e19f33ee046fba9b05972bc45465076f0445bd1b8399b"
+    },
+    "triggers": [
+      "repairing a feature whose CLI imports a generated runtime",
+      "source and runtime disagree",
+      "immutable tests and tooling require verification without edits"
+    ],
+    "validator": {
+      "code_sha256": "05ab8abf5f69e0d551f00796d0368c617a81b391687cb5b8e1aab637c6147f92",
+      "helper_extensions": [
+        ".py"
+      ],
+      "id": "lemieux/typed-asset/v1"
+    }
+  },
+  "id": "asset_01M5NF325P9YENHCZJMEXBE89C",
+  "sha256": "f3dbf19cba200041af301ac14b1ac705f3855b3008d3772cbf01c5c3d61b0c29"
+}

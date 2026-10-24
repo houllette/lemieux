@@ -1,0 +1,41 @@
+{
+  "asset_id": "asset_01M5NF325P9YENHCZJMEXBE89C",
+  "asset_sha256": "f3dbf19cba200041af301ac14b1ac705f3855b3008d3772cbf01c5c3d61b0c29",
+  "default_activation": false,
+  "experimental_critic": {
+    "decision": "approve",
+    "effort": "high",
+    "human_review": false,
+    "model": "openai_codex:gpt-6-astra",
+    "reason": "SKILL.md contains a bounded reusable workflow, not a task solution or expected outputs. Public evidence supports tracing the CLI into generated runtime, repairing authoritative source, rebuilding with existing tooling, and checking CLI behavior, source/runtime parity, and protected-file hashes. Its read/glob/bash/edit requirements match the evidenced tools; it requires no installations, network access, credentials, or permission expansion. It explicitly limits comparison claims and acknowledges snapshot timing and untested environments. Approval permits only an isolated experiment, not a claim of correctness or transfer."
+  },
+  "file_sha256": {
+    "SKILL.md": "f532cd40a0d5db6a14d37028561cecdd4ac1724438a052a572632a33abcc761b"
+  },
+  "host_authority_exported": false,
+  "independent_confirmation": "not_run",
+  "kind": "actual_learned_skill_development_review/v1",
+  "next_gates": [
+    "complete_matching_live_mechanism",
+    "paired_fresh_repository_results",
+    "independent_confirmation",
+    "current_receiving_host_binding_and_exact_digest_approval",
+    "qualified_source_export_and_fresh_consumer_rollback"
+  ],
+  "original_created_at": "not_retained_in_asset_search_wire_record",
+  "qualification": "unassessed_incomplete_development_scope",
+  "review_packet": "exact_public_asset_identity_and_complete_nonexecutable_files_no_version_timestamp_invented",
+  "schema_version": 1,
+  "source_evidence_file_sha256": "1a5ce78969905ad90cbd86f8927ed6f5c9ce529e0b7cdbf7a7ab5be114451ada",
+  "source_receipt_contract_sha256": "f243d8c874b2b4f3804d8d6389f0389e02799424d15e251dc692eaeeba8141e3",
+  "source_receipt_file_sha256": "103bba0c37c218963228bdb12d7bfc28244ff180c149a7b6f8943b17b16ab31a",
+  "source_revision": "609d7197b6b482a0556401f4af67973846598b51",
+  "source_scope": {
+    "artifact_passed": true,
+    "asset_applied": true,
+    "asset_restored": true,
+    "learning_failure": null,
+    "reflection_complete": false,
+    "reflection_reason": "{:error, :reflection_incomplete_or_invalid}"
+  }
+}

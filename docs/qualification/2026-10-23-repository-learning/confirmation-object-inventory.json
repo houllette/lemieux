@@ -1,0 +1,52 @@
+{
+  "ancestry_report_sha256": "1b3ae96dc4fc1fbb7984ef875af931e3f04b8c71476e5de53c5d3edac74eed73",
+  "commit_messages_or_tree_contents_disclosed_to_model": false,
+  "expected_filter": "tree:0",
+  "file_blob_objects": 0,
+  "object_types": {
+    "commit": 204461,
+    "tree": 9
+  },
+  "observation": "Nine tree metadata objects were included by the remote despite the requested filter. No file blobs were fetched. The stricter zero-tree inventory assertion failed and is not a qualification pass.",
+  "qualified_independent_streams": 0,
+  "schema_version": 1,
+  "tree_metadata_present": [
+    {
+      "index": 4,
+      "trees": 1
+    },
+    {
+      "index": 28,
+      "trees": 1
+    },
+    {
+      "index": 47,
+      "trees": 1
+    },
+    {
+      "index": 51,
+      "trees": 1
+    },
+    {
+      "index": 62,
+      "trees": 1
+    },
+    {
+      "index": 67,
+      "trees": 1
+    },
+    {
+      "index": 76,
+      "trees": 1
+    },
+    {
+      "index": 93,
+      "trees": 1
+    },
+    {
+      "index": 105,
+      "trees": 1
+    }
+  ],
+  "worktrees_created": false
+}

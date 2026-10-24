@@ -1,0 +1,28 @@
+{
+  "asset_lane_source_sha256": "a456f2e391e559cfa6415550bcb811b5ade92d47df3bdd889ae21dfbf8a9e014",
+  "base_revision": "129b59efd2a5a9334f1ea87e534962ef1a7c567e",
+  "changed_scope_refusals": 12,
+  "checks": {
+    "experience_withheld": true,
+    "helper_executed": true,
+    "observed_lesson_to_execution": true,
+    "procedure_exercised": true,
+    "profile_exercised": true,
+    "retained_seed_lessons": true,
+    "setting_exercised": true
+  },
+  "credential_loan_created": false,
+  "evidence_scope": "working_tree_component_before_publication",
+  "hosted_requests": 0,
+  "kind": "selected_asset_source_archival_component/v1",
+  "mechanism_receipt_sha256": "03ec0df6f3da5f5155756a19357d504762f07370839c92fcd082b0dcca5161c6",
+  "original_timestamp_policy": "Source.write receives each original complete Version before activation; no historical timestamp is reconstructed",
+  "qualification": "unassessed_scripted_mechanics",
+  "schema_version": 1,
+  "scripted_dispatches": 1054,
+  "scripted_tokens": 4216,
+  "selected_source_trees_verified": 12,
+  "source_tree_clean": false,
+  "study_driver_sha256": "16fc907a449f84624cd0185e0032d0620b81f82a1279c2c60ebcf5b44249b2ed",
+  "unapproved_activation_refusals": 12
+}

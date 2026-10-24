@@ -177,9 +177,20 @@ Codex credentials. It validates routing and accounting, not model capability.
 
 The [confirmation preparation status](confirmation-preparation-status.json)
 records metadata screening of 483 candidate repository names and GitHub fork
-metadata for the first 120. No source/evaluator controls or transitive history
-and exposure qualification are established by that screening. The number of
-qualified independent streams remains zero; no confirmation request has run.
+metadata for the first 120. The [pinned ancestry audit](confirmation-history-audit.json)
+then fetched complete, non-shallow commit ancestry for the three selected bases
+in each of those 120 repositories. Its 204,461 distinct ancestor commits form
+120 history groups with no shared-ancestry pair. This screens shared Git history;
+it does not establish task independence or model pretraining novelty.
+
+The [object inventory](confirmation-object-inventory.json) records zero file
+blobs and nine unexpected tree metadata objects despite the requested `tree:0`
+filter. The stricter zero-tree assertion failed and remains recorded. No source
+worktree was created or case text, patches, commit messages or tree contents
+disclosed to the model by this audit. Transitive exposure, source/evaluator and
+image closures, positive/negative controls and a powered budget-feasible study
+remain pending. The number of qualified independent streams remains zero; no
+confirmation request has run.
 
 
 ## Complete reflection records
@@ -205,3 +216,43 @@ sources still abstain before a provider call.
 Research protocol v4 registers this encoding before any new hosted work. Earlier
 scopes are not rescored or continued, and a new matching hosted mechanism receipt
 is required before a larger study can advance.
+
+
+## Actual learned skill for review
+
+The [complete skill](learned-skill-review/SKILL.md), [asset record](learned-skill-review/asset-record.json)
+and [provenance](learned-skill-review/provenance.json) preserve a real Astra/high
+proposal from the source-bound failure above. Its original asset ID, digest and
+all non-executable file bytes remain intact. The experimental critic approved
+only an isolated trial; that is not human release review or independent
+confirmation. The host applied the skill through its actual loader and restored
+the harness. The surrounding incomplete learning scope prevents a qualification
+claim even though the selected task artifact passed.
+
+The archive's wire record did not retain the version's creation timestamp. This
+packet records that omission; it does not invent a timestamp or reconstruct a
+complete historical Version value. It exports no sessions, callbacks,
+credentials, approval or active pointer. A receiving host still needs current
+scope/runtime validation and fresh exact-digest approval. New-kind default
+activation and qualified native packaging remain gated.
+
+After compiling the checkout, verify the public records without credentials or
+model requests:
+
+```sh
+mix run docs/qualification/2026-10-23-repository-learning/verify.exs
+```
+
+This check reconstructs the archived content digest and checks complete skill
+bytes, linked history-report hashes and the explicit unassessed boundaries. It
+does not run the source study again or establish provenance from a checksum.
+
+
+The [provider-free archival rehearsal](offline-selected-source-archival.json)
+passes all seven mechanism checks across six arms and two repetitions. It retains
+twelve selected source trees, verifies their IDs, digests and complete files,
+and observes twelve changed-scope refusals and twelve unapproved-activation
+refusals. All 1,054 Scripted dispatches settle with 4,216 synthetic tokens. It
+uses a separate simulation allowance and borrows no credentials. This tests
+archival mechanics for future trials; it does not repair the earlier missing
+timestamp, establish efficacy, or change a running hosted study's source.
