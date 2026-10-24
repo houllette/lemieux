@@ -1,5 +1,6 @@
 # Explicitly authorized, staged qualification. Never loaded by ordinary lmx.
 alias Lemieux.CLI.Learning.AssetSearch
+alias Lemieux.CLI.Learning.Calibration
 alias Lemieux.CLI.Learning.CodexAuth
 alias Lemieux.CLI.Learning.Container
 alias Lemieux.CLI.Learning.Installation
@@ -489,6 +490,9 @@ auth = if live, do: Path.join(root, ".auth/oauth.json")
 System.at_exit(fn _ -> if auth, do: CodexAuth.cleanup(auth) end)
 
 try do
+  if study_allowance && is_nil(StudyAllowance.snapshot(study_allowance)["accounting"]["tokens"]),
+    do: raise("Shared allowance has unmeasured usage; reconcile it before any new stage")
+
   if live do
     {:ok, ^auth, _summary} = CodexAuth.prepare(path: auth, min_validity_hours: 2)
   end
@@ -502,7 +506,13 @@ try do
       raw =
         cond do
           live ->
-            Recording.new(meter, ReqLLM.new(receive_timeout: :infinity, max_retries: 0),
+            Recording.new(
+              meter,
+              ReqLLM.new(
+                receive_timeout: :infinity,
+                max_retries: 0,
+                response_metadata: [headers: ["x-request-id", "x-openai-request-id"]]
+              ),
               role: role,
               cost_mode: :quota
             )
@@ -691,18 +701,7 @@ try do
           row
         end
 
-      baseline = Enum.filter(rows, &(&1["arm"] == "disabled"))
-      rate = Enum.count(baseline, & &1["passed"]) / length(baseline)
-
-      %{
-        "kind" => "development_calibration_only",
-        "plan_sha256" => plan["sha256"],
-        "rows" => rows,
-        "baseline_success" => rate,
-        "has_headroom" => rate >= 0.1 and rate <= 0.9,
-        "benefit" => "not_tested",
-        "independent_confirmation" => false
-      }
+      Calibration.report(plan, rows)
     end
 
   if not live and fixture_module == Projects do
@@ -780,9 +779,15 @@ try do
 
   IO.puts(
     JSON.encode!(
-      Map.take(report, ~w(kind mechanics benefit baseline_success has_headroom analysis arms))
+      Map.take(
+        report,
+        ~w(kind status execution_complete unknown_token_rows mechanics benefit baseline_success has_headroom analysis arms)
+      )
     )
   )
+
+  if stage == "calibration" and report["execution_complete"] != true,
+    do: raise("Calibration incomplete; retained report cannot establish difficulty or headroom")
 after
   if auth, do: CodexAuth.cleanup(auth)
   if study_allowance, do: StudyAllowance.close(study_allowance)

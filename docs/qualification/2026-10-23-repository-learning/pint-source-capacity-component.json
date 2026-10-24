@@ -1,0 +1,47 @@
+{
+  "complete_roundtrip": true,
+  "distinct_observations": 6,
+  "encoded_bytes": 1154735,
+  "encoded_sha256": "a6b70f2c15239c735b53f29679d83523249b2263cf10a8ad2b9ccda012d2a312",
+  "encoding": "lossless_shared_values/v2",
+  "fits_source_wire": false,
+  "hosted_requests": 0,
+  "interpretation": "Prior observations test codec capacity; actual future trajectories and complete experiment envelopes still require admission and validation.",
+  "kind": "prior_coding_trajectory_codec_component/v1",
+  "qualification": "unassessed_codec_component",
+  "raw_bytes": 2043862,
+  "raw_sha256": "b399e180e346235ae4816d5bb33d6124fc314190e32039934844c9c212caac16",
+  "source_cases": [
+    {
+      "arm": "disabled",
+      "id": "hgrecco-pint-652"
+    },
+    {
+      "arm": "reference",
+      "id": "hgrecco-pint-652"
+    },
+    {
+      "arm": "disabled",
+      "id": "hgrecco-pint-920"
+    },
+    {
+      "arm": "reference",
+      "id": "hgrecco-pint-920"
+    },
+    {
+      "arm": "disabled",
+      "id": "hgrecco-pint-948"
+    },
+    {
+      "arm": "reference",
+      "id": "hgrecco-pint-948"
+    }
+  ],
+  "source_wire_limit": 1048576,
+  "trajectory_occurrences": 8,
+  "unimplemented_syntax_prototypes": {
+    "complete_codec_or_decoder": false,
+    "tuple_and_line_body_encoded_bytes": 1051576,
+    "tuple_encoded_bytes": 1089346
+  }
+}

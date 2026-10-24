@@ -3,6 +3,7 @@ defmodule Lemieux.CLI.Learning.Recording do
   @behaviour Lemieux.Provider
   alias Lemieux.Contract
   alias Lemieux.Provider
+  alias Lemieux.Provider.Error
   alias Lemieux.Session.Accounting
   alias Lemieux.Usage
 
@@ -63,13 +64,50 @@ defmodule Lemieux.CLI.Learning.Recording do
         emit.(event)
       end)
 
+    if match?({:error, _}, result), do: record(state.meter, id, result)
+
     :ok =
       Agent.update(
         state.meter,
-        &Map.update!(&1, id, fn record -> Map.put(record, "terminal", true) end)
+        &Map.update!(&1, id, fn record ->
+          # A returned stream without final usage is unmeasured, not still
+          # running and not free. The shared allowance keeps admission closed.
+          status = if is_integer(record["tokens"]), do: "reported", else: "unknown"
+          Map.merge(record, %{"terminal" => true, "status" => status})
+        end)
       )
 
     result
+  end
+
+  defp record(meter, id, {:error, error}) do
+    code = Error.code(error)
+    code = if is_binary(code) and Regex.match?(~r/\A[a-z][a-z0-9_]{0,63}\z/, code), do: code
+
+    failure = %{
+      "category" => to_string(Error.category(error)),
+      "code" => code,
+      "http_status" => Error.http_status(error)
+    }
+
+    Agent.update(
+      meter,
+      &Map.update!(&1, id, fn record -> Map.put(record, "failure", failure) end)
+    )
+  end
+
+  defp record(meter, id, {:response_metadata, metadata}) do
+    raw = Contract.json(metadata)
+
+    selected =
+      raw
+      |> Map.take(~w(request_id requested_model resolved_model status))
+      |> Map.put("headers", Map.take(raw["headers"] || %{}, ~w(x-request-id x-openai-request-id)))
+
+    Agent.update(
+      meter,
+      &Map.update!(&1, id, fn record -> Map.put(record, "response_metadata", selected) end)
+    )
   end
 
   defp record(meter, id, {:usage, usage}) do

@@ -5,7 +5,7 @@ defmodule Lemieux.Learning.Controller.Checkpoint do
   @spec verify(recorded :: map(), job_id :: String.t(), maximum :: pos_integer()) ::
           :ok | {:error, term()}
   def verify(recorded, job_id, maximum) when is_map(recorded) do
-    with true <- byte_size(JSON.encode!(recorded)) <= 2_097_152,
+    with true <- byte_size(JSON.encode!(recorded)) <= 4_194_304,
          :ok <- Contract.verify_digest(recorded, "sha256"),
          %{"schema_version" => 1, "job_id" => ^job_id, "records" => records, "seen" => seen} <-
            recorded,

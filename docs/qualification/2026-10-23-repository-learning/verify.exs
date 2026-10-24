@@ -179,6 +179,61 @@ true = origin["episode"]["qualification_complete"]
 true = origin["episode"]["requests"] == 98 and origin["episode"]["tokens"] == 1_020_608
 true = origin["native_witness_hosted_requests"] == 0
 
+mechanism = read.("hosted-text-skill-mechanism-v5.json")
+true = mechanism["physical_requests"] == 639 and mechanism["tokens"] == 6_602_336
+true = mechanism["unknown_usage_requests"] == 0 and mechanism["execution_complete"]
+true = length(mechanism["rows"]) == 12 and mechanism["warmup_rows"] == 1
+true = mechanism["mechanism"]["status"] == "passed"
+true = length(mechanism["selected_skill_reads"]) == 6
+true = Enum.all?(mechanism["selected_skill_reads"], &(&1["selected_skill_reads"] > 0))
+
+for check <- ~w(profile_exercised helper_executed setting_exercised) do
+  false = mechanism["mechanism"]["required_checks"][check]
+  false = mechanism["mechanism"]["observed_checks"][check]
+end
+
+true = mechanism["research_endpoints"]["quality"] == "inconclusive"
+true = mechanism["research_endpoints"]["efficiency"] == "inconclusive"
+false = mechanism["adequately_powered"]
+false = mechanism["default_activation"]
+
+interrupted = read.("pint-calibration-v5-incomplete.json")
+true = interrupted["physical_requests"] == 5 and interrupted["known_tokens"] == 15_401
+true = interrupted["unknown_usage_requests"] == 1 and interrupted["zero_dispatch_rows"] == 5
+true = interrupted["unknown_token_rows"] == 6
+true = interrupted["status"] == "incomplete"
+nil = interrupted["baseline_success"]
+nil = interrupted["has_headroom"]
+nil = interrupted["tokens"]
+false = interrupted["execution_complete"]
+false = interrupted["raw_artifacts_modified"]
+
+amendment = read.("allowance-amendment-v2.json")
+
+true =
+  amendment["receipt"]["limits"] == %{
+    "max_requests" => 7500,
+    "max_tokens" => 100_000_000,
+    "max_time_ms" => 86_400_000
+  }
+
+:ok = Contract.verify_digest(amendment["receipt"], "sha256")
+true = amendment["deadline_ms"] == amendment["original_start_ms"] + 86_400_000
+true = amendment["physical_requests"] == 2323 and amendment["known_tokens"] == 26_773_752
+true = amendment["known_usage_requests"] == 2322 and amendment["unknown_usage_requests"] == 1
+true = amendment["records_unchanged"] and amendment["accounting_unchanged"]
+true = amendment["historical_checkpoint_bytes_unchanged"]
+true = amendment["admission"] == "blocked_usage_unknown"
+true = amendment["new_hosted_requests"] == 0
+nil = amendment["tokens"]
+
+capacity = read.("pint-source-capacity-component.json")
+true = capacity["complete_roundtrip"] and capacity["hosted_requests"] == 0
+true = capacity["encoded_bytes"] == 1_154_735
+true = capacity["encoded_bytes"] > capacity["source_wire_limit"]
+false = capacity["fits_source_wire"]
+false = capacity["unimplemented_syntax_prototypes"]["complete_codec_or_decoder"]
+
 IO.puts(
   "Public ancestry and learned-skill integrity checks passed; qualification remains unassessed."
 )

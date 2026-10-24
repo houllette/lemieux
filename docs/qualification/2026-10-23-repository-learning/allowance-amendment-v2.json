@@ -1,0 +1,36 @@
+{
+  "accounting_unchanged": true,
+  "admission": "blocked_usage_unknown",
+  "deadline_ms": 1792860504112,
+  "historical_checkpoint_bytes_sha256": "ffdd7f54dc0ee49406dc2137ba837efcfbedf0349f5ddef500060af71bafd84d",
+  "historical_checkpoint_bytes_unchanged": true,
+  "kind": "explicit_accumulated_allowance_amendment",
+  "known_tokens": 26773752,
+  "known_usage_requests": 2322,
+  "new_hosted_requests": 0,
+  "original_authorization_bytes_sha256": "b04603e0d01c3827bd750d1a2c15577c7f8e7de962f15cb6b4d07c6d25f5aded",
+  "original_deadline_ms": 1792817304112,
+  "original_start_ms": 1792774104112,
+  "physical_requests": 2323,
+  "receipt": {
+    "approval": "User approved expanded accumulated totals via call_277e48ac1894420ab53272c9bbf89161; all prior calls, failures and elapsed time remain counted.",
+    "approved_at_ms": 1792813057774,
+    "deadline_ms": 1792860504112,
+    "limits": {
+      "max_requests": 7500,
+      "max_time_ms": 86400000,
+      "max_tokens": 100000000
+    },
+    "previous_sha256": "e9de9fc4bf1d1ef93e0d2e9827866360623fb1929c58def5ba39a946751a9cdf",
+    "prior_checkpoint_sha256": "0470461f64121fc72004eec0f50ac0847258775840a2fff476c74b7228e608f4",
+    "prior_limits": {
+      "max_requests": 5000,
+      "max_time_ms": 43200000,
+      "max_tokens": 50000000
+    },
+    "sha256": "cfc65e3a16253e154480a05d13641cec28fbeac9f0f7251a2a617117b3957afa"
+  },
+  "records_unchanged": true,
+  "tokens": null,
+  "unknown_usage_requests": 1
+}

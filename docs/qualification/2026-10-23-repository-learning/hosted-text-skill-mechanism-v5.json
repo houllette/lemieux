@@ -1,0 +1,432 @@
+{
+  "adequately_powered": false,
+  "benefit": "unassessed",
+  "corpus": "developer_exposed_synthetic_graph_diagnostic",
+  "default_activation": false,
+  "editor": "openai_codex:gpt-6-astra/high",
+  "execution_complete": true,
+  "executor": "openai_codex:gpt-6.1-sol/high",
+  "independent_confirmation": "not_run",
+  "independent_streams": 1,
+  "inference_route": "codex_subscription",
+  "kind": "hosted_text_skill_mechanism",
+  "known_tokens": 6602336,
+  "known_usage_requests": 639,
+  "mechanism": {
+    "interpretation": "observed_dataflow_and_execution_not_causal_efficacy",
+    "observed_checks": {
+      "experience_withheld": true,
+      "helper_executed": false,
+      "observed_lesson_to_execution": true,
+      "procedure_exercised": true,
+      "profile_exercised": false,
+      "retained_seed_lessons": true,
+      "setting_exercised": false
+    },
+    "required_checks": {
+      "experience_withheld": true,
+      "helper_executed": false,
+      "observed_lesson_to_execution": true,
+      "procedure_exercised": true,
+      "profile_exercised": false,
+      "retained_seed_lessons": true,
+      "setting_exercised": false
+    },
+    "sha256": "6857a40b6bb8ee84f525802db49c827c7d75bab6e1decab20905ba97832ce72b",
+    "status": "passed"
+  },
+  "physical_requests": 639,
+  "plan_sha256": "26da24141ddda2bca7266019d38dccfa5bfedea32af450784d8ea2d0db065215",
+  "raw_artifacts_modified": false,
+  "research_endpoints": {
+    "comparisons": {
+      "disabled": {
+        "candidate_requests_including_acquisition": 186,
+        "control_requests": 21,
+        "efficiency": {
+          "alpha_per_comparison": 0.008333333333333333,
+          "clusters": 1,
+          "discordant_win_probability_interval": [
+            0.0,
+            0.9958333333333331
+          ],
+          "effect": -1.0,
+          "interval_estimand": "win_probability_conditional_on_discordance",
+          "method": "exact_one_sided_mcnemar_independent_streams",
+          "p_value": 1.0,
+          "regression_rate": 1.0,
+          "regressions": 1,
+          "ties": 0,
+          "wins": 0
+        },
+        "efficiency_supported": false,
+        "paired_success_fraction": 1.0,
+        "quality": {
+          "alpha_per_comparison": 0.008333333333333333,
+          "clusters": 1,
+          "discordant_win_probability_interval": [
+            0.0,
+            1.0
+          ],
+          "effect": 0.0,
+          "interval_estimand": "win_probability_conditional_on_discordance",
+          "method": "exact_one_sided_mcnemar_independent_streams",
+          "p_value": 1.0,
+          "regression_rate": 0.0,
+          "regressions": 0,
+          "ties": 1,
+          "wins": 0
+        },
+        "quality_regression_upper_bound": 0.9916666666666667,
+        "quality_supported": false,
+        "total_request_saving": -7.857142857142858
+      },
+      "no_experience": {
+        "candidate_requests_including_acquisition": 186,
+        "control_requests": 194,
+        "efficiency": {
+          "alpha_per_comparison": 0.008333333333333333,
+          "clusters": 1,
+          "discordant_win_probability_interval": [
+            0.0,
+            1.0
+          ],
+          "effect": 0.0,
+          "interval_estimand": "win_probability_conditional_on_discordance",
+          "method": "exact_one_sided_mcnemar_independent_streams",
+          "p_value": 1.0,
+          "regression_rate": 0.0,
+          "regressions": 0,
+          "ties": 1,
+          "wins": 0
+        },
+        "efficiency_supported": false,
+        "paired_success_fraction": 1.0,
+        "quality": {
+          "alpha_per_comparison": 0.008333333333333333,
+          "clusters": 1,
+          "discordant_win_probability_interval": [
+            0.0,
+            1.0
+          ],
+          "effect": 0.0,
+          "interval_estimand": "win_probability_conditional_on_discordance",
+          "method": "exact_one_sided_mcnemar_independent_streams",
+          "p_value": 1.0,
+          "regression_rate": 0.0,
+          "regressions": 0,
+          "ties": 1,
+          "wins": 0
+        },
+        "quality_regression_upper_bound": 0.9916666666666667,
+        "quality_supported": false,
+        "total_request_saving": 0.04123711340206182
+      },
+      "retry": {
+        "candidate_requests_including_acquisition": 186,
+        "control_requests": 21,
+        "efficiency": {
+          "alpha_per_comparison": 0.008333333333333333,
+          "clusters": 1,
+          "discordant_win_probability_interval": [
+            0.0,
+            0.9958333333333331
+          ],
+          "effect": -1.0,
+          "interval_estimand": "win_probability_conditional_on_discordance",
+          "method": "exact_one_sided_mcnemar_independent_streams",
+          "p_value": 1.0,
+          "regression_rate": 1.0,
+          "regressions": 1,
+          "ties": 0,
+          "wins": 0
+        },
+        "efficiency_supported": false,
+        "paired_success_fraction": 1.0,
+        "quality": {
+          "alpha_per_comparison": 0.008333333333333333,
+          "clusters": 1,
+          "discordant_win_probability_interval": [
+            0.0,
+            1.0
+          ],
+          "effect": 0.0,
+          "interval_estimand": "win_probability_conditional_on_discordance",
+          "method": "exact_one_sided_mcnemar_independent_streams",
+          "p_value": 1.0,
+          "regression_rate": 0.0,
+          "regressions": 0,
+          "ties": 1,
+          "wins": 0
+        },
+        "quality_regression_upper_bound": 0.9916666666666667,
+        "quality_supported": false,
+        "total_request_saving": -7.857142857142858
+      }
+    },
+    "efficiency": "inconclusive",
+    "efficiency_power": "not_estimated_no_quality_power_claim_for_efficiency",
+    "independent_confirmation": false,
+    "interpretation": "conditional_on_registered_scope_not_a_cross_domain_or_release_claim",
+    "kind": "research_endpoints",
+    "mechanics": "passed",
+    "mechanism_exercised": true,
+    "plan_sha256": "26da24141ddda2bca7266019d38dccfa5bfedea32af450784d8ea2d0db065215",
+    "policy": {
+      "id": "separate_quality_efficiency/v1",
+      "maximum_quality_regression": 0.1,
+      "minimum_paired_success_fraction": 0.8,
+      "minimum_request_saving": 0.2,
+      "primary_tests": 6
+    },
+    "quality": "inconclusive",
+    "quality_power": {
+      "all_three_lower_bound": 0.0,
+      "alpha_per_test": 0.008333333333333333,
+      "assumptions": {
+        "desired_power": 0.8,
+        "loss_probability": 0.05,
+        "maximum_latency_ratio": 10,
+        "maximum_regression_rate": 0.1,
+        "maximum_request_ratio": 8,
+        "method": "exact_paired_stream_success",
+        "minimum_effect": 0.1,
+        "win_probability": 0.25
+      },
+      "clusters": 1,
+      "method": "exact_multinomial_union_bound_three_quality_tests",
+      "per_comparison": 0.0
+    },
+    "schema_version": 1,
+    "sha256": "ae225da733f6a43ac0590e33f36be72b93580071f88bbf969aea02bf172f93f4"
+  },
+  "roles": {
+    "asset_critic": {
+      "known_tokens": 355118,
+      "requests": 6,
+      "unknown_requests": 0
+    },
+    "asset_proposer": {
+      "known_tokens": 356038,
+      "requests": 6,
+      "unknown_requests": 0
+    },
+    "probe": {
+      "known_tokens": 2670916,
+      "requests": 404,
+      "unknown_requests": 0
+    },
+    "reflection": {
+      "known_tokens": 1874269,
+      "requests": 9,
+      "unknown_requests": 0
+    },
+    "task": {
+      "known_tokens": 1345995,
+      "requests": 214,
+      "unknown_requests": 0
+    }
+  },
+  "rows": [
+    {
+      "arm": "disabled",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "9e6f5e2c0da790c08f9a0dd9469b2ea5c67f21b163d148fb7597e04937996be4",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 9,
+      "task_id": "development-graph-2",
+      "tokens": 45880
+    },
+    {
+      "arm": "retrieval",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "7e5c449245a6795f5c1b9cbfddfaef31425bffa5c51f4e4d4c3c57b80e690161",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 11,
+      "task_id": "development-graph-2",
+      "tokens": 126691
+    },
+    {
+      "arm": "retry",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "d3795fdb66403d447b5ba7b4e53bc0e232b00666dee4414a27d9ad6b18314041",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 9,
+      "task_id": "development-graph-2",
+      "tokens": 52436
+    },
+    {
+      "arm": "frozen",
+      "asset_application_count": 1,
+      "asset_restoration_count": 1,
+      "evidence_sha256": "cb1d0505a506bbdfc3e275ee998c2513362a4cd15590a8250544f450fc086bee",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 98,
+      "task_id": "development-graph-2",
+      "tokens": 1020608
+    },
+    {
+      "arm": "updating",
+      "asset_application_count": 1,
+      "asset_restoration_count": 1,
+      "evidence_sha256": "aa4969545115ee8504d286dd5a49cc7e34fa89c61ed682daea36438575835665",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 92,
+      "task_id": "development-graph-2",
+      "tokens": 947234
+    },
+    {
+      "arm": "no_experience",
+      "asset_application_count": 1,
+      "asset_restoration_count": 1,
+      "evidence_sha256": "6fb8bc51af60cc387522e99491622ee389a1154e265455c690ea8dca1ccf0a58",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 97,
+      "task_id": "development-graph-2",
+      "tokens": 968306
+    },
+    {
+      "arm": "retrieval",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "430dcf2481b5ada36c16b878104e9be977c0efa49a0a7f2a70f0baa758bb761a",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 11,
+      "task_id": "development-graph-2",
+      "tokens": 123029
+    },
+    {
+      "arm": "retry",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "05fa149cc5abdc59573e4efd059e7e8c29ccc4aa193f2c0613a88344c9fd8d27",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 12,
+      "task_id": "development-graph-2",
+      "tokens": 76876
+    },
+    {
+      "arm": "frozen",
+      "asset_application_count": 1,
+      "asset_restoration_count": 1,
+      "evidence_sha256": "3bc06fd5e94506d0f7851ba58fe099d3077426e10d340e09f657f8a0a3a2199c",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 97,
+      "task_id": "development-graph-2",
+      "tokens": 1140452
+    },
+    {
+      "arm": "updating",
+      "asset_application_count": 1,
+      "asset_restoration_count": 1,
+      "evidence_sha256": "f375d4928c525161039ef4a7d9d9893f68d11441aaf671251d8607718a15f016",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 81,
+      "task_id": "development-graph-2",
+      "tokens": 880386
+    },
+    {
+      "arm": "no_experience",
+      "asset_application_count": 1,
+      "asset_restoration_count": 1,
+      "evidence_sha256": "00bef4d9955a14f2ec1ce7560448bda3a4359680800c33ca9f3e65e5443f1206",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 97,
+      "task_id": "development-graph-2",
+      "tokens": 1015008
+    },
+    {
+      "arm": "disabled",
+      "asset_application_count": 0,
+      "asset_restoration_count": 0,
+      "evidence_sha256": "558746760e8390c8a2cf3b5e4a85f98e056a78d00697cfd671868258434fbe60",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 2,
+      "requests": 12,
+      "task_id": "development-graph-2",
+      "tokens": 67698
+    }
+  ],
+  "schema_version": 1,
+  "selected_skill_reads": [
+    {
+      "arm": "updating",
+      "repetition": 1,
+      "selected_skill_reads": 1
+    },
+    {
+      "arm": "no_experience",
+      "repetition": 2,
+      "selected_skill_reads": 1
+    },
+    {
+      "arm": "updating",
+      "repetition": 2,
+      "selected_skill_reads": 1
+    },
+    {
+      "arm": "frozen",
+      "repetition": 2,
+      "selected_skill_reads": 1
+    },
+    {
+      "arm": "frozen",
+      "repetition": 1,
+      "selected_skill_reads": 1
+    },
+    {
+      "arm": "no_experience",
+      "repetition": 1,
+      "selected_skill_reads": 1
+    }
+  ],
+  "source_evidence_bytes_sha256": [
+    "aa4969545115ee8504d286dd5a49cc7e34fa89c61ed682daea36438575835665",
+    "00bef4d9955a14f2ec1ce7560448bda3a4359680800c33ca9f3e65e5443f1206",
+    "d3795fdb66403d447b5ba7b4e53bc0e232b00666dee4414a27d9ad6b18314041",
+    "f375d4928c525161039ef4a7d9d9893f68d11441aaf671251d8607718a15f016",
+    "7e5c449245a6795f5c1b9cbfddfaef31425bffa5c51f4e4d4c3c57b80e690161",
+    "3bc06fd5e94506d0f7851ba58fe099d3077426e10d340e09f657f8a0a3a2199c",
+    "cb1d0505a506bbdfc3e275ee998c2513362a4cd15590a8250544f450fc086bee",
+    "6fb8bc51af60cc387522e99491622ee389a1154e265455c690ea8dca1ccf0a58",
+    "558746760e8390c8a2cf3b5e4a85f98e056a78d00697cfd671868258434fbe60",
+    "05fa149cc5abdc59573e4efd059e7e8c29ccc4aa193f2c0613a88344c9fd8d27",
+    "1b8cc6d9c230705227b7aa3be41d03f60154eedb23324735511ae4d07ac3a1d6",
+    "9e6f5e2c0da790c08f9a0dd9469b2ea5c67f21b163d148fb7597e04937996be4",
+    "430dcf2481b5ada36c16b878104e9be977c0efa49a0a7f2a70f0baa758bb761a"
+  ],
+  "source_mechanism_bytes_sha256": "60e8a98e652fb613919eaef88907ef132696522e82304e84221baac1fff48c12",
+  "source_plan_bytes_sha256": "0d6554f3d21669bde6c782d474108152404bffc8a7d969d2971533419a6519e6",
+  "source_report_bytes_sha256": "b3a76992e5aa65438d9b3eb33f05449f216fd932c084ebd56004520620d37fdd",
+  "source_revision": "9099669c1f18fc2ff22e6cc2ef421d2432e18ade",
+  "task_horizon": 12,
+  "tokens": 6602336,
+  "unknown_usage_requests": 0,
+  "warmup_rows": 1
+}
