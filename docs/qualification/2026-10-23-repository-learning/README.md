@@ -434,3 +434,20 @@ Protocol v6 registers the new format before hosted work. It requires a new
 matching hosted mechanism and calibration before the larger study. The previous
 v5 hosted receipt cannot satisfy its changed binding. No v6 hosted request or
 independent confirmation is included in this packet.
+
+## Explicit reserve for the interrupted task
+
+The [approved reserve](approved-usage-reserve.json) records the user's explicit
+authorization to charge 2,000,000 tokens from the existing 100-million-token
+allowance for the single unmeasured Pint task call. Its actual usage and original
+record remain unknown and unchanged. The 26,773,752 known tokens plus this
+reserve produce a separate 28,773,752-token admission charge. All 2,323 request
+charges, the original checkpoint bytes, limits and October 24 16:48:24.112 UTC
+deadline remain intact. Applying the reserve sent no hosted request and did not
+qualify or rescore the failed calibration.
+
+The receipt binds that exact unknown task record. A future unmeasured call has
+no reserve and closes admission again. Checkpoint version two separates actual
+usage from the conservative budget charge and refuses older readers. Tests cover
+restart, unchanged history, expired deadlines, existing token limits, stale or
+duplicate approval, record tampering, wrong roles and a subsequent unknown call.

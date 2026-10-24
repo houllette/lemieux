@@ -3,6 +3,7 @@ defmodule Lemieux.CLI.Learning.StudyRegistration do
   alias Lemieux.CLI.Learning.Installation
   alias Lemieux.CLI.Learning.Journal
   alias Lemieux.Contract
+  alias Lemieux.Learning.Controller.Accounting
   alias Lemieux.Learning.Controller.Checkpoint
 
   @maximum 8_388_608
@@ -158,12 +159,90 @@ defmodule Lemieux.CLI.Learning.StudyRegistration do
   defp registered(_directory, _registration, _current),
     do: {:error, :study_allowance_changed_or_invalid}
 
+  @spec reserve_unknown(
+          directory :: Path.t(),
+          limits :: keyword(),
+          id :: String.t(),
+          tokens :: pos_integer(),
+          approval :: String.t()
+        ) :: {:ok, map()} | {:error, term()}
+  def reserve_unknown(directory, limits, id, tokens, approval) do
+    path = Path.join(directory, "authorization.json")
+    current = Contract.json(Map.new(limits))
+
+    with true <- is_binary(approval) and byte_size(approval) in 1..2048,
+         true <- is_integer(tokens) and tokens > 0 and tokens <= current["max_tokens"],
+         {:ok, registration} <- read(path),
+         {:ok, checkpoint} <- registered(directory, registration, current),
+         true <- is_nil(checkpoint["stop"]),
+         record when is_map(record) <- checkpoint["records"][id],
+         reserves = Map.get(checkpoint, "token_reserves", %{}),
+         false <- Map.has_key?(reserves, id) do
+      receipt =
+        Journal.seal(%{
+          "id" => id,
+          "record_sha256" => Contract.digest(record),
+          "tokens" => tokens,
+          "approval" => approval,
+          "approved_at_ms" => System.system_time(:millisecond),
+          "prior_checkpoint_sha256" => checkpoint["sha256"]
+        })
+
+      reserves = Map.put(reserves, id, receipt)
+
+      original =
+        Map.get(registration, "original", %{
+          "authorization" => registration,
+          "checkpoint_sha256" => checkpoint["sha256"],
+          "deadline_ms" => checkpoint["deadline_ms"]
+        })
+
+      checkpoint =
+        checkpoint
+        |> Map.put("schema_version", 2)
+        |> Map.put("token_reserves", reserves)
+        |> Map.put(
+          "budget_tokens",
+          Accounting.budget_tokens(checkpoint["records"], checkpoint["initial_tokens"], reserves)
+        )
+        |> Journal.seal()
+
+      envelope = %{
+        "schema_version" => 2,
+        "original" => original,
+        "amendments" => Map.get(registration, "amendments", []),
+        "current_limits" => current,
+        "checkpoint" => checkpoint
+      }
+
+      with true <- Accounting.valid_reserves?(reserves, checkpoint["records"]),
+           :ok <- verify(checkpoint, directory, current),
+           :ok <- checkpoint_write(path, envelope, checkpoint) do
+        {:ok, receipt}
+      else
+        _invalid -> {:error, :invalid_usage_reserve}
+      end
+    else
+      _invalid -> {:error, :invalid_usage_reserve}
+    end
+  rescue
+    _invalid in [
+      ArgumentError,
+      ArithmeticError,
+      BadMapError,
+      FunctionClauseError,
+      KeyError,
+      Protocol.UndefinedError
+    ] ->
+      {:error, :invalid_usage_reserve}
+  end
+
   defp amendments(registration) do
     original = registration["original"]
     authorization = original["authorization"]
     receipts = registration["amendments"]
 
-    if is_list(receipts) and length(receipts) in 1..32 do
+    if is_list(receipts) and length(receipts) in 0..32 do
       Enum.reduce_while(
         receipts,
         {:ok, authorization["limits"], original["deadline_ms"], authorization["sha256"]},

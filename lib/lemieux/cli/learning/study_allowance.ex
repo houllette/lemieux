@@ -6,7 +6,9 @@ defmodule Lemieux.CLI.Learning.StudyAllowance do
   One exclusive owner checkpoints the controller and its outer request ledger
   together before dispatch. Reopening restores consumed requests, token usage
   and the original wall-clock deadline. Unknown or interrupted work closes
-  admission; it is never replayed or reset by starting another stage.
+  admission unless a host explicitly approves a separate conservative reserve
+  for that exact quota task request. Actual usage stays unknown; starting
+  another stage never replays, resets or treats the call as free.
 
   The directory contains accounting only, never credentials or provider state.
   A stale lock or partial checkpoint requires inspection. This helper grants no
@@ -112,6 +114,47 @@ defmodule Lemieux.CLI.Learning.StudyAllowance do
     else
       _refused -> {:error, :study_amendment_unavailable}
     end
+  end
+
+  @doc """
+  Charges an explicitly approved budget reserve for one unmeasured task request.
+
+  This never supplies measured usage or qualifies the failed task. Its immutable
+  receipt binds the exact unknown record. A version-two controller checkpoint
+  keeps actual accounting separate from admission's conservative token total;
+  old readers refuse it. Quota mode, finite existing limits, the original
+  deadline, all request charges and unknown records remain intact. A subsequent
+  unmeasured request has no reserve and closes admission again.
+  """
+  @spec reserve_unknown(
+          directory :: Path.t(),
+          limits :: keyword(),
+          id :: String.t(),
+          tokens :: pos_integer(),
+          approval :: String.t()
+        ) :: {:ok, map()} | {:error, term()}
+  def reserve_unknown(directory, limits, id, tokens, approval) do
+    directory = Path.expand(directory)
+    lock = Path.join(directory, "owner.lock")
+
+    with true <- valid_limits?(limits),
+         :ok <- Journal.safe(directory),
+         :ok <- File.mkdir(lock) do
+      try do
+        StudyRegistration.reserve_unknown(directory, limits, id, tokens, approval)
+      after
+        File.rmdir(lock)
+      end
+    else
+      _refused -> {:error, :study_reserve_unavailable}
+    end
+  end
+
+  @doc "Known usage plus separately approved conservative reserves, or nil when admission is uncertain."
+  @spec admission_tokens(handle :: t()) :: non_neg_integer() | nil
+  def admission_tokens(handle) do
+    checkpoint = snapshot(handle)
+    Map.get(checkpoint, "budget_tokens", checkpoint["accounting"]["tokens"])
   end
 
   @spec provider(handle :: t(), role :: atom(), provider :: Lemieux.Provider.t()) ::
