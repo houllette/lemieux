@@ -127,6 +127,14 @@ rejected probes and uncertainty; each retained hypothesis cites checked JSON
 pointers into its source bytes. Interpretation remains unconfirmed. Reflection
 uses the episode's allowance, and an empty result is a legitimate abstention.
 Private confirmation grades never enter reflection, proposal or selection.
+Records beyond the 1 MiB source-wire bound can share repeated complete
+observations and text through `lossless_shared_text/v1`. Every occurrence stays
+in its original trajectory position. Expansion must reproduce the complete
+original digest and canonical encoding, within a separate 8 MiB expansion
+ceiling. Missing, altered, cyclic and unused injected references are refused.
+The host retains both the original record and the compact source actually
+cited by the reflector. Unrepeated oversized records still abstain before a
+model call; no conversational or tool-result bytes are truncated to fit.
 All conversational and tool-result bytes survive the trajectory projection;
 repeated request/catalog accounting metadata is represented by hashed references
 to the retained full observations. Research retrieval explicitly allows larger,

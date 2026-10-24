@@ -1,0 +1,34 @@
+{
+  "all_physical_usage_known": true,
+  "allowance_lock_removed": true,
+  "artifacts_sha256": {
+    "operator-stop-request.json": "a2dc959793523df7222dd1c1009905c65281be017c7154ccc9391ebe4daac894",
+    "plan.json": "8a8cc367efdad3a29a0b9c8618dbe530349bb40c7eb7c1a6b74fbd6842657a65",
+    "registration.json": "56a48808e0f7e0f0f13f68397b21d73afdf2abf77c856f087e3bab3cfc1a8bee",
+    "report.json": "dddaeaa3b19cb9d0ef545a47259fe936d8860a8d9bf1f9ace44ecee55cb7cfad"
+  },
+  "asset_applications": 1,
+  "asset_restorations": 1,
+  "auth_loan_removed": true,
+  "candidate_kinds": [
+    "skill"
+  ],
+  "efficacy": "unassessed_operator_intervened_in_failed_scope",
+  "incomplete_qualification_rows": 1,
+  "kind": "complete_record_source_bound_failure/v1",
+  "operator_action": "learning_opt_out_after_first_incomplete_row_admitted_experiment_finished_before_later_learning_was_withheld",
+  "passing_artifacts": 13,
+  "profile_applications": 1,
+  "registered_source_bound": 1048576,
+  "rejected_input_sources": [
+    {
+      "bytes": 1261606,
+      "sha256": "97ee161d3335c06b9682e10acc822ba0e7edbe0f1ff45d27b00e53c61e0ff95c"
+    }
+  ],
+  "rows_including_seed": 13,
+  "schema_version": 1,
+  "scope_physical_requests": 395,
+  "scope_tokens": 2972660,
+  "source_revision": "609d7197b6b482a0556401f4af67973846598b51"
+}
