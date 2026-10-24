@@ -3,6 +3,8 @@
 # host authority, runtime qualification or permission to activate the asset.
 alias Lemieux.Contract
 alias Lemieux.Learning.Asset
+alias Lemieux.Learning.Asset.Source
+alias Lemieux.Learning.Extension.Export
 
 read = fn name ->
   __DIR__ |> Path.join(name) |> File.read!() |> JSON.decode!()
@@ -93,6 +95,89 @@ stock = read.("stock-live-supplement.json")
 true = stock["rows"] == 8 and stock["qualification_complete_rows"] == 8
 true = stock["physical_requests"] == 70
 true = stock["benefit"] == "unassessed"
+
+fresh = read.("fresh-repository-calibration-v4.json")
+true = fresh["physical_requests"] == 220 and fresh["tokens"] == 4_459_923
+true = fresh["all_rows_complete_and_known"]
+true = length(fresh["rows"]) == 12
+true = fresh["task_request_horizon"] == 48
+true = fresh["benefit"] == "not_tested" and fresh["independent_confirmation"] == "not_run"
+
+packet = "native-learned-skill-review"
+native = read.(packet <> "/review.json")
+origin = read.(packet <> "/origin.json")
+package = Path.join([__DIR__, packet, "package"])
+:ok = Contract.verify_digest(native, "sha256")
+:ok = Export.verify(package)
+inventory = read.(packet <> "/package/lemieux-extension-export.json")
+true = inventory["sha256"] == native["package_sha256"]
+true = inventory["qualification"] == "unassessed"
+true = origin["review_file_sha256"] == file_digest.(packet <> "/review.json")
+true = native["driver_sha256"] == file_digest.(packet <> "/driver-v1.ex.txt")
+
+# These reconstructed contexts check archived data only. No imported scope,
+# binding, digest or critic decision is receiving-host permission.
+archival_context = fn document ->
+  %{
+    scope: document["content"]["scope"],
+    binding: document["content"]["binding"],
+    trust: "repository",
+    tools: ~w(read write edit bash glob),
+    description_tools: [],
+    settings_allowlist: [],
+    helper_extensions: [],
+    approved_digests: []
+  }
+end
+
+original_document = read.(packet <> "/package/priv/original/asset.json")
+derived_document = read.(packet <> "/package/priv/learned/asset.json")
+
+{:ok, original, _original_files} =
+  Source.read(Path.join(package, "priv/original"), archival_context.(original_document))
+
+{:ok, derived, _derived_files} =
+  Source.read(Path.join(package, "priv/learned"), archival_context.(derived_document))
+
+{:error, _changed_scope} =
+  Source.read(Path.join(package, "priv/original"), archival_context.(derived_document))
+
+true = original.content["files"] == derived.content["files"]
+true = original.id != derived.id and original.digest != derived.digest
+true = derived.content["scope"]["id"] == "learned-skill-witness-example"
+true = original.content["qualification"] == "unconfirmed"
+true = derived.content["qualification"] == "unconfirmed"
+provenance = read.(packet <> "/package/priv/provenance.json")
+true = provenance == native["provenance"]
+true = provenance["original_asset_id"] == original.id
+true = provenance["original_asset_sha256"] == original.digest
+true = provenance["original_created_at"] == DateTime.to_iso8601(original.created_at)
+true = provenance["derived_asset_id"] == derived.id
+true = provenance["derived_asset_sha256"] == derived.digest
+false = provenance["qualification_inherited"]
+false = provenance["host_authority_exported"]
+
+bytes = original.content["files"]["SKILL.md"]
+expected = %{"skill_sha256" => Contract.sha256(bytes), "source_bytes" => byte_size(bytes)}
+true = byte_size(bytes) == 4706
+true = native["applied"]["witness"] == expected
+true = native["installed_consumer"]["witness"] == expected
+true = native["applied"]["assets"] == native["installed_consumer"]["resolved_assets"]
+[%{"id" => id, "sha256" => digest}] = native["applied"]["assets"]
+true = id == derived.id and digest == derived.digest
+true = native["before"]["witness"] == %{"skill_sha256" => nil, "source_bytes" => 0}
+true = native["before"]["witness"] == native["after_undo"]["witness"]
+true = native["before"]["assets"] == [] and native["after_undo"]["assets"] == []
+true = native["before"]["frozen_build_sha256"] == native["after_undo"]["frozen_build_sha256"]
+true = Enum.all?(~w(before applied after_undo), &native[&1]["harness_restored"])
+true = native["installed_consumer"]["rolled_back"]
+true = native["qualification"] == "unassessed" and native["hosted_requests"] == 0
+true = native["independent_confirmation"] == "not_run"
+false = native["production_active"]
+false = origin["human_release_approval"]
+true = origin["episode"]["qualification_complete"]
+true = origin["episode"]["requests"] == 98 and origin["episode"]["tokens"] == 1_020_608
+true = origin["native_witness_hosted_requests"] == 0
 
 IO.puts(
   "Public ancestry and learned-skill integrity checks passed; qualification remains unassessed."

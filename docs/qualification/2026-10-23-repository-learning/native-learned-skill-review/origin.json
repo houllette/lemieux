@@ -1,0 +1,32 @@
+{
+  "asset_search_receipt_sha256": "ba45a7c344e507317c4b9afa5e1b661748b314c9daaf106da824f9e238eba718",
+  "editor": {
+    "effort": "high",
+    "model": "openai_codex:gpt-6-astra"
+  },
+  "episode": {
+    "arm": "frozen",
+    "asset_application_count": 1,
+    "passed": true,
+    "qualification_complete": true,
+    "repetition": 1,
+    "requests": 98,
+    "task_id": "development-graph-2",
+    "tokens": 1020608
+  },
+  "episode_evidence_sha256": "cb1d0505a506bbdfc3e275ee998c2513362a4cd15590a8250544f450fc086bee",
+  "executor": {
+    "effort": "high",
+    "model": "openai_codex:gpt-6.1-sol"
+  },
+  "full_hosted_scope": "in_progress_when_packet_created",
+  "human_release_approval": false,
+  "independent_confirmation": "not_run",
+  "kind": "actual_hosted_learned_source_origin/v1",
+  "native_witness_hosted_requests": 0,
+  "qualification": "unassessed_single_completed_development_episode",
+  "review_file_sha256": "f301d1bc7f2afd5f9ea4717ededb8fa6032d74c12d7de469cb7db1e49a90d23d",
+  "source_plan_sha256": "26da24141ddda2bca7266019d38dccfa5bfedea32af450784d8ea2d0db065215",
+  "source_protocol": "whole_record_research/v5",
+  "source_revision": "9099669c1f18fc2ff22e6cc2ef421d2432e18ade"
+}
