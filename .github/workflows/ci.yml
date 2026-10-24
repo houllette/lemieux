@@ -337,6 +337,7 @@ jobs:
           - {example: builder, path: examples/extensions/builder}
           - {example: capture, path: examples/extensions/capture}
           - {example: computer_use, path: examples/extensions/computer_use}
+          - {example: learned_skill_witness, path: examples/extensions/learned_skill_witness}
           - {example: portable_procedure, path: examples/extensions/portable_procedure}
           - {example: research, path: examples/extensions/research}
           - {example: review, path: examples/extensions/review}

@@ -304,3 +304,24 @@ The original combined protocol still requires every declared mechanism.
 Empty or rejected candidate sets retain a baseline without paid task probes.
 Explicit `file: "SKILL.md"` and the skill tool's default-file invocation both
 count as reading the actual procedure. New kinds remain disabled by default.
+
+## Fresh repository calibration and an actual learned native package
+
+The [six-case fresh repository calibration](fresh-repository-calibration-v4.json)
+retains 220 calls and 4,459,923 tokens with complete known usage. Typesystem's
+three baselines pass, so it is a ceiling for this executor. Pint passes two of
+three; both the disabled and reference arms fail the private outcome on case
+948. The original metadata ordering selects Pint for a matching-runtime
+calibration before a larger study. This is difficulty and cost evidence from
+the earlier v4 runtime, without an improver or efficacy claim.
+
+The [actual learned native packet](native-learned-skill-review/README.md)
+contains a selected Astra/high text skill from one completed v5 mechanism
+episode. It preserves the original source and creation timestamp, explicitly
+derives a new unconfirmed receiving-scope identity, exports the native project
+and installs it in a fresh Mix consumer. The real skill tool returns all 4,706
+bytes to a fixed Scripted witness; removing the adaptation restores the
+baseline exactly. Both identities, complete files, provenance, frozen-build
+digests and consumer results are retained. The packet remains unassessed:
+independent effectiveness, per-kind defaults and CodeGate qualification are
+still pending.

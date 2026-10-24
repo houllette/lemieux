@@ -211,14 +211,20 @@ defmodule Lemieux.Subagent.ProgressTest do
     end
 
     test "is the only clock when checks are off", ctx do
-      child = reading(~w(a), gate: nil, then: [])
+      child = reading(~w(a), gate: self(), then: [])
 
-      {group, _child_ref} =
+      {group, child_ref} =
         fan_out(ctx, child, progress: [assess: false], progress_interval: 50, timeout: 5_000)
+
+      gated = wait_for_gate(child_ref.id, 1)
 
       # No time passes on the manual clock, so the one clock armed is exactly
       # what is left of the group's five seconds.
       assert %{message: {:child_clock, _child_id}, due_in: 5_000} = armed(ctx, group)
+
+      # Finish the child before teardown stops its linked Scripted provider.
+      send(gated, :release)
+      assert {:ok, %{status: :ok}} = Subagent.await(child_ref, 5_000)
     end
 
     test "the spawn intent records both clocks and who decides", ctx do
