@@ -1,0 +1,132 @@
+{
+  "all_rows_complete_and_known": true,
+  "benefit": "not_tested",
+  "current_runtime_qualification": "v5_matching_calibration_required_before_larger_study",
+  "decisions": {
+    "encode-typesystem": "ceiling_3_of_3_baselines_pass_skip_without_selecting_on_treatment_gain",
+    "hgrecco-pint": "2_of_3_baselines_pass_private_failure_on_948_provides_headroom_both_reference_and_disabled_fail_948"
+  },
+  "executor": "openai_codex:gpt-6.1-sol/high",
+  "improver_exercised": false,
+  "independent_confirmation": "not_run",
+  "kind": "fresh_repository_difficulty_calibration/v1",
+  "physical_requests": 220,
+  "qualification": "development_calibration_only",
+  "rows": [
+    {
+      "arm": "disabled",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 13,
+      "task_id": "encode-typesystem-16",
+      "tokens": 179520
+    },
+    {
+      "arm": "reference",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 21,
+      "task_id": "encode-typesystem-16",
+      "tokens": 426474
+    },
+    {
+      "arm": "disabled",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 11,
+      "task_id": "encode-typesystem-65",
+      "tokens": 112270
+    },
+    {
+      "arm": "reference",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 12,
+      "task_id": "encode-typesystem-65",
+      "tokens": 157606
+    },
+    {
+      "arm": "disabled",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 20,
+      "task_id": "encode-typesystem-122",
+      "tokens": 370453
+    },
+    {
+      "arm": "reference",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 25,
+      "task_id": "encode-typesystem-122",
+      "tokens": 583362
+    },
+    {
+      "arm": "disabled",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 19,
+      "task_id": "hgrecco-pint-652",
+      "tokens": 307973
+    },
+    {
+      "arm": "reference",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 19,
+      "task_id": "hgrecco-pint-652",
+      "tokens": 458246
+    },
+    {
+      "arm": "disabled",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 18,
+      "task_id": "hgrecco-pint-920",
+      "tokens": 393958
+    },
+    {
+      "arm": "reference",
+      "passed": true,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 16,
+      "task_id": "hgrecco-pint-920",
+      "tokens": 349779
+    },
+    {
+      "arm": "disabled",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 26,
+      "task_id": "hgrecco-pint-948",
+      "tokens": 673634
+    },
+    {
+      "arm": "reference",
+      "passed": false,
+      "qualification_complete": true,
+      "repetition": 1,
+      "requests": 20,
+      "task_id": "hgrecco-pint-948",
+      "tokens": 446648
+    }
+  ],
+  "runtime_protocol": "whole_record_research/v4",
+  "selection_policy": "metadata_order_frozen_before_outcomes",
+  "source_plan_sha256": "ac727f254b024233490a4e1a1d1ad5223d81a5f5dd7345ab86a24734d0087b5a",
+  "source_report_sha256": "98db47867cd028e5aad041368d4c36f4a4c701d250b5c514c9d8c500a55363bd",
+  "source_revision": "a6d1015fa8e2a60ba294b371787abb7998290ba8",
+  "task_request_horizon": 48,
+  "tokens": 4459923
+}

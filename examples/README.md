@@ -36,7 +36,7 @@ it depends on `lemieux` from Hex (`~> 0.9`). Inside the checkout, point it at
 your working copy first: `export LEMIEUX_EXTENSION_BASE="$PWD"` from the
 repository root. Where an example's own scripts call a model, you name it as
 `provider:model` in `LMX_MODEL` (`RESEARCH_MODEL` for the research benches).
-`portable_procedure` uses unreleased APIs and currently requires the checkout;
+`portable_procedure` and `learned_skill_witness` use unreleased APIs and currently require the checkout;
 its own README describes that dependency and the entirely scripted workflow.
 
 One thing to know about that switch:
@@ -56,6 +56,7 @@ One thing to know about that switch:
 | [`extensions/security`](extensions/security/README.md) | Wrapping an external tool (Nmap) in bounded tools, with a hook that keeps scans to configured targets | `mix test` | `LMX_MODEL` and its key; Nmap only if you actually scan |
 | [`extensions/capture`](extensions/capture/README.md) | A `session_end` hook that turns failed sessions into draft eval cases | `mix test` | Nothing of its own: it drafts from the sessions you already run |
 | [`extensions/portable_procedure`](extensions/portable_procedure/README.md) | Source-preserving typed asset export, real on-demand skill use and exact harness rollback | `mix run examples/portable_asset.exs --output NEW_DIRECTORY`; `scripts/check_example.sh portable_procedure` | Offline only; hosted qualification is separate |
+| [`extensions/learned_skill_witness`](extensions/learned_skill_witness/README.md) | Actual archived learned text, explicit receiving-scope derivation, native export and fresh-consumer byte witness | `mix run examples/learned_skill_export.exs --source ARCHIVE --output NEW_DIRECTORY`; `scripts/check_example.sh learned_skill_witness` | Offline packaging evidence; effectiveness and release qualification remain separate |
 | [`extensions/builder`](extensions/builder/README.md) | The guided extension builder exercised as an ordinary extension | `mix compile` | `LMX_MODEL` and its key, with dollar caps or quota request bounds |
 
 ## Experimental integrations
@@ -90,7 +91,8 @@ The synthetic tasks these drivers and the evaluation gate run on are in
 
 Check an example's Mix project against this checkout the way CI does, from
 the repository root: `scripts/check_example.sh NAME`, for `hello`, `review`,
-`verifier`, `research`, `security`, `capture`, `builder`, `portable_procedure` or `computer_use`.
+`verifier`, `research`, `security`, `capture`, `builder`, `portable_procedure`,
+`learned_skill_witness` or `computer_use`.
 `extensions/planning` and `extensions/relay` have no Mix project; the root
 suite checks them (`test/lemieux/planning_example_test.exs`,
 `test/lemieux/relay_example_test.exs`).

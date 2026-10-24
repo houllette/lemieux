@@ -262,6 +262,14 @@ retains a digest-bearing review report. It exercises the real session and skill
 tool and verifies resulting files. It leaves the package unassessed and reports
 missing independent confirmation and CodeGate evidence explicitly.
 
+The [learned skill witness](../examples/extensions/learned_skill_witness/README.md)
+accepts a complete archived learned text skill. It preserves the original source
+and explicitly derives a new unconfirmed identity for the receiving scope, then
+exports the native project, loads it in a fresh Mix consumer and demonstrates
+exact rollback. Its Scripted provider witnesses complete skill-tool bytes;
+effectiveness, independent confirmation and reviewed CodeGate evidence remain
+separate requirements.
+
 Confirmed native exports now carry `lemieux-extension-qualification.json` with
 their exact source/build/confirmation/report identities and frozen profile.
 `Extension.Export.verify/1` checks package integrity;
