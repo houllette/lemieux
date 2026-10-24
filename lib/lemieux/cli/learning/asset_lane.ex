@@ -1,5 +1,14 @@
 defmodule Lemieux.CLI.Learning.AssetLane do
-  @moduledoc false
+  @moduledoc """
+  Task-local research over independently reviewed typed assets.
+
+  Selected versions are retained through `Lemieux.Learning.Asset.Source` before
+  activation. The compact search receipt contains content identities, but lacks
+  creation metadata needed to reconstruct the original complete Version for
+  export. Archiving while that Version is still available preserves it without
+  inventing historical timestamps. These sources carry no receiving-host
+  approval or qualification; a failed archive withholds activation.
+  """
   alias Lemieux.CLI.Learning.AssetSearch
   alias Lemieux.CLI.Learning.Installation
   alias Lemieux.CLI.Learning.Leases
@@ -7,6 +16,7 @@ defmodule Lemieux.CLI.Learning.AssetLane do
   alias Lemieux.CLI.Learning.Reflection
   alias Lemieux.CLI.Runtime.Evaluation
   alias Lemieux.Learning.Asset
+  alias Lemieux.Learning.Asset.Source
   alias Lemieux.Learning.Discovery.ProfileDelta
   alias Lemieux.Learning.Refinement
   alias Lemieux.Tool
@@ -79,7 +89,39 @@ defmodule Lemieux.CLI.Learning.AssetLane do
 
   defp finish({:ok, receipt, selected}, config, details, root, authority, attempt, choose) do
     :ok = Installation.write(Path.join(root, "receipt.json"), receipt)
-    result = Map.put(details.result, :asset_search, receipt)
+    details = %{details | result: Map.put(details.result, :asset_search, receipt)}
+
+    case archive(selected, root, authority) do
+      :ok -> apply_selected(selected, config, details, root, authority, attempt, choose)
+      error -> finish(error, config, details, root, authority, attempt, choose)
+    end
+  end
+
+  defp finish(error, _config, details, root, _authority, _attempt, _choose) do
+    failure = %{"kind" => "asset_search_incomplete", "reason" => inspect(error)}
+    :ok = Installation.write(Path.join(root, "incomplete.json"), failure)
+    Map.put(details.result, :learning_failure, failure)
+  end
+
+  defp archive([], _root, _authority), do: :ok
+
+  defp archive(selected, root, authority) do
+    sources = Path.join(root, "selected-sources")
+
+    with {:ok, context} <- authority.(), :ok <- File.mkdir(sources) do
+      Enum.reduce_while(selected, :ok, &archive_item(&1, &2, sources, context))
+    end
+  end
+
+  defp archive_item(item, :ok, sources, context) do
+    case Source.write(item.version, Path.join(sources, item.version.id), context) do
+      :ok -> {:cont, :ok}
+      error -> {:halt, error}
+    end
+  end
+
+  defp apply_selected(selected, config, details, root, authority, attempt, choose) do
+    result = details.result
 
     if selected == [] do
       result
@@ -109,12 +151,6 @@ defmodule Lemieux.CLI.Learning.AssetLane do
           Map.put(result, :learning_failure, %{"kind" => "asset_restoration_incomplete"})
       end
     end
-  end
-
-  defp finish(error, _config, details, root, _authority, _attempt, _choose) do
-    failure = %{"kind" => "asset_search_incomplete", "reason" => inspect(error)}
-    :ok = Installation.write(Path.join(root, "incomplete.json"), failure)
-    Map.put(details.result, :learning_failure, failure)
   end
 
   defp factory(config, details, assets, root, authority) do

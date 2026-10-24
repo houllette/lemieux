@@ -201,6 +201,15 @@ The initial trusted configuration surface is only search catalog disclosure
 cannot select modules, commands, models, routes, environments or permissions.
 Profile-only campaigns and reviewed overlays retain their existing format.
 
+The research study host archives each selected complete Version under
+`EPISODE/asset-search/selected-sources/ASSET_ID` before task-local application.
+This uses the same source format below, retaining creation metadata and complete
+file bytes while the original Version is available. An archive failure retains
+the search receipt and ordinary task result, withholds activation and marks
+qualification incomplete. These files carry neither approval nor confirmation.
+Older compact search receipts alone lack the original creation timestamp; do
+not invent one when preparing a historical review packet.
+
 To include a typed asset in a native Mix extension, write its source tree into
 the owning project before freezing the build:
 

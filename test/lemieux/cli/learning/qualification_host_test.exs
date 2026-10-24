@@ -6,6 +6,8 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
   alias Lemieux.Contract
   alias Lemieux.Environment.Local
   alias Lemieux.JobBudget
+  alias Lemieux.Learning.Asset.Extension, as: AssetExtension
+  alias Lemieux.Learning.Asset.Source
   alias Lemieux.Learning.Controller
   alias Lemieux.Learning.Experience.Lessons
   alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
@@ -555,6 +557,30 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
     observation = evidence["asset_application"]["final_observation"]
     sha = hd(evidence["asset_search"]["selected_asset_sha256"])
+    candidate = hd(evidence["asset_search"]["candidates"])["asset"]
+    archive = Path.join([Path.dirname(path), "asset-search", "selected-sources", candidate["id"]])
+    archived_context = evidence["asset_search"]["plan"]["context"]
+
+    context = %{
+      scope: archived_context["scope"],
+      binding: archived_context["binding"],
+      trust: archived_context["trust"],
+      tools: archived_context["tools"],
+      description_tools: archived_context["description_tools"],
+      settings_allowlist: archived_context["settings_allowlist"],
+      helper_extensions: archived_context["helper_extensions"],
+      approved_digests: []
+    }
+
+    assert {:ok, archived, _files} = Source.read(archive, context)
+    assert archived.id == candidate["id"]
+    assert archived.digest == sha
+    assert archived.content == candidate["content"]
+
+    assert {:error, :typed_asset_not_approved_or_current} =
+             AssetExtension.init(source: archive, context: context)
+
+    assert {:error, _} = Source.read(archive, %{context | scope: %{"id" => "another-project"}})
     attempt = %{observation: observation, grade: evidence["selected_grade"]}
     assert {:ok, artifact} = AssetSearch.evidence(attempt, [sha], "test:model", :artifact_outcome)
     assert artifact["score"] == 1 and artifact["verified_success"]
@@ -576,6 +602,88 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     assert {:error, _} =
              AssetSearch.evidence(%{attempt | observation: corrupted}, [sha], "test:model")
 
+    assert Lemieux.sessions(config.supervisor) == []
+  end
+
+  test "failed source archival withholds asset activation and preserves the ordinary result",
+       ctx do
+    obstruction =
+      Path.join([
+        ctx.config.root,
+        "1-#{ctx.fixture.id}-updating",
+        "asset-search",
+        "selected-sources"
+      ])
+
+    provider = fn
+      :asset_proposer ->
+        Scripted.new([
+          Scripted.complete(
+            JSON.encode!(%{
+              "assets" => [
+                %{
+                  "kind" => "configuration",
+                  "payload" => %{"extension" => "search", "glob_after_requests" => 0},
+                  "requires_tools" => ["glob"],
+                  "files" => %{},
+                  "triggers" => []
+                }
+              ]
+            }),
+            usage: usage()
+          )
+        ])
+
+      :asset_critic ->
+        Scripted.new([
+          fn request ->
+            user = request.entries |> Enum.filter(&(&1.type == :user)) |> List.last()
+            input = JSON.decode!(user.payload["text"])
+            File.write!(obstruction, "preserve existing bytes")
+
+            Scripted.complete(
+              JSON.encode!(%{
+                "asset_sha256" => input["asset_sha256"],
+                "decision" => "approve",
+                "reason" => "Bounded disclosure setting."
+              }),
+              usage: usage()
+            )
+          end
+        ])
+
+      _role ->
+        task_provider(true)
+    end
+
+    config =
+      Map.merge(ctx.config, %{
+        asset_search: true,
+        profile_search: false,
+        terminal_rule: :artifact_outcome,
+        task_requests: 3,
+        asset_tokens: 1_000_000,
+        provider: provider,
+        support_policy: %{
+          "id" => "experimental_mean/v2",
+          "verified_ties" => true,
+          "minimum_gain" => 0.1,
+          "minimum_repetitions" => 2
+        }
+      })
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"]
+    refute row["qualification_complete"]
+    assert row["asset_application_count"] == 0
+    assert row["asset_restoration_count"] == 0
+    assert row["asset_candidate_count"] == 1
+    assert is_integer(row["tokens"])
+    assert File.read!(obstruction) == "preserve existing bytes"
+    failure = obstruction |> Path.dirname() |> Path.join("incomplete.json") |> File.read!()
+    assert failure =~ "eexist"
+    receipt = obstruction |> Path.dirname() |> Path.join("receipt.json") |> File.read!()
+    assert JSON.decode!(receipt)["decision"] == "selected"
     assert Lemieux.sessions(config.supervisor) == []
   end
 
