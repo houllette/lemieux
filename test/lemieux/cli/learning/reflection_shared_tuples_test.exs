@@ -7,6 +7,14 @@ defmodule Lemieux.CLI.Learning.ReflectionSharedTuplesTest do
   alias Lemieux.CLI.Learning.Reflection.SharedValues
   alias Lemieux.Contract
 
+  # The corruption cases all start from the same immutable wire record. Build
+  # it once: repeatedly compacting its 15,600 source lines tests no additional
+  # behavior and used to dominate those otherwise small validation cases.
+  setup_all do
+    original = record()
+    %{original: original, encoded: SharedTuples.compact(original)}
+  end
+
   test "a source at the exact expanded limit is not rejected for its intermediate envelope" do
     output = for n <- 1..8000, into: "", do: "#{n}\t" <> String.duplicate("a", 1000) <> " λ\n"
     base = %{"original" => %{"output" => output, "padding" => ""}}
@@ -18,10 +26,9 @@ defmodule Lemieux.CLI.Learning.ReflectionSharedTuplesTest do
     assert {:ok, ^original} = SharedTuples.expand(encoded)
   end
 
-  test "numbered outputs preserve every original byte and position within the existing wire bound" do
-    original = record()
+  test "numbered outputs preserve every original byte and position within the existing wire bound",
+       %{original: original, encoded: encoded} do
     assert byte_size(Contract.encode!(SharedValues.compact(original))) > Reflection.source_limit()
-    encoded = SharedTuples.compact(original)
     assert encoded["text_encoding"] == SharedTuples.encoding()
     assert byte_size(Contract.encode!(encoded)) < Reflection.source_limit()
     assert {:ok, ^original} = SharedTuples.expand(encoded)
@@ -49,31 +56,31 @@ defmodule Lemieux.CLI.Learning.ReflectionSharedTuplesTest do
     end
   end
 
-  test "legacy encodings retain their original canonical readers" do
+  test "legacy encodings retain their original canonical readers", %{original: record} do
     text = String.duplicate("complete original λ observation\n", 50)
     original = %{"original" => %{"a" => text, "b" => text}}
     legacy = SharedText.compact(original)
     assert {:ok, ^original} = SharedTuples.expand(legacy)
     assert SharedText.compact(original) == legacy
-    v2 = SharedValues.compact(record())
+    v2 = SharedValues.compact(record)
     assert v2["text_encoding"] == "lossless_shared_values/v2"
     assert {:ok, expanded} = SharedTuples.expand(v2)
-    assert expanded == record()
+    assert expanded == record
   end
 
-  test "literal tags, reserved objects, line prefixes and Unicode are not interpreted as references" do
+  test "literal tags, reserved objects, line prefixes and Unicode are not interpreted as references",
+       %{original: record} do
     literal = %{
       "tags" => Enum.map(-9..-1, &[&1, ["literal", 42]]),
       "object" => %{"$text" => "t0", "$row" => ["s0", "literal"]},
       "lines" => "01\tleading zero\n1\tλ\r\n0\tzero\n-1\tnegative\n\n\\\"\n"
     }
 
-    original = Map.put(record(), "literal", literal)
+    original = Map.put(record, "literal", literal)
     assert {:ok, ^original} = SharedTuples.expand(SharedTuples.compact(original))
   end
 
-  test "altered, missing, cyclic and unused dictionaries refuse expansion" do
-    encoded = SharedTuples.compact(record())
+  test "altered, missing, cyclic and unused dictionaries refuse expansion", %{encoded: encoded} do
     assert encoded["line_table"] != []
 
     invalid = [
@@ -92,8 +99,7 @@ defmodule Lemieux.CLI.Learning.ReflectionSharedTuplesTest do
     for value <- invalid, do: assert({:error, _} = SharedTuples.expand(value))
   end
 
-  test "line references cannot amplify beyond the independent expanded bound" do
-    encoded = SharedTuples.compact(record())
+  test "line references cannot amplify beyond the independent expanded bound", %{encoded: encoded} do
     text = String.duplicate("bounded source λ\n", 2000)
 
     forged =
@@ -105,9 +111,8 @@ defmodule Lemieux.CLI.Learning.ReflectionSharedTuplesTest do
     assert {:error, _} = SharedTuples.expand(forged)
   end
 
-  test "malformed JSON-shaped tables and tuple nodes return errors without raising" do
-    encoded = SharedTuples.compact(record())
-
+  test "malformed JSON-shaped tables and tuple nodes return errors without raising",
+       %{encoded: encoded} do
     for field <- ~w(record text_table value_table schema_table observation_table line_table),
         value <- [nil, false, 0, "not a table", %{}, [-3, -1], [-8, 42]] do
       assert {:error, _} = SharedTuples.expand(Map.put(encoded, field, value))
