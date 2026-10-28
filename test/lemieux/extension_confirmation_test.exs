@@ -226,14 +226,19 @@ defmodule Lemieux.ExtensionConfirmationTest do
   test "a typed procedure survives confirmation, source export, fresh loading and exact rollback",
        context do
     {source, version, profile} = typed_source(context.tmp_dir)
+    runtime = LemieuxTest.FrozenRuntime.session_paths()
 
     assert {:ok, control} =
-             Build.freeze(source, Path.join(context.tmp_dir, "typed-control"), profile)
+             Build.freeze(source, Path.join(context.tmp_dir, "typed-control"), profile,
+               runtime_paths: runtime
+             )
 
     enabled = put_in(profile, ["options", "enabled"], true)
 
     assert {:ok, candidate} =
-             Build.freeze(source, Path.join(context.tmp_dir, "typed-candidate"), enabled)
+             Build.freeze(source, Path.join(context.tmp_dir, "typed-candidate"), enabled,
+               runtime_paths: runtime
+             )
 
     context = typed_corpus(%{context | control: control, candidate: candidate})
     assert {:ok, confirmation} = prepare(context)
@@ -269,7 +274,9 @@ defmodule Lemieux.ExtensionConfirmationTest do
     # Freeze the exported project again: execution must read its packaged asset
     # through the real skill loader, with no original in-memory version.
     assert {:ok, installed} =
-             Build.freeze(package, Path.join(context.tmp_dir, "typed-installed"), enabled)
+             Build.freeze(package, Path.join(context.tmp_dir, "typed-installed"), enabled,
+               runtime_paths: runtime
+             )
 
     File.write!(
       Path.join(context.tmp_dir, "records.json"),
