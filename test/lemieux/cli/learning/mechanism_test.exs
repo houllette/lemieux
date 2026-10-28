@@ -1,6 +1,7 @@
 defmodule Lemieux.CLI.Learning.MechanismTest do
   use ExUnit.Case, async: true
   alias Lemieux.CLI.Learning.Mechanism
+  alias Lemieux.CLI.Learning.Transport
   alias Lemieux.Contract
 
   test "v6 requires its declared scope and cannot reuse a v5 receipt" do
@@ -92,13 +93,14 @@ defmodule Lemieux.CLI.Learning.MechanismTest do
              Mechanism.gate(seal(%{receipt | "required_checks" => %{}}), runtime, "model", "high")
   end
 
-  test "larger runs require the same frozen mechanism, model, editor and inference route" do
+  test "larger runs require the same mechanism, model, editor, route and transport" do
     runtime = %{
       "revision" => String.duplicate("a", 40),
       "inference_route" => "codex_subscription",
       "research_protocol" => %{
         "stage" => "mechanism",
         "editor_model" => "editor",
+        "http_transport" => Transport.policy(),
         "profile_search" => true
       }
     }
@@ -125,7 +127,8 @@ defmodule Lemieux.CLI.Learning.MechanismTest do
     for changed <- [
           Map.put(current, "revision", String.duplicate("b", 40)),
           Map.put(current, "inference_route", "scripted"),
-          put_in(current, ["research_protocol", "editor_model"], "other")
+          put_in(current, ["research_protocol", "editor_model"], "other"),
+          put_in(current, ["research_protocol", "http_transport", "id"], "shared_pool")
         ] do
       assert {:error, :matching_mechanism_required} =
                Mechanism.gate(receipt, changed, "model", "low")
