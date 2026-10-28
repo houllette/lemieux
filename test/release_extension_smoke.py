@@ -45,13 +45,20 @@ end
         command = [str(binary), "explain", "--config", "none", "--no-delegate", "--no-project-mcp",
                    "--sessions-dir", str(scratch / "sessions"),
                    "--extension-dir", str(extension)]
+        baseline_result = subprocess.run(command + ["--no-user-extensions"], env=env, cwd=scratch,
+                                         capture_output=True, text=True, timeout=90, check=True)
+        baseline = report_from(baseline_result.stdout)
+        baseline_bash = next(tool for tool in baseline["tools"] if tool["name"] == "bash")
         result = subprocess.run(command, env=env, cwd=scratch, capture_output=True, text=True, timeout=90)
         if result.returncode:
             raise RuntimeError(result.stderr)
         report = report_from(result.stdout)
         assert report["settings"]["max_requests"] == 7, report
         bash = next(tool for tool in report["tools"] if tool["name"] == "bash")
-        assert bash["implementation"] == ["Lemieux.Tool.Override", "Lemieux.Tools.Bash"]
+        # The shipped recipe also decorates Bash (for example, tool guidance).
+        # Require exactly one additional native wrapper, preserving that whole
+        # baseline rather than assuming the stock tool is undecorated.
+        assert bash["implementation"] == ["Lemieux.Tool.Override"] + baseline_bash["implementation"], bash
         # Host policy may follow this extension; its effective settings and
         # decorated tool above establish the contribution, not catalog order.
         loaded = [entry for entry in report["extensions"]
@@ -63,9 +70,10 @@ end
         # Recovery disables user extensions while retaining the shipped recipe.
         expected = [extension for extension in report["extensions"]
                     if extension["module"] != "NativeExtensionSmoke"]
-        assert recovered["extensions"] == expected
+        assert recovered["extensions"] == expected == baseline["extensions"]
         recovered_bash = next(tool for tool in recovered["tools"] if tool["name"] == "bash")
-        assert recovered_bash["implementation"] == ["Lemieux.Tools.Bash"]
+        assert recovered_bash == baseline_bash
+        assert recovered["settings"]["max_requests"] == baseline["settings"]["max_requests"]
         assert not list((scratch / "sessions").glob("*.jsonl"))
         print("verified native extension loading, decoration, diagnostics and recovery")
 
