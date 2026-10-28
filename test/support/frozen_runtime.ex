@@ -52,17 +52,17 @@ defmodule LemieuxTest.FrozenRuntime do
     ]
 
     [:req_llm, :yaml_elixir]
-    |> required_apps(MapSet.new())
-    |> MapSet.put(:lemieux)
+    |> required_apps([:lemieux])
     |> Enum.map(&Application.app_dir(&1, "ebin"))
     |> Enum.reject(fn path -> Enum.any?(system, &String.starts_with?(path, &1 <> "/")) end)
     |> Enum.sort()
   end
 
+  @spec required_apps(apps :: [atom()], seen :: [atom()]) :: [atom()]
   defp required_apps([], seen), do: seen
 
   defp required_apps([app | rest], seen) do
-    if MapSet.member?(seen, app) do
+    if app in seen do
       required_apps(rest, seen)
     else
       required =
@@ -70,7 +70,7 @@ defmodule LemieuxTest.FrozenRuntime do
           (Application.spec(app, :optional_applications) || [])
 
       included = Application.spec(app, :included_applications) || []
-      required_apps(required ++ included ++ rest, MapSet.put(seen, app))
+      required_apps(required ++ included ++ rest, [app | seen])
     end
   end
 end
