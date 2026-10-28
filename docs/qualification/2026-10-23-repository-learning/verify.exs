@@ -278,6 +278,43 @@ true = reserve["new_hosted_requests"] == 0
 true = reserve["failed_calibration_qualification"] == "incomplete"
 nil = reserve["actual_tokens"]
 
+failure = read.("fresh-mechanism-transport-failure.json")
+:ok = Contract.verify_digest(failure, "sha256")
+false = failure["qualified"]
+true = failure["new_physical_requests"] == 360 and failure["new_unknown_requests"] == 1
+true = failure["new_known_tokens"] == 3_609_095
+
+true =
+  failure["known_tokens_in_complete_rows"] + failure["known_tokens_in_incomplete_rows"] ==
+    3_609_095
+
+true = failure["known_tokens_in_incomplete_rows"] == 2778
+true = failure["rows_retained"] == 13 and failure["unusable_rows"] == 4
+true = failure["applications"] == 3 and failure["restorations"] == 3
+true = failure["report_mechanics"] == "incomplete_execution"
+true = failure["auth_cleaned"] and failure["owner_released"]
+
+window = read.("approved-fixed-window.json")
+:ok = Contract.verify_digest(window, "sha256")
+:ok = Contract.verify_digest(window["amendment"], "sha256")
+true = window["deadline_ms"] == window["approval_recorded_at_ms"] + 172_800_000
+true = window["deadline_ms"] == window["original_started_at_ms"] + window["limits"]["max_time_ms"]
+true = window["limits"]["max_requests"] == 7500 and window["limits"]["max_tokens"] == 100_000_000
+true = window["new_hosted_requests"] == 0 and window["records_unchanged"]
+
+third = read.("approved-task-reserve-3.json")
+:ok = Contract.verify_digest(third, "sha256")
+:ok = Contract.verify_digest(third["receipt"], "sha256")
+true = third["receipt"]["id"] == failure["unknown_record_id"]
+true = third["receipt"]["tokens"] == 2_000_000
+true = third["requests"] == 2689 and third["unknown_requests"] == 3
+true = third["known_tokens"] == 30_401_276 and third["budget_tokens"] == 36_401_276
+true = third["additional_task_reserves_remaining"] == 1
+true = third["deadline_ms"] == window["deadline_ms"] and third["new_hosted_requests"] == 0
+true = third["records_unchanged"] and third["actual_accounting_unchanged"]
+true = third["historical_checkpoint_bytes_unchanged"]
+nil = third["actual_tokens"]
+
 IO.puts(
   "Public ancestry and learned-skill integrity checks passed; qualification remains unassessed."
 )

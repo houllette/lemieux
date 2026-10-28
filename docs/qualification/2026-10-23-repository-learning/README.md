@@ -432,7 +432,7 @@ This tests apparatus and dataflow, with no effectiveness inference.
 
 Protocol v6 registers the new format before hosted work. It requires a new
 matching hosted mechanism and calibration before the larger study. The previous
-v5 hosted receipt cannot satisfy its changed binding. No v6 hosted request or
+v5 hosted receipt cannot satisfy its changed binding. No complete v6 hosted mechanism or
 independent confirmation is included in this packet.
 
 ## Explicit reserve for the interrupted task
@@ -451,3 +451,51 @@ no reserve and closes admission again. Checkpoint version two separates actual
 usage from the conservative budget charge and refuses older readers. Tests cover
 restart, unchanged history, expired deadlines, existing token limits, stale or
 duplicate approval, record tampering, wrong roles and a subsequent unknown call.
+
+
+## Interrupted v6 mechanism and isolated-host transport
+
+The [fresh mechanism audit](fresh-mechanism-transport-failure.json) retains the
+October 28 attempt at `95988bd04b3d533effe246b41b902c3a01a433a0`. Its first
+repetition completed, including three skill applications and three restorations.
+A socket closure during the second repetition left one task request without
+usage. All thirteen rows remain retained; four are unusable, including rows
+that made no physical request after admission closed. The mechanism gate refused
+this incomplete archive. It supplies no efficacy or qualification result.
+
+The attempt made 360 physical requests. The 359 measured calls used 3,609,095
+tokens, including 2,778 known tokens from an incomplete row. Summing only complete
+rows would omit that spend. The raw plan, report, episode evidence and process
+log remain locally retained under
+`tmp/learning-text-skill-sol-astra-mechanism12-v6-reserved-retry-2026-10-28`;
+the audit publishes their digests without publishing credentials or transcripts.
+
+The [fixed-window receipt](approved-fixed-window.json) records the separately
+approved deadline of October 30 00:28:26.914 UTC, preserving the original start,
+all elapsed time, and the 7,500-request / 100-million-token accumulated caps.
+The [third exact reserve](approved-task-reserve-3.json) charges 2,000,000 tokens
+from that cap for the socket-closed task, using the previously authorized bounded
+reserve policy. It changes no original request or measured usage. At that
+snapshot there were 2,689 requests, 30,401,276 known tokens, three unknown task
+calls, and a separate 36,401,276-token admission charge. One further exact
+2-million-token task reserve remains authorized; unknown improver usage remains
+uncovered. These receipts describe historical authorization, not transferable
+host authority. The original one-off snapshot wrappers used atom-keyed limit
+maps when computing their outer digests. The public snapshots normalize those
+wrappers to canonical string-keyed JSON and bind the original local bytes and
+recorded wrapper digest. Their nested sealed authorization receipts and the
+actual allowance checkpoint remain unchanged.
+
+The isolated qualification host now configures req_llm's supported HTTP/1 pool
+with a zero connection idle lifetime before starting work. A returned socket is
+closed at its next checkout. A local socket test exercises the real streaming
+provider: default pooling reuses a connection, while this policy opens distinct
+connections for the two requests without adding a hidden dispatch. Pool
+destinations, TLS options and sizing are preserved, and repeated preparation is
+a no-op. Ordinary `lmx` and embedded hosts retain their own pool settings.
+
+The socket closure's remote cause remains unknown. Fresh connections remove a
+reuse failure mode; they do not establish provider reliability. Models, task
+selection, verification, repetitions and unknown-usage rules remain fixed. The
+registered transport policy is part of the mechanism binding, so the next
+hosted mechanism must complete on the new revision before a larger study.

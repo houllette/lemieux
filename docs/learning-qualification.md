@@ -460,3 +460,13 @@ in-memory; this rehearsal does not turn it into a durable deployment host.
 The broader default-on integration in issue #78 and independent qualification in
 issue #79 remain release gates. Shared editable assets (#80), exports (#81), durable
 production installation and default promotion are not enabled by this runner.
+
+
+The isolated subscription-study host uses fresh HTTP/1 connections through
+req_llm, closing each returned socket at its next checkout. It configures this
+before model work begins and records the policy in the plan and mechanism
+binding. Hidden transport retries remain disabled: a closed stream with missing
+usage remains unknown, and an approved exact-record reserve permits later work
+without qualifying the failed episode. Ordinary hosts retain their own
+connection policy. See the [retained transport failure and authorization
+receipts](qualification/2026-10-23-repository-learning/README.md#interrupted-v6-mechanism-and-isolated-host-transport).
