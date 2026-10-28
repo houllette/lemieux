@@ -873,13 +873,29 @@ defmodule Lemieux.SessionCompactionTest do
     end
 
     test "is refused while the session is busy", context do
+      owner = self()
+
       {session, _provider} =
-        start_session(context, [[{:text_delta, "thinking"}, {:done, :stop}]])
+        start_session(context, [
+          fn _request ->
+            send(owner, {:provider_waiting, self()})
+
+            receive do
+              :release -> [{:text_delta, "thinking"}, {:done, :stop}]
+            end
+          end
+        ])
 
       :ok = Session.prompt(session, "hello")
+      assert_receive {:provider_waiting, provider_task}
 
-      # Racy by nature; either answer is correct, and neither may be a crash.
-      assert Session.compact(session) in [{:error, :busy}, {:error, :nothing_to_do}]
+      # Hold the request so this actually tests busy refusal, regardless of
+      # whether a fast scripted answer could otherwise finish before compact.
+      assert {:error, :busy} = Session.compact(session)
+
+      send(provider_task, :release)
+      id = Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
   end
 

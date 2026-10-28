@@ -198,6 +198,8 @@ defmodule Lemieux.SteeringTest do
 
       assert_receive {:lemieux, ^id,
                       {:entry, %Entry{type: :user, payload: %{"text" => "use tabs"}}}}
+
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "several steers arrive in the order they were sent", context do
