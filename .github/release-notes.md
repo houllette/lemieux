@@ -1,62 +1,52 @@
-# Lemieux 0.11.0
+# Lemieux 0.12.0
 
-Plan and review work durably, connect an editor over ACP, and bound a whole job's
-requests and cost. Hosts can opt into recoverable background jobs, isolated
-writers and source-verified repository context. This release also makes input,
-approval and extension activity easier to audit. Installed copies need a restart
-on every platform.
+This release adds native task and tool controls, scoped workspace experience,
+and bounded verification replay. Installed copies need a restart on every
+platform. Learning and qualification interfaces remain experimental; their
+mechanical tests do not establish a general model-quality or cost advantage.
 
 ## What changed
 
-- **Plan and review before editing.** `/plan` drafts, edits, approves and exports
-  a persistent plan. Planning stays read-only until its obligations are approved;
-  progress retains that approval. `/review` pins the working, staged, commit or
-  range changes being reviewed and restricts write and shell tools.
-- **Editor and headless workflows.** `lmx acp` exposes native sessions over ACP
-  versions 1 and 2, with streaming, approvals, cancellation, loading and forking.
-  `lmx run --output-schema FILE` validates the final JSON answer and records the
-  schema digest; invalid output fails without a paid repair request.
-- **Guarded defaults.** `auto` is the default permission mode. Workspace edits
-  are automatic, and commands use an OS sandbox when one is available. Without
-  a sandbox, commands and external capabilities require approval. An unattended
-  request that needs approval is denied. Explicit sandbox requests fail closed.
-- **Whole-job budgets and verification.** `--max-total-requests` and
-  `--max-total-cost-usd` share one allowance across parent and child inference,
-  summaries, checks, compaction scoring and paid tools. Verification observes
-  workspace changes, including shell edits and failed commands, and names
-  checks that were skipped or unavailable. A normal stop still does not mean
-  the result was verified.
-- **Background jobs and isolated writers.** Opt-in hosts can queue, schedule,
-  detach, attach, cancel and reconcile durable jobs under current authority.
-  Writer batches keep file ownership, shared budgets, reviewable artifacts and
-  guarded integration in separate worktrees. Interrupted integration preserves
-  recovery evidence and rolls back failed checks. Parallel writers remain an
-  explicit host choice; worktrees alone do not sandbox execution.
-- **Fresh repository context.** The optional `repository_context` tool returns
-  bounded maps, definitions, references, dependencies, symbols and diagnostics.
-  Current path policy and source digests gate disclosure; stale records are
-  withheld and a literal search can supply current source. The offline Elixir
-  index reads and parses without evaluating repository code. No language server
-  or persistent retrieval memory starts implicitly.
-- **Input, approvals and extension status.** Hosts can attest current input
-  provenance and bind approval resolution to the effective call and current
-  context. Replayed text cannot recreate authority. `/status` and `lmx status`
-  expose local extension observations and cancellation commands; evidence
-  separates catalog bytes, notices and extension-started requests from provider
-  usage. Missing usage stays unknown.
-- **Workspace, provider and MCP repairs.** Reads and instruction discovery use
-  the effective environment. Scoped `.claude/rules` activate before matching
-  native file operations. Provider retry and cache-key behavior agrees across
-  hosts. MCP stdio bounds frames, pending responses and stderr, and records
-  termination and cleanup evidence. Malformed negotiation and cyclic pagination
-  return errors. Todo, subagent and completion receipts are easier to scan.
+- **One Tasks view.** Shift+Up, its clickable badge, or F6 opens a native tray
+  for agents, background commands and external runs. It preserves the draft,
+  shows live output and full command source, and supports steering and scoped
+  cancellation. Session watches observe existing work without model polling.
+  Completion can resume the idle owner under current policy and remaining
+  limits; the tray can select notification only.
+- **Native tool management.** `/tools` shows availability, descriptions and
+  keyboard/mouse toggles without filling the transcript with switch receipts.
+  Guidance reflects the tools and permissions actually available to the session.
+- **Scoped experience with local controls.** CLI/TUI sessions with personal
+  state retain observations and can add bounded, unconfirmed guidance to later
+  requests. Capture and recall add no inference requests. `lmx learning inspect`
+  reads the evidence offline; `lmx learning undo` blocks the last adaptation and
+  dependent lessons, and `lmx learning off` opts the workspace out persistently.
+- **Bounded verification replay.** A reproducible failure can trigger a fixed
+  isolated refinement only with complete evidence, a cached replay image and a
+  finite whole-job allowance. The 48-slot experiment needs
+  `--max-total-requests` of at least 192; other work shares that same allowance.
+  Missing prerequisites abstain before learning dispatch. Supported guidance is
+  temporary and source-backed; unknown or interrupted usage requires recovery.
+- **Portable, reviewed learning assets.** Typed procedure files, trusted tool
+  descriptions and allowlisted search settings retain their complete bytes and
+  runtime bindings through native export. Receiving hosts revalidate current
+  policy and supply fresh approval. Confirmed export requires a complete
+  dependency/capability manifest and source-bound CodeGate/reviewer evidence.
+  Research qualification retains complete reflection records and one durable
+  allowance across stages; incomplete runs remain incomplete evidence.
+- **Provider and workspace repairs.** ReqLLM 1.29 verifies certificate trust and
+  hostnames for secure WebSocket connections, including Codex subscription
+  transport ([upstream advisory](https://github.com/agentjido/req_llm/security/advisories/GHSA-6vww-5m28-f26v)).
+  The release also includes upstream reasoning/terminal-stream and billing
+  metadata fixes, native Ixway harness attribution, sanitized startup Git
+  origins, environment-correct directory searches and remote undo notices.
 
-The [changelog](https://github.com/houllette/lemieux/blob/v0.11.0/CHANGELOG.md)
-contains the complete changes and migration notes. Jobs, writers and repository
-context are opt-in; their mechanical tests do not establish an agent-quality or
-cost advantage.
+The [changelog](https://github.com/houllette/lemieux/blob/v0.12.0/CHANGELOG.md)
+contains the full changes and migration notes. See
+[ordinary-use controls](https://github.com/houllette/lemieux/blob/v0.12.0/docs/harness-learning.md#ordinary-use-experience-and-controls)
+for learning prerequisites, accounting, evidence and opt-out behavior.
 
-## Updating from 0.10.0
+## Updating from 0.11.0
 
 An installed `lmx` on macOS or Linux stages the release after its signed manifest
 is published, or when you run:
@@ -66,35 +56,43 @@ lmx update
 ```
 
 Save an unsent draft, quit and start `lmx -c` to resume. The exit message also
-prints `lmx --resume PLAYER-NAME` for the session you just left. New session and
-harness state, supervision and modules require fresh initialization; this is a
-restart update on every platform.
+prints `lmx --resume PLAYER-NAME` for the session you just left. New watch and
+learning modules, retained callbacks and changed dependency code require a fresh
+VM; no hot upgrade or downgrade path is declared.
 
 `LMX_AUTO_UPDATE=0` keeps notices but installs only on `lmx update` or `/update`.
 Windows updates by downloading and unpacking the new archive.
 
-Script extensions pinned to a bare 0.10 version or a patch-line requirement such
-as `~> 0.10.0` need their code and manifest reviewed for 0.11. Compiled bundles
-retain extension API 1; rebuild any bundle that `lmx extension list` refuses.
+Ordinary experience is enabled only with personal state. Personal
+`"learning": false` or `"disabled_extensions": ["learning"]` disables it;
+`"capture": false` disables both capture and this experience lane.
+`--config none` without `LMX_HOME` has no personal state. A project can opt out
+with `.lmx/learning.json` containing `{"enabled": false}`; project settings never
+override a personal opt-out. Undo cannot retract a request already sent.
+
+Review script extensions pinned to a bare 0.11 version or `~> 0.11.0` before
+widening their code and manifest requirements. Compiled bundles retain extension
+API 1 and its OTP/Elixir compatibility checks; rebuild any bundle the loader
+refuses.
 
 ## Library migration
 
-Add `{:lemieux, "~> 0.11.0"}` to your dependencies. The library still starts no
-Lemieux processes; hosts mount its supervisor and supply storage, credentials,
-environments and current policy.
+Use `{:lemieux, "~> 0.12.0"}`. The library still starts no Lemieux processes;
+hosts mount its supervisor and supply storage, credentials, environments and
+current policy. The CLI defaults above do not turn learning on in an embedder.
 
-- Hosts opting into jobs or writers supply shared allowances and lifecycle,
-  verification and integration callbacks. Existing scouts remain read-only.
-  Ordinary session resume is unchanged; `Session.continue/1` requires a
-  reconciled `recover_tools: true` resume for interrupted tool execution.
-- Input attestors, configured tools, contribution callbacks, credentials and
-  approval authority must be supplied by the current host again on resume;
-  transcript evidence is inert. Scoped approval and input capture are opt-in.
-- Match the budget and evidence fields you use. Job accounting, input provenance,
-  extension activity and tool lifecycle evidence add fields to those results.
-- Provider retries belong to the runtime host; explicit retry settings and stable
-  session cache keys are preserved. Optional source context requires explicit
-  repository scopes and trusted adapters.
+- Update an existing provider lock with `req_llm` and `llm_db` together. This
+  release requires ReqLLM 1.29 and uses the LLMDB 2026.10.6 catalog.
+- Requalify experimental confirmations against current runtime identities and
+  complete request/terminal/transcript evidence. Historical scores, archived
+  assets and source checksums cannot supply current host authority.
+- Version 2 research plans keep their original analysis; version 3 is selected
+  explicitly. Supply the same durable study allowance for each research stage;
+  a new directory or stage must not reset consumed requests or unknown usage.
+- Watch sources, refinement isolation and persistent promotion remain host-owned
+  seams. Hosts opt in, supply transactional installation/recovery and current
+  approval, and retain exact rollback; no persistent learning scheduler starts
+  implicitly.
 
 ## Install lmx
 
@@ -121,7 +119,7 @@ runs nothing from the archive while it installs.
 Linux arm64 and musl distributions such as Alpine have no build yet; use the
 source checkout. To check this release yourself before you run anything,
 follow
-[Verify a download](https://github.com/houllette/lemieux/blob/v0.11.0/docs/releases.md#verify-a-download).
+[Verify a download](https://github.com/houllette/lemieux/blob/v0.12.0/docs/releases.md#verify-a-download).
 The release-signing public key is `X7aGNLOgOV+bz13CuG4x4AVnhKmsPIH8eYvBrajsiG8=`.
 
 **From source**, anywhere mise can install the pinned Erlang and Elixir:
@@ -135,7 +133,7 @@ mise exec -- mix lmx -C /path/to/your/project
 `mise exec -- mix lmx` runs any `lmx` command from the checkout, and
 `mix lmx update` fast-forwards it from its Git upstream.
 
-**As a library**, add `{:lemieux, "~> 0.11.0"}` and start with
+**As a library**, add `{:lemieux, "~> 0.12.0"}` and start with
 [First embedded agent](https://hexdocs.pm/lemieux/first-embedded-agent.html),
 which runs a complete session without an API key. See
 [Library migration](#library-migration) for changes to existing hosts.
@@ -145,7 +143,7 @@ which runs a complete session without an API key. See
 - `auto` is the default permission mode. Use `--permission-mode ask` for approval
   of tool actions, or `--sandbox` to require an available OS sandbox. `full_auto`
   and `off` explicitly select unrestricted execution. See
-  [the trust model](https://github.com/houllette/lemieux/blob/v0.11.0/SECURITY.md#what-lmx-trusts-by-default).
+  [the trust model](https://github.com/houllette/lemieux/blob/v0.12.0/SECURITY.md#what-lmx-trusts-by-default).
 - Your provider bills requests. `--max-requests` and `--max-cost-usd` bound the
   direct session; `--max-total-requests` and `--max-total-cost-usd` bound shared
   work. An unfinished plan can cause more requests; `"continuation": false`
