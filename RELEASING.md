@@ -40,9 +40,10 @@ toolchain through Mise, and installs Hex/Rebar only when missing.
 
 The driver:
 
-1. Takes a shared Git-directory lock, makes a temporary fresh clone, and pins
+1. Takes a shared Git-directory lock, creates an isolated checkout, and pins
    the release source from `origin/main` or its existing version tag. The
-   caller's branch and working files are preserved. It validates `VERSION`,
+   caller's branch and working files are preserved. The checkout and compiled
+   dependencies are retained after a stop and reused on resume. It validates `VERSION`,
    GitHub/Hex authentication, the reviewed upgrade plan and the offline key's
    match to the committed public key before creating a tag.
 2. Waits for the source's CI and Public readiness runs. It reuses or starts a
@@ -53,7 +54,7 @@ The driver:
    and macOS deployment minimum. It compares the draft with those exact bytes,
    signs locally with the existing Mix helper, downloads it again and verifies
    both signatures and GitHub provenance attestations.
-4. Builds and inspects the Hex package from the fresh clone, runs the publish
+4. Builds and inspects the Hex package from the pinned checkout, runs the publish
    dry run, publishes package/docs, and confirms Hex's checksum and docs state.
    An existing version is reused only with the same checksum; it never passes
    `--replace` or overwrites an existing package.
@@ -63,19 +64,29 @@ The driver:
 Output streams to your terminal and a private timestamped log under
 `$(git rev-parse --git-common-dir)/lmx-releases/VERSION/`. `state.json` in that
 directory records the source, workflow attempt, qualified asset hashes and
-progress. Logs and checkpoints remain local; temporary clones, downloads and
-builds are removed on success, failure, Ctrl-C or termination. A killed process's
-owned temporary directory is reclaimed on the next invocation. No key contents
-are copied into that directory, checkpoints or logs; inherited token values are
-redacted from command output. No provider requests are made.
+progress. A private `workspace-ID/` directory beside the checkpoint retains the
+pinned checkout and compiled dependencies after failure, Ctrl-C or termination.
+Downloads and crash dumps are removed after each attempt; the retained workspace
+is removed after successful completion. A killed process's owned workspace is
+reused on the next invocation. No key contents are copied into that directory,
+checkpoints or logs; Erlang memory dumps are disabled and inherited token values
+are redacted from command output. No provider requests are made.
 
 Rerun the same command after an interruption. It reconciles current remote
 state before proceeding, including a push or publication whose response was
-lost. It revalidates existing releases and does not republish a completed one.
+lost. Resume logs identify the saved checkpoint and reused local setup. Existing
+valid signatures and confirmed Hex package/docs publication are reused, and a
+remaining docs upload does not rebuild or republish the package. It revalidates
+existing releases and does not republish a completed one.
 The source cannot silently move after it is checkpointed. A concurrent workflow
 rerun or changed draft stops publication and requires another invocation to
 qualify the current artifacts. Authentication/network failures are errors, not
 evidence that a tag, package or release is absent.
+
+Use `--fresh` to recreate only the local workspace while preserving the pinned
+source and completed remote-release checkpoints. A modified retained checkout is
+refused. Checkpoints created by an older helper that already deleted its local
+files require one initial rebuild; subsequent interrupted attempts retain them.
 
 Workflow waits default to four hours each; `--timeout SECONDS` accepts 60 through
 86400. A failed workflow stops with its URL. To retry its failed jobs once:

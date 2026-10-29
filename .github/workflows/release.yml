@@ -714,7 +714,8 @@ jobs:
           The driver resumes this tag run, compares the draft with its candidate,
           signs locally, verifies signatures/checksums/provenance, publishes Hex,
           then publishes the GitHub release stable/latest. It retains local logs
-          and resumable checkpoints and cleans up its temporary checkout.
+          and resumable checkpoints, retains local builds after a stop, and
+          removes its workspace after successful completion.
 
           Complete and record human terminal/provider qualification before running
           it. See RELEASING.md for prerequisites and manual recovery. CI never

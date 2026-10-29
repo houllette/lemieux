@@ -103,7 +103,7 @@ class Runner:
     def __init__(self, log, timeout, key):
         self.log, self.timeout = log, timeout
         self.env = dict(os.environ, MIX_ENV="dev", LMX_CHECK_UPDATES="0", LMX_CONFIG="none",
-                        HEX_API_URL="https://hex.pm/api")
+                        HEX_API_URL="https://hex.pm/api", ERL_CRASH_DUMP=os.devnull)
         for name in ("MIX_BUILD_PATH", "MIX_DEPS_PATH", "MIX_APP_PATH", "LEMIEUX_DOCS_REF"):
             self.env.pop(name, None)
         self.env["LMX_RELEASE_KEY_PATH"] = str(key)
@@ -213,7 +213,7 @@ def verify_inventory(directory):
 
 class Release:
     def __init__(self, root, version, key, state_dir, runner=None, poll=30, wait=4 * 3600,
-                 retry_failed=False, hex_get=None):
+                 retry_failed=False, hex_get=None, fresh=False):
         self.root, self.version, self.key, self.directory = root, version, key, state_dir
         self.tag, self.poll, self.wait, self.retry_failed = "v" + version, poll, wait, retry_failed
         self.state_path = state_dir / "state.json"
@@ -226,6 +226,7 @@ class Release:
         self.log_file = self.log_path.open("a", buffering=1)
         self.run = runner or Runner(self.log, min(wait, 3600), key)
         self.hex_get = hex_get or self.hex_release
+        self.fresh = fresh
         self.scratch = self.source = None
 
     def log(self, text):
@@ -302,7 +303,7 @@ class Release:
         raise ReleaseError(f"Timed out waiting for {workflow}; rerun this command to resume")
 
     def prepare(self):
-        self.checkpoint("preflight", log=str(self.log_path))
+        self.checkpoint("revalidating" if self.state.get("bootstrap_ready") else "preflight", log=str(self.log_path))
         origin = self.command("git", "remote", "get-url", "origin", capture=True)
         require(origin_repo(origin) == REPO, "origin must point to " + REPO)
         permissions = self.api(f"repos/{REPO}")
@@ -311,31 +312,55 @@ class Release:
         actor = self.api("user")
         require(isinstance(actor.get("id"), int) and actor["id"] > 0 and
                 re.fullmatch(r"[A-Za-z0-9-]+", actor.get("login", "")), "Invalid GitHub maintainer identity")
-        self.command("git", "clone", "--no-checkout", origin, str(self.scratch / "source"))
         self.source = self.scratch / "source"
+        require(not self.source.is_symlink(), "Retained checkout is a symlink; use --fresh to rebuild local files")
+        checkout = self.state.get("checkout_ready", {})
+        require(isinstance(checkout, dict), "Invalid checkout checkpoint; use --fresh to rebuild local files")
+        retained = (checkout.get("workspace") == self.state["scratch_owner"]["id"] and
+                    checkout.get("source_sha") == self.state.get("source_sha") and (self.source / ".git").exists())
+        if retained:
+            require(self.command("git", "rev-parse", "HEAD", capture=True) == self.state["source_sha"],
+                    "Retained checkout changed revision; use --fresh to rebuild local files")
+            require(not self.command("git", "status", "--porcelain", "--untracked-files=no", capture=True),
+                    "Retained checkout has modified source; use --fresh to rebuild local files")
+            require(origin_repo(self.command("git", "remote", "get-url", "origin", capture=True)) == REPO,
+                    "Retained checkout has a different origin")
+            self.log("Reusing retained checkout: " + str(self.source))
+            self.command("git", "fetch", "origin", "--tags", "--prune")
+        else:
+            if self.source.exists():
+                shutil.rmtree(self.source)
+            self.command("git", "clone", "--no-checkout", origin, str(self.source), cwd=self.root)
         # A fresh clone has no repository-local identity. Use gh's public
         # identity, without exposing an email or prompting for a GPG key.
         self.command("git", "config", "user.name", actor["login"])
         self.command("git", "config", "user.email", f"{actor['id']}+{actor['login']}@users.noreply.github.com")
-        tags = self.command("git", "tag", "--list", self.tag, capture=True).splitlines()
+        tags = bool(self.command("git", "ls-remote", "--tags", "origin", "refs/tags/" + self.tag, capture=True))
         ref = self.tag if tags else self.state.get("source_sha", "origin/main")
         sha = self.command("git", "rev-parse", ref + "^{commit}", capture=True)
         require(not self.state.get("source_sha") or self.state["source_sha"] == sha,
                 "Source/tag moved since this release started; refusing to change the checkpointed source")
         self.command("git", "merge-base", "--is-ancestor", sha, "origin/main")
         self.command("git", "switch", "--detach", sha)
-        if tags:
+        if self.command("git", "tag", "--list", self.tag, capture=True):
             require(self.command("git", "cat-file", "-t", self.tag, capture=True) == "tag",
                     "Existing release tag must be annotated")
+            require(self.command("git", "rev-parse", self.tag + "^{commit}", capture=True) == sha,
+                    "Local release tag differs from the pinned source")
         require((self.source / "VERSION").read_text().strip() == self.version, "Requested version differs from source VERSION")
-        self.checkpoint("source-pinned", source_sha=sha)
+        fingerprint = {"workspace": self.state["scratch_owner"]["id"], "source_sha": sha, "schema": 1}
+        self.checkpoint("source-revalidated" if retained else "source-pinned", source_sha=sha, checkout_ready=fingerprint)
         self.log("Release source: " + sha)
-        self.command("mise", "install")
-        self.mix("local.hex", "--if-missing", "--force")
-        self.mix("local.rebar", "--if-missing", "--force")
-        self.mix("deps.get")
-        self.mix("deps.get", host=True)
+        if self.state.get("bootstrap_ready") == fingerprint:
+            self.log("Reusing compiled dependencies and completed local setup")
+        else:
+            self.command("mise", "install")
+            self.mix("local.hex", "--if-missing", "--force")
+            self.mix("local.rebar", "--if-missing", "--force")
+            self.mix("deps.get")
+            self.mix("deps.get", host=True)
         self.mix("run", "--no-start", "-e", KEY_CHECK, host=True)
+        self.checkpoint("local-ready", bootstrap_ready=fingerprint)
         self.mix("hex.user", "whoami")
         latest = self.api(f"repos/{REPO}/releases/latest", absent=True)
         if latest:
@@ -352,12 +377,15 @@ class Release:
         sha = self.state["source_sha"]
         if not tags:
             rehearsal = self.await_run("release.yml", "workflow_dispatch", sha, "main", dispatch=True)
-            candidate = self.scratch / "rehearsal"
-            self.command("gh", "run", "download", str(rehearsal["id"]), "--repo", REPO,
-                         "--name", "complete-release-candidate", "--dir", str(candidate))
-            self.validate_candidate(candidate)
-            self.checkpoint("rehearsal-passed", rehearsal_run=rehearsal["id"])
-            self.command("git", "tag", "-a", "--no-sign", self.tag, "-m", "Lemieux " + self.version)
+            if (self.state.get("rehearsal_run"), self.state.get("rehearsal_attempt")) != (rehearsal["id"], rehearsal["run_attempt"]):
+                candidate = self.scratch / "rehearsal"
+                self.reset_download(candidate)
+                self.command("gh", "run", "download", str(rehearsal["id"]), "--repo", REPO,
+                             "--name", "complete-release-candidate", "--dir", str(candidate))
+                self.validate_candidate(candidate)
+                self.checkpoint("rehearsal-passed", rehearsal_run=rehearsal["id"], rehearsal_attempt=rehearsal["run_attempt"])
+            if not self.command("git", "tag", "--list", self.tag, capture=True):
+                self.command("git", "tag", "-a", "--no-sign", self.tag, "-m", "Lemieux " + self.version)
             self.checkpoint("push-tag")
             self.command("git", "push", "origin", "refs/tags/" + self.tag)
         run = self.await_run("release.yml", "push", sha, self.tag)
@@ -366,10 +394,21 @@ class Release:
         return run
 
     def download_release(self, directory, tag=None, patterns=()):
+        self.reset_download(directory)
         arguments = ["gh", "release", "download", tag or self.tag, "--repo", REPO, "--dir", str(directory)]
         for pattern in patterns:
             arguments.extend(("--pattern", pattern))
         self.command(*arguments)
+
+    def reset_download(self, directory):
+        # Remote draft bytes are refreshed on admission; compiled source is
+        # retained separately. Never follow a leftover download symlink.
+        if directory.is_symlink():
+            directory.unlink()
+        elif directory.is_dir():
+            shutil.rmtree(directory)
+        elif directory.exists():
+            directory.unlink()
 
     def snapshot(self, directory):
         return {path.name: sha256(path) for path in directory.iterdir() if path.name not in SIGNED}
@@ -502,6 +541,19 @@ class Release:
         raise ReleaseError("Hex is unavailable; publication state is unknown. Rerun to reconcile before publishing.")
 
     def publish_hex(self):
+        if self.state.get("hex_checksum"):
+            existing = self.hex_get()
+            if existing:
+                require(existing.get("checksum") == self.state["hex_checksum"] and not existing.get("retirement"),
+                        "Existing Hex version differs from this source or is retired; refusing overwrite")
+                if existing.get("has_docs"):
+                    self.log("Resuming after confirmed Hex package and documentation publication")
+                    self.checkpoint("hex-published")
+                    return
+                self.log("Resuming the remaining Hex documentation upload")
+                self.mix("hex.publish", "docs", "--yes")
+                self.confirm_hex(self.state["hex_checksum"])
+                return
         self.checkpoint("prepare-hex")
         self.mix("hex.publish", "--dry-run")
         package = self.scratch / ("lemieux-" + self.version + ".tar")
@@ -531,6 +583,9 @@ class Release:
                     "Existing Hex version differs from this source or is retired; refusing overwrite")
             if not release.get("has_docs"):
                 self.mix("hex.publish", "docs", "--yes")
+        self.confirm_hex(digest)
+
+    def confirm_hex(self, digest):
         deadline = time.monotonic() + min(self.wait, 180)
         while time.monotonic() < deadline:
             release = self.hex_get()
@@ -548,6 +603,7 @@ class Release:
         qualified = (self.state.get("qualified_run_id"), self.state.get("qualified_run_attempt"))
         if qualified != (run["id"], run["run_attempt"]):
             candidate = self.scratch / "candidate"
+            self.reset_download(candidate)
             self.command("gh", "run", "download", str(run["id"]), "--repo", REPO,
                          "--name", "complete-release-candidate", "--dir", str(candidate))
             self.validate_candidate(candidate)
@@ -558,8 +614,12 @@ class Release:
         draft = self.scratch / "draft"
         release = self.verified_draft(draft, run)
         if release["draft"]:
-            self.checkpoint("sign-draft")
-            self.mix("lmx.release.sign_draft", "--tag", self.tag, "--private-key", str(self.key), "--repo", REPO, host=True)
+            if SIGNED <= {path.name for path in draft.iterdir()}:
+                self.mix("lmx.release.verify", str(draft / "SHA256SUMS"), str(draft / "update.json"), host=True)
+                self.log("Resuming with existing verified draft signatures")
+            else:
+                self.checkpoint("sign-draft")
+                self.mix("lmx.release.sign_draft", "--tag", self.tag, "--private-key", str(self.key), "--repo", REPO, host=True)
         signed = self.scratch / "signed"
         self.verified_draft(signed, run, signed=True)
         self.attest(signed)
@@ -584,47 +644,88 @@ class Release:
         self.checkpoint("complete", release_url=published["html_url"], error=None)
         self.log("Released " + self.tag + ": " + published["html_url"])
 
-    def cleanup(self):
+    def workspace_path(self):
         old = self.state.get("scratch")
         if old:
             path = Path(old)
             marker = path / ".release-owner.json"
+            owner = self.state.get("scratch_owner")
+            require(isinstance(owner, dict) and owner.get("repo") == REPO and owner.get("version") == self.version
+                    and isinstance(owner.get("id"), str) and re.fullmatch(r"[0-9a-f]{32}", owner["id"]),
+                    "Invalid retained workspace owner")
+            private = path.parent == self.directory.resolve() and path.name == "workspace-" + owner["id"]
+            legacy = path.parent == Path(tempfile.gettempdir()).resolve() and path.name == "lemieux-release-" + owner["id"]
+            require(private or legacy, "Temporary directory ownership differs; refusing cleanup: " + str(path))
             if path.exists():
-                owner = self.state.get("scratch_owner")
-                require(isinstance(owner, dict) and owner.get("repo") == REPO and owner.get("version") == self.version
-                        and isinstance(owner.get("id"), str) and re.fullmatch(r"[0-9a-f]{32}", owner["id"])
-                        and path.parent == Path(tempfile.gettempdir()).resolve() and path.name == "lemieux-release-" + owner["id"]
-                        and path.is_dir() and not path.is_symlink() and path.stat().st_uid == os.getuid()
+                require(path.is_dir() and not path.is_symlink() and path.stat().st_uid == os.getuid()
                         and (not marker.exists() or (marker.is_file() and json.loads(marker.read_text()) == owner)),
                         "Temporary directory ownership differs; refusing cleanup: " + str(path))
+            return path
+        return None
+
+    def cleanup(self):
+        path = self.workspace_path()
+        if path is not None:
+            if path.exists():
                 shutil.rmtree(path)
-            self.state.pop("scratch", None)
-            self.state.pop("scratch_owner", None)
+            for field in ("scratch", "scratch_owner", "checkout_ready", "bootstrap_ready"):
+                self.state.pop(field, None)
             atomic_json(self.state_path, self.state)
+
+    def retain_workspace(self):
+        path = self.workspace_path()
+        if path is None or not path.exists():
+            return
+        # Keep only the checkout/build cache. Downloads are revalidated from
+        # GitHub next time, and diagnostic memory dumps must never be cached.
+        for name in ("candidate", "rehearsal", "draft", "signed", "final", "previous"):
+            self.reset_download(path / name)
+        self.reset_download(path / f"lemieux-{self.version}.tar")
+        for dump in path.rglob("erl_crash.dump"):
+            dump.unlink()
+        self.log("Resume workspace retained: " + str(path))
 
     def start(self):
         self.log("Log: " + str(self.log_path))
+        completed = False
         try:
-            self.cleanup()
-            owner = {"repo": REPO, "version": self.version, "id": uuid.uuid4().hex}
-            self.scratch = Path(tempfile.gettempdir()).resolve() / ("lemieux-release-" + owner["id"])
-            # Reserve the exact unpredictable path durably BEFORE mkdir. A
-            # kill between mkdir and writing its marker is then recoverable.
-            self.checkpoint("starting", scratch=str(self.scratch), scratch_owner=owner)
-            self.scratch.mkdir(mode=0o700)
-            atomic_json(self.scratch / ".release-owner.json", owner)
+            old = self.workspace_path()
+            if self.fresh or (old is not None and old.parent != self.directory.resolve()):
+                self.cleanup()
+                old = None
+            if old is not None and old.exists():
+                self.scratch = old
+                self.log("Resuming saved release; current remote state will be revalidated")
+            else:
+                self.cleanup()
+                owner = {"repo": REPO, "version": self.version, "id": uuid.uuid4().hex}
+                self.scratch = self.directory.resolve() / ("workspace-" + owner["id"])
+                self.checkpoint("resuming" if self.state.get("source_sha") else "starting",
+                                scratch=str(self.scratch), scratch_owner=owner)
+                self.scratch.mkdir(mode=0o700)
+                atomic_json(self.scratch / ".release-owner.json", owner)
+                if self.state.get("source_sha"):
+                    self.log("Previous local files were cleaned; creating a retained workspace once")
+            if self.state.get("qualified_run_id"):
+                self.log(f"Resume checkpoint: qualified tag run {self.state['qualified_run_id']} attempt {self.state['qualified_run_attempt']}; continue with draft verification/signing")
+            if self.state.get("hex_checksum"):
+                self.log("Resume checkpoint: reconcile existing Hex/GitHub publication")
             self.execute()
+            completed = True
         except (ReleaseError, OSError, ValueError, KeyError, TypeError, IndexError,
                 struct.error, tarfile.TarError, KeyboardInterrupt) as error:
             message = "Interrupted; rerun the same command to resume" if isinstance(error, KeyboardInterrupt) else str(error)
             if isinstance(self.run, Runner):
                 message = self.run.clean(message)
-            self.checkpoint("stopped", error=message)
+            self.checkpoint("stopped", error=message, stopped_at=self.state.get("phase"))
             self.log("ERROR: " + message)
             raise ReleaseError(message) from None
         finally:
             try:
-                self.cleanup()
+                if completed:
+                    self.cleanup()
+                else:
+                    self.retain_workspace()
             finally:
                 self.log("Log: " + str(self.log_path))
                 self.log_file.close()
@@ -650,6 +751,7 @@ def main(argv=None):
     parser.add_argument("version", help="stable X.Y.Z or vX.Y.Z")
     parser.add_argument("key", type=Path, help="existing offline release key outside every checkout")
     parser.add_argument("--retry-failed", action="store_true", help="retry failed workflow jobs once")
+    parser.add_argument("--fresh", action="store_true", help="recreate local workspace while keeping remote release checkpoints")
     parser.add_argument("--timeout", type=int, default=14400, help="maximum seconds per workflow wait (default: 14400)")
     args = parser.parse_args(argv)
     version = args.version[1:] if args.version.startswith("v") else args.version
@@ -671,7 +773,7 @@ def main(argv=None):
                 raise KeyboardInterrupt()
             for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
                 signal.signal(signum, interrupted)
-            Release(ROOT, version, key, state, wait=args.timeout, retry_failed=args.retry_failed).start()
+            Release(ROOT, version, key, state, wait=args.timeout, retry_failed=args.retry_failed, fresh=args.fresh).start()
         return 0
     except (ReleaseError, subprocess.CalledProcessError, OSError, ValueError) as error:
         print("Release stopped: " + str(error), file=sys.stderr)

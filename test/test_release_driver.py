@@ -132,11 +132,15 @@ class World:
         if args[:4] == ("git", "remote", "get-url", "origin"):
             return "git@github.com:houllette/lemieux.git"
         if args[:2] == ("git", "clone"):
-            shutil.copytree(self.fixture, args[-1]); return ""
+            shutil.copytree(self.fixture, args[-1]); (Path(args[-1]) / ".git").mkdir(exist_ok=True); return ""
         if args[:3] == ("git", "tag", "--list"):
             return "v0.12.0" if self.tagged else ""
         if args[:2] == ("git", "rev-parse"):
             return self.sha
+        if args[:2] == ("git", "ls-remote"):
+            return "f" * 40 + "\trefs/tags/v0.12.0" if self.pushed else ""
+        if args[:2] in (("git", "fetch"), ("git", "status")):
+            return ""
         if args[:2] in (("git", "merge-base"), ("git", "switch")):
             return ""
         if args[:2] == ("git", "config"):
@@ -146,6 +150,8 @@ class World:
         if args[:3] == ("git", "tag", "-a"):
             self.tagged = True; return ""
         if args[:2] == ("git", "push"):
+            if self.fail_after == "push-before":
+                self.fail_after = None; raise driver.ReleaseError("push not accepted")
             self.pushed = True
             if self.fail_after == "push":
                 self.fail_after = None; raise driver.ReleaseError("lost push response")
@@ -158,6 +164,13 @@ class World:
             return ""
         if args[:4] == ("mise", "exec", "--", "mix"):
             task = args[4]
+            if task == "run":
+                marker = Path(cwd) / "_build/retained-compile"
+                marker.parent.mkdir(exist_ok=True)
+                marker.write_text("compiled")
+                if self.fail_after == "bootstrap":
+                    self.fail_after = None; raise KeyboardInterrupt()
+                return ""
             if task in ("local.hex", "local.rebar", "deps.get", "run", "hex.user", "lmx.upgrade.check", "lmx.release.verify"):
                 return ""
             if task == "lmx.release.sign_draft":
@@ -172,6 +185,7 @@ class World:
                     return ""
                 self.hex = {"version": "0.12.0", "checksum": self.package_hash, "has_docs": True, "retirement": None}
                 if self.fail_after == "hex":
+                    (Path(cwd) / "erl_crash.dump").write_text("throwaway diagnostic memory")
                     self.fail_after = None; raise driver.ReleaseError("lost Hex response")
                 if self.fail_after == "replace":
                     self.changed_draft = True
@@ -219,15 +233,15 @@ class ReleaseDriverTest(unittest.TestCase):
         self.state = self.base / "state"; self.state.mkdir()
         self.key = self.base / "unused placeholder.key"; self.key.write_text("not a real key")
 
-    def release(self):
+    def release(self, **options):
         release = driver.Release(self.world.fixture, "0.12.0", self.key, self.state, runner=self.world,
-                                 poll=0, wait=1, hex_get=lambda: copy.deepcopy(self.world.hex))
+                                 poll=0, wait=1, hex_get=lambda: copy.deepcopy(self.world.hex), **options)
         release.api = self.world.api
         return release
 
-    def start(self):
+    def start(self, **options):
         with contextlib.redirect_stdout(io.StringIO()):
-            self.release().start()
+            self.release(**options).start()
 
     def checkpoint(self):
         return json.loads((self.state / "state.json").read_text())
@@ -277,11 +291,18 @@ class ReleaseDriverTest(unittest.TestCase):
         self.world.fail_after = boundary
         with self.assertRaisesRegex(driver.ReleaseError, "lost"):
             self.start()
-        self.assertNotIn("scratch", self.checkpoint())
+        retained = Path(self.checkpoint()["scratch"])
+        self.assertTrue((retained / "source/.git").is_dir())
+        self.assertFalse((retained / "source/erl_crash.dump").exists())
+        self.assertFalse(any((retained / name).exists() for name in ("candidate", "rehearsal", "draft", "signed", "final")))
         self.start()
+        self.assertFalse(retained.exists())
         self.assertEqual(self.checkpoint()["phase"], "complete")
         self.assertEqual(sum(c[:2] == ("git", "push") for c in self.world.calls), 1)
         self.assertEqual(sum(len(c) > 5 and c[4] == "hex.publish" and c[5] == "--yes" for c in self.world.calls), 1)
+        self.assertEqual(sum(c[:2] == ("git", "clone") for c in self.world.calls), 1)
+        self.assertEqual(sum(len(c) > 4 and c[4] == "deps.get" for c in self.world.calls), 2)
+        self.assertEqual(sum(len(c) > 4 and c[4] == "lmx.release.sign_draft" for c in self.world.calls), 1)
 
     def test_resume_after_accepted_tag_push_with_lost_response(self):
         self.accepted_write("push")
@@ -291,6 +312,57 @@ class ReleaseDriverTest(unittest.TestCase):
 
     def test_resume_after_accepted_github_publication_with_lost_response(self):
         self.accepted_write("github")
+
+    def test_resume_pushes_unpublished_local_tag_without_recreating_it(self):
+        self.world.fail_after = "push-before"
+        with self.assertRaisesRegex(driver.ReleaseError, "not accepted"): self.start()
+        self.assertTrue(self.world.tagged)
+        self.assertFalse(self.world.pushed)
+        self.start()
+        self.assertTrue(self.world.published)
+        self.assertEqual(sum(c[:3] == ("git", "tag", "-a") for c in self.world.calls), 1)
+        self.assertEqual(sum(c[:2] == ("git", "push") for c in self.world.calls), 2)
+
+    def test_interrupted_bootstrap_retains_compiled_files_and_checkout(self):
+        self.world.fail_after = "bootstrap"
+        with self.assertRaisesRegex(driver.ReleaseError, "Interrupted"): self.start()
+        cache = Path(self.checkpoint()["scratch"])
+        self.assertTrue((cache / "source/dist/lmx/_build/retained-compile").is_file())
+        self.assertNotIn("bootstrap_ready", self.checkpoint())
+        self.start()
+        self.assertFalse(cache.exists())
+        self.assertEqual(sum(c[:2] == ("git", "clone") for c in self.world.calls), 1)
+
+    def test_fresh_rebuilds_local_cache_without_resetting_remote_progress(self):
+        self.world.fail_after = "hex"
+        with self.assertRaises(driver.ReleaseError): self.start()
+        cache = Path(self.checkpoint()["scratch"])
+        self.start(fresh=True)
+        self.assertFalse(cache.exists())
+        self.assertEqual(sum(c[:2] == ("git", "clone") for c in self.world.calls), 2)
+        self.assertEqual(sum(c[:2] == ("git", "push") for c in self.world.calls), 1)
+        self.assertEqual(sum(len(c) > 5 and c[4:6] == ("hex.publish", "--yes") for c in self.world.calls), 1)
+
+    def test_modified_retained_checkout_is_refused_before_resume(self):
+        self.world.fail_after = "push"
+        with self.assertRaises(driver.ReleaseError): self.start()
+        original = self.world.__class__.__call__
+        def dirty(world, args, **kwargs):
+            if tuple(args)[:2] == ("git", "status"): return " M VERSION"
+            return original(world, args, **kwargs)
+        before = len(self.world.calls)
+        with patch.object(World, "__call__", dirty):
+            with self.assertRaisesRegex(driver.ReleaseError, "modified source"): self.start()
+        self.assertFalse(any(len(c)>4 and c[4]=="run" for c in self.world.calls[before:]))
+
+    def test_retained_checkout_symlink_cannot_redirect_resume(self):
+        self.world.fail_after = "push"
+        with self.assertRaises(driver.ReleaseError): self.start()
+        source = Path(self.checkpoint()["scratch"]) / "source"
+        shutil.rmtree(source); source.symlink_to(self.world.fixture, target_is_directory=True)
+        before = (self.world.fixture / "VERSION").read_bytes()
+        with self.assertRaisesRegex(driver.ReleaseError, "symlink"): self.start()
+        self.assertEqual((self.world.fixture / "VERSION").read_bytes(), before)
 
     def test_completed_release_rerun_does_not_publish_again(self):
         self.start(); before = len(self.world.calls)
@@ -335,6 +407,8 @@ class ReleaseDriverTest(unittest.TestCase):
         docs = [c for c in self.world.calls if len(c) > 6 and c[4:7] == ("hex.publish", "docs", "--yes")]
         self.assertEqual(len(normal), 1)
         self.assertEqual(len(docs), 1)
+        self.assertEqual(sum(len(c)>5 and c[4:6]==("hex.publish", "--dry-run") for c in self.world.calls), 1)
+        self.assertEqual(sum(len(c)>4 and c[4]=="hex.build" for c in self.world.calls), 1)
         self.assertTrue(self.world.published)
 
     def test_existing_foreign_hex_version_is_not_overwritten(self):
