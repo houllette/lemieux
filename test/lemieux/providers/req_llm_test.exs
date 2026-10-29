@@ -19,6 +19,102 @@ defmodule Lemieux.Providers.ReqLLMTest do
     Request.new("anthropic:claude-haiku-4-5", Keyword.put(opts, :entries, entries))
   end
 
+  describe "fast modes" do
+    @describetag :capture_log
+    test "only known modes on supported direct transports are advertised" do
+      provider = ReqLLMProvider.new(api_keys: %{"openai" => "fake"})
+      assert Provider.fast_modes(provider, "openai:gpt-5.6") == ["fast"]
+      assert Provider.fast_modes(provider, "openai_codex:gpt-5.6") == ["fast"]
+      assert Provider.fast_modes(provider, "openai:gpt-6-astra") == ["fast", "ultrafast"]
+      assert Provider.fast_modes(provider, "anthropic:claude-opus-4-6") == []
+      assert Provider.fast_modes(provider, "openai:not-in-the-catalog") == []
+      assert Provider.fast_modes(Scripted.new([]), "openai:gpt-5.6") == []
+
+      for options <- [
+            [transport_routes: %{"openai" => [provider: "openai"]}],
+            [base_url: "https://gateway.example/v1"]
+          ] do
+        gateway = ReqLLMProvider.new(options)
+        assert Provider.fast_modes(gateway, "openai:gpt-5.6") == []
+      end
+    end
+
+    test "logical modes become the actual OpenAI and Codex wire service tier" do
+      for {spec, mode, tier} <- [
+            {"openai:gpt-5.6", "fast", "priority"},
+            {"openai_codex:gpt-5.6", "fast", "priority"},
+            {"openai:gpt-6-astra", "ultrafast", "ultrafast"}
+          ] do
+        assert {:ok, {target, options}} =
+                 ReqLLMProvider.request_target(spec, fast_mode: mode, api_key: "fake")
+
+        refute Keyword.has_key?(options, :fast_mode)
+        assert {:ok, model} = ReqLLM.model(target)
+        assert {:ok, provider} = ReqLLM.provider(model.provider)
+        context = Context.new([Context.user("hello")])
+
+        options =
+          if model.provider == :openai_codex,
+            do:
+              Keyword.merge(options,
+                access_token: "fake-token",
+                chatgpt_account_id: "fake-account"
+              ),
+            else: options
+
+        assert {:ok, req} = provider.prepare_request(:chat, model, context, options)
+        encoded = provider.encode_body(req)
+        assert Jason.decode!(encoded.body)["service_tier"] == tier
+      end
+    end
+
+    test "a fast budget reservation never falls back to the ordinary list rate" do
+      provider = ReqLLMProvider.new()
+
+      request =
+        Request.new("openai:gpt-6-astra",
+          entries: [Entry.new(:user, %{"text" => "hello"})],
+          params: [max_tokens: 100]
+        )
+
+      assert is_number(Provider.estimate_cost(provider, request))
+      # This catalog's tier/region tariff is incomplete. Refuse a capped run
+      # rather than admitting priority service at the cheaper ordinary rate.
+      assert Provider.estimate_cost(provider, %{
+               request
+               | params: [max_tokens: 100, fast_mode: "fast"]
+             }) == nil
+    end
+
+    test "off, unsupported modes and gateway paths do not send a fast tier" do
+      for {spec, mode} <- [
+            {"openai:gpt-5.6", "off"},
+            {"openai:gpt-5.6", "ultrafast"},
+            {"anthropic:claude-opus-4-6", "fast"}
+          ] do
+        assert {:ok, {^spec, options}} =
+                 ReqLLMProvider.request_target(spec, fast_mode: mode, service_tier: "priority")
+
+        refute Keyword.has_key?(options, :fast_mode)
+        refute Keyword.has_key?(options, :service_tier)
+      end
+
+      for route <- [
+            [transport_routes: %{"openai" => [provider: "openai"]}],
+            [base_url: "https://gateway.example/v1"]
+          ] do
+        assert {:ok, {_target, options}} =
+                 ReqLLMProvider.request_target(
+                   "openai:gpt-5.6",
+                   [api_key: "fake", fast_mode: "fast"] ++ route
+                 )
+
+        refute Keyword.has_key?(options, :fast_mode)
+        refute Keyword.has_key?(options, :service_tier)
+      end
+    end
+  end
+
   describe "decode_arguments/1" do
     test "keeps a valid object" do
       assert ReqLLMProvider.decode_arguments(~s({"path":"README.md"})) ==

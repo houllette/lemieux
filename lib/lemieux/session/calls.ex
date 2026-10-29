@@ -99,6 +99,18 @@ defmodule Lemieux.Session.Calls do
     {:reply, Enum.uniq(providers), state}
   end
 
+  def call(:fast_modes, _from, state),
+    do: {:reply, Provider.fast_modes(state.provider, state.model), state}
+
+  def call({:set_fast_mode, _mode}, _from, state) when not is_nil(state.turn),
+    do: {:reply, {:error, :busy}, state}
+
+  def call({:set_fast_mode, mode}, _from, state) do
+    if Core.busy?(state),
+      do: {:reply, {:error, :busy}, state},
+      else: Catalog.change_fast_mode(state, mode)
+  end
+
   def call(:reasoning_efforts, _from, state),
     do: {:reply, Provider.reasoning_efforts(state.provider, state.model), state}
 
@@ -263,6 +275,8 @@ defmodule Lemieux.Session.Calls do
       provider: ModelSpec.provider(state.model),
       reasoning_effort: Catalog.reasoning_effort(state) || "default",
       reasoning_efforts: Provider.reasoning_efforts(state.provider, state.model),
+      fast_mode: Keyword.get(state.params, :fast_mode, "off"),
+      fast_modes: Provider.fast_modes(state.provider, state.model),
       tools: Catalog.local_tool_names(state),
       cwd: state.cwd,
       pending: Core.pending(state),
@@ -301,6 +315,8 @@ defmodule Lemieux.Session.Calls do
       provider: ModelSpec.provider(state.model),
       reasoning_effort: Catalog.reasoning_effort(state) || "default",
       reasoning_efforts: Provider.reasoning_efforts(state.provider, state.model),
+      fast_mode: Keyword.get(state.params, :fast_mode, "off"),
+      fast_modes: Provider.fast_modes(state.provider, state.model),
       tools: Catalog.local_tool_names(state),
       cwd: state.cwd,
       pending: Core.pending(state),

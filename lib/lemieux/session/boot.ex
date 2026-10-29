@@ -91,7 +91,12 @@ defmodule Lemieux.Session.Boot do
     entries = opts |> Keyword.get(:entries, []) |> Dedup.expand()
     recorded = Setup.recorded_config(entries)
     model = Setup.resolve(opts, :model, recorded, "model", nil)
-    params = Setup.resolve_params(opts, recorded)
+
+    params =
+      opts
+      |> Setup.resolve_params(recorded)
+      |> Catalog.compatible_fast_params(Keyword.fetch!(opts, :provider), model)
+
     supervisor = Keyword.fetch!(opts, :supervisor)
     hooks = Keyword.get(opts, :hooks, [])
     configured_tools = Setup.resolve_tools(opts, recorded)

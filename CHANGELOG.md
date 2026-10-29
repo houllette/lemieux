@@ -19,6 +19,10 @@ API.
   unavailable, resuming the exact session and working directory without
   replaying the initial prompt. Automatically restart only a pristine,
   untouched, idle screen; drafts and pending work prevent restart. (#108)
+- Toggle faster service with `/fast` when the active model and transport
+  declare support, including `ultrafast` where available. Persist the choice
+  for resume, clear unsupported modes on model switches, and hide the command
+  elsewhere. Faster tiers may cost more and still require account access. (#107)
 
 ### Migration
 

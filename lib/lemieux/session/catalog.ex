@@ -117,7 +117,11 @@ defmodule Lemieux.Session.Catalog do
       :ok ->
         previous = state.model
         previous_effort = reasoning_effort(state)
-        params = compatible_reasoning_params(state, model)
+
+        params =
+          state
+          |> compatible_reasoning_params(model)
+          |> compatible_fast_params(state.provider, model)
 
         state =
           state
@@ -188,6 +192,39 @@ defmodule Lemieux.Session.Catalog do
   def models_for(state, provider) do
     provider = provider |> String.trim() |> String.downcase()
     Enum.filter(models(state), &(ModelSpec.provider(&1) == provider))
+  end
+
+  def change_fast_mode(state, mode) do
+    current = Keyword.get(state.params, :fast_mode, "off")
+    mode = mode |> String.trim() |> String.downcase() |> fast_choice(current)
+    supported = Provider.fast_modes(state.provider, state.model)
+
+    cond do
+      mode not in ["off" | supported] ->
+        {:reply, {:error, {:fast_mode_unsupported, state.model, mode, supported}}, state}
+
+      mode == current ->
+        {:reply, {:ok, mode}, state}
+
+      true ->
+        state =
+          state
+          |> Map.update!(:params, &Keyword.put(&1, :fast_mode, mode))
+          |> Setup.record_config()
+
+        {:reply, {:ok, mode}, state}
+    end
+  end
+
+  defp fast_choice("on", _current), do: "fast"
+  defp fast_choice("toggle", "off"), do: "fast"
+  defp fast_choice("toggle", _current), do: "off"
+  defp fast_choice(mode, _current), do: mode
+
+  def compatible_fast_params(params, provider, model) do
+    if Keyword.get(params, :fast_mode, "off") in ["off" | Provider.fast_modes(provider, model)],
+      do: params,
+      else: Keyword.delete(params, :fast_mode)
   end
 
   def reasoning_effort(state), do: normalize_effort(Keyword.get(state.params, :reasoning_effort))

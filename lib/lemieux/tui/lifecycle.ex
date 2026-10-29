@@ -660,6 +660,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         models: Choices.models_for(session, provider),
         model_metadata: Session.model_metadata(session),
         efforts: Session.reasoning_efforts(session),
+        fast_modes: Session.fast_modes(session),
         tool_statuses: tool_statuses(session, info),
         mcp: mcp_statuses(session, info),
         # Asked once, because a host profile is fixed for the life of a

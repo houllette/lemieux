@@ -253,6 +253,15 @@ build show notices only. A source checkout checks nothing on its own:
 `mix deps.get` and restart `mix lmx`. `lmx run` and embedded hosts never
 check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 
+**Fast service.** `/fast` toggles fast mode; `/fast on` and `/fast off` select
+it explicitly. `/fast ultrafast` is offered only when the model catalog and
+active transport support that tier. The choice is saved with the session and
+cleared when switching to an unsupported model or connection. Capability is
+not subscription entitlement: the provider still authorizes each request.
+With the pinned provider library, supported direct OpenAI and Codex models
+expose service tiers; Anthropic and gateways without a declared transport
+contract do not.
+
 ### Keys
 
 | Key | What it does |
@@ -365,6 +374,7 @@ links to the docs, issues and questions at the end.
 | `/model [SPEC]` | Show or select a model within the current provider |
 | `/provider [NAME]` | Show or select a provider; switching provider is how you reach another provider's models |
 | `/effort [LEVEL]` | Show or select a reasoning effort the model supports |
+| `/fast [on \| off \| ultrafast]` | Toggle faster service for subsequent requests; shown only for supported models and connections. May cost more and requires provider account access |
 | `/new` | Start a new session: fresh name, transcript and usage totals |
 | `/resume [SESSION \| all]` | List this directory's sessions, most recently active first, or switch to one; `all` lists every directory's |
 | `/compact` | Summarize the earlier conversation now |

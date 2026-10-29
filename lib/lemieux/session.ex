@@ -296,6 +296,8 @@ defmodule Lemieux.Session do
           provider: String.t() | nil,
           reasoning_effort: String.t(),
           reasoning_efforts: [String.t()],
+          fast_mode: String.t(),
+          fast_modes: [String.t()],
           tools: [String.t()],
           cwd: Path.t(),
           pending: [%{call_id: String.t(), kind: atom(), payload: term()}],
@@ -363,6 +365,8 @@ defmodule Lemieux.Session do
           provider: String.t() | nil,
           reasoning_effort: String.t(),
           reasoning_efforts: [String.t()],
+          fast_mode: String.t(),
+          fast_modes: [String.t()],
           tools: [String.t()],
           cwd: Path.t(),
           pending: [%{call_id: String.t(), kind: atom(), payload: term()}],
@@ -881,6 +885,20 @@ defmodule Lemieux.Session do
           {:ok, String.t()} | {:error, :busy | term()}
   def set_provider(session, provider) when is_binary(provider),
     do: GenServer.call(session, {:set_provider, provider})
+
+  @doc "Lists faster service modes for the current model and provider."
+  @spec fast_modes(session :: session()) :: [String.t()]
+  def fast_modes(session), do: GenServer.call(session, :fast_modes)
+
+  @doc """
+  Sets `"fast"`, `"ultrafast"` or `"off"` for future requests. `"on"` selects
+  fast, and `"toggle"` switches fast on or any enabled mode off. Refused during
+  a turn; persisted for resume. Faster modes may cost more and require account access.
+  """
+  @spec set_fast_mode(session :: session(), mode :: String.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def set_fast_mode(session, mode) when is_binary(mode),
+    do: GenServer.call(session, {:set_fast_mode, mode})
 
   @doc "Lists the reasoning-effort choices for the current model."
   @spec reasoning_efforts(session :: session()) :: [String.t()]
