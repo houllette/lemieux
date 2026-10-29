@@ -1,12 +1,12 @@
 Rust crates in the ex_ratatui terminal NIF
 ==========================================
 
-ex_ratatui: 0.17.0
-Cargo.lock sha256: 154456b8420162383ef78c4b3ca67541249bb384f5c9c9f6ab2a7ec3b6910346
+ex_ratatui: 0.17.1
+Cargo.lock sha256: d3808e13dfe134e4f32f106f193a3a79142334ea0b362322a39b576686a0a080
 Targets: aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc
 Licenses: Apache-2.0, ISC, MIT, Zlib
 
-The terminal library's native code (lib/ex_ratatui-0.17.0/priv/native)
+The terminal library's native code (lib/ex_ratatui-0.17.1/priv/native)
 is compiled from these crates. Each entry gives the crate, its version and
 its declared license; where the crate offers a choice, the license lmx
 uses it under follows "used under". The copyright lines its license files
@@ -69,7 +69,7 @@ equivalent 1.0.2: Apache-2.0 OR MIT; used under MIT
     Copyright (c) 2016--2023
 errno 0.3.14: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
     Copyright (c) 2014 Chris Wong
-ex_ratatui 0.17.0: MIT
+ex_ratatui 0.17.1: MIT
 fast-srgb8 1.0.0: MIT OR Apache-2.0 OR CC0-1.0; used under MIT
     Copyright 2016 The Miri Developers
     Copyright (c) 2021 Thom Chiovoloni
@@ -331,7 +331,7 @@ zune-jpeg 0.5.15: MIT OR Apache-2.0 OR Zlib; used under MIT
 Files these crates carry
 ------------------------
 
---- ex_ratatui 0.17.0: syntaxes/LICENSE ---
+--- ex_ratatui 0.17.1: syntaxes/LICENSE ---
 
 MIT License
 
