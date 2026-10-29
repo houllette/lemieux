@@ -239,8 +239,11 @@ signed manifest verifies against the Ed25519 public key built into the
 binary; a release whose signature is missing or does not verify is reported
 in the notice box and never installed. An offline or failed check stays
 silent. A compatible update may load into the running screen; otherwise it
-applies at the next start, and the first start after it links that
-release's changelog. `LMX_CHECK_UPDATES=0` turns the automatic checks off;
+applies at the next start. `/update` can restart the installed TUI and resume
+this exact session once it is idle and its draft is empty. A new screen with
+no interaction or conversation restarts automatically after installation;
+otherwise it waits for you. The first start after it links that release's
+changelog. `LMX_CHECK_UPDATES=0` turns the automatic checks off;
 `/update` still checks. `LMX_AUTO_UPDATE=0` keeps the notices and installs
 only when you run `/update`. Selecting your own extensions also turns
 automatic installation off; `/update` still installs, and the update applies
@@ -249,6 +252,15 @@ build show notices only. A source checkout checks nothing on its own:
 `/update` fast-forwards a clean checkout from its upstream, then says to run
 `mix deps.get` and restart `mix lmx`. `lmx run` and embedded hosts never
 check. See [Updates from the TUI](releases.md#updates-from-the-tui).
+
+**Fast service.** `/fast` toggles fast mode; `/fast on` and `/fast off` select
+it explicitly. `/fast ultrafast` is offered only when the model catalog and
+active transport support that tier. The choice is saved with the session and
+cleared when switching to an unsupported model or connection. Capability is
+not subscription entitlement: the provider still authorizes each request.
+With the pinned provider library, supported direct OpenAI and Codex models
+expose service tiers; Anthropic and gateways without a declared transport
+contract do not.
 
 ### Keys
 
@@ -362,6 +374,7 @@ links to the docs, issues and questions at the end.
 | `/model [SPEC]` | Show or select a model within the current provider |
 | `/provider [NAME]` | Show or select a provider; switching provider is how you reach another provider's models |
 | `/effort [LEVEL]` | Show or select a reasoning effort the model supports |
+| `/fast [on \| off \| ultrafast]` | Toggle faster service for subsequent requests; shown only for supported models and connections. May cost more and requires provider account access |
 | `/new` | Start a new session: fresh name, transcript and usage totals |
 | `/resume [SESSION \| all]` | List this directory's sessions, most recently active first, or switch to one; `all` lists every directory's |
 | `/compact` | Summarize the earlier conversation now |
@@ -389,7 +402,7 @@ links to the docs, issues and questions at the end.
 | `/name [TEXT]` | Show or change the session's label on screen, until you quit |
 | `/color [COLOUR]` | Show or change the accent colour |
 | `/theme [NAME]` | Show or switch the palette: `dark`, `light`, `mono` or one of yours |
-| `/update` | Check for and apply an update of the installed release, or fast-forward a clean source checkout |
+| `/update` | Check for and install an update; when a restart is pending, restart and resume this session. In a source checkout, fast-forward the clean branch |
 | `/doctor` | A readable report of the model and key, limits, MCP servers, permissions, checkpoints, sandbox and platform tools |
 | `/help` | Show the commands and key bindings |
 | `/quit` or `/exit` | Leave |

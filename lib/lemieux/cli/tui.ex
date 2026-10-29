@@ -390,6 +390,8 @@ defmodule Lemieux.CLI.TUI do
   # After a clean exit, where the conversation went: the screen used the
   # alternate buffer, so leaving it wiped the transcript from view and said
   # nothing about how to get back to it.
+  # The host prepared the restart before the screen closed; returning a status
+  # lets its launcher replace the VM only after terminal restoration and shutdown.
   defp farewell(:ok, options, opts) do
     store = Runtime.store(options, opts)
 
@@ -398,7 +400,7 @@ defmodule Lemieux.CLI.TUI do
       hint -> IO.puts(:stderr, "lmx: " <> hint)
     end
 
-    :ok
+    if get_in(opts, [:closed_session, :restart?]), do: {:error, 75}, else: :ok
   end
 
   defp farewell(outcome, _options, _opts), do: outcome

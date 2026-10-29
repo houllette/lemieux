@@ -237,6 +237,7 @@ defmodule Lemieux.Conversation do
           | {:set_model, String.t()}
           | :reasoning_effort_status
           | {:set_reasoning_effort, String.t()}
+          | {:set_fast_mode, String.t()}
           | :name_status
           | {:set_name, String.t()}
           | :colour_status

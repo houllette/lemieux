@@ -7,6 +7,29 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Features
+
+- Start an independent todo list with `action: "new"` or `Planning.new/2`,
+  retaining earlier plans in the transcript and keeping task ids monotonic.
+  `set` still continues the current work; completed plans no longer appear as
+  outstanding obligations on later requests. (#109)
+- Restart an installer-managed TUI with `/update` when hot loading is
+  unavailable, resuming the exact session and working directory without
+  replaying the initial prompt. Automatically restart only a pristine,
+  untouched, idle screen; drafts and pending work prevent restart. (#108)
+- Toggle faster service with `/fast` when the active model and transport
+  declare support, including `ultrafast` where available. Persist the choice
+  for resume, clear unsupported modes on model switches, and hide the command
+  elsewhere. Faster tiers may cost more and still require account access. (#107)
+
+### Migration
+
+- TUI `on_exit` callbacks now receive `restart?: boolean` alongside `id`,
+  `name` and `cwd`. Hosts matching the complete receipt must accept the new
+  field; it is true only after the host has prepared an update restart.
+
 ## 0.12.0 — 2026-10-28
 
 This release requires restarting `lmx` on every platform. Save an unsent draft,

@@ -22,7 +22,15 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec command_policy(TUI.t()) :: Conversation.command_policy()
     def command_policy(state) do
-      host = state.tool_choices.command_policy
+      policy = state.tool_choices.command_policy
+
+      host = fn
+        {:set_fast_mode, _mode} when state.catalog.fast_modes == [] ->
+          {:deny, "fast mode is not supported by this model and provider"}
+
+        action ->
+          Conversation.command_decision(policy, action)
+      end
 
       case state.tool_choices.elixir do
         :allow ->
@@ -72,6 +80,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       state =
         state
         |> put_in([Access.key!(:catalog), :efforts], Session.reasoning_efforts(state.session))
+        |> put_in([Access.key!(:catalog), :fast_modes], Session.fast_modes(state.session))
         |> put_in([Access.key!(:catalog), :model_metadata], Session.model_metadata(state.session))
 
       merge_discovered_choices(

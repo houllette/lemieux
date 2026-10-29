@@ -135,6 +135,36 @@ defmodule Lemieux.Extensions.PlanningTest do
 
   defp set(plan, tasks), do: Reducer.apply(plan, %{"action" => "set", "tasks" => tasks})
 
+  test "new starts an independent list without reusing task ids or erasing history", ctx do
+    assert {:ok, %{revision: 1}} =
+             Planning.set(ctx.session, [%{"title" => "Verify", "status" => "completed"}])
+
+    assert {:ok, %Result{structured_content: %{"revision" => 2, "plan" => plan}}} =
+             Planning.Tool.run(
+               %{"action" => "new", "tasks" => [%{"title" => "Verify", "status" => "pending"}]},
+               %{session: ctx.session}
+             )
+
+    assert [%{"id" => "t2", "title" => "Verify", "status" => "pending"}] = plan["tasks"]
+    assert {:ok, entries} = Lemieux.Store.read(ctx.store, Session.id(ctx.session))
+    assert Enum.count(entries, &(&1.type == :extension_state)) == 2
+
+    assert {:error, _} =
+             Planning.Tool.run(%{"action" => "new", "tasks" => [%{"title" => ""}]}, %{
+               session: ctx.session
+             })
+
+    assert {:ok, %{revision: 2, value: ^plan}} = Planning.read(ctx.session)
+  end
+
+  test "completed plans are not presented as current obligations on later turns", ctx do
+    assert {:ok, _} =
+             Planning.set(ctx.session, [%{"title" => "Old work", "status" => "completed"}])
+
+    request = Lemieux.Request.new("test:plan")
+    assert {:ok, ^request} = Planning.prepare(request, %{session: ctx.session})
+  end
+
   describe "set" do
     test "replaces the plan, keeping ids for restated titles and removing what it omits" do
       assert {:ok, plan} =

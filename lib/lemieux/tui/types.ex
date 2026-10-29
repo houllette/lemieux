@@ -185,6 +185,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             discovered: [String.t()],
             discover: %{optional(String.t()) => (-> [CatalogState.discovery()])},
             efforts: [String.t()],
+            fast_modes: [String.t()],
             mcp: [String.t()]
           }
 

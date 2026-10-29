@@ -46,7 +46,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
             requested?: boolean(),
             timer: {reference(), reference()} | nil,
             announced: {version :: String.t(), verdict :: :available | term()} | nil,
-            installed: String.t() | nil
+            installed: String.t() | nil,
+            interacted?: boolean()
           }
 
     @doc false
@@ -60,7 +61,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
         requested?: false,
         timer: nil,
         announced: nil,
-        installed: nil
+        installed: nil,
+        interacted?: false
       }
 
     @doc false
@@ -128,6 +130,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
           "This host supports update checks only. Update through its installation manager."
         )
 
+    def request(%{status: %{update: %{phase: :restart, host: %{restart: restart}}}} = state)
+        when is_function(restart, 1), do: restart(state)
+
     def request(%{status: %{update: %{phase: :restart}}} = state),
       do:
         state
@@ -163,6 +168,50 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       task(state, :check, Map.get(host, :request, host.check))
     end
+
+    # A resize is not activity; any deliberate input opts out, even if the
+    # draft is later erased. Resumed conversations also fail the history gate.
+    @doc false
+    @spec interact(state :: TUI.t(), event :: term()) :: TUI.t()
+    def interact(state, %ExRatatui.Event.Resize{}), do: state
+    def interact(state, %ExRatatui.Event.Key{kind: "release"}), do: state
+    def interact(state, _event), do: put_in(state.status.update.interacted?, true)
+
+    defp restart_automatically?(state) do
+      update = state.status.update
+
+      is_function(update.host[:restart], 1) and Map.get(update.host, :auto?, true) and
+        not update.interacted? and state.history.entries == [] and
+        Enum.all?(state.lines, &match?({:notice_box, _, _}, &1)) and
+        restart_idle?(state) and ExRatatui.textarea_get_value(state.input) == ""
+    end
+
+    defp restart_idle?(state),
+      do: idle?(state) and is_binary(state.id) and is_pid(state.session)
+
+    defp restart(state) do
+      cond do
+        not restart_idle?(state) ->
+          Notices.say(state, :warning, "Wait for pending work before restarting with /update.")
+
+        ExRatatui.textarea_get_value(state.input) != "" ->
+          Notices.say(state, :warning, "Save or clear your draft before restarting with /update.")
+
+        true ->
+          restart_ready(
+            state,
+            state.status.update.host.restart.(%{id: state.id, cwd: state.references.cwd})
+          )
+      end
+    end
+
+    defp restart_ready(state, :ok) do
+      send(self(), :restart_update)
+      put_in(state.status.update.phase, :restarting)
+    end
+
+    defp restart_ready(state, {:error, _reason}),
+      do: Notices.say(state, :error, "Could not prepare the restart. Your session is still open.")
 
     @doc false
     @spec check(state :: TUI.t()) :: TUI.t()
@@ -287,7 +336,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
         )
 
       state = put_in(state.status.update.phase, :restart)
-      schedule(state)
+      state = schedule(state)
+      if restart_automatically?(state), do: restart(state), else: state
     end
 
     defp complete(state, :apply, {:error, {:rollback_failed, _}}),
@@ -350,8 +400,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp restart_message(state, default) do
       case state.status.update.host do
-        %{restart_notice: notice} -> notice.(state.status.update.installed)
-        _host -> default
+        %{restart: restart} when is_function(restart, 1) ->
+          "Update installed · /update to restart and resume this session. Rebuild selected extensions for the new version."
+
+        %{restart_notice: notice} ->
+          notice.(state.status.update.installed)
+
+        _host ->
+          default
       end
     end
 
@@ -394,8 +450,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp idle?(state),
       do:
         not state.conversation.busy? and not state.resume.busy? and
-          state.resume.startup_status != :loading and state.history.queued == [] and
-          state.turn.started_at == nil
+          state.resume.startup_status in [:idle, :ready] and state.history.queued == [] and
+          state.turn.started_at == nil and state.modal == nil and state.overlay == nil and
+          tools_idle?(state.tools)
+
+    defp tools_idle?(tools),
+      do:
+        tools.question_flow == nil and tools.mcp_flow == nil and
+          map_size(tools.approvals) == 0 and map_size(tools.calls) == 0
 
     defp task(state, phase, fun) do
       task = Task.Supervisor.async_nolink(state.status.update.host.tasks, fun)

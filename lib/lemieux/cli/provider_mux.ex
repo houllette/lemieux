@@ -189,6 +189,13 @@ defmodule Lemieux.CLI.ProviderMux do
   end
 
   @impl Provider
+  def fast_modes(state, model) do
+    if blocked?(state, model),
+      do: [],
+      else: state |> connection(model) |> Provider.fast_modes(model)
+  end
+
+  @impl Provider
   def reasoning_efforts(state, model) do
     if blocked?(state, model),
       do: [],

@@ -237,6 +237,7 @@ defmodule Lemieux.TUI.TestSupport do
         :preferred_efforts,
         :discovered_models,
         :efforts,
+        :fast_modes,
         :mcp_servers,
         :sessions,
         :list_sessions,
@@ -366,6 +367,7 @@ defmodule Lemieux.TUI.TestSupport do
           models: Keyword.get(choices, :models, ["test:model", "test:other"]),
           model_metadata: Keyword.get(choices, :model_metadata, %{}),
           efforts: Keyword.get(choices, :efforts, ["default", "high"]),
+          fast_modes: Keyword.get(choices, :fast_modes, []),
           tool_statuses:
             Keyword.get(choices, :tool_statuses, [
               %{name: "read", source: :local, enabled?: true},
@@ -466,6 +468,25 @@ defmodule Lemieux.TUI.TestSupport do
       {:"$gen_call", from, {:available_models, _provider}} ->
         GenServer.reply(from, state.models)
         fake_session_loop(state)
+
+      {:"$gen_call", from, :fast_modes} ->
+        GenServer.reply(from, state.fast_modes)
+        fake_session_loop(state)
+
+      {:"$gen_call", from, {:set_fast_mode, mode}} ->
+        send(state.owner, {:set_fast_mode, mode})
+        current = Map.get(state.snapshot, :fast_mode, "off")
+
+        mode =
+          case {mode, current} do
+            {"toggle", "off"} -> "fast"
+            {"toggle", _} -> "off"
+            {"on", _} -> "fast"
+            _ -> mode
+          end
+
+        GenServer.reply(from, {:ok, mode})
+        fake_session_loop(%{state | snapshot: Map.put(state.snapshot, :fast_mode, mode)})
 
       {:"$gen_call", from, :reasoning_efforts} ->
         GenServer.reply(from, state.efforts)

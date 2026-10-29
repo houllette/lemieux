@@ -537,6 +537,8 @@ defmodule Lemieux.TUI.SessionsTest do
 
       assert looped.overlay.frame == 0
 
+      ExRatatui.Runtime.inject_event(app, key("left"))
+      assert :ok = LemieuxTest.Sync.state(app, & &1.user_state.status.update.interacted?)
       send(app, {:version_notice, "version 0.2.0 available"})
       send(app, {:models_discovered, ["ollama:local"]})
       send(loading.resume.initial_task.pid, :finish_preparing)
@@ -547,6 +549,7 @@ defmodule Lemieux.TUI.SessionsTest do
                end)
 
       ready = :sys.get_state(app).user_state
+      assert ready.status.update.interacted?
       assert ready.status.line == HostStatus
       assert ready.status.words == ["Deking"]
       assert is_reference(ready.terminal.cursor_blink.tick)
@@ -1023,7 +1026,49 @@ defmodule Lemieux.TUI.SessionsTest do
       end)
 
       GenServer.stop(app)
-      assert_receive {:closed, %{id: "02EXITRECEIPT", name: "my actual session"}}
+      assert_receive {:closed, %{id: "02EXITRECEIPT", name: "my actual session", restart?: false}}
+    end
+
+    test "an update restart closes normally and reports the exact session to its host" do
+      owner = self()
+      session = fake_session(snapshot("02RESTARTRECEIPT"))
+
+      {:ok, app} =
+        TUI.start_link(
+          test_mode: {80, 24},
+          name: nil,
+          on_exit: fn receipt -> send(owner, {:closed, receipt}) end,
+          start: fn -> {:ok, session} end,
+          updates: %{
+            check?: false,
+            restart: fn receipt ->
+              send(owner, {:restart_prepared, receipt})
+              :ok
+            end
+          }
+        )
+
+      ref = Process.monitor(app)
+
+      :sys.replace_state(app, fn state ->
+        state = put_in(state.user_state.status.update.phase, :restart)
+        put_in(state.user_state.appearance.name, "keep this session")
+      end)
+
+      ExRatatui.Runtime.inject_event(app, %ExRatatui.Event.Paste{content: "/update"})
+      ExRatatui.Runtime.inject_event(app, key("enter"))
+
+      assert_receive {:restart_prepared, %{id: "02RESTARTRECEIPT", cwd: cwd}}
+
+      assert_receive {:closed,
+                      %{
+                        id: "02RESTARTRECEIPT",
+                        name: "keep this session",
+                        cwd: ^cwd,
+                        restart?: true
+                      }}
+
+      assert_receive {:DOWN, ^ref, :process, ^app, :normal}
     end
 
     defp titling do

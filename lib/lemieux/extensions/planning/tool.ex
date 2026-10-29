@@ -30,7 +30,8 @@ defmodule Lemieux.Extensions.Planning.Tool do
     do:
       "Keep a plan for multi-step work, and finish its tasks before you end your turn " <>
         "unless the person asked you to stop sooner: a plan with open tasks says the work " <>
-        "is not done. Send the whole list with action `set` whenever it " <>
+        "is not done. Use `new` with tasks for unrelated work; do not carry completed tasks " <>
+        "from a previous request into a fresh plan. Use `set` to continue or append to the same work. Send the whole list with action `set` whenever it " <>
         "changes — each task a title and a status (pending, in_progress, completed) — and " <>
         "keep the task you are working on in_progress. `list` shows the plan. Completed means " <>
         "you report it done, not that anything verified it. The create, update, reopen and " <>
@@ -46,10 +47,10 @@ defmodule Lemieux.Extensions.Planning.Tool do
       "additionalProperties" => false,
       "required" => ["action"],
       "properties" => %{
-        "action" => %{"type" => "string", "enum" => ~w(set list create update reopen delete)},
+        "action" => %{"type" => "string", "enum" => ~w(new set list create update reopen delete)},
         "tasks" => %{
           "type" => "array",
-          "description" => "For set: the complete plan, in order.",
+          "description" => "For new or set: the complete plan, in order.",
           "items" => %{
             "type" => "object",
             "additionalProperties" => false,
@@ -85,6 +86,12 @@ defmodule Lemieux.Extensions.Planning.Tool do
 
   @impl true
   def run(%{"action" => "list"}, context), do: result(Planning.read(context.session))
+
+  def run(%{"action" => "new", "tasks" => tasks}, context) when is_list(tasks),
+    do: result(Planning.new(context.session, tasks))
+
+  def run(%{"action" => "new"}, _context),
+    do: {:error, "new needs tasks: the fresh plan as a list of titles and statuses"}
 
   def run(%{"action" => "set", "tasks" => tasks}, context) when is_list(tasks),
     do: result(Planning.set(context.session, tasks))

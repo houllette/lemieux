@@ -99,6 +99,7 @@ defmodule Lemieux.TUI.CatalogState do
       | model_metadata: details.model_metadata,
         recent_models: recent(model, catalog.recent_models),
         efforts: details.efforts,
+        fast_modes: Map.get(details, :fast_modes, []),
         mcp: server_names(details.mcp)
     }
     |> merge(provider, details.providers, details.models)

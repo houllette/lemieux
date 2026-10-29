@@ -238,10 +238,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
     interactive session with a task.
 
     `:on_exit` is an optional host callback taking the final screen's
-    `%{id: session_id, name: local_caption, cwd: directory}` when the app
-    terminates. The CLI uses it to print a resume hint for that exact session;
-    scanning recent history can instead choose another session, since the
-    picker omits idle new sessions. The callback must return promptly.
+    `%{id: session_id, name: local_caption, cwd: directory, restart?: boolean}`
+    when the app terminates. `restart?` is true only after the host prepared an
+    update restart. The CLI uses the receipt to print a resume hint for that
+    exact session; scanning recent history can instead choose another session,
+    since the picker omits idle new sessions. The callback must return promptly.
 
     All options are also passed to `mount/1`; pass `:size` so paging is correct
     before the first resize event.
@@ -682,56 +683,58 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # burst is painted before anything else moves, and a modal — startup, a
     # question, the MCP manager — claims keys before the input box sees them.
     @impl ExRatatui.App
-    def handle_event(event, state)
+    def handle_event(event, %{status: %{update: %{phase: phase}}} = state)
+        when phase in [:apply, :restarting] and not is_struct(event, ExRatatui.Event.Resize),
+        do: {:noreply, Updates.interact(state, event)}
 
-    def handle_event(event, %{status: %{update: %{phase: :apply}}} = state)
-        when not is_struct(event, ExRatatui.Event.Resize),
-        do: {:noreply, state}
+    def handle_event(event, state), do: route_event(event, Updates.interact(state, event))
 
-    def handle_event(event, %{terminal: %{scroll_pending: %{}}} = state)
-        when not is_struct(event, ExRatatui.Event.Mouse),
-        do: handle_event(event, Pointer.flush_scroll(state))
+    defp route_event(event, state)
 
-    def handle_event(
-          %ExRatatui.Event.Mouse{kind: kind} = event,
-          %{terminal: %{scroll_pending: %{}}} = state
-        )
-        when kind not in ["scroll_up", "scroll_down"],
-        do: handle_event(event, Pointer.flush_scroll(state))
+    defp route_event(event, %{terminal: %{scroll_pending: %{}}} = state)
+         when not is_struct(event, ExRatatui.Event.Mouse),
+         do: handle_event(event, Pointer.flush_scroll(state))
+
+    defp route_event(
+           %ExRatatui.Event.Mouse{kind: kind} = event,
+           %{terminal: %{scroll_pending: %{}}} = state
+         )
+         when kind not in ["scroll_up", "scroll_down"],
+         do: handle_event(event, Pointer.flush_scroll(state))
 
     # Enhanced keyboard protocols also report releases. A released Shift+Enter
     # may arrive without Shift; treating it as another press submits the draft
     # immediately after inserting its newline.
-    def handle_event(%ExRatatui.Event.Key{kind: "release"}, state), do: {:noreply, state}
+    defp route_event(%ExRatatui.Event.Key{kind: "release"}, state), do: {:noreply, state}
 
     # The Go Habs Go banner covers everything, the provider panel and the
     # notice box included, and once the session is ready it is only playing
     # out (`Lemieux.TUI.Lifecycle.start_habs/1`). A key ends it first, so the
     # key is answered on a screen the person can see rather than under one
     # they cannot. While loading, keys edit the draft behind it as before.
-    def handle_event(
-          %ExRatatui.Event.Key{} = event,
-          %__MODULE__{overlay: %{}, resume: %{startup_status: status}} = state
-        )
-        when status != :loading,
-        do: handle_event(event, %{state | overlay: nil})
+    defp route_event(
+           %ExRatatui.Event.Key{} = event,
+           %__MODULE__{overlay: %{}, resume: %{startup_status: status}} = state
+         )
+         when status != :loading,
+         do: handle_event(event, %{state | overlay: nil})
 
-    def handle_event(%ExRatatui.Event.Key{} = event, %__MODULE__{modal: %{}} = state),
+    defp route_event(%ExRatatui.Event.Key{} = event, %__MODULE__{modal: %{}} = state),
       do: Modal.key(event, state)
 
-    def handle_event(
-          %ExRatatui.Event.Key{} = event,
-          %__MODULE__{resume: %{startup_status: status}} = state
-        )
-        when status in [:loading, :failed],
-        do: Lifecycle.starting_key(event, state)
+    defp route_event(
+           %ExRatatui.Event.Key{} = event,
+           %__MODULE__{resume: %{startup_status: status}} = state
+         )
+         when status in [:loading, :failed],
+         do: Lifecycle.starting_key(event, state)
 
-    def handle_event(%ExRatatui.Event.Key{} = event, %{tools: %{question_flow: flow}} = state)
-        when not is_nil(flow),
-        do: QuestionInteraction.key(event, state, %{edit: &Composer.edit/2, run: &Effects.run/2})
+    defp route_event(%ExRatatui.Event.Key{} = event, %{tools: %{question_flow: flow}} = state)
+         when not is_nil(flow),
+         do: QuestionInteraction.key(event, state, %{edit: &Composer.edit/2, run: &Effects.run/2})
 
-    def handle_event(%ExRatatui.Event.Key{} = event, %{tools: %{mcp_flow: flow}} = state)
-        when not is_nil(flow) do
+    defp route_event(%ExRatatui.Event.Key{} = event, %{tools: %{mcp_flow: flow}} = state)
+         when not is_nil(flow) do
       MCPInteraction.key(event, state, %{
         edit: &Composer.edit/2,
         interrupt: &Composer.interrupt/1,
@@ -746,17 +749,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # Command key, so it is caught here; Alt-Z, its stand-in for everyone
     # whose Option key sends Alt, is the key map's (`:revoke_steer`), so it
     # can be rebound like any other. `/unsteer` works everywhere.
-    def handle_event(%ExRatatui.Event.Key{code: "z", modifiers: modifiers} = event, state) do
+    defp route_event(%ExRatatui.Event.Key{code: "z", modifiers: modifiers} = event, state) do
       if "super" in modifiers or "meta" in modifiers,
         do: Submission.revoke_steer(event, state),
         else: Composer.key(event, state)
     end
 
-    def handle_event(%ExRatatui.Event.Key{code: "back_tab"} = event, state),
+    defp route_event(%ExRatatui.Event.Key{code: "back_tab"} = event, state),
       do: Composer.cycle_tab_or_edit(event, state)
 
-    def handle_event(%ExRatatui.Event.Key{code: "tab", modifiers: modifiers} = event, state)
-        when is_list(modifiers) do
+    defp route_event(%ExRatatui.Event.Key{code: "tab", modifiers: modifiers} = event, state)
+         when is_list(modifiers) do
       if "shift" in modifiers,
         do: Composer.cycle_tab_or_edit(event, state),
         else: Composer.key(event, state)
@@ -766,29 +769,29 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # — and one clause of `Lemieux.TUI.Composer`'s. What a key *means* lives
     # in `Lemieux.TUI.Keys`, so that rebinding is data and this function never
     # has to know which key it was.
-    def handle_event(%ExRatatui.Event.Key{code: code} = event, state) when is_binary(code),
+    defp route_event(%ExRatatui.Event.Key{code: code} = event, state) when is_binary(code),
       do: Composer.key(event, state)
 
-    def handle_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tasks}} = state),
+    defp route_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tasks}} = state),
       do: TaskPanel.mouse(event, state)
 
-    def handle_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tools}} = state),
+    defp route_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tools}} = state),
       do: ToolsPanel.mouse(event, state)
 
-    def handle_event(%ExRatatui.Event.Mouse{} = event, state), do: Pointer.mouse(event, state)
+    defp route_event(%ExRatatui.Event.Mouse{} = event, state), do: Pointer.mouse(event, state)
 
     # Pasted text goes in whole. Re-dispatched as keystrokes it would be
     # indistinguishable from typing, and a pasted newline would send the
     # message half-written.
-    def handle_event(%ExRatatui.Event.Paste{} = event, %__MODULE__{modal: %{}} = state),
+    defp route_event(%ExRatatui.Event.Paste{} = event, %__MODULE__{modal: %{}} = state),
       do: Modal.paste(event, state)
 
-    def handle_event(%ExRatatui.Event.Paste{} = event, state), do: Composer.paste(event, state)
+    defp route_event(%ExRatatui.Event.Paste{} = event, state), do: Composer.paste(event, state)
 
     # `render/2` is handed the frame and cannot write anything down, so the
     # size is learned here. Paging happens between frames and has to know how
     # tall a page is and how wide a row wraps.
-    def handle_event(%ExRatatui.Event.Resize{width: width, height: height}, state),
+    defp route_event(%ExRatatui.Event.Resize{width: width, height: height}, state),
       do:
         {:noreply,
          put_in(
@@ -797,7 +800,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
          )
          |> DiffPanel.resize()}
 
-    def handle_event(_event, state), do: {:noreply, state}
+    defp route_event(_event, state), do: {:noreply, state}
 
     # See `Lemieux.TUI.Replies`, which routes each to its module.
     @replies [
@@ -915,6 +918,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def handle_info(:check_update, state), do: {:noreply, Updates.check(state)}
     def handle_info({:update_check, token}, state), do: {:noreply, Updates.poll(state, token)}
+
+    def handle_info(:restart_update, %{status: %{update: %{phase: :restarting}}} = state),
+      do: Lifecycle.stopping(state)
+
     def handle_info(:update_idle, state), do: {:noreply, Updates.tick(state)}
 
     def handle_info({ref, result}, %{status: %{update: %{task: %Task{ref: ref}}}} = state) do
