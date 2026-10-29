@@ -364,6 +364,19 @@ class ReleaseDriverTest(unittest.TestCase):
         with self.assertRaisesRegex(driver.ReleaseError, "symlink"): self.start()
         self.assertEqual((self.world.fixture / "VERSION").read_bytes(), before)
 
+    def test_resume_discards_partial_downloads_left_by_a_hard_kill(self):
+        self.world.fail_after = "push-before"
+        with self.assertRaises(driver.ReleaseError): self.start()
+        cache = Path(self.checkpoint()["scratch"])
+        # SIGKILL bypasses the finally cleanup; model its partial predecessor.
+        previous = cache / "previous"
+        previous.mkdir()
+        (previous / "SHA256SUMS").write_text("partial download")
+        self.start()
+        self.assertTrue(self.world.published)
+        self.assertFalse(cache.exists())
+        self.assertEqual(sum(c[:2] == ("git", "clone") for c in self.world.calls), 1)
+
     def test_completed_release_rerun_does_not_publish_again(self):
         self.start(); before = len(self.world.calls)
         self.start()

@@ -695,6 +695,9 @@ class Release:
                 old = None
             if old is not None and old.exists():
                 self.scratch = old
+                # SIGKILL bypasses finally; discard partial downloads before
+                # admission while preserving the checkout and compiled cache.
+                self.retain_workspace()
                 self.log("Resuming saved release; current remote state will be revalidated")
             else:
                 self.cleanup()
