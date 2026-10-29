@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STABLE = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 TARGETS = release_checksums.TARGETS
 SIGNED = {"SHA256SUMS.sig", "update.json.sig"}
+HEX_AUTH_PROMPT = re.compile(rb"(?:^|\n)(?:Enter OTP code|Local password):[ \t]*")
 KEY_CHECK = """
 alias Lmx.Update.{Signing, Signature}
 with {:ok, seed} <- Signing.read_private_key(System.fetch_env!("LMX_RELEASE_KEY_PATH")),
@@ -115,11 +116,14 @@ class Runner:
             text = text.replace(secret, "<redacted>")
         return text
 
-    def __call__(self, args, cwd, capture=False):
+    def __call__(self, args, cwd, capture=False, interactive=False):
         args = [str(arg) for arg in args]
         self.log("$ " + self.clean(shlex.join(args)))
         output = bytearray()
-        with subprocess.Popen(args, cwd=cwd, env=self.env, stdin=subprocess.DEVNULL,
+        # Only Hex uploads inherit the maintainer's terminal. Input goes
+        # directly to Hex, never through the output logger or checkpoint.
+        terminal = interactive and sys.stdin is not None and sys.stdin.isatty()
+        with subprocess.Popen(args, cwd=cwd, env=self.env, stdin=sys.stdin if terminal else subprocess.DEVNULL,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               start_new_session=True) as process:
             selector = selectors.DefaultSelector()
@@ -136,10 +140,17 @@ class Runner:
                             continue
                         output.extend(chunk)
                         pending += chunk
+                        if interactive and HEX_AUTH_PROMPT.search(pending):
+                            require(terminal, "Hex needs authentication input. Rerun the same release command in a terminal to enter the 2FA code, or configure HEX_API_KEY for unattended publishing.")
                         while b"\n" in pending:
                             line, pending = pending.split(b"\n", 1)
                             if not capture:
                                 self.log(self.clean(line.decode(errors="replace")))
+                        # Mix prompts have no newline. Display the complete
+                        # auth prompt now, before waiting for the user's input.
+                        if interactive and HEX_AUTH_PROMPT.match(pending):
+                            self.log(self.clean(pending.decode(errors="replace")))
+                            pending = b""
                         require(len(output) < 64 * 1024 * 1024, "Command output exceeded 64 MiB")
                     if time.monotonic() - heartbeat >= 30:
                         self.log("Still running: " + self.clean(shlex.join(args[:4])))
@@ -239,12 +250,12 @@ class Release:
         atomic_json(self.state_path, self.state)
         self.log("Phase: " + phase)
 
-    def command(self, *args, cwd=None, capture=False):
-        return self.run(args, cwd=cwd or self.source or self.root, capture=capture)
+    def command(self, *args, cwd=None, capture=False, interactive=False):
+        return self.run(args, cwd=cwd or self.source or self.root, capture=capture, interactive=interactive)
 
-    def mix(self, *args, host=False, capture=False):
+    def mix(self, *args, host=False, capture=False, interactive=False):
         return self.command("mise", "exec", "--", "mix", *args,
-                            cwd=self.source / "dist/lmx" if host else self.source, capture=capture)
+                            cwd=self.source / "dist/lmx" if host else self.source, capture=capture, interactive=interactive)
 
     def api(self, endpoint, absent=False):
         # `--include` lets us distinguish a real 404 from auth/network failures;
@@ -551,7 +562,7 @@ class Release:
                     self.checkpoint("hex-published")
                     return
                 self.log("Resuming the remaining Hex documentation upload")
-                self.mix("hex.publish", "docs", "--yes")
+                self.mix("hex.publish", "docs", "--yes", interactive=True)
                 self.confirm_hex(self.state["hex_checksum"])
                 return
         self.checkpoint("prepare-hex")
@@ -577,12 +588,12 @@ class Release:
         release = self.hex_get()
         if release is None:
             self.checkpoint("publish-hex")
-            self.mix("hex.publish", "--yes")
+            self.mix("hex.publish", "--yes", interactive=True)
         else:
             require(release.get("checksum") == digest and not release.get("retirement"),
                     "Existing Hex version differs from this source or is retired; refusing overwrite")
             if not release.get("has_docs"):
-                self.mix("hex.publish", "docs", "--yes")
+                self.mix("hex.publish", "docs", "--yes", interactive=True)
         self.confirm_hex(digest)
 
     def confirm_hex(self, digest):

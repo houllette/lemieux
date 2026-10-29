@@ -26,15 +26,20 @@ On your trusted macOS or Linux machine, from the repository root:
 Pass the prepared stable version and the existing signing key. A leading `v`
 is accepted. Invoking this command authorizes tagging, local signing, Hex
 publication and GitHub stable/latest publication, with no confirmation prompts.
+Hex may still pause for a two-factor authentication code during publishing.
 It never generates a key or changes either public-key pin. Keep the key mounted
 until the command finishes; eject it yourself afterwards.
 
-Before starting, authenticate `gh` with repository write access and configure
-noninteractive Hex publishing. An existing unlocked Hex login works; an
+Before starting, authenticate `gh` with repository write access and sign into
+Hex. With an existing Hex login, publishing pauses at `Enter OTP code:` when
+two-factor authentication is required. Type the code in the same terminal;
+input goes directly to Hex and is never recorded in release logs or checkpoints.
+Only the Hex upload commands accept terminal input. The driver still uses
+`--yes` to skip publication confirmations. For unattended publishing, an
 environment-provided `HEX_API_KEY` with API read and package-publish permission
-also works ([Hex publishing](https://hex.pm/docs/publish)). The driver uses
-`--yes` for publishing and closes subprocess stdin, so missing authentication
-fails rather than hanging on a password prompt. Install `git`, `gh`, `mise`
+also works ([Hex publishing](https://hex.pm/docs/publish)); if Hex needs input
+without a terminal, the driver stops with a recovery hint and retains progress.
+Install `git`, `gh`, `mise`
 and Python 3.8 or newer. The driver installs the committed Erlang/Elixir
 toolchain through Mise, and installs Hex/Rebar only when missing.
 

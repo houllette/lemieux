@@ -13,6 +13,7 @@ import io
 import json
 import os
 from pathlib import Path
+import pty
 import shutil
 import struct
 import subprocess
@@ -127,7 +128,7 @@ class World:
             return {"object": {"sha": self.sha}}
         raise AssertionError("Unexpected endpoint: " + endpoint)
 
-    def __call__(self, args, cwd, capture=False):
+    def __call__(self, args, cwd, capture=False, interactive=False):
         args = tuple(map(str, args)); self.calls.append(args)
         if args[:4] == ("git", "remote", "get-url", "origin"):
             return "git@github.com:houllette/lemieux.git"
@@ -532,6 +533,46 @@ class ReleaseDriverTest(unittest.TestCase):
                     runner([sys.executable, "-c", "import os,time; print(os.environ['HEX_API_KEY'],flush=True); time.sleep(60)"], self.base)
         self.assertIn("<redacted>", "\n".join(lines))
         self.assertNotIn("throwaway-test-token", "\n".join(lines))
+
+    def test_publish_prompt_accepts_terminal_otp_without_logging_input(self):
+        master, slave = pty.openpty()
+        self.addCleanup(os.close, master)
+        terminal = os.fdopen(slave, "r")
+        self.addCleanup(terminal.close)
+        lines = []
+        code = "246810"
+        def log(line):
+            lines.append(line)
+            if line == "Enter OTP code: ":
+                os.write(master, (code + "\n").encode())
+        runner = driver.Runner(log, 10, self.key)
+        runner.env["EXPECTED_OTP"] = code
+        program = "import os,sys; value=input('Enter OTP code: '); assert sys.stdin.isatty() and value==os.environ['EXPECTED_OTP']; print('accepted')"
+        with patch.object(sys, "stdin", terminal):
+            result = runner([sys.executable, "-c", program], self.base, interactive=True)
+        self.assertIn("accepted", result)
+        self.assertNotIn(code, "\n".join(lines))
+        self.assertNotIn(code, result)
+
+    def test_publish_otp_without_terminal_stops_with_recovery_hint(self):
+        lines = []
+        runner = driver.Runner(lines.append, 10, self.key)
+        with patch.object(sys, "stdin", io.StringIO()):
+            with self.assertRaisesRegex(driver.ReleaseError, "terminal"):
+                runner([sys.executable, "-c", "input('Enter OTP code: ')"], self.base, interactive=True)
+
+    def test_only_hex_uploads_enable_terminal_input(self):
+        original = World.__call__
+        inputs = []
+        def record(world, args, **kwargs):
+            if kwargs.pop("interactive", False): inputs.append(tuple(args))
+            return original(world, args, **kwargs)
+        with patch.object(World, "__call__", record):
+            self.world.fail_after = "hex"
+            with self.assertRaises(driver.ReleaseError): self.start()
+            self.world.hex["has_docs"] = False
+            self.start()
+        self.assertEqual([args[4:] for args in inputs], [("hex.publish", "--yes"), ("hex.publish", "docs", "--yes")])
 
     def test_timeout_kills_grandchild_after_its_parent_exits(self):
         lines = []
