@@ -699,57 +699,25 @@ jobs:
             cat "$RUNNER_TEMP/view.err" >&2
             exit 1
           fi
-      # sign_draft cannot tell whether the draft holds what this run built
-      # (its moduledoc says so), so step 1 checks that before anything is
-      # signed, against this run's own artifact.
+      # The local driver reconciles this exact run and compares the draft
+      # before it signs. The private key stays on the maintainer's machine.
       - name: Next steps for the maintainer
-        env:
-          PRIVATE: ${{ github.event.repository.private }}
         run: |
-          note=""
-          if [ "$PRIVATE" = true ]; then
-            note="The repository was private when this ran, so nothing was attested: skip the gh attestation lines in step 3."
-          fi
           cat <<EOF | tee -a "$GITHUB_STEP_SUMMARY"
-          ## $TAG is a draft: check, sign, verify, then publish
+          ## $TAG is a draft: finish locally
 
-          Nothing is signed or published yet, and the installer and lmx's updater
-          refuse this release until its signatures are uploaded. Run these from a
-          checkout of $TAG, on the machine that holds the offline key.
-          $note
+          From a trusted checkout, with gh and Hex publishing authenticated
+          and the offline key mounted, run:
 
-          1. Check that the draft holds exactly what this run built:
+              ./scripts/release.sh "${TAG#v}" /Volumes/LMX-KEYS/lmx-release.key
 
-                 dir=\$(mktemp -d)
-                 gh run download $GITHUB_RUN_ID --repo $GITHUB_REPOSITORY --name complete-release-candidate --dir "\$dir/run"
-                 gh release download $TAG --repo $GITHUB_REPOSITORY --dir "\$dir/draft"
-                 diff -r "\$dir/run" "\$dir/draft" && echo "draft matches run $GITHUB_RUN_ID"
+          The driver resumes this tag run, compares the draft with its candidate,
+          signs locally, verifies signatures/checksums/provenance, publishes Hex,
+          then publishes the GitHub release stable/latest. It retains local logs
+          and resumable checkpoints, retains local builds after a stop, and
+          removes its workspace after successful completion.
 
-          2. Sign:
-
-                 cd dist/lmx
-                 mix lmx.release.sign_draft --tag $TAG --private-key PATH
-
-             It downloads SHA256SUMS and update.json from the draft, signs them,
-             uploads SHA256SUMS.sig and update.json.sig, and verifies the result.
-             It never publishes.
-
-          3. Verify the signed draft independently, still in dist/lmx:
-
-                 gh release download $TAG --repo $GITHUB_REPOSITORY --dir "\$dir/signed"
-                 mix lmx.release.verify "\$dir/signed/SHA256SUMS" "\$dir/signed/update.json"
-                 (cd "\$dir/signed" && shasum -a 256 -c SHA256SUMS)
-                 for file in "\$dir"/signed/lmx_*.tar.gz "\$dir/signed/SHA256SUMS" "\$dir/signed/update.json"; do
-                   gh attestation verify "\$file" --repo $GITHUB_REPOSITORY --source-ref refs/tags/$TAG \\
-                     --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release.yml
-                 done
-
-          4. Publish it as the latest release, not a pre-release (install.sh and
-             the updater read releases/latest, which skips pre-releases):
-
-                 gh release edit $TAG --repo $GITHUB_REPOSITORY --draft=false --prerelease=false --latest
-
-          Re-running this workflow for $TAG replaces the draft's assets and deletes
-          their signatures; check and sign again afterwards, with the new run's ID
-          in step 1. Once published, $TAG is never rebuilt.
+          Complete and record human terminal/provider qualification before running
+          it. See RELEASING.md for prerequisites and manual recovery. CI never
+          receives the key, signs, or publishes a stable release.
           EOF

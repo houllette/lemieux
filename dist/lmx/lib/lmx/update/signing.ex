@@ -10,9 +10,9 @@ defmodule Lmx.Update.Signing do
   `keygen/2` writes it to a file only its owner can read and never prints it,
   every function here reads it only to sign, and nothing here can publish a
   release: release CI builds an unsigned draft, `sign_draft/3` adds the two
-  signatures to it, and the maintainer publishes it by hand. A signing step in
-  CI would put the key where a compromised workflow or token could use it,
-  which is the attack the signatures exist to stop.
+  signatures to it, and the maintainer's local release driver publishes it.
+  A signing step in CI would put the key where a compromised workflow or token
+  could use it, which is the attack the signatures exist to stop.
 
   Nor is the key ever written to or read from a Git working tree
   (`outside_checkout/1`). Run from `dist/lmx`, `--private-key release.key`
