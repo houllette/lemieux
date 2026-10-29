@@ -11,8 +11,85 @@ A release is two things with one version number:
   `SHA256SUMS` and `update.json`, and the signatures over those two.
 
 CI builds, tests and qualifies. It never signs and never publishes. The
-maintainer signs with an offline key and publishes by hand. Commands run from
+maintainer's local release driver signs with an offline key and publishes.
+Commands run from
 the repository root unless they start with `cd dist/lmx`.
+
+## One-command release
+
+On your trusted macOS or Linux machine, from the repository root:
+
+```sh
+./scripts/release.sh 0.12.0 /Volumes/LMX-KEYS/lmx-release.key
+```
+
+Pass the prepared stable version and the existing signing key. A leading `v`
+is accepted. Invoking this command authorizes tagging, local signing, Hex
+publication and GitHub stable/latest publication, with no confirmation prompts.
+It never generates a key or changes either public-key pin. Keep the key mounted
+until the command finishes; eject it yourself afterwards.
+
+Before starting, authenticate `gh` with repository write access and configure
+noninteractive Hex publishing. An existing unlocked Hex login works; an
+environment-provided `HEX_API_KEY` with API read and package-publish permission
+also works ([Hex publishing](https://hex.pm/docs/publish)). The driver uses
+`--yes` for publishing and closes subprocess stdin, so missing authentication
+fails rather than hanging on a password prompt. Install `git`, `gh`, `mise`
+and Python 3.8 or newer. The driver installs the committed Erlang/Elixir
+toolchain through Mise, and installs Hex/Rebar only when missing.
+
+The driver:
+
+1. Takes a shared Git-directory lock, makes a temporary fresh clone, and pins
+   the release source from `origin/main` or its existing version tag. The
+   caller's branch and working files are preserved. It validates `VERSION`,
+   GitHub/Hex authentication, the reviewed upgrade plan and the offline key's
+   match to the committed public key before creating a tag.
+2. Waits for the source's CI and Public readiness runs. It reuses or starts a
+   matching manual release rehearsal, downloads and validates its complete
+   artifact, then pushes an annotated tag at that exact source commit.
+3. Waits for the tag workflow, verifies its candidate inventory, checksums,
+   archive/manifest identities, upgrade reports, signed predecessor metadata
+   and macOS deployment minimum. It compares the draft with those exact bytes,
+   signs locally with the existing Mix helper, downloads it again and verifies
+   both signatures and GitHub provenance attestations.
+4. Builds and inspects the Hex package from the fresh clone, runs the publish
+   dry run, publishes package/docs, and confirms Hex's checksum and docs state.
+   An existing version is reused only with the same checksum; it never passes
+   `--replace` or overwrites an existing package.
+5. Rechecks the workflow attempt and signed draft immediately before publishing
+   GitHub stable/latest, then confirms the published state.
+
+Output streams to your terminal and a private timestamped log under
+`$(git rev-parse --git-common-dir)/lmx-releases/VERSION/`. `state.json` in that
+directory records the source, workflow attempt, qualified asset hashes and
+progress. Logs and checkpoints remain local; temporary clones, downloads and
+builds are removed on success, failure, Ctrl-C or termination. A killed process's
+owned temporary directory is reclaimed on the next invocation. No key contents
+are copied into that directory, checkpoints or logs; inherited token values are
+redacted from command output. No provider requests are made.
+
+Rerun the same command after an interruption. It reconciles current remote
+state before proceeding, including a push or publication whose response was
+lost. It revalidates existing releases and does not republish a completed one.
+The source cannot silently move after it is checkpointed. A concurrent workflow
+rerun or changed draft stops publication and requires another invocation to
+qualify the current artifacts. Authentication/network failures are errors, not
+evidence that a tag, package or release is absent.
+
+Workflow waits default to four hours each; `--timeout SECONDS` accepts 60 through
+86400. A failed workflow stops with its URL. To retry its failed jobs once:
+
+```sh
+./scripts/release.sh 0.12.0 /Volumes/LMX-KEYS/lmx-release.key --retry-failed
+```
+
+Human terminal/provider [qualification](#qualification) remains the maintainer's
+responsibility before running the driver. Automated records never claim those
+checks passed. Retain the tested archive hashes, provider/model and tester/date
+on the release PR. The numbered procedure below remains available for manual
+recovery. After publication, perform the clean-machine checks and open the next
+Unreleased changelog section described there.
 
 ## What you need
 
