@@ -47,6 +47,13 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
     defp argument_completions(state, "/model " <> _rest = value),
       do: ModelChoices.completions(state.catalog.model_choices, value, state.model_tab)
 
+    defp argument_completions(state, "/fast " <> _rest = value) do
+      choices =
+        if state.catalog.fast_modes == [], do: [], else: ["on", "off" | state.catalog.fast_modes]
+
+      offered_in_order(choices, value, "/fast ")
+    end
+
     # Effort levels run from least to most, which is the only order in which
     # `minimal` next to `high` means anything.
     defp argument_completions(state, "/effort " <> _rest = value),
@@ -109,10 +116,10 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
       # all.
       |> Enum.sort_by(&String.downcase(&1.name))
       |> Enum.map(fn command ->
-        # Bare /copy has an immediate action; its source option is optional.
+        # These bare commands act immediately; their arguments are optional.
         accepts_arguments? =
           Map.fetch!(by_name, command.name).accepts_arguments? and
-            command.name not in ~w(mcp copy tools)
+            command.name not in ~w(mcp copy tools fast)
 
         suffix = if accepts_arguments?, do: " ", else: ""
 

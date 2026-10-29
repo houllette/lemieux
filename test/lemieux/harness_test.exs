@@ -341,6 +341,9 @@ defmodule Lemieux.HarnessTest do
                %{"module" => "Lemieux.HarnessTest.Terse"}
              ] =
                snapshot["extensions"]["applied"]
+
+      id = Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "an explicit option wins over the harness, and harness contexts merge", context do

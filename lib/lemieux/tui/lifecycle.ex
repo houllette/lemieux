@@ -211,6 +211,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> put_in([Access.key!(:resume), :start_async], state.resume.start_async)
         |> put_in([Access.key!(:resume), :task_supervisor], state.resume.task_supervisor)
         |> put_in([Access.key!(:catalog), :discovered], state.catalog.discovered)
+        |> put_in([Access.key!(:status), :update, :interacted?], state.status.update.interacted?)
         # The resolved harness may name a theme the first state did not
         # have, for a host that opens the screen with an empty harness and
         # lets the session's configuration or extensions choose one. `lmx`
@@ -659,6 +660,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         models: Choices.models_for(session, provider),
         model_metadata: Session.model_metadata(session),
         efforts: Session.reasoning_efforts(session),
+        fast_modes: Session.fast_modes(session),
         tool_statuses: tool_statuses(session, info),
         mcp: mcp_statuses(session, info),
         # Asked once, because a host profile is fixed for the life of a
@@ -839,7 +841,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
         state.terminal.on_exit.(%{
           id: state.id,
           name: state.appearance.name,
-          cwd: state.references.cwd
+          cwd: state.references.cwd,
+          restart?: state.status.update.phase == :restarting
         })
 
     # Never waited for: see `Lemieux.TUI.Signals.release/1`.

@@ -344,6 +344,38 @@ class ReleaseToolsTest(unittest.TestCase):
             self.assertEqual((home / "args").read_bytes(), b"two lines\nsecond\0$(never execute)\0\0")
             self.assertEqual(list((home / "running").iterdir()), [])
 
+    def test_launcher_restarts_current_release_only_with_a_receipt(self):
+        import os
+        import shutil
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "home"
+            home.mkdir()
+            old, new = root / "old", root / "new"
+            for release in (old, new):
+                (release / "bin").mkdir(parents=True)
+            shutil.copy2(ROOT / "dist/lmx/priv/launcher.sh", old / "bin/lmx")
+            (old / "bin/lmx").chmod(0o755)
+            (home / "current").symlink_to(new, target_is_directory=True)
+            first = old / "bin/lmx-release"
+            first.write_text('#!/bin/sh\nset -eu\nrm "$LMX_ARGV_FILE"\nprintf \'["--resume","same-session"]\' > "$LMX_RESTART_FILE"\nexit 75\n')
+            first.chmod(0o755)
+            second = new / "bin/lmx-release"
+            second.write_text('#!/bin/sh\nset -eu\ntest -f "$LMX_ARGV_FILE"\ntest ! -s "$LMX_ARGV_FILE"\ntest "$(cat "$LMX_LEASE_FILE")" = "$LMX_LAUNCHER_PID"\nrm "$LMX_ARGV_FILE"\ncat "$LMX_RESTART_FILE"\ncat > "$LMX_INSTALL_HOME/stdin"\n: > "$LMX_RESTART_FILE"\n')
+            second.chmod(0o755)
+            env = dict(os.environ, LMX_INSTALL_HOME=str(home))
+            result = subprocess.run([str(old / "bin/lmx")], env=env,
+                                    input=b"still attached", capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, b'["--resume","same-session"]')
+            self.assertEqual((home / "stdin").read_bytes(), b"still attached")
+            self.assertEqual(list((home / "running").iterdir()), [])
+            first.write_text('#!/bin/sh\nexit 75\n')
+            no_receipt = subprocess.run([str(old / "bin/lmx")], env=env,
+                                        capture_output=True, timeout=10)
+            self.assertEqual(no_receipt.returncode, 75)
+            self.assertEqual(no_receipt.stdout, b"")
+
     def test_launcher_passes_standard_input_to_the_release(self):
         # POSIX gives an asynchronous command in a non-interactive shell
         # /dev/null as standard input unless the command redirects it itself.

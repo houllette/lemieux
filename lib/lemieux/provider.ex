@@ -185,6 +185,14 @@ defmodule Lemieux.Provider do
   @callback reasoning_efforts(state :: term(), model :: String.t()) :: [String.t()]
 
   @doc """
+  Faster service modes supported by this model and transport, e.g. `["fast", "ultrafast"]`.
+
+  This is capability discovery, not an entitlement check: the provider still
+  authorizes each request. No callback means no modes, never an inferred tier.
+  """
+  @callback fast_modes(state :: term(), model :: String.t()) :: [String.t()]
+
+  @doc """
   A realistic upper USD cost estimate for a request, or `nil` when it cannot be
   priced.
 
@@ -212,6 +220,7 @@ defmodule Lemieux.Provider do
                       available_models: 2,
                       validate_model: 3,
                       reasoning_efforts: 2,
+                      fast_modes: 2,
                       estimate_cost: 2,
                       input_modalities: 2
 
@@ -310,6 +319,12 @@ defmodule Lemieux.Provider do
     else
       :ok
     end
+  end
+
+  @doc "Returns faster service modes a provider reports for a model."
+  @spec fast_modes(provider :: t(), model :: String.t()) :: [String.t()]
+  def fast_modes({module, state}, model) when is_binary(model) do
+    if function_exported?(module, :fast_modes, 2), do: module.fast_modes(state, model), else: []
   end
 
   @doc "Returns the reasoning-effort choices a provider reports for a model."

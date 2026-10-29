@@ -119,6 +119,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           discovered: [],
           discover: Keyword.get(opts, :discover, %{}),
           efforts: Keyword.get(opts, :efforts, []),
+          fast_modes: Keyword.get(opts, :fast_modes, []),
           mcp: Keyword.get(opts, :mcp_servers, [])
         },
         skills: Keyword.get(opts, :skills, []),

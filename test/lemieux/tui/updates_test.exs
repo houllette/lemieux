@@ -2,6 +2,7 @@ defmodule Lemieux.TUI.UpdatesTest do
   use ExUnit.Case, async: true
   alias Lemieux.TUI
   alias Lemieux.TUI.Notices
+  alias Lemieux.TUI.QuestionFlow
   alias Lemieux.TUI.Updates
 
   # Update notices are news about lmx, so they go to the notice box rather
@@ -126,8 +127,11 @@ defmodule Lemieux.TUI.UpdatesTest do
     {:noreply, state} = TUI.handle_info(:update_idle, state)
     assert state.status.update.phase == :apply
 
-    assert {:noreply, ^state} =
+    assert {:noreply, state} =
              TUI.handle_event(%ExRatatui.Event.Paste{content: "new prompt"}, state)
+
+    assert state.status.update.interacted?
+    assert ExRatatui.textarea_get_value(state.input) == ""
 
     assert_receive {:activated, %{version: "0.2.0"}, app}
     assert app == self()
@@ -350,6 +354,140 @@ defmodule Lemieux.TUI.UpdatesTest do
       assert String.starts_with?(text, expected)
       assert failed.status.update.phase == :idle
     end
+  end
+
+  test "a pristine screen automatically restarts an installed update, but interaction opts out" do
+    caller = self()
+
+    host = %{
+      auto?: true,
+      restart: fn receipt ->
+        send(caller, {:restart, receipt})
+        :ok
+      end
+    }
+
+    fresh =
+      TUI.new(
+        test_mode: {80, 24},
+        id: "fresh",
+        session: self(),
+        model: "test:model",
+        updates: host
+      )
+
+    fresh = put_in(fresh.status.update.phase, :apply)
+    fresh = put_in(fresh.status.update.pending, %{info: %{"version" => "0.2.0"}})
+
+    restarted = Updates.result(fresh, {:ok, :restart})
+    assert_receive {:restart, %{id: "fresh"}}
+    assert_receive :restart_update
+    assert restarted.status.update.phase == :restarting
+
+    used = Updates.interact(fresh, %ExRatatui.Event.Paste{content: "draft"})
+    installed = Updates.result(used, {:ok, :restart})
+    assert installed.status.update.phase == :restart
+    refute_received {:restart, _}
+    manual = Updates.request(installed)
+    assert manual.status.update.phase == :restarting
+    assert_receive {:restart, %{id: "fresh"}}
+    assert_receive :restart_update
+  end
+
+  test "automatic restart excludes opted-out, resumed, busy and modal screens" do
+    host = %{auto?: true, restart: fn _ -> flunk("unsafe automatic restart") end}
+
+    fresh =
+      TUI.new(
+        test_mode: {80, 24},
+        id: "fresh",
+        session: self(),
+        model: "test:model",
+        updates: host
+      )
+
+    fresh = put_in(fresh.status.update.phase, :apply)
+
+    for state <- [
+          put_in(fresh.status.update.host.auto?, false),
+          put_in(fresh.history.entries, ["previous work"]),
+          %{fresh | lines: [{:user, "previous work"}]},
+          put_in(fresh.conversation.busy?, true),
+          put_in(fresh.resume.busy?, true),
+          put_in(fresh.resume.startup_status, :loading),
+          put_in(fresh.history.queued, ["pending work"]),
+          put_in(fresh.turn.started_at, 1),
+          %{fresh | modal: %{kind: :tools}},
+          %{fresh | overlay: %{}},
+          put_in(
+            fresh.tools.question_flow,
+            QuestionFlow.new(%{question: "Continue?", options: []}, "")
+          ),
+          put_in(fresh.tools.mcp_flow, %{}),
+          put_in(fresh.tools.approvals, %{"call" => %{}}),
+          put_in(fresh.tools.calls, %{"call" => %{}})
+        ] do
+      installed = Updates.result(state, {:ok, :restart})
+      assert installed.status.update.phase == :restart
+      refute_received :restart_update
+    end
+  end
+
+  test "only actual input opts out, including input suppressed during installation" do
+    state = TUI.new(test_mode: {80, 24}, id: "input", model: "test:model")
+    {:noreply, resized} = TUI.handle_event(%ExRatatui.Event.Resize{width: 80, height: 24}, state)
+    refute resized.status.update.interacted?
+
+    {:noreply, released} =
+      TUI.handle_event(%ExRatatui.Event.Key{code: "a", kind: "release"}, resized)
+
+    refute released.status.update.interacted?
+    applying = put_in(released.status.update.phase, :apply)
+    {:noreply, typed} = TUI.handle_event(%ExRatatui.Event.Paste{content: "draft"}, applying)
+    assert typed.status.update.interacted?
+    assert ExRatatui.textarea_get_value(typed.input) == ""
+  end
+
+  test "a failed restart preparation leaves the session open for retry" do
+    host = %{restart: fn _ -> {:error, :eacces} end}
+
+    state =
+      TUI.new(
+        test_mode: {80, 24},
+        id: "retry",
+        session: self(),
+        model: "test:model",
+        updates: host
+      )
+
+    state = put_in(state.status.update.phase, :restart)
+    failed = Updates.request(state)
+    assert failed.status.update.phase == :restart
+    assert newest_notice(failed).text =~ "Your session is still open"
+    assert failed.id == state.id
+    assert failed.session == state.session
+    refute_received :restart_update
+  end
+
+  test "restart refuses to lose a draft or interrupt queued work" do
+    host = %{restart: fn _ -> flunk("unsafe restart") end}
+
+    state =
+      TUI.new(
+        test_mode: {80, 24},
+        id: "draft",
+        session: self(),
+        model: "test:model",
+        updates: host
+      )
+
+    state = put_in(state.status.update.phase, :restart)
+    :ok = ExRatatui.textarea_set_value(state.input, "unsent")
+    assert Updates.request(state).status.update.phase == :restart
+    assert newest_notice(Updates.request(state)).text =~ "draft"
+    :ok = ExRatatui.textarea_set_value(state.input, "")
+    queued = put_in(state.history.queued, ["next task"])
+    assert Updates.request(queued).status.update.phase == :restart
   end
 
   test "another screen's installed update produces one restart reminder" do

@@ -1,5 +1,6 @@
 defmodule Lmx.CLITest do
-  use ExUnit.Case, async: true
+  # Restart receipt consumption changes the process environment.
+  use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO
 
@@ -44,6 +45,108 @@ defmodule Lmx.CLITest do
     assert_received :configured
     assert_received :native_loaded
     assert_received {:ran, ["--version"]}
+  end
+
+  @tag :tmp_dir
+  test "a restart receipt preserves launch flags but removes one-shot and old resume arguments",
+       %{tmp_dir: dir} do
+    argv = [
+      "tui",
+      "--config",
+      "state dir",
+      "--model",
+      "openai:gpt-5.6",
+      "--prompt",
+      "do not repeat",
+      "--resume=old",
+      "--cwd",
+      "/old project",
+      "-c"
+    ]
+
+    path = Path.join(dir, "restart.json")
+    assert :ok = CLI.prepare_restart(argv, %{id: "exact-session", cwd: "/work space"}, path)
+    assert {:ok, bytes} = File.read(path)
+
+    assert JSON.decode!(bytes) == [
+             "--config",
+             "state dir",
+             "--resume",
+             "exact-session",
+             "-C",
+             "/work space"
+           ]
+
+    assert {:ok, %File.Stat{mode: mode}} = File.stat(path)
+    assert Bitwise.band(mode, 0o777) == 0o600
+  end
+
+  @tag :tmp_dir
+  test "restart flag values are not mistaken for command names or one-shot flags", %{tmp_dir: dir} do
+    argv = [
+      "--config",
+      "tui",
+      "--model=openai:gpt-5.6",
+      "--prompt=hello",
+      "--system",
+      "initial instructions",
+      "--mcp-config",
+      "old.json",
+      "--no-mouse",
+      "--sessions-dir",
+      "my sessions"
+    ]
+
+    path = Path.join(dir, "restart.json")
+    assert :ok = CLI.prepare_restart(argv, %{id: "changed-session", cwd: "/project"}, path)
+
+    assert JSON.decode!(File.read!(path)) == [
+             "--config",
+             "tui",
+             "--no-mouse",
+             "--sessions-dir",
+             "my sessions",
+             "--resume",
+             "changed-session",
+             "-C",
+             "/project"
+           ]
+  end
+
+  @tag :tmp_dir
+  test "a restart receipt is consumed before dispatch and cannot replay twice", %{tmp_dir: dir} do
+    path = Path.join(dir, "restart.json")
+    previous = System.get_env("LMX_RESTART_FILE")
+    System.put_env("LMX_RESTART_FILE", path)
+
+    on_exit(fn ->
+      if previous,
+        do: System.put_env("LMX_RESTART_FILE", previous),
+        else: System.delete_env("LMX_RESTART_FILE")
+    end)
+
+    args = ["--resume", "exact-session", "-C", "/work space"]
+    File.write!(path, JSON.encode!(args))
+
+    opts = [
+      configure: fn -> :ok end,
+      native_loader: fn -> :ok end,
+      runner: fn argv ->
+        assert File.read!(path) == ""
+        assert argv == args
+        :ok
+      end
+    ]
+
+    assert CLI.run(["--prompt", "do not repeat"], opts) == 0
+
+    assert CLI.run(
+             ["--version"],
+             Keyword.put(opts, :runner, fn argv ->
+               assert argv == ["--version"]
+               :ok
+             end)
+           ) == 0
   end
 
   test "preserves a command's non-zero status" do

@@ -27,6 +27,9 @@ defmodule Lemieux.Extensions.Planning.Reducer do
     validate(%{plan | "next_id" => plan["next_id"] + 1, "tasks" => plan["tasks"] ++ [task]})
   end
 
+  def apply(plan, %{"action" => "new", "tasks" => items}) when is_list(items),
+    do: apply(%{plan | "tasks" => []}, %{"action" => "set", "tasks" => items})
+
   # The whole plan at once, as the model currently sees it. Items keep the id
   # they already had — named explicitly, or matched by title — so a host
   # watching the plan sees the same task move rather than one task deleted

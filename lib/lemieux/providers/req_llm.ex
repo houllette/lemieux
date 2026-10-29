@@ -401,11 +401,15 @@ defmodule Lemieux.Providers.ReqLLM do
   def run(%State{route: route, options: options} = state, %Request{} = request, emit)
       when not is_nil(route) do
     with {:ok, {target, options}} <-
-           Route.target(route, request, Keyword.merge(options, request.params)) do
+           Route.target(
+             route,
+             %{request | params: Keyword.delete(request.params, :fast_mode)},
+             options |> Keyword.merge(request.params) |> Keyword.delete(:fast_mode)
+           ) do
       stream_at(
         request,
         target,
-        put_tools(request_options(options), request.tools),
+        put_tools(options |> Keyword.delete(:fast_mode) |> request_options(), request.tools),
         emit,
         route,
         state.response_metadata
@@ -425,12 +429,68 @@ defmodule Lemieux.Providers.ReqLLM do
     end
   end
 
+  # Catalog modes carry the actual wire value. Do not infer support from a
+  # model name, or offer tiers on gateways whose transport contract is unknown.
+  @impl Lemieux.Provider
+  def fast_modes(state, spec) do
+    case normalize_state(state) do
+      %State{route: nil, options: options} ->
+        if fast_transport?(options, spec),
+          do: Enum.filter(["fast", "ultrafast"], &(not is_nil(fast_tier(spec, &1)))),
+          else: []
+
+      _routed ->
+        []
+    end
+  end
+
+  defp fast_tier(spec, mode) do
+    with {:ok, %{provider: provider, extra: extra}} <- model(spec),
+         true <- provider in [:openai, :openai_codex] do
+      case get_in(extra || %{}, [
+             "experimental",
+             "modes",
+             mode,
+             "provider",
+             "body",
+             "service_tier"
+           ]) do
+        tier when is_binary(tier) and tier != "" -> tier
+        _unsupported -> nil
+      end
+    else
+      _unsupported -> nil
+    end
+  end
+
+  defp fast_transport?(options, spec),
+    do:
+      is_nil(Keyword.get(options, :base_url)) and
+        not Map.has_key?(Keyword.get(options, :transport_routes, %{}), ModelSpec.provider(spec))
+
+  defp fast_options(options, spec) do
+    case Keyword.pop(options, :fast_mode) do
+      {nil, options} ->
+        options
+
+      {"off", options} ->
+        Keyword.delete(options, :service_tier)
+
+      {mode, options} ->
+        tier = if fast_transport?(options, spec), do: fast_tier(spec, mode)
+        put_fast_tier(options, tier)
+    end
+  end
+
+  defp put_fast_tier(options, nil), do: Keyword.delete(options, :service_tier)
+  defp put_fast_tier(options, tier), do: Keyword.put(options, :service_tier, tier)
+
   @doc false
   @spec request_target(spec :: String.t(), options :: keyword()) ::
           {:ok, {ReqLLM.model_input(), keyword()}} | {:error, term()}
   def request_target(spec, options) when is_binary(spec) and is_list(options) do
     routes = Keyword.get(options, :transport_routes, %{})
-    options = request_options(options)
+    options = options |> fast_options(spec) |> request_options()
 
     case ModelSpec.split(spec) do
       {:ok, {provider, model_id}} ->
@@ -496,7 +556,12 @@ defmodule Lemieux.Providers.ReqLLM do
   # `--max-cost-usd 5` stopped a session after two or three turns that had
   # cost cents. Unknown pricing still answers `nil`, and the gate still refuses.
   def estimate_cost(state, %Request{} = request) do
-    options = state |> normalize_state() |> Map.fetch!(:options) |> Keyword.merge(request.params)
+    options =
+      state
+      |> normalize_state()
+      |> Map.fetch!(:options)
+      |> Keyword.merge(request.params)
+      |> fast_options(request.model)
 
     with {:ok, model} <- model(request.model),
          output when is_integer(output) and output >= 0 <- output_reservation(request, model) do
@@ -510,15 +575,38 @@ defmodule Lemieux.Providers.ReqLLM do
         input_includes_cached: true
       }
 
-      case ReqLLM.Billing.calculate(usage, model, pricing_context(options)) do
+      case ReqLLM.Billing.calculate(usage, model, estimate_pricing_context(options)) do
         {:ok, %{total: total}} ->
           total
 
         {:ok, nil} ->
-          list_rate_estimate(model, input, cached, output)
+          fallback_estimate(options, model, input, cached, output)
       end
     else
       _unknown -> nil
+    end
+  end
+
+  defp fallback_estimate(options, model, input, cached, output) do
+    if Keyword.has_key?(options, :service_tier),
+      do: nil,
+      else: list_rate_estimate(model, input, cached, output)
+  end
+
+  # A budget reservation uses the requested tier, never claims that it was the
+  # tier actually billed. Actual usage keeps ReqLLM's returned-tier accounting.
+  defp estimate_pricing_context(options) do
+    context = pricing_context(options)
+
+    case Keyword.get(options, :service_tier) do
+      nil ->
+        context
+
+      tier ->
+        context
+        |> Map.new()
+        |> Map.drop([:service_tier, "service_tier"])
+        |> Map.put(:service_tier, tier)
     end
   end
 

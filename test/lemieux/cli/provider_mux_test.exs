@@ -57,6 +57,15 @@ defmodule Lemieux.CLI.ProviderMuxTest do
     assert {:error, {:provider_unavailable, "google"}} = Session.set_provider(session, "google")
   end
 
+  test "fast modes belong to the selected connection, not another mux member" do
+    provider =
+      ProviderMux.new([{"ixway", ixway_provider()}], ReqLLM.new(api_keys: %{"openai" => "fake"}))
+
+    assert Provider.fast_modes(provider, "openai:gpt-5.6") == ["fast"]
+    assert Provider.fast_modes(provider, "ixway:team/coding") == []
+    assert Provider.fast_modes(provider, "anthropic:claude-opus-4-6") == []
+  end
+
   test "Ixway selections stay on Ixway and cannot fall back to a direct key" do
     provider =
       ProviderMux.new(

@@ -12,6 +12,7 @@ alias Lemieux.CLI.Learning.Repositories
 alias Lemieux.CLI.Learning.Reflection
 alias Lemieux.CLI.Learning.StudyBudget
 alias Lemieux.CLI.Learning.StudyAllowance
+alias Lemieux.CLI.Learning.Transport
 alias Lemieux.Contract
 alias Lemieux.Learning.Experience.Lessons
 alias Lemieux.Learning.Experience.Lessons.File, as: LessonFiles
@@ -133,6 +134,7 @@ root = Path.expand(opts[:output] || "tmp/learning-study-#{Lemieux.ID.generate()}
 :ok = File.mkdir(root)
 :ok = File.chmod(root, 0o700)
 Logger.configure(level: :warning)
+if live, do: :ok = Transport.prepare()
 
 {:ok, environment} =
   Container.new("python@sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059")
@@ -250,6 +252,7 @@ runtime = %{
     "task_requests" => requests
   },
   "transport_max_retries" => 0,
+  "http_transport" => Transport.policy(),
   "study_allowance" =>
     if(live,
       do: %{
@@ -293,6 +296,7 @@ runtime =
     Map.merge(runtime, %{
       "research_protocol" => %{
         "id" => "whole_record_research/v6",
+        "http_transport" => Transport.policy(),
         "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
         "reflection" => "whole_public_record_including_rejected_and_uncertain_experiments",

@@ -9,10 +9,61 @@ API.
 
 ## Unreleased
 
-- Run a bounded stock verification-replay refinement from the shared CLI/TUI
-  host when a finite whole-job allowance, cached isolated image and current
-  policy permit it. Supported guidance is temporary and source-backed;
-  inspection, undo, opt-out and recovery preserve outer accounting.
+### Features
+
+- Start an independent todo list with `action: "new"` or `Planning.new/2`,
+  retaining earlier plans in the transcript and keeping task ids monotonic.
+  `set` still continues the current work; completed plans no longer appear as
+  outstanding obligations on later requests. (#109)
+- Restart an installer-managed TUI with `/update` when hot loading is
+  unavailable, resuming the exact session and working directory without
+  replaying the initial prompt. Automatically restart only a pristine,
+  untouched, idle screen; drafts and pending work prevent restart. (#108)
+- Toggle faster service with `/fast` when the active model and transport
+  declare support, including `ultrafast` where available. Persist the choice
+  for resume, clear unsupported modes on model switches, and hide the command
+  elsewhere. Faster tiers may cost more and still require account access. (#107)
+
+### Migration
+
+- TUI `on_exit` callbacks now receive `restart?: boolean` alongside `id`,
+  `name` and `cwd`. Hosts matching the complete receipt must accept the new
+  field; it is true only after the host has prepared an update restart.
+
+## 0.12.0 — 2026-10-28
+
+This release requires restarting `lmx` on every platform. Save an unsent draft,
+stage the update, quit and use `lmx -c` or the named `--resume` command. New
+watch and learning modules, retained callbacks and changed dependency code have
+no supported hot upgrade or downgrade path from 0.11.0.
+
+### Migration
+
+- Ordinary CLI/TUI sessions with personal state now retain scoped experience
+  and recall bounded, unconfirmed guidance. `lmx learning inspect` reads it
+  offline; `lmx learning off` persistently disables learning in the workspace.
+  Personal `"learning": false` or `"disabled_extensions": ["learning"]` also
+  disables it. `"capture": false` disables both capture and this experience
+  lane. `--config none` without `LMX_HOME` has no personal state. Embedders
+  retain explicit opt-in and lifecycle control.
+- Capture and recall add no inference requests. Stock isolated refinement can
+  use extra requests from an existing finite `--max-total-requests` allowance
+  when a cached replay image, complete evidence and current policy permit it.
+  The 48-slot experiment needs a whole-job limit of at least 192; smaller or
+  unpriced dollar-limited jobs abstain. See
+  [ordinary-use controls](docs/harness-learning.md#ordinary-use-experience-and-controls).
+- Update `req_llm` and `llm_db` together when updating an existing lock; this
+  release requires ReqLLM 1.29 and uses LLMDB 2026.10.6.
+- Experimental effective-runtime confirmations now require complete request,
+  terminal and transcript evidence. Requalify against current runtime and
+  asset bindings; historical evidence and exported source do not grant current
+  approval or activation. Confirmed native exports require a complete
+  dependency/capability manifest and source-bound CodeGate/reviewer evidence.
+  Existing version 2 research plans keep their analysis; version 3 is explicit.
+- Review script extensions pinned to a bare 0.11 version or `~> 0.11.0` before
+  widening their code and manifest requirements. Compiled bundles retain
+  extension API 1 and its OTP/Elixir compatibility checks; rebuild bundles
+  that the current loader refuses.
 
 ### Dependencies
 
@@ -21,14 +72,22 @@ API.
   ([upstream advisory](https://github.com/agentjido/req_llm/security/advisories/GHSA-6vww-5m28-f26v)).
   Align the standalone host and example locks with its LLMDB 2026.10.6 catalog.
 
-- Update ReqLLM to 1.28.0 and its required LLMDB catalog to 2026.10.5 across
-  the library, standalone host, bundled compaction extension and tracked
-  example locks. This includes upstream Codex reasoning/terminal-stream
-  fixes and streamed cache/billing metadata preservation. Embedders with an
-  older provider stack should update `req_llm` and `llm_db` together; see
+- Include the upstream Codex reasoning/terminal-stream fixes and streamed
+  cache/billing metadata preservation introduced in ReqLLM 1.28. Embedders
+  with an older provider stack should update `req_llm` and `llm_db` together; see
   [embedding requirements](docs/embedding.md#1-add-the-dependency).
 
 ### Features
+
+- Run a bounded stock verification-replay refinement from the shared CLI/TUI
+  host when a finite whole-job allowance, cached isolated image and current
+  policy permit it. Supported guidance is temporary and source-backed;
+  inspection, undo, opt-out and recovery preserve outer accounting.
+
+- Whole-record research reflection preserves complete numbered observations
+  and selected asset files with lossless sharing inside fixed wire bounds.
+  Partial or unknown usage remains incomplete evidence; mechanism checks do
+  not establish general hosted-model efficacy.
 
 - Repository learning qualification isolates the installed verifier from
   workspace import shadows, freezes required check counts and supports an
@@ -190,6 +249,11 @@ API.
 
 ### Fixes
 
+- Settle physical learning usage before forwarding completion, and ignore
+  captures that were never committed. Unknown and interrupted accounting
+  closes admission until its existing recovery requirements are satisfied.
+- Remote-workspace undo reports limitations against the effective environment
+  instead of suggesting that a host-side checkout was restored.
 - Directory-scoped search helpers retain the session workspace and enter the
   requested directory inside its command environment, so container searches
   cannot silently inspect an empty host-side tree.
@@ -213,6 +277,12 @@ API.
   conversation.
 - Turn dividers label cumulative request usage as "tokens this turn" to
   distinguish it from the latest request's context size.
+
+### Development
+
+- Reduce repeated frozen-runtime and large compaction-fixture setup while
+  retaining every regression case. Await fixture requests before teardown and
+  hold the provider explicitly when asserting busy-compaction refusal.
 
 ## 0.11.0 — 2026-10-13
 

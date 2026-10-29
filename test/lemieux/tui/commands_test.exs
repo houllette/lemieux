@@ -185,6 +185,33 @@ defmodule Lemieux.TUI.CommandsTest do
     end
   end
 
+  describe "/fast" do
+    test "unsupported models hide the command and deny explicit invocation" do
+      state = tui()
+      refute Enum.any?(command(state, "/help").lines, &(inspect(&1) =~ "/fast"))
+      assert suggestions(type(tui(), "/fast")) == nil
+      assert screen(command(state, "/fast on")) =~ "not supported"
+      refute_receive {:set_fast_mode, _}, 20
+    end
+
+    test "supported modes complete and toggle through the Session API" do
+      session = fake_session(snapshot("01SESSION"), fast_modes: ["fast", "ultrafast"])
+      state = tui(session: session, fast_modes: ["fast", "ultrafast"])
+      assert Enum.any?(command(state, "/help").lines, &(inspect(&1) =~ "/fast"))
+
+      completing = tui(fast_modes: ["fast", "ultrafast"]) |> type("/fast ")
+      assert suggestions(completing).items == ["on", "off", "fast", "ultrafast"]
+
+      enabled = command(state, "/fast")
+      assert_receive {:set_fast_mode, "toggle"}
+      assert screen(enabled) =~ "fast: fast"
+      assert screen(command(enabled, "/fast ultrafast")) =~ "fast: ultrafast"
+      assert_receive {:set_fast_mode, "ultrafast"}
+      assert screen(command(enabled, "/fast off")) =~ "fast: off"
+      assert_receive {:set_fast_mode, "off"}
+    end
+  end
+
   describe "model configuration commands" do
     test "provider, bare model id, and effort selections reach their Session APIs" do
       session = fake_session(snapshot("01SESSION"))

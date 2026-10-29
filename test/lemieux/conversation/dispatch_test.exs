@@ -365,6 +365,9 @@ defmodule Lemieux.Conversation.DispatchTest do
       assert line =~ "could not switch model"
       refute Enum.any?(calls(refused), &match?({:react, _}, &1))
       send(turn, :release)
+
+      id = Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "a provider is normalised before the session sees it", context do

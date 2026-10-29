@@ -55,7 +55,7 @@ from:
   becomes an error the model can read, not a dead session. An installed
   `lmx` is an OTP release, so a compatible, signed update can load into the
   terminal UI while it runs.
-- **The same loop runs in your application.** Add `{:lemieux, "~> 0.9"}`,
+- **The same loop runs in your application.** Add `{:lemieux, "~> 0.12.0"}`,
   mount `Lemieux.Supervisor`, and supply your own tools, store, approval
   policy and interface through the API `lmx` uses; `lmx` has no private path
   into the library. [First embedded agent](docs/first-embedded-agent.md) runs
@@ -143,7 +143,7 @@ shows how to make `lmx` work from any directory.
 
 ```elixir
 def deps do
-  [{:lemieux, "~> 0.9"}]
+  [{:lemieux, "~> 0.12.0"}]
 end
 ```
 

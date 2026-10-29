@@ -37,6 +37,10 @@ defmodule Lemieux.SessionConfigTest do
     def context_window(_scripted, _model), do: nil
 
     @impl Lemieux.Provider
+    def fast_modes(_scripted, "test:model"), do: ["fast", "ultrafast"]
+    def fast_modes(_scripted, _model), do: []
+
+    @impl Lemieux.Provider
     def reasoning_efforts(_scripted, "test:model"), do: ["default", "low", "high"]
     def reasoning_efforts(_scripted, "other:first"), do: ["default", "low"]
     def reasoning_efforts(_scripted, _model), do: []
@@ -329,6 +333,7 @@ defmodule Lemieux.SessionConfigTest do
       assert_receive {:provider_started, provider_task}
 
       assert {:error, :busy} = Session.set_model(session, "test:other")
+      assert {:error, :busy} = Session.set_fast_mode(session, "on")
       assert Session.snapshot(session).model == "test:model"
 
       send(provider_task, :finish)
@@ -341,6 +346,51 @@ defmodule Lemieux.SessionConfigTest do
 
       assert {:ok, "test:other"} = Session.set_model(session, "test:other")
       assert Session.snapshot(session).context.window == 12_345
+    end
+
+    test "fast mode toggles, persists, reaches requests and resets on an unsupported model",
+         context do
+      provider = model_provider([[{:done, :stop}]])
+      {session, scripted} = start(context, provider: provider)
+      id = Session.id(session)
+      assert Session.fast_modes(session) == ["fast", "ultrafast"]
+      assert {:ok, "fast"} = Session.set_fast_mode(session, "toggle")
+      assert {:ok, "ultrafast"} = Session.set_fast_mode(session, "ultrafast")
+      assert Session.snapshot(session).fast_mode == "ultrafast"
+      assert :ok = Session.prompt(session, "hello")
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      assert [request] = Scripted.requests(scripted)
+      assert request.params[:fast_mode] == "ultrafast"
+      stop(context, session)
+      {resumed, _} = resume(context, id, provider: provider)
+      assert Session.snapshot(resumed).fast_mode == "ultrafast"
+      assert {:ok, "off"} = Session.set_fast_mode(resumed, "toggle")
+      assert {:ok, "fast"} = Session.set_fast_mode(resumed, "on")
+      assert {:ok, "test:other"} = Session.set_model(resumed, "test:other")
+      assert Session.snapshot(resumed).fast_mode == "off"
+
+      assert {:error, {:fast_mode_unsupported, "test:other", "fast", []}} =
+               Session.set_fast_mode(resumed, "on")
+    end
+
+    test "invalid fast modes do not mutate configuration", context do
+      {session, _} = start(context, provider: model_provider([]))
+      before = Session.snapshot(session)
+
+      assert {:error, {:fast_mode_unsupported, "test:model", "turbo", ["fast", "ultrafast"]}} =
+               Session.set_fast_mode(session, "turbo")
+
+      assert Session.snapshot(session).entries == before.entries
+      assert Session.snapshot(session).fast_mode == "off"
+    end
+
+    test "resuming revalidates fast mode against the new connection", context do
+      {session, _} = start(context, provider: model_provider([]))
+      assert {:ok, "fast"} = Session.set_fast_mode(session, "on")
+      id = stop(context, session)
+      {resumed, _} = resume(context, id, [])
+      assert Session.fast_modes(resumed) == []
+      assert Session.snapshot(resumed).fast_mode == "off"
     end
 
     test "reasoning effort is persisted, sent, and restored", context do

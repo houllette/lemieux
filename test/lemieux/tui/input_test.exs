@@ -1834,6 +1834,9 @@ defmodule Lemieux.TUI.InputTest do
       assert typed(sent) == ""
       assert sent.conversation.busy?
       assert sent.history.entries == ["say hi"]
+
+      id = Lemieux.Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "invokes a user skill as a slash command without echoing its expanded body", %{
@@ -1892,6 +1895,11 @@ defmodule Lemieux.TUI.InputTest do
 
       assert {:noreply, sent} = TUI.handle_event(key("enter"), state)
       assert screen(sent) =~ "say hi"
+
+      # The Scripted agent dies with the test, before ExUnit stops the
+      # supervised session. Let its request finish before that teardown.
+      id = Lemieux.Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "leaves one blank row between the previous answer and the next prompt", %{
@@ -1908,6 +1916,9 @@ defmodule Lemieux.TUI.InputTest do
              ]
 
       assert screen(sent) =~ "finished\n\n› next task"
+
+      id = Lemieux.Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "on an empty box does nothing at all", %{session: session} do
@@ -2194,6 +2205,9 @@ defmodule Lemieux.TUI.InputTest do
 
       blank = tui() |> type("   ") |> press("enter")
       assert blank.history.entries == []
+
+      id = Lemieux.Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
   end
 
