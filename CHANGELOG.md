@@ -7,6 +7,15 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Features
+
+- Start an independent todo list with `action: "new"` or `Planning.new/2`,
+  retaining earlier plans in the transcript and keeping task ids monotonic.
+  `set` still continues the current work; completed plans no longer appear as
+  outstanding obligations on later requests. (#109)
+
 ## 0.12.0 — 2026-10-28
 
 This release requires restarting `lmx` on every platform. Save an unsent draft,

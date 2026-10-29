@@ -9,7 +9,7 @@ defmodule Lemieux.Extensions.Planning do
   session's generic document seam before any successful tool result is returned.
   Hosts own cross-session work items and scheduling.
 
-  ## Two ways to write it
+  ## Writing a plan
 
   `set/2` replaces the whole list — titles and statuses, as the model sees the
   plan now — and needs no revision: it reads the current one itself and
@@ -20,6 +20,11 @@ defmodule Lemieux.Extensions.Planning do
   fine-grained actions (`update/3` with `create`, `update`, `reopen`,
   `delete`) keep the compare-and-set on an observed revision for hosts and
   models that record dependencies, owners and evidence.
+
+  `new/2` starts unrelated work with fresh task identities. Earlier plans stay
+  in the transcript; document revisions and task ids remain monotonic so a
+  stale single-task edit can never target a different task. Use `set/2` to
+  continue or append to the current work instead.
 
   ## What a host renders
 
@@ -89,21 +94,27 @@ defmodule Lemieux.Extensions.Planning do
   whole-list write means "this is the plan now" whichever write it follows.
   """
   @spec set(session :: Session.session(), tasks :: [map()]) :: {:ok, map()} | {:error, term()}
-  def set(session, tasks) when is_list(tasks), do: set(session, tasks, 2)
+  def set(session, tasks) when is_list(tasks),
+    do: write(session, %{"action" => "set", "tasks" => tasks}, 2)
 
-  defp set(session, tasks, attempts) do
+  @doc "Starts a fresh plan without carrying over tasks, dependencies or completion evidence."
+  @spec new(session :: Session.session(), tasks :: [map()]) :: {:ok, map()} | {:error, term()}
+  def new(session, tasks) when is_list(tasks),
+    do: write(session, %{"action" => "new", "tasks" => tasks}, 2)
+
+  defp write(session, command, attempts) do
     with {:ok, %{revision: revision, value: plan}} <- read(session),
-         {:ok, next} <- Reducer.apply(plan, %{"action" => "set", "tasks" => tasks}) do
-      commit_set(session, tasks, revision, plan, next, attempts)
+         {:ok, next} <- Reducer.apply(plan, command) do
+      commit_set(session, command, revision, plan, next, attempts)
     end
   end
 
   defp commit_set(_session, _tasks, revision, plan, plan, _attempts),
     do: {:ok, %{revision: revision, value: plan}}
 
-  defp commit_set(session, tasks, revision, _plan, next, attempts) do
+  defp commit_set(session, command, revision, _plan, next, attempts) do
     case Session.put_document(session, @namespace, revision, next) do
-      {:error, {:conflict, _current}} when attempts > 1 -> set(session, tasks, attempts - 1)
+      {:error, {:conflict, _current}} when attempts > 1 -> write(session, command, attempts - 1)
       committed -> committed
     end
   end
@@ -129,21 +140,28 @@ defmodule Lemieux.Extensions.Planning do
   @spec prepare(request :: Lemieux.Request.t(), context :: map()) :: term()
   def prepare(request, context) do
     case read(context.session) do
-      {:ok, %{value: %{"tasks" => []}}} ->
-        {:ok, request}
-
       {:ok, document} ->
-        entry =
-          Entry.new(:user, %{
-            "text" =>
-              "Current session plan (tracking data, not proof of completion):\n" <>
-                summary(document)
-          })
-
-        {:ok, %{request | entries: request.entries ++ [entry]}}
+        project(request, document)
 
       {:error, reason} ->
         {:deny, "cannot reconstruct session plan: #{inspect(reason)}"}
+    end
+  end
+
+  # Completed work remains inspectable, not an obligation injected into every
+  # subsequent request (which encouraged models to keep extending old lists).
+  defp project(request, document) do
+    if Enum.any?(tasks(document.value), &(&1["status"] in ~w(pending in_progress))) do
+      entry =
+        Entry.new(:user, %{
+          "text" =>
+            "Current session plan (tracking data, not proof of completion):\n" <>
+              summary(document)
+        })
+
+      {:ok, %{request | entries: request.entries ++ [entry]}}
+    else
+      {:ok, request}
     end
   end
 
