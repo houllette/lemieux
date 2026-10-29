@@ -454,6 +454,19 @@ class Release:
                 (expected["id"], expected["run_attempt"], "success", "completed"),
                 "Release workflow changed; rerun this script to qualify its current artifacts")
 
+    def release_info(self):
+        # REST /releases/tags/TAG only returns published releases. gh resolves
+        # authenticated drafts too; normalize its field names for both states.
+        info = json.loads(self.command("gh", "release", "view", self.tag, "--repo", REPO,
+                                       "--json", "databaseId,tagName,isDraft,isPrerelease,url", capture=True))
+        require(isinstance(info, dict) and info.get("tagName") == self.tag and
+                type(info.get("databaseId")) is int and info["databaseId"] > 0 and
+                isinstance(info.get("isDraft"), bool) and isinstance(info.get("isPrerelease"), bool) and
+                isinstance(info.get("url"), str) and info["url"].startswith(f"https://github.com/{REPO}/releases/"),
+                "GitHub returned an invalid release identity")
+        return {"id": info["databaseId"], "tag_name": info["tagName"], "draft": info["isDraft"],
+                "prerelease": info["isPrerelease"], "html_url": info["url"]}
+
     def verified_draft(self, directory, expected, signed=False):
         self.assert_current_run(expected)
         self.download_release(directory)
@@ -462,7 +475,7 @@ class Release:
         if signed:
             require(SIGNED <= {path.name for path in directory.iterdir()}, "Release lacks both signatures")
             self.mix("lmx.release.verify", str(directory / "SHA256SUMS"), str(directory / "update.json"), host=True)
-        return self.api(f"repos/{REPO}/releases/tags/{self.tag}")
+        return self.release_info()
 
     def attest(self, directory):
         for name in (*release_checksums.ARTIFACTS, "SHA256SUMS", "update.json"):
@@ -564,7 +577,7 @@ class Release:
             self.checkpoint("publish-github")
             self.command("gh", "release", "edit", self.tag, "--repo", REPO,
                          "--draft=false", "--prerelease=false", "--latest")
-        published = self.api(f"repos/{REPO}/releases/tags/{self.tag}")
+        published = self.release_info()
         latest = self.api(f"repos/{REPO}/releases/latest")
         require(not published["draft"] and not published["prerelease"] and latest["tag_name"] == self.tag,
                 "GitHub publication/latest was not confirmed; rerun to reconcile")

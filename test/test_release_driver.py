@@ -117,6 +117,8 @@ class World:
         if endpoint.endswith("/releases/latest"):
             return {"tag_name": self.latest_override or ("v0.12.0" if self.published else "v0.11.0")}
         if endpoint.endswith("/releases/tags/v0.12.0"):
+            if not self.published:
+                raise driver.ReleaseError("HTTP/2.0 404 Not Found: tag lookup only returns published releases")
             return {"draft": not self.published, "prerelease": not self.published,
                     "html_url": "https://github.com/houllette/lemieux/releases/tag/v0.12.0"}
         if endpoint == "repos/" + driver.REPO:
@@ -193,6 +195,10 @@ class World:
             if self.changed_draft:
                 (directory / "NOTICE").write_text("replaced")
             return ""
+        if args[:3] == ("gh", "release", "view"):
+            return json.dumps({"databaseId": 12, "tagName": "v0.12.0", "isDraft": not self.published,
+                               "isPrerelease": not self.published,
+                               "url": "https://github.com/houllette/lemieux/releases/tag/v0.12.0"})
         if args[:3] == ("gh", "attestation", "verify"):
             return ""
         if args[:3] == ("gh", "release", "edit"):
@@ -241,6 +247,31 @@ class ReleaseDriverTest(unittest.TestCase):
         self.assertIn(("git", "config", "user.email", "123+maintainer@users.noreply.github.com"), self.world.calls)
         scratch = next(Path(c[-1]).parent for c in self.world.calls if c[:2] == ("git", "clone"))
         self.assertFalse(scratch.exists())
+
+    def test_verified_draft_resolves_unpublished_release_without_tag_rest_lookup(self):
+        release = self.release()
+        self.world.pushed = True
+        release.state.update(source_sha=self.world.sha, inventory=release.snapshot(self.world.candidate))
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = release.verified_draft(self.base / "downloaded-draft",
+                                               self.world.run("release.yml", "push", "v0.12.0", 4))
+            self.assertTrue(result["draft"])
+            self.assertTrue(result["prerelease"])
+            self.assertFalse(self.world.published or self.world.signed)
+        finally:
+            release.log_file.close()
+
+    def test_release_metadata_must_match_the_requested_tag(self):
+        release = self.release()
+        release.run = lambda *args, **kwargs: json.dumps({"databaseId": 12, "tagName": "v0.13.0",
+                                                        "isDraft": True, "isPrerelease": True,
+                                                        "url": "https://github.com/houllette/lemieux/releases/tag/v0.13.0"})
+        try:
+            with self.assertRaisesRegex(driver.ReleaseError, "invalid release identity"):
+                release.release_info()
+        finally:
+            release.log_file.close()
 
     def accepted_write(self, boundary):
         self.world.fail_after = boundary
