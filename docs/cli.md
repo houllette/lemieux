@@ -239,8 +239,11 @@ signed manifest verifies against the Ed25519 public key built into the
 binary; a release whose signature is missing or does not verify is reported
 in the notice box and never installed. An offline or failed check stays
 silent. A compatible update may load into the running screen; otherwise it
-applies at the next start, and the first start after it links that
-release's changelog. `LMX_CHECK_UPDATES=0` turns the automatic checks off;
+applies at the next start. `/update` can restart the installed TUI and resume
+this exact session once it is idle and its draft is empty. A new screen with
+no interaction or conversation restarts automatically after installation;
+otherwise it waits for you. The first start after it links that release's
+changelog. `LMX_CHECK_UPDATES=0` turns the automatic checks off;
 `/update` still checks. `LMX_AUTO_UPDATE=0` keeps the notices and installs
 only when you run `/update`. Selecting your own extensions also turns
 automatic installation off; `/update` still installs, and the update applies
@@ -389,7 +392,7 @@ links to the docs, issues and questions at the end.
 | `/name [TEXT]` | Show or change the session's label on screen, until you quit |
 | `/color [COLOUR]` | Show or change the accent colour |
 | `/theme [NAME]` | Show or switch the palette: `dark`, `light`, `mono` or one of yours |
-| `/update` | Check for and apply an update of the installed release, or fast-forward a clean source checkout |
+| `/update` | Check for and install an update; when a restart is pending, restart and resume this session. In a source checkout, fast-forward the clean branch |
 | `/doctor` | A readable report of the model and key, limits, MCP servers, permissions, checkpoints, sandbox and platform tools |
 | `/help` | Show the commands and key bindings |
 | `/quit` or `/exit` | Leave |

@@ -38,6 +38,7 @@ defmodule Lmx.InheritedTest do
       "LMX_RELEASE_ROOT" => @root,
       "LMX_LAUNCHER_PID" => "4242",
       "LMX_LEASE_FILE" => "/home/p/.lmx/install/running/4242-x",
+      "LMX_RESTART_FILE" => "/tmp/lmx-restart-private",
       "LMX_INSTALL_HOME" => "/home/p/.lmx/install"
     })
     |> Map.put_new("ERL_CRASH_DUMP", "/home/p/.lmx/crash/erl_crash.dump")

@@ -15,6 +15,16 @@ API.
   retaining earlier plans in the transcript and keeping task ids monotonic.
   `set` still continues the current work; completed plans no longer appear as
   outstanding obligations on later requests. (#109)
+- Restart an installer-managed TUI with `/update` when hot loading is
+  unavailable, resuming the exact session and working directory without
+  replaying the initial prompt. Automatically restart only a pristine,
+  untouched, idle screen; drafts and pending work prevent restart. (#108)
+
+### Migration
+
+- TUI `on_exit` callbacks now receive `restart?: boolean` alongside `id`,
+  `name` and `cwd`. Hosts matching the complete receipt must accept the new
+  field; it is true only after the host has prepared an update restart.
 
 ## 0.12.0 — 2026-10-28
 

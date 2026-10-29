@@ -50,7 +50,7 @@ defmodule Lmx.CLI do
   @erts ~w(BINDIR ROOTDIR EMU PROGNAME)
   # The launcher's, and the wrapper install.sh writes: nothing a person's
   # command has any use for. `LMX_PARENT_*` are the records themselves.
-  @launcher ~w(LMX_INSTALL_HOME LMX_RELEASE_ROOT LMX_ARGV_FILE LMX_LAUNCHER_PID LMX_LEASE_FILE
+  @launcher ~w(LMX_INSTALL_HOME LMX_RELEASE_ROOT LMX_ARGV_FILE LMX_RESTART_FILE LMX_LAUNCHER_PID LMX_LEASE_FILE
                LMX_PARENT_PATH)
   @recorded "LMX_PARENT__"
 
@@ -61,13 +61,95 @@ defmodule Lmx.CLI do
     native_loader = Keyword.get(opts, :native_loader, &ExRatatui.Native.ensure_loaded/0)
     runner = Keyword.get(opts, :runner, &run_cli/1)
 
+    argv = restart_arguments(argv, System.get_env("LMX_RESTART_FILE"))
+
     with :ok <- configure.(),
          :ok <- native_loader.() do
       exit_status(runner.(argv))
     end
   end
 
-  defp run_cli(argv), do: Lemieux.CLI.run(argv, updates: &Lmx.Update.host/1)
+  defp run_cli(argv) do
+    updates = &update_host(&1, argv)
+    Lemieux.CLI.run(argv, updates: updates)
+  end
+
+  defp update_host(options, argv) do
+    host = Lmx.Update.host(options)
+
+    case {host, System.get_env("LMX_RESTART_FILE"), System.get_env("LMX_INSTALL_HOME")} do
+      {%{apply: _apply}, path, home} when is_binary(path) and is_binary(home) ->
+        host
+        |> Map.put(:restart, &prepare_restart(argv, &1, path))
+        |> Map.put(:refresh, fn -> update_host(options, argv) end)
+
+      _other ->
+        host
+    end
+  end
+
+  # The launcher owns a private one-use receipt. Restart never repeats --prompt
+  # or guesses the latest session, which might belong to another screen.
+  @doc false
+  @spec prepare_restart(argv :: [String.t()], receipt :: map(), path :: Path.t()) ::
+          :ok | {:error, term()}
+  def prepare_restart(argv, %{id: id, cwd: cwd}, path) do
+    args = restart_flags(drop_tui(argv)) ++ ["--resume", id] ++ if(cwd, do: ["-C", cwd], else: [])
+    with :ok <- File.write(path, JSON.encode!(args)), do: File.chmod(path, 0o600)
+  end
+
+  defp drop_tui(["tui" | rest]), do: rest
+  defp drop_tui(argv), do: argv
+
+  # Match complete option/value pairs, not arbitrary tokens: a config path
+  # named "tui" is still a path. Like Runtime.resume_options/2, do not replay
+  # the initial model/system/tool instructions over changes saved in-session.
+  @restart_values ~w(--resume --prompt -C --cwd --model -m --system --mcp-config)
+  @restart_booleans ~w(-c --continue --no-continue --elixir --no-elixir)
+  defp restart_flags([flag, _value | rest]) when flag in @restart_values,
+    do: restart_flags(rest)
+
+  defp restart_flags([flag | rest]) when flag in @restart_booleans,
+    do: restart_flags(rest)
+
+  defp restart_flags([flag | rest]) do
+    cond do
+      Enum.any?(@restart_values, &String.starts_with?(flag, &1 <> "=")) ->
+        restart_flags(rest)
+
+      String.starts_with?(flag, "-") and not String.contains?(flag, "=") ->
+        keep_restart_value(flag, rest)
+
+      true ->
+        [flag | restart_flags(rest)]
+    end
+  end
+
+  defp restart_flags([]), do: []
+
+  defp keep_restart_value(flag, [value | rest]) do
+    if String.starts_with?(value, "-"),
+      do: [flag | restart_flags([value | rest])],
+      else: [flag, value | restart_flags(rest)]
+  end
+
+  defp keep_restart_value(flag, []), do: [flag]
+
+  defp restart_arguments(argv, nil), do: argv
+
+  defp restart_arguments(argv, path) do
+    case File.read(path) do
+      {:ok, ""} ->
+        argv
+
+      {:ok, bytes} ->
+        :ok = File.write(path, "")
+        JSON.decode!(bytes)
+
+      {:error, _reason} ->
+        argv
+    end
+  end
 
   defp exit_status(:ok), do: 0
   defp exit_status({:error, status}) when is_integer(status) and status > 0, do: status

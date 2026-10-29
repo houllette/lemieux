@@ -24,6 +24,7 @@ lmx_child=''
 lmx_tty=''
 lmx_cleanup() {
   [ -z "${LMX_ARGV_FILE:-}" ] || rm -f "$LMX_ARGV_FILE"
+  [ -z "${LMX_RESTART_FILE:-}" ] || rm -f "$LMX_RESTART_FILE"
   if [ -n "$lmx_lease" ]; then
     # The lease is transferred to the VM during boot. Keep it if a signal
     # interrupted waiting and the VM is still alive.
@@ -58,22 +59,8 @@ lmx_signal() {
 trap 'lmx_signal 129' HUP
 trap 'lmx_signal 130' INT
 trap 'lmx_signal 143' TERM
-if [ -n "${LMX_INSTALL_HOME:-}" ]; then
-  if [ ! -d "$LMX_INSTALL_HOME" ]; then
-    echo "lmx: the installation at $LMX_INSTALL_HOME is missing; reinstall it with install.sh" >&2
-    exit 1
-  fi
-  # Installs are per user. Another user's installation used to spin here for
-  # 150 seconds, mistaking "permission denied" for a busy lock, and then
-  # blame an update.
-  if [ ! -w "$LMX_INSTALL_HOME" ]; then
-    if [ -O "$LMX_INSTALL_HOME" ]; then
-      echo "lmx: $LMX_INSTALL_HOME is not writable; lmx records each launch there" >&2
-    else
-      echo 'lmx: this installation belongs to another user; reinstall it as yourself with install.sh' >&2
-    fi
-    exit 1
-  fi
+# Every VM start, including a restart, owns the same lock/lease handshake.
+lmx_register() {
   lmx_lock=$LMX_INSTALL_HOME/.update-lock
   lmx_attempt=0
   lmx_absent=0
@@ -100,11 +87,34 @@ if [ -n "${LMX_INSTALL_HOME:-}" ]; then
   done
   lmx_lock_owned=$lmx_lock
   mkdir -p "$LMX_INSTALL_HOME/running"
+  [ -z "$lmx_lease" ] || rm -f "$lmx_lease"
   lmx_lease=$(mktemp "$LMX_INSTALL_HOME/running/$$-XXXXXXXX")
   printf '%s' "$$" > "$lmx_lease"
   export LMX_LEASE_FILE="$lmx_lease"
+  if [ "${1:-}" = current ]; then
+    LMX_RELEASE_ROOT=$(CDPATH='' cd "$LMX_INSTALL_HOME/current" && pwd -P)
+    export LMX_RELEASE_ROOT
+  fi
   rm -f "$lmx_lock"
   lmx_lock_owned=''
+}
+if [ -n "${LMX_INSTALL_HOME:-}" ]; then
+  if [ ! -d "$LMX_INSTALL_HOME" ]; then
+    echo "lmx: the installation at $LMX_INSTALL_HOME is missing; reinstall it with install.sh" >&2
+    exit 1
+  fi
+  # Installs are per user. Another user's installation used to spin here for
+  # 150 seconds, mistaking "permission denied" for a busy lock, and then
+  # blame an update.
+  if [ ! -w "$LMX_INSTALL_HOME" ]; then
+    if [ -O "$LMX_INSTALL_HOME" ]; then
+      echo "lmx: $LMX_INSTALL_HOME is not writable; lmx records each launch there" >&2
+    else
+      echo 'lmx: this installation belongs to another user; reinstall it as yourself with install.sh' >&2
+    fi
+    exit 1
+  fi
+  lmx_register
 fi
 lmx_self=$0
 while [ -L "$lmx_self" ]; do
@@ -115,6 +125,8 @@ LMX_RELEASE_ROOT=$(CDPATH='' cd "$(dirname "$lmx_self")/.." && pwd -P)
 export LMX_RELEASE_ROOT
 LMX_ARGV_FILE=$(mktemp "${TMPDIR:-/tmp}/lmx-args.XXXXXXXX")
 export LMX_ARGV_FILE
+LMX_RESTART_FILE=$(mktemp "${TMPDIR:-/tmp}/lmx-restart.XXXXXXXX")
+export LMX_RESTART_FILE
 if [ "$#" -gt 0 ]; then printf '%s\000' "$@" > "$LMX_ARGV_FILE"; fi
 # Each CLI owns a node, with no distribution socket. Updates use local SASL calls.
 export RELEASE_DISTRIBUTION=none
@@ -166,13 +178,26 @@ if [ -t 0 ] && [ -t 1 ]; then lmx_tty=$(stty -g 2>/dev/null || true); fi
 # Commands the agent runs inherit the ignored SIGHUP, as under nohup; each runs
 # in a session of its own, which no terminal hangup reaches anyway.
 exec 3<&0
+while :; do
 (trap '' HUP; exec "$LMX_RELEASE_ROOT/bin/lmx-release" start) <&3 3<&- &
-exec 3<&-
 lmx_child=$!
 lmx_status=0
 # bash reports a background job killed by a signal ("line N: PID Killed: 9
 # ... lmx-release start") on the wait's standard error, over the screen it
 # is about to restore; the status says the same thing.
 wait "$lmx_child" 2>/dev/null || lmx_status=$?
+lmx_child=''
 lmx_restore_terminal
+# Only a successful TUI handoff restarts. Read the current pointer again: the
+# installed update can change both ERTS and the release script. The launcher's
+# lease is reclaimed before boot so activation cannot race that startup window.
+if [ "$lmx_status" -ne 75 ] || [ ! -s "$LMX_RESTART_FILE" ] || [ -z "${LMX_INSTALL_HOME:-}" ]; then break; fi
+lmx_register current
+# Boot consumes the argv file on every launch. The private receipt replaces
+# these empty arguments inside the new CLI; never replay the initial prompt.
+rm -f "$LMX_ARGV_FILE"
+LMX_ARGV_FILE=$(mktemp "${TMPDIR:-/tmp}/lmx-args.XXXXXXXX")
+export LMX_ARGV_FILE
+done
+exec 3<&-
 exit "$lmx_status"

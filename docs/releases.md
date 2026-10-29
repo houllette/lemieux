@@ -297,8 +297,9 @@ exits 0 when `lmx` is up to date or an update was installed, 1 when the check
 or the installation failed, and 2 for a usage error. The new version runs the
 next time `lmx` starts: a terminal UI that is open keeps running the version
 it started on until you restart it, is never stopped by the update, and the
-two never install at once. `/update` in the terminal UI does the same from
-inside a session.
+two never install at once. `/update` in the terminal UI installs from inside
+a session and, once a restart is pending, can restart into the new release
+and resume that exact session.
 
 An `lmx` installed with `install.sh` or `install.py` also checks for updates
 from its terminal UI and, on macOS and Linux, installs them too. An archive
@@ -345,10 +346,16 @@ A verified update installs on its own:
   no queued prompt, no session switching. Input pauses while it loads. The
   update is kept only when the same screen answers on the new version;
   otherwise it is rolled back.
-- Otherwise `lmx` stages the full release and says to "restart lmx for it to
-  take effect". Restarting is up to you; an active session is never stopped
-  for an update. Save an unsent draft, quit, and start `lmx -c` to resume
-  where you were.
+- Otherwise `lmx` stages the full release. In an installer-managed TUI,
+  `/update` then restarts into the selected release and resumes the exact
+  current session, including its working directory, without replaying an
+  initial `--prompt`. Wait for active or queued work to finish and save or
+  clear any unsent draft first. If the screen is new and untouched, with no
+  conversation, pending work or draft, installation and restart happen
+  automatically. Any interaction opts out of automatic restart, even if you
+  erase what you typed. `LMX_AUTO_UPDATE=0` also disables automatic restart.
+  A host without restart support still asks you to quit and resume manually
+  (`lmx -c`); source checkouts keep their separate dependency/restart steps.
 
 `lmx update` and `/update` check now and, in an installation the installer
 made, install a verified update. To change the defaults:
