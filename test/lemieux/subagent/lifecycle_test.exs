@@ -52,6 +52,7 @@ defmodule Lemieux.Subagent.LifecycleTest do
   alias Lemieux.Subagent.Task
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Tools.Read
+  alias LemieuxTest.Sync
 
   @moduletag :tmp_dir
 
@@ -61,7 +62,7 @@ defmodule Lemieux.Subagent.LifecycleTest do
   @behaviours [:answers, :prose, :errors, :hangs]
 
   # What the controller does while they run.
-  @actions [:none, :cancel_group, :cancel_child, :steer, :duplicate_finish, :parent_exit]
+  @actions [:none, :cancel_group, :cancel_child, :steer, :duplicate_finish, :parent_cancel]
 
   setup context do
     runtime = Module.concat(__MODULE__, "Runtime#{System.unique_integer([:positive])}")
@@ -90,6 +91,76 @@ defmodule Lemieux.Subagent.LifecycleTest do
     for {behaviours, action} <- scripts() do
       run(context, behaviours, action)
     end
+  end
+
+  test "a parent's actual death cancels active provider workers and releases every reservation",
+       context do
+    parent = start_parent(context)
+    parent_id = Lemieux.Session.id(parent)
+    owner = self()
+
+    requests =
+      for id <- ~w(first second) do
+        child = %{definition(id, :hangs) | timeout: 60_000}
+        Request.new(child, task("hold until the parent is lost"))
+      end
+
+    providers =
+      Map.new(~w(first second), fn id ->
+        provider =
+          Scripted.new(
+            [
+              fn _request ->
+                send(owner, {:held_provider, id, self()})
+                Scripted.delayed(60_000, Scripted.complete("fixture should have been cancelled"))
+              end
+            ],
+            estimated_cost_usd: 0.01
+          )
+
+        {id, provider}
+      end)
+
+    assert {:ok, group_ref} =
+             Subagent.spawn_many(parent, requests,
+               max_cost_usd: 1.0,
+               timeout: 60_000,
+               cancel_grace_ms: 100,
+               providers: providers
+             )
+
+    assert {:ok, children} = Subagent.children(group_ref)
+
+    workers =
+      for id <- ~w(first second) do
+        assert_receive {:held_provider, ^id, worker}
+        {worker, Process.monitor(worker)}
+      end
+
+    assert [account] =
+             Admission.snapshot(Sup.subagent_admission(context.runtime)).roots |> Map.values()
+
+    assert account.children == 2
+    assert account.reserved_micros > 0
+
+    # An already registered waiter retains the terminal result even when a
+    # coordinator settles and exits as it processes the parent's DOWN message.
+    assert {:ok, group} = Subagent.group(group_ref)
+    waiter = Elixir.Task.async(fn -> Subagent.await(group_ref) end)
+    Sync.state(group, &(&1.result != nil or &1.waiters != []))
+    monitor = Process.monitor(parent)
+    Process.exit(parent, :kill)
+    assert_receive {:DOWN, ^monitor, :process, ^parent, :killed}
+    assert {:ok, result} = Elixir.Task.await(waiter, :infinity)
+    assert_one_terminal_result(result, children, "parent died")
+    assert Enum.map(result.results, & &1.status) == [:cancelled, :cancelled]
+
+    for {worker, monitor} <- workers do
+      assert_receive {:DOWN, ^monitor, :process, ^worker, _reason}
+    end
+
+    assert_reservations_released(context.runtime, "parent died")
+    assert_replayable_prefixes(context, parent_id, "parent died")
   end
 
   defp run(context, behaviours, action) do
@@ -130,7 +201,7 @@ defmodule Lemieux.Subagent.LifecycleTest do
     assert_inclusive_usage(result, label)
     assert_no_escalation(context.store, result, label)
     assert_reservations_released(context.runtime, label)
-    assert_replayable_prefixes(context, parent, label)
+    assert_replayable_prefixes(context, Lemieux.Session.id(parent), label)
   end
 
   # One result per child, in input order, and every one of them terminal. A
@@ -223,8 +294,7 @@ defmodule Lemieux.Subagent.LifecycleTest do
   # append per prefix length through the node's single file server, and under
   # the parallel suite on CI that alone ran this test past its 60-second
   # timeout (2026-09-29).
-  defp assert_replayable_prefixes(context, parent, label) do
-    parent_id = Lemieux.Session.id(parent)
+  defp assert_replayable_prefixes(context, parent_id, label) do
     {:ok, entries} = Store.read(context.store, parent_id)
     durable = Enum.map(entries, &(&1 |> Lemieux.Entry.encode!() |> Lemieux.Entry.decode!()))
 
@@ -265,12 +335,8 @@ defmodule Lemieux.Subagent.LifecycleTest do
     send(group, {:lemieux, first.id, {:finished, :stop}})
   end
 
-  defp perform(:parent_exit, group_ref, _children, parent) do
-    {:ok, group} = Subagent.group(group_ref)
-    send(group, {:parent_cancel, :parent_went_away})
-    _alive = Process.alive?(parent)
-    :ok
-  end
+  defp perform(:parent_cancel, _group_ref, _children, parent),
+    do: Lemieux.Session.cancel(parent, :cancelled)
 
   defp start_parent(context) do
     provider = Scripted.new([[{:text_delta, "parent"}, {:done, :stop}]], estimated_cost_usd: 0.01)

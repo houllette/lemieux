@@ -50,7 +50,7 @@ defmodule Lemieux.TUI.BlocksTest do
     end
 
     test "inside a fence it is code from the first character, not a paragraph" do
-      [fence | _rest] = stream("```elixir\n") |> Enum.reverse() |> Enum.reverse()
+      [fence | _rest] = stream("```elixir\n")
       assert {:model_code, "elixir", "", nil} = fence
       assert Blocks.open?(fence)
 
@@ -118,7 +118,8 @@ defmodule Lemieux.TUI.BlocksTest do
              ] =
                lines
 
-      assert is_list(spans)
+      assert spans_text(spans) == "def f, do: 1"
+      assert length(spans) > 1
     end
 
     test "closing re-highlights the block as one source" do
@@ -205,7 +206,8 @@ defmodule Lemieux.TUI.BlocksTest do
       assert [{:model_fence, :open, "elixir", "```"}, {:model_code, "elixir", "def f", spans}] =
                rows
 
-      assert is_list(spans)
+      assert spans_text(spans) == "def f"
+      assert length(spans) > 1
     end
   end
 

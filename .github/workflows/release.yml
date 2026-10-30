@@ -90,7 +90,7 @@ jobs:
       - name: Check links and public wording
         continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: |
-          python scripts/check_links.py
+          elixir scripts/check_links.exs
           scripts/check_public_text.sh
       # `ci` is the precommit gate in check mode. `precommit` itself formats
       # and regenerates usage rules, so it would validate a tree it had just

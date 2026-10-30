@@ -8,6 +8,6 @@
     # project under examples/extensions formats itself.
     "examples/*.exs",
     "examples/{discovery,experiments}/*.exs",
-    "scripts/*.exs"
+    "scripts/**/*.exs"
   ]
 ]

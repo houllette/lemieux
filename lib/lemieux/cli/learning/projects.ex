@@ -3,6 +3,7 @@ defmodule Lemieux.CLI.Learning.Projects do
   alias Lemieux.Benchmark.Task
   alias Lemieux.CLI.Learning.Fixtures
   alias Lemieux.CLI.Learning.Leases
+  alias Lemieux.CLI.Learning.Projects.Corpus
   alias Lemieux.Environment.Sandbox
 
   @spec materialize(root :: Path.t(), partition :: String.t(), variants :: pos_integer()) :: [
@@ -10,12 +11,7 @@ defmodule Lemieux.CLI.Learning.Projects do
         ]
   def materialize(root, partition, variants)
       when partition in ~w(seed development confirmation) do
-    generator = Application.app_dir(:lemieux, "priv/qualification/projects.py")
-
-    {bytes, 0} =
-      System.cmd("python3", [generator, Path.expand(root), partition, to_string(variants)])
-
-    Enum.map(JSON.decode!(bytes), fn fixture ->
+    Enum.map(Corpus.materialize(root, partition, variants), fn fixture ->
       {:ok, source} = Leases.source_digest(fixture["cwd"])
 
       %{

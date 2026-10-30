@@ -62,7 +62,7 @@ SymPy and package caches, and has no network during tasks or grading.
 ## Reproduce the exposed SymPy fixture
 
 Preparation sends no model requests. It requires Docker, the pinned source
-image, the existing local SWE-bench task snapshot and Python 3.13 or newer.
+image, the existing local SWE-bench task snapshot and the pinned Elixir toolchain.
 The image build installs the grader before freezing its immutable identity.
 
 ```sh
@@ -71,7 +71,7 @@ docker build --platform linux/amd64 -f priv/qualification/sympy.Dockerfile \
 docker image inspect lemieux-learning-swe-sympy:review --format '{{.Id}}'
 
 # Use that exact sha256:image ID. The output directory must be new.
-python3 scripts/prepare_learning_repository.py \
+mix run scripts/prepare_learning_repository.exs \
   --dataset tmp/swebench/manifest.private-dataset.json \
   --instance sympy__sympy-19040 \
   --source-image swebench/sweb.eval.x86_64.sympy_1776_sympy-19040@sha256:2238ea21e03d1548e7f3e5345fb924aba8459c99f8697270f8e04aa3661136b4 \

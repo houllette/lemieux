@@ -291,7 +291,7 @@ minimum macOS version belongs to each release: check it again every time
   ```sh
   git grep -n 'REPLACE_BEFORE''_LAUNCH'    # must print nothing
   scripts/check_public_text.sh
-  python3 scripts/check_links.py
+  elixir scripts/check_links.exs
   ```
 
 - Merge through a pull request whose required checks are green.

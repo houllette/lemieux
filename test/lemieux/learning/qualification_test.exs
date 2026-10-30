@@ -291,27 +291,44 @@ defmodule Lemieux.Learning.QualificationTest do
   test "preregistered paired inference detects a useful effect with a bounded regression" do
     assert {:ok, plan} = stream_plan(80)
 
-    assert {:ok, report} =
-             Q.run(plan, fn ctx ->
-               [number, _phase] = String.split(ctx["task"]["id"], "-")
-               n = String.to_integer(number)
+    # Eighty independent streams are required by this power claim. The causal
+    # scheduler is exercised above with two streams; this test supplies a full
+    # completed sample directly to the report boundary instead of dispatching
+    # 1,600 fake episodes just to construct those inference inputs.
+    rows =
+      for repetition <- 1..2,
+          task <- plan["tasks"],
+          arm <-
+            if(repetition == 1, do: plan["arms"], else: tl(plan["arms"]) ++ [hd(plan["arms"])]) do
+        [number, _phase] = String.split(task["id"], "-")
+        n = String.to_integer(number)
 
-               passed =
-                 cond do
-                   ctx["task"]["phase"] == "learning" -> false
-                   n <= 10 -> ctx["arm"] == "updating"
-                   n == 11 -> ctx["arm"] != "updating"
-                   true -> true
-                 end
+        passed =
+          cond do
+            task["phase"] == "learning" -> false
+            n <= 10 -> arm == "updating"
+            n == 11 -> arm != "updating"
+            true -> true
+          end
 
-               {:ok,
-                Map.merge(row(ctx), %{
-                  "passed" => passed,
-                  "candidate_count" => 1,
-                  "promotion_count" => 1,
-                  "rollback_count" => 1
-                })}
-             end)
+        ctx = %{
+          "arm" => arm,
+          "task" => task,
+          "repetition" => repetition,
+          "available_case_ids" => []
+        }
+
+        Map.merge(row(ctx), %{
+          "passed" => passed,
+          "created_lesson_ids" => [],
+          "candidate_count" => 1,
+          "promotion_count" => 1,
+          "rollback_count" => 1
+        })
+      end
+
+    assert length(rows) == 1_600
+    assert {:ok, report} = Q.report(plan, rows)
 
     assert report["analysis"]["adequately_powered"]
     assert report["comparisons"]["updating"]["regressions"] == 1

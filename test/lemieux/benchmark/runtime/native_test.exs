@@ -5,6 +5,7 @@ defmodule Lemieux.Benchmark.Runtime.NativeTest do
   alias Lemieux.Benchmark.Runtime
   alias Lemieux.Benchmark.Runtime.Native
   alias Lemieux.Benchmark.Task
+  alias Lemieux.Clock.Manual
   alias Lemieux.Providers.Scripted
   alias Lemieux.Subagent.Definition
   alias Lemieux.Subagent.Delegate
@@ -14,6 +15,7 @@ defmodule Lemieux.Benchmark.Runtime.NativeTest do
   test "a benchmark deadline retains partial evidence and consumes the unknown-cost reservation",
        context do
     owner = self()
+    clock = start_supervised!(Manual)
 
     provider =
       Scripted.new([
@@ -22,7 +24,7 @@ defmodule Lemieux.Benchmark.Runtime.NativeTest do
         ),
         fn _request ->
           send(owner, {:provider_task, self()})
-          Scripted.delayed(30_000, Scripted.complete("too late"))
+          Scripted.delayed(60_000, Scripted.complete("too late"))
         end
       ])
 
@@ -37,6 +39,7 @@ defmodule Lemieux.Benchmark.Runtime.NativeTest do
     }
 
     supervisor = :"benchmark_deadline_test_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: supervisor})
 
     runtime =
       Runtime.new("native", Native,
@@ -44,17 +47,31 @@ defmodule Lemieux.Benchmark.Runtime.NativeTest do
         model: "test:model",
         supervisor: supervisor,
         sessions_dir: Path.join(context.tmp_dir, "sessions"),
-        # Parallel suites can spend a second scheduling the first tool call;
-        # leave room for the second request to start before the deadline.
+        clock: clock,
+        session_options: [clock: clock],
         timeout_ms: 5_000
       )
 
-    assert {:ok, report} =
-             Lemieux.Benchmark.run(%Lemieux.Benchmark.Manifest{tasks: [task]}, [runtime],
-               workspace: :in_place,
-               cost_cap_usd: 0.02,
-               max_cost_per_attempt_usd: 0.02
-             )
+    attempt =
+      Elixir.Task.async(fn ->
+        Lemieux.Benchmark.run(%Lemieux.Benchmark.Manifest{tasks: [task]}, [runtime],
+          workspace: :in_place,
+          cost_cap_usd: 0.02,
+          max_cost_per_attempt_usd: 0.02
+        )
+      end)
+
+    # Arm the real host deadline and reach the unanswered second request before
+    # moving time. This checks both sides of the boundary without requiring a
+    # loaded machine to start a session inside five wall-clock seconds.
+    assert_receive {:provider_task, worker}
+    Manual.await_timer(clock, &match?({:agent_deadline, _}, &1.message))
+    assert Manual.advance(clock, 4_999) == []
+    assert Elixir.Task.yield(attempt, 0) == nil
+    assert Process.alive?(worker)
+    assert File.read!(Path.join(cwd, "created.txt")) == "partial"
+    assert [_deadline] = Manual.advance(clock, 1)
+    assert {:ok, report} = Elixir.Task.await(attempt, :infinity)
 
     assert [result] = report["results"]
     refute result["passed"]
@@ -75,8 +92,9 @@ defmodule Lemieux.Benchmark.Runtime.NativeTest do
     assert evidence["payload"]["completeness"]["usage"] == "partial"
     assert report["execution"]["unknown_cost_runs"] == 1
     assert report["execution"]["actual_cost_usd"] == 0.02
-    assert_received {:provider_task, worker}
     refute Process.alive?(worker)
+    assert Manual.pending(clock) == []
+    assert Lemieux.sessions(supervisor) == []
   end
 
   test "an unanswered request leaves total cost unknown while retaining reported usage",

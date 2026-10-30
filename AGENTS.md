@@ -122,7 +122,7 @@ language server, Docker, another build), pass `--max-cases 4`.
 | Type check (first run builds a PLT cache, slow once) | `mix dialyzer` |
 | Dependency vulnerabilities | `mix deps.audit` |
 | Retired packages | `mix hex.audit` |
-| Check Markdown links the way GitHub renders them | `python3 scripts/check_links.py` |
+| Check Markdown links the way GitHub renders them | `elixir scripts/check_links.exs` |
 | Check for private names and launch-state wording | `scripts/check_public_text.sh` |
 | Check the static Linux build pins this toolchain | `scripts/build-static-otp.sh --check-pins` |
 | Lint shell scripts with CI's ShellCheck (needs Docker) | `docker run --rm --entrypoint shellcheck -v "$PWD:/repo:ro" -w /repo rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 scripts/*.sh` |
@@ -294,7 +294,7 @@ Release signing keys:
   never starts from a cache another branch could have written, and its Linux
   job builds its own static Erlang/OTP in a container; `eval.yml` also calls
   `erlef/setup-beam` directly. Jobs that need no BEAM set up only what they
-  use (Python for Docs links, Docker for Lint workflows, a pinned gitleaks for
+  use (Docker for Lint workflows, a pinned gitleaks for
   the secret scan). Every job has a `timeout-minutes`. CI and Public readiness
   run on every push to main and every pull request, with no path filters; job
   names are the status checks a ruleset requires, so rename a required check

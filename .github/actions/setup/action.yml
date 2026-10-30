@@ -24,8 +24,7 @@ inputs:
     default: "true"
   python:
     description: >-
-      Also install the pinned Python (dependency setup always needs it for
-      verified native downloads). Set it for every other job whose commands run
+      Also install the pinned Python. Set it for every job whose commands run
       Python: the ordinary suite starts its MCP and process fixtures with
       `python3`, and the release helpers are Python scripts.
     default: "false"
@@ -46,7 +45,7 @@ runs:
     # that relied on the image's choice failed on the platform nobody ran.
     # release.yml and the jobs that need no BEAM pin the same version.
     - name: Set up Python
-      if: inputs.python == 'true' || inputs.deps == 'true'
+      if: inputs.python == 'true'
       uses: actions/setup-python@v7
       with:
         python-version: "3.13"
@@ -91,7 +90,5 @@ runs:
       working-directory: ${{ inputs.project }}
       run: |
         nif_cache="$RUNNER_TEMP/lemieux-terminal-nifs"
-        nif_version=$(elixir -e 'IO.puts(:erlang.system_info(:nif_version))')
-        python3 "$GITHUB_WORKSPACE/scripts/cache_terminal_nif.py" deps/ex_ratatui "$nif_cache" \
-          --nif-version "$nif_version"
+        elixir "$GITHUB_WORKSPACE/scripts/cache_terminal_nif.exs" deps/ex_ratatui "$nif_cache"
         echo "RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH=$nif_cache" >> "$GITHUB_ENV"
