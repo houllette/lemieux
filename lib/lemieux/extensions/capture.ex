@@ -137,12 +137,30 @@ defmodule Lemieux.Extensions.Capture do
   defp observe_checkpoint(request, context, state) do
     if enabled?(context) do
       case Enum.find(Enum.reverse(request.entries), &user?/1) do
-        nil -> :ok
-        prompt -> checkpoint(request, context, prompt, state) |> reported()
+        nil ->
+          :ok
+
+        prompt ->
+          locked_checkpoint(request, context, prompt, state)
       end
     end
 
     :ok
+  end
+
+  defp locked_checkpoint(request, context, prompt, state) do
+    Storage.with_lock(state.dir, Storage.scope(context.cwd), fn ->
+      current_checkpoint(request, context, prompt, state)
+    end)
+    |> reported()
+  end
+
+  defp current_checkpoint(request, context, prompt, state) do
+    case Storage.current?(state.dir, Storage.scope(context.cwd), prompt.at) do
+      {:ok, true} -> checkpoint(request, context, prompt, state)
+      {:ok, false} -> :ok
+      error -> error
+    end
   end
 
   defp checkpoint(request, context, prompt, state) do
@@ -199,15 +217,18 @@ defmodule Lemieux.Extensions.Capture do
 
   defp observe_terminal(context, state) do
     if enabled?(context) do
-      with {:ok, entries} <- source(state, context.session_id),
-           :ok <- retain_signals(entries, context, state) do
-        :ok
-      else
-        error -> reported(error)
-      end
+      Storage.with_lock(state.dir, Storage.scope(context.cwd), fn ->
+        terminal(context, state)
+      end)
+      |> reported()
     end
 
     :ok
+  end
+
+  defp terminal(context, state) do
+    with {:ok, entries} <- source(state, context.session_id),
+         do: retain_signals(entries, context, state)
   end
 
   defp source(%{store: {JSONL, %{dir: dir}}} = state, id) do
@@ -242,6 +263,10 @@ defmodule Lemieux.Extensions.Capture do
     result =
       entries
       |> Signals.detect(state.verification_commands)
+      |> Enum.filter(fn signal ->
+        prompt = Enum.find(entries, &(&1.id == signal["prompt_id"]))
+        prompt && Storage.current?(state.dir, scope, prompt.at) == {:ok, true}
+      end)
       |> Enum.reduce_while(:ok, fn signal, :ok ->
         duplicate =
           Enum.any?(
@@ -253,7 +278,8 @@ defmodule Lemieux.Extensions.Capture do
         result =
           if duplicate,
             do: :ok,
-            else: retain(state.dir, record(signal, entries, context, state, scope, existing))
+            else:
+              write_record(state.dir, record(signal, entries, context, state, scope, existing))
 
         case result do
           :ok -> {:cont, :ok}
@@ -383,7 +409,18 @@ defmodule Lemieux.Extensions.Capture do
   @spec retain(root :: Path.t(), record :: map()) :: :ok | {:error, term()}
   def retain(root, record) do
     with :ok <- verify(record),
-         do: Storage.write(root, record["scope"], record["id"] <> ".json", record)
+         do: Storage.with_lock(root, record["scope"], fn -> write_record(root, record) end)
+  end
+
+  defp write_record(root, record) do
+    with :ok <- verify(record),
+         {:ok, at, 0} <- DateTime.from_iso8601(record["created_at"]),
+         {:ok, true} <- Storage.current?(root, record["scope"], at) do
+      Storage.write(root, record["scope"], record["id"] <> ".json", record)
+    else
+      {:ok, false} -> {:error, :capture_forgotten}
+      error -> error
+    end
   end
 
   @doc "Verifies capture identity and complete input bytes without restoring authority."
@@ -526,10 +563,7 @@ defmodule Lemieux.Extensions.Capture do
   def prune(root, cwd, days, max_records) when days in 1..3650 and max_records in 1..1000,
     do: Storage.prune(root, Storage.scope(cwd), days, max_records, DateTime.utc_now())
 
-  @doc "Explicitly removes this project's capture content, including pending checkpoints."
+  @doc "Removes project captures and checkpoints; late delivery of pre-forget prompts stays forgotten."
   @spec forget(root :: Path.t(), cwd :: Path.t()) :: :ok | {:error, term()}
-  def forget(root, cwd) do
-    dir = Storage.directory(root, Storage.scope(cwd))
-    with :ok <- Storage.ancestors(dir), {:ok, _removed} <- File.rm_rf(dir), do: :ok
-  end
+  def forget(root, cwd), do: Storage.forget(root, Storage.scope(cwd))
 end

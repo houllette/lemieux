@@ -26,7 +26,10 @@ defmodule Lemieux.CLI.Learning.Command do
   defp action(["undo"], home, cwd), do: Loop.undo(home, cwd)
   defp action(["off"], home, cwd), do: Loop.set_enabled(home, cwd, false)
   defp action(["on"], home, cwd), do: Loop.set_enabled(home, cwd, true)
-  defp action(_invalid, _home, _cwd), do: {:error, "use lmx learning [inspect|undo|off|on]"}
+  defp action(["forget"], home, cwd), do: Loop.forget(home, cwd)
+
+  defp action(_invalid, _home, _cwd),
+    do: {:error, "use lmx learning [inspect|undo|off|on|forget]"}
 
   defp error(message, opts) do
     IO.puts(:stderr, Sanitize.for_device(message, :stderr, opts[:terminal?]))

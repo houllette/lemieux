@@ -26,5 +26,10 @@ defmodule Lemieux.CLI.Learning.CommandTest do
       end)
 
     assert stderr =~ "no_task_local_adaptation"
+    refute invoke.(["off"])["enabled"]
+    forgotten = invoke.(["forget"])
+    refute forgotten["enabled"]
+    assert forgotten["last"]["action"] == "forget"
+    assert forgotten["retained"] == 0
   end
 end

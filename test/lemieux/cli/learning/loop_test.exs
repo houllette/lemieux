@@ -4,6 +4,7 @@ defmodule Lemieux.CLI.Learning.LoopTest do
   alias Lemieux.CLI.Learning.Loop
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
+  alias Lemieux.Extensions.Capture
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store.JSONL
@@ -221,6 +222,101 @@ defmodule Lemieux.CLI.Learning.LoopTest do
     refute status["enabled"]
     assert status["retained"] == 0
     assert length(Scripted.requests(provider)) == 1
+  end
+
+  test "forget removes recalled content and captures but preserves opt-out, history and accounting",
+       ctx do
+    train(ctx)
+    home = ctx.options.host.state_dir
+    assert {:ok, before_forget} = Loop.inspect(home, ctx.cwd)
+    assert before_forget["retained"] > 0
+    root = before_forget["evidence_directory"]
+    audit = Path.join(root, "refinement/held/usage.json")
+    File.mkdir_p!(Path.dirname(audit))
+    File.write!(audit, ~s({"state":"unknown","allocated_slots":48}))
+    transcripts = Path.join(ctx.tmp_dir, "sessions")
+    history = Map.new(Path.wildcard(Path.join(transcripts, "*.jsonl")), &{&1, File.read!(&1)})
+    assert map_size(history) > 0
+    assert :ok = Loop.set_enabled(home, ctx.cwd, false)
+
+    assert :ok = Loop.forget(home, ctx.cwd)
+    assert {:ok, forgotten} = Loop.inspect(home, ctx.cwd)
+    refute forgotten["enabled"]
+    assert forgotten["retained"] == 0
+    assert forgotten["last"]["action"] == "forget"
+    assert {:ok, []} = Capture.history(Path.join(home, "capture"), ctx.cwd)
+    assert File.read!(audit) == ~s({"state":"unknown","allocated_slots":48})
+    assert Enum.all?(history, fn {path, bytes} -> File.read!(path) == bytes end)
+
+    assert Enum.all?(Path.wildcard(Path.join(root, "lessons/*.json")), fn path ->
+             String.ends_with?(path, ".pruned.json")
+           end)
+
+    assert :ok = Loop.set_enabled(home, ctx.cwd, true)
+    provider = Scripted.new([Scripted.complete("fresh context")])
+    run(ctx, provider, "Investigate the next failing test", false)
+    assert [request] = Scripted.requests(provider)
+    refute request.system =~ "Prior scoped experience"
+    assert :ok = Loop.forget(home, ctx.cwd)
+  end
+
+  test "forget leaves an interrupted session's consumed allocation and unknown state unchanged",
+       ctx do
+    home = ctx.options.host.state_dir
+    provider = Scripted.new([])
+
+    {:ok, session} =
+      Runtime.start_session(ctx.options, Keyword.merge(ctx.host, provider: provider))
+
+    intent = %{"complete" => false, "slots" => 48, "prompts" => [], "pending" => "interrupted"}
+    assert {:ok, document} = Session.put_document(session, "lmx.learning.refinement", 0, intent)
+    assert :ok = Loop.forget(home, ctx.cwd)
+    assert {:ok, ^document} = Session.document(session, "lmx.learning.refinement")
+    assert Scripted.requests(provider) == []
+    GenServer.stop(session)
+  end
+
+  test "forget refuses an active workspace writer and a symlinked lesson directory", ctx do
+    train(ctx)
+    home = ctx.options.host.state_dir
+    assert {:ok, info} = Loop.inspect(home, ctx.cwd)
+    root = info["evidence_directory"]
+    assert {:ok, claim} = JSONL.lock(%{dir: root}, "operation")
+
+    try do
+      assert {:error, _busy} = Loop.forget(home, ctx.cwd)
+      assert {:ok, unchanged} = Loop.inspect(home, ctx.cwd)
+      assert unchanged["retained"] == info["retained"]
+    after
+      JSONL.unlock(%{dir: root}, "operation", claim)
+    end
+
+    File.rename!(Path.join(root, "lessons"), Path.join(root, "saved-lessons"))
+    File.ln_s!(Path.join(root, "saved-lessons"), Path.join(root, "lessons"))
+    assert {:error, _unsafe} = Loop.forget(home, ctx.cwd)
+
+    assert {:ok, records} =
+             Capture.history(Path.join(home, "capture"), ctx.cwd)
+
+    assert records != []
+  end
+
+  test "full history is actionable and forgetting cannot reset its audit quota", ctx do
+    home = ctx.options.host.state_dir
+    assert :ok = Loop.set_enabled(home, ctx.cwd, false)
+    assert {:ok, info} = Loop.inspect(home, ctx.cwd)
+    evidence = Path.join(info["evidence_directory"], "evidence")
+    File.mkdir_p!(evidence)
+    for n <- 1..1000, do: File.write!(Path.join(evidence, "quota-#{n}.json"), "")
+
+    assert {:ok, full} = Loop.inspect(home, ctx.cwd)
+    assert full["history_full"]
+    assert full["history_records"] == full["history_limit"]
+    assert full["retention_help"] =~ "archive"
+    assert :ok = Loop.forget(home, ctx.cwd)
+    assert {:ok, after_forget} = Loop.inspect(home, ctx.cwd)
+    assert after_forget["history_full"]
+    assert length(File.ls!(evidence)) == 1000
   end
 
   test "small, dollar-limited and unmeasured jobs abstain without extra requests", ctx do
