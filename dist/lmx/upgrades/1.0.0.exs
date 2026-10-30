@@ -15,6 +15,9 @@
 #   owner claims, a capture cutoff and pruning of active applications. Existing
 #   callbacks are not replaced in running sessions. Transcript accounting and
 #   recovery documents remain append-only and are reauthorized on resume.
+# - Cancellation now settles session-owned tool reservations before recording
+#   the terminal checkpoint. Free holds settle at zero; paid effects keep
+#   unknown cost. Existing interrupted history is not rewritten or refunded.
 # - Changes since 0.12.0 include TUI.Updates/Lifecycle restart preparation,
 #   current session/working-directory selection and on_exit receipts, planning
 #   reducer state, provider fast-mode callbacks and structured-output handling.

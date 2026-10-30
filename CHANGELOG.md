@@ -23,6 +23,9 @@ API.
 
 ### Fixes
 
+- Settle and checkpoint cancelled tool reservations before ending the turn.
+  Free tools no longer strand a hold that blocks dollar-limited resume; paid
+  tools retain unknown cost and consumed requests rather than refunding them.
 - Show background-task waits in seconds and elapsed time in minutes and
   seconds, using "ran for" while retaining exact structured milliseconds. (#110)
 - Restore native Codex structured-output streaming with ReqLLM 1.29 by

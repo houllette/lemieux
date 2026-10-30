@@ -614,7 +614,12 @@ defmodule Lemieux.Session.ToolWave do
               Messages.render(state.messages, :tool_cancelled, [call])
             )
 
-          Core.append(state, {:tool_result, payload(cancelled), nil})
+          # Reservations belong to the session, so killing the tool task cannot
+          # settle them. Persist the same accounting as a lost ordinary result:
+          # free tools release their hold; paid effects remain unmeasured.
+          state
+          |> Accounting.account_tool_cost(cancelled)
+          |> Core.append({:tool_result, payload(cancelled), nil})
 
         :error ->
           state
