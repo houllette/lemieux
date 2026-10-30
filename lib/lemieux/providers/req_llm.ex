@@ -147,6 +147,7 @@ defmodule Lemieux.Providers.ReqLLM do
   alias Lemieux.Provider.Interrupted
   alias Lemieux.Provider.Route
   alias Lemieux.Providers.OllamaWindow
+  alias Lemieux.Providers.ReqLLM.CodexObject
   alias Lemieux.Providers.ReqLLM.ResponseMetadata
   alias Lemieux.Request
   alias Lemieux.Tool
@@ -2211,8 +2212,20 @@ defmodule Lemieux.Providers.ReqLLM do
   defp stream_response(%Request{output_schema: nil} = request, target, options),
     do: ReqLLM.stream_text(target, context(request, target), options)
 
-  defp stream_response(%Request{} = request, target, options),
-    do: ReqLLM.stream_object(target, context(request, target), request.output_schema, options)
+  defp stream_response(%Request{} = request, target, options) do
+    case ReqLLM.model(target) do
+      {:ok, %{provider: :openai_codex} = model} ->
+        CodexObject.stream(
+          model,
+          context(request, target),
+          request.output_schema,
+          options
+        )
+
+      _other ->
+        ReqLLM.stream_object(target, context(request, target), request.output_schema, options)
+    end
+  end
 
   defp structured_response(%Request{output_schema: nil}, result, _emit), do: {:ok, result}
 

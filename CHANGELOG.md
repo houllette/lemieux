@@ -13,6 +13,9 @@ API.
 
 - Show background-task waits in seconds and elapsed time in minutes and
   seconds, using "ran for" while retaining exact structured milliseconds. (#110)
+- Restore native Codex structured-output streaming with ReqLLM 1.29 by
+  removing its copied private model option before stream validation, retaining
+  the prepared schema, context and output-validation policy. (#113)
 
 ### Features
 
