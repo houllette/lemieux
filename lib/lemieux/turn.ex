@@ -233,8 +233,11 @@ defmodule Lemieux.Turn do
   # So does the provider's own code, when it gave one: `"cyber_policy"` says
   # which refusal a `"refused"` was, where the sentence is whatever the
   # provider chose to write (#32).
+  # The source distinguishes these from local guards sharing the :error entry
+  # type; uncategorized provider failures must still count as provider failures.
   defp error_payload(reason) do
     %{
+      "source" => "provider",
       "reason" => ProviderError.message(reason),
       "category" => Atom.to_string(ProviderError.category(reason))
     }

@@ -1,6 +1,7 @@
 defmodule Lemieux.Tools.BashTest do
   use ExUnit.Case, async: true
 
+  alias Lemieux.Clock.Manual
   alias Lemieux.Tool
   alias Lemieux.Tools.Bash
 
@@ -178,7 +179,7 @@ defmodule Lemieux.Tools.BashTest do
     assert [task_id] = Regex.run(~r/[0-9A-HJKMNP-TV-Z]{26}/, started)
 
     assert {:ok, polled} = run(%{"task_id" => task_id}, ctx)
-    assert polled =~ "Status: running"
+    assert polled =~ "Status: ran for"
 
     assert {:ok, finished} = run(%{"task_id" => task_id, "wait_ms" => 2_000}, ctx)
     assert finished =~ "Status: exited (0)"
@@ -194,6 +195,45 @@ defmodule Lemieux.Tools.BashTest do
     assert [task_id] = Regex.run(~r/[0-9A-HJKMNP-TV-Z]{26}/, started)
     assert {:ok, output} = run(%{"task_id" => task_id, "wait_ms" => 20}, ctx)
     assert output =~ "still running after waiting 20ms"
+  end
+
+  test "background elapsed time is compact while structured milliseconds stay exact", %{ctx: ctx} do
+    {ctx, clock, task_id} = timed_background(ctx)
+
+    for {ms, label} <- [
+          {0, "0ms"},
+          {999, "999ms"},
+          {1_000, "1s"},
+          {59_999, "59s"},
+          {60_000, "1m0s"},
+          {435_850, "7m15s"}
+        ] do
+      Manual.advance(clock, ms - Manual.now_ms(clock))
+      assert {:ok, result} = Bash.run(%{"task_id" => task_id}, ctx)
+      assert result.model_text =~ "Status: ran for #{label}\n"
+      assert result.structured_content["status"] == "running"
+      assert result.structured_content["duration_ms"] == ms
+    end
+
+    assert {:ok, _cancelled} = run(%{"task_id" => task_id, "cancel" => true}, ctx)
+  end
+
+  test "background waits report seconds and preserve the call-deadline advice", %{ctx: ctx} do
+    for {deadline, wait_ms, label, cut?} <- [
+          {nil, 60_000, "60s", false},
+          {2_000, 60_000, "1s", true}
+        ] do
+      {ctx, clock, task_id} = timed_background(ctx)
+      ctx = if deadline, do: Map.put(ctx, :deadline_ms, deadline), else: ctx
+      waiter = Task.async(fn -> run(%{"task_id" => task_id, "wait_ms" => wait_ms}, ctx) end)
+      timer = Manual.await_timer(clock, &match?({:wait_timeout, _}, &1.message))
+      Manual.advance(clock, timer.due_in, settle: timer.destination)
+
+      assert {:ok, output} = Task.await(waiter)
+      assert output =~ "still running after waiting #{label}"
+      assert output =~ "longest one call may wait" == cut?
+      assert {:ok, _cancelled} = run(%{"task_id" => task_id, "cancel" => true}, ctx)
+    end
   end
 
   describe "a host runner" do
@@ -417,15 +457,34 @@ defmodule Lemieux.Tools.BashTest do
 
       assert output =~ "still running after waiting 900ms"
       assert output =~ "longest one call may wait in this session"
-      assert output =~ "Status: running"
+      assert output =~ "Status: ran for"
 
       assert {:ok, _cancelled} = run(%{"task_id" => task_id, "cancel" => true}, ctx)
     end
   end
 
+  defp timed_background(ctx) do
+    ctx = background_context(ctx)
+    clock = start_supervised!({Manual, []}, id: make_ref())
+
+    {:ok, task_id} =
+      Lemieux.Background.start(
+        supervisor: ctx.supervisor,
+        session_id: ctx.session_id,
+        owner: self(),
+        command: "held command",
+        cwd: ctx.cwd,
+        environment: ctx.environment,
+        clock: clock,
+        runner: fn _, _ -> receive do: (:finish -> {:ok, "done", 0}) end
+      )
+
+    {ctx, clock, task_id}
+  end
+
   defp background_context(ctx) do
     runtime = :"lemieux_bash_test_#{System.unique_integer([:positive])}"
-    start_supervised!({Lemieux.Supervisor, name: runtime})
+    start_supervised!({Lemieux.Supervisor, name: runtime}, id: runtime)
     Map.merge(ctx, %{session: self(), supervisor: runtime})
   end
 end

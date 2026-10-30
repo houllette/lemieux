@@ -398,7 +398,7 @@ defmodule Lemieux.Learning.RefinementTest do
                )
     end
 
-    failed = put_in(observation, ["provider_error", "category"], "timeout")
+    failed = Map.put(observation, "provider_error", %{"category" => "timeout"})
 
     assert {:error, :incomplete_probe_evidence} =
              Refinement.Evidence.record(failed, assessment, true, identity)
@@ -535,7 +535,7 @@ defmodule Lemieux.Learning.RefinementTest do
                )
     end
 
-    failed = put_in(observation, ["provider_error", "category"], "timeout")
+    failed = Map.put(observation, "provider_error", %{"category" => "timeout"})
 
     assert {:error, :incomplete_probe_evidence} =
              Refinement.Evidence.record(failed, assessment, true, identity, :artifact_outcome)

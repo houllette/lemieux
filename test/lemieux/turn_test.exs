@@ -171,7 +171,12 @@ defmodule Lemieux.TurnTest do
 
       # The status is the fact behind the category, for a host whose retry
       # policy needs more than "other"; a failure without one carries no key.
-      assert refused_payload == %{"category" => "other", "reason" => "nope", "http_status" => 403}
+      assert refused_payload == %{
+               "source" => "provider",
+               "category" => "other",
+               "reason" => "nope",
+               "http_status" => 403
+             }
 
       assert [_emit, {:append, {:error, stall_payload, nil}}, _finished] =
                effects([{:error, stall}])

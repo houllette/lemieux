@@ -135,8 +135,9 @@ defmodule Lemieux.Learning.Refinement.Evidence do
   defp terminal_assessment(_observation, _evidence, _assessment, _rule),
     do: {:error, :incomplete_probe_evidence}
 
-  # Agent.Session projects the loop's own error notice into provider_error too.
-  # A categorized provider failure is never this notice, even with known usage.
+  # New Agent.Session observations separate harness_error from provider_error.
+  # Retain this narrow legacy shape for archived observations written before
+  # error provenance existed; categorized provider failures never qualify.
   defp turn_limit_notice?(nil), do: true
 
   defp turn_limit_notice?(%{

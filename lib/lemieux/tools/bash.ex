@@ -531,11 +531,11 @@ defmodule Lemieux.Tools.Bash do
   end
 
   defp still_running(task_id, wait_ms, false),
-    do: "Background task #{task_id} is still running after waiting #{wait_ms}ms."
+    do: "Background task #{task_id} is still running after waiting #{wait_duration(wait_ms)}."
 
   defp still_running(task_id, wait_ms, true),
     do:
-      "Background task #{task_id} is still running after waiting #{wait_ms}ms, the longest " <>
+      "Background task #{task_id} is still running after waiting #{wait_duration(wait_ms)}, the longest " <>
         "one call may wait in this session. Call again to keep waiting."
 
   defp background_result(snapshot, prefix \\ nil) do
@@ -555,12 +555,19 @@ defmodule Lemieux.Tools.Bash do
   defp background_status(%{status: :timed_out}), do: "timed out"
   defp background_status(%{status: :failed}), do: "failed"
   defp background_status(%{status: :cancelled}), do: "cancelled"
-  # With the elapsed time, so that two polls of a quiet task are two different
-  # answers. They were identical, and `Lemieux.Session` counts a round that asks the
-  # same thing and gets the same answer as no progress — three polls of a silent
-  # test suite stopped the session waiting for it. The elapsed time is also what the
-  # model most wants to know.
-  defp background_status(%{status: :running, duration_ms: ms}), do: "running for #{ms}ms"
+  # A long task's elapsed time is for reading; exact milliseconds remain in
+  # structured_content. Its running status also keeps polling out of the loop
+  # guard, even when successive polls round to the same second.
+  defp background_status(%{status: :running, duration_ms: ms}),
+    do: "ran for #{elapsed_duration(ms)}"
+
+  defp elapsed_duration(ms) when ms < 60_000, do: wait_duration(ms)
+
+  defp elapsed_duration(ms),
+    do: "#{div(ms, 60_000)}m#{div(rem(ms, 60_000), 1_000)}s"
+
+  defp wait_duration(ms) when ms < 1_000, do: "#{ms}ms"
+  defp wait_duration(ms), do: "#{div(ms, 1_000)}s"
 
   defp json_snapshot(snapshot) do
     Map.new(snapshot, fn {key, value} -> {Atom.to_string(key), json_value(value)} end)

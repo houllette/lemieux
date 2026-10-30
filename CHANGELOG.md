@@ -9,6 +9,17 @@ API.
 
 ## Unreleased
 
+### Fixes
+
+- Show background-task waits in seconds and elapsed time in minutes and
+  seconds, using "ran for" while retaining exact structured milliseconds. (#110)
+- Restore native Codex structured-output streaming with ReqLLM 1.29 by
+  removing its copied private model option before stream validation, retaining
+  the prepared schema, context and output-validation policy. (#113)
+- Record local guard and budget stops as `harness_error` in experimental
+  agent/benchmark observations, with typed transcript provenance. Preserve
+  provider failures in `provider_error`, including unclassified errors. (#114)
+
 ### Features
 
 - Start an independent todo list with `action: "new"` or `Planning.new/2`,
