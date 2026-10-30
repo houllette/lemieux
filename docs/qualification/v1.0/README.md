@@ -14,7 +14,8 @@ OAuth server is assumed from a configured MCP client.
 Each path has a disjoint request/dollar allocation. Resume inherits the original
 session's accounting. Additional scenarios must fit the registered reserve;
 new invocations never erase consumed or unknown usage. Unknown pricing stops a
-path before dispatch. Interrupted calls stay incomplete, even if a later check
+hosted path before dispatch. Local Ollama has no remote API charge; its economic
+cost stays UNPRICED and its request cap still applies. Interrupted calls stay incomplete, even if a later check
 passes. Cost derived from token tariffs is identified separately from an
 account-side invoice or subscription quota.
 

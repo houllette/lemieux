@@ -21,7 +21,7 @@ defmodule Lemieux.CLI.Extensions do
         "name": "audit",
         "module": "MyApp.Audit",
         "ebin": ["lib/my_app/ebin", "lib/jason/ebin"],
-        "versions": {"lemieux": "0.8.0", "elixir": "1.20.4", "otp": "29"},
+        "versions": {"lemieux": "1.0.0", "elixir": "1.20.4", "otp": "29"},
         "options": {"log": "/var/log/agents.log"}
       }
 
@@ -53,15 +53,15 @@ defmodule Lemieux.CLI.Extensions do
   `mix lmx.extension.build`.
 
   A script extension compiles in the running VM, so its manifest names only
-  the Lemieux it was written for, as a version (`"0.8.0"`, meaning that
-  release line) or a requirement (`"~> 0.8"`):
+  the Lemieux it was written for, as a version (`"1.0.0"`, meaning that
+  release line) or a requirement (`"~> 1.0"`):
 
       {
         "schema_version": 1,
         "name": "planning",
         "module": "LemieuxPlanningExample",
         "script": "planning.exs",
-        "versions": {"lemieux": "~> 0.8"}
+        "versions": {"lemieux": "~> 1.0"}
       }
 
   ## Two rules this keeps
@@ -536,7 +536,7 @@ defmodule Lemieux.CLI.Extensions do
   defp versions_rule(%{"script" => _script}),
     do:
       "versions must name the lemieux version or requirement the script was written for, " <>
-        "such as {\"lemieux\": \"~> 0.8\"}"
+        "such as {\"lemieux\": \"~> 1.0\"}"
 
   defp versions_rule(manifest),
     do:
@@ -585,7 +585,7 @@ defmodule Lemieux.CLI.Extensions do
       :error ->
         {:error,
          "#{manifest_path(directory)}: versions.lemieux #{inspect(wanted)} is neither a " <>
-           "version such as \"0.8.0\" nor a requirement such as \"~> 0.8\""}
+           "version such as \"1.0.0\" nor a requirement such as \"~> 1.0\""}
     end
   end
 

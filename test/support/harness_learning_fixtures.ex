@@ -37,23 +37,35 @@ defmodule Lemieux.TestSupport.HarnessLearningFixtures do
   end
 
   defp snapshot do
-    Snapshot.build(Request.new("test:model", system: "fixture system", tools: []),
-      id: "harness-fixture",
-      resolved_assets: [
-        %{"id" => "asset-fixture", "sha256" => String.duplicate("a", 64)}
-      ],
-      context_limits: %{"context_window" => 10_000, "max_turns" => 5},
-      hooks: %{"id" => "hooks-fixture"},
-      workflow: %{"id" => "workflow-fixture"},
-      compaction: %{"id" => "compaction-fixture"},
-      environment_context: %{"id" => "environment-fixture"},
-      sandbox_profile: %{"id" => "sandbox-fixture"},
-      correlations: %{
-        "tenant_id" => "tenant-fixture",
-        "project_id" => "project-fixture",
-        "run_id" => "run-fixture"
-      }
-    )
+    snapshot =
+      Snapshot.build(Request.new("test:model", system: "fixture system", tools: []),
+        id: "harness-fixture",
+        resolved_assets: [
+          %{"id" => "asset-fixture", "sha256" => String.duplicate("a", 64)}
+        ],
+        context_limits: %{"context_window" => 10_000, "max_turns" => 5},
+        hooks: %{"id" => "hooks-fixture"},
+        workflow: %{"id" => "workflow-fixture"},
+        compaction: %{"id" => "compaction-fixture"},
+        environment_context: %{"id" => "environment-fixture"},
+        sandbox_profile: %{"id" => "sandbox-fixture"},
+        correlations: %{
+          "tenant_id" => "tenant-fixture",
+          "project_id" => "project-fixture",
+          "run_id" => "run-fixture"
+        }
+      )
+
+    # This is a historical wire fixture, not a snapshot of the current build.
+    # Pin its runtime so a release bump cannot change every dependent digest.
+    {:ok, historical} =
+      snapshot
+      |> Snapshot.to_map()
+      |> Map.drop(~w(semantic_sha256 manifest_sha256))
+      |> Map.put("runtime", %{"lemieux_version" => "0.12.0", "req_llm_version" => "1.29.0"})
+      |> Snapshot.new()
+
+    historical
   end
 
   defp artifact(scope) do

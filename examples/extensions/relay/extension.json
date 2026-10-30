@@ -1,2 +1,2 @@
-{"schema_version":1,"name":"relay","module":"LemieuxRelayExample","script":"relay.exs","versions":{"lemieux":"~> 0.9"},
+{"schema_version":1,"name":"relay","module":"LemieuxRelayExample","script":"relay.exs","versions":{"lemieux":"~> 1.0"},
  "options":{"endpoint":"http://localhost:8000","models":["qwen3-32b"],"default":"qwen3-32b","context_window":32768}}

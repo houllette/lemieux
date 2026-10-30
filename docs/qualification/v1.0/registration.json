@@ -27,7 +27,8 @@
       "id": "local-ollama",
       "model": "ollama:qwen3.8:27b-mxfp8",
       "maximum_requests": 8,
-      "maximum_cost_usd": 0
+      "maximum_cost_usd": 0,
+      "local_cost_accounting": "UNPRICED economic cost; no remote API charge; request cap applies and unknown usage remains recorded"
     },
     {
       "id": "native-terminal",
@@ -51,7 +52,7 @@
     "native terminal restoration and draft/session controls"
   ],
   "decisions": {
-    "unknown_pricing": "stop that path before dispatch",
+    "unknown_pricing": "stop a hosted path before dispatch; local Ollama may run under its request cap while retaining UNPRICED economic cost",
     "interrupted_or_unknown_usage": "retain debt; no automatic replay",
     "api_or_account_failure": "retain failure; no blind retries",
     "unavailable_hardware_or_oauth_account": "record unrun; do not infer from fixture tests",
