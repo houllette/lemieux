@@ -79,10 +79,15 @@ defmodule Lemieux.CLI.Extensions.CompatibilityTest do
 
   defp current_versions, do: Extensions.versions()
 
+  defp script_versions do
+    version = Version.parse!(Lemieux.version())
+    %{"lemieux" => "~> #{version.major}.#{version.minor}"}
+  end
+
   describe "script extensions" do
     test "need only a Lemieux requirement, whatever Elixir wrote them", %{tmp_dir: tmp_dir} do
       directory = Path.join(tmp_dir, "requirement")
-      module = script_extension(directory, %{"lemieux" => "~> 0.1"})
+      module = script_extension(directory, script_versions())
 
       assert {:ok, %{spec: {^module, [config: %{}]}}} = Extensions.load(directory)
     end
@@ -132,7 +137,7 @@ defmodule Lemieux.CLI.Extensions.CompatibilityTest do
       script_extension(directory, %{"elixir" => System.version()})
 
       assert {:error, message} = Extensions.load(directory)
-      assert message =~ "~> 0.8"
+      assert message =~ "~> 1.0"
     end
 
     test "an unparseable Lemieux version is refused as such", %{tmp_dir: tmp_dir} do
@@ -230,7 +235,7 @@ defmodule Lemieux.CLI.Extensions.CompatibilityTest do
       directory = Path.join(tmp_dir, "audit")
 
       module =
-        script_extension(directory, %{"lemieux" => "~> 0.1"}, %{
+        script_extension(directory, script_versions(), %{
           "options" => %{"log" => "/manifest.log", "level" => "info"}
         })
 
@@ -246,7 +251,7 @@ defmodule Lemieux.CLI.Extensions.CompatibilityTest do
       directory = Path.join(tmp_dir, "audit")
 
       module =
-        script_extension(directory, %{"lemieux" => "~> 0.1"}, %{"options" => %{"log" => "a"}})
+        script_extension(directory, script_versions(), %{"options" => %{"log" => "a"}})
 
       assert {:ok, [%{spec: {^module, [config: %{"log" => "a"}]}}]} =
                Extensions.load_all([{:dir, directory}], options: %{"other" => %{"log" => "b"}})
@@ -254,7 +259,7 @@ defmodule Lemieux.CLI.Extensions.CompatibilityTest do
 
     test "must be JSON objects", %{tmp_dir: tmp_dir} do
       directory = Path.join(tmp_dir, "audit")
-      script_extension(directory, %{"lemieux" => "~> 0.1"})
+      script_extension(directory, script_versions())
 
       assert {:error, message} =
                Extensions.load_all([{:dir, directory}], options: %{"audit" => "verbose"})
@@ -269,7 +274,7 @@ defmodule Lemieux.CLI.Extensions.CompatibilityTest do
       tmp_dir: tmp_dir
     } do
       root = Path.join(tmp_dir, "extensions")
-      good = script_extension(Path.join(root, "good"), %{"lemieux" => "~> 0.1"})
+      good = script_extension(Path.join(root, "good"), script_versions())
       script_extension(Path.join(root, "future"), %{"lemieux" => "~> 9.0"})
       File.mkdir_p!(Path.join(root, "empty"))
       File.write!(Path.join(root, "not-a-directory"), "")

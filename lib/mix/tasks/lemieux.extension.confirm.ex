@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Extension.Confirm do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Preregisters, runs and exports one independent extension confirmation.
 
       mix lemieux.extension.confirm prepare CONFIG.exs NEW_DIRECTORY

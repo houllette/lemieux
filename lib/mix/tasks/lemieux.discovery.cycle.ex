@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Discovery.Cycle do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs one generation of routine harness improvement.
 
       mix lemieux.discovery.cycle examples/discovery/cycle.exs --allow-live

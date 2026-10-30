@@ -1,6 +1,6 @@
 # Hosted harness learning
 
-**Experimental.** May change in any 0.x release.
+**Experimental.** Not part of the stable public API.
 
 **Harness learning** improves the harness a session runs with (its
 instructions, tool descriptions and other durable assets) from evidence of how

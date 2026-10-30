@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Runtime.Sandbox do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Fail-closed evidence contract for host-provided isolated benchmark runtimes.
 
   Lemieux intentionally does not provision a microVM. A host runtime already
@@ -15,7 +15,7 @@ defmodule Lemieux.Benchmark.Runtime.Sandbox do
 
   defmodule Result do
     @moduledoc """
-    **Experimental.** May change in any 0.x release.
+    **Experimental.** Not part of the stable public API.
     Normalized, host-verified sandbox evidence.
     """
 

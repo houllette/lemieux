@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Runtime.Native do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs a benchmark task through the reusable `Lemieux.Agent.Session` runner.
 
   Provider/model, workspace effects, transcripts, usage completeness and timeout

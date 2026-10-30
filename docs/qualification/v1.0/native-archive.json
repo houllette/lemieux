@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "source": "9f07379990748694e4223929937cac8f12b79517",
+  "archive_sha256": "f482e2b1a01f340b3c17b72d7c8a4a32686f9e3a7425aab65858d26d70962cb5",
+  "build_id": "1a314090b10dedd3f34945f0621a89982a0e459c8a50f1fe6dea16d63821edf4",
+  "target": "macos_silicon",
+  "runtime": {
+    "elixir": "1.20.4",
+    "erts": "17.1"
+  },
+  "predecessor_version": "0.12.0",
+  "predecessor_checksum_and_update_signatures": "verified using committed public key; all four published predecessor archive checksums verified",
+  "signing": "local candidate unsigned; no private key used",
+  "mode": "restart",
+  "actual_archive_report": "upgrade-report-macos-silicon-local.json",
+  "passed": [
+    "reviewed restart plan and exact predecessor build",
+    "cold boot selects 1.0.0",
+    "packaged tools and cross-process transcript resume",
+    "native extension loading, tool decoration, diagnostics and recovery",
+    "standard input reaches packaged VM",
+    "quiet version/help and working-directory .env isolation",
+    "command environment restored and credentials scrubbed",
+    "signals stop launcher/VM/tool processes and restore terminal alternate screen"
+  ],
+  "synthetic_upgrade_and_other_platforms": "separate GitHub release rehearsal; not inferred from this local result"
+}

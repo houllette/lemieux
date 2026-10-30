@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Asset do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Immutable typed, non-executable learning candidates.
 

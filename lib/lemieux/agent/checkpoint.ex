@@ -1,6 +1,6 @@
 defmodule Lemieux.Agent.Checkpoint do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Checkpoints for ordinary Elixir agent composition, not a workflow language.
 
   A host opens a run with code/configuration/policy identity, then calls `step/5`

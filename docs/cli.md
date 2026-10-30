@@ -1226,7 +1226,7 @@ as well as from a source checkout.
 ## Harness-learning and feedback commands
 
 **Experimental.** These commands serve harness learning and evaluation, not
-everyday work, and may change in any 0.x release. The [learning
+everyday work, and is outside the stable public API. The [learning
 guides](harness-learning.md) explain when to use them; `lmx help learning`
 lists them.
 
@@ -1278,11 +1278,15 @@ runs a model.
 
 ### Harness-learning inspection
 
-`lmx learning [inspect|undo|off|on]` manages ordinary-use scoped experience without
+`lmx learning [inspect|undo|off|on|forget]` manages ordinary-use scoped experience without
 creating a provider. `off` persists for this workspace in the current personal
 state directory; personal `"learning": false` and project opt-outs still win
 over `on`. In a live terminal session use `/status learning inspect`,
-`/status learning undo` or `/status learning off`. See
+`/status learning undo`, `/status learning off` or `/status learning forget`.
+`forget` prunes captures and recalled guidance; it preserves opt-out, lesson
+tombstones, exposure receipts, transcripts and refinement/accounting archives.
+It refuses active writers. Inspection reports the audit history count and limit
+with an archival hint when full; forgetting does not reset that quota. See
 [ordinary-use controls](harness-learning.md#ordinary-use-experience-and-controls)
 for accounting, evidence and the boundary between unconfirmed context and
 independently qualified promotion.

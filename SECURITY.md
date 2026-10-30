@@ -30,13 +30,13 @@ contains no technical detail.
 
 ## Supported versions
 
-Lemieux is pre-1.0. Only the latest release gets security fixes; earlier
+Only the latest stable release gets security fixes; earlier
 releases do not. A fix for a privately reported vulnerability is prepared in
 private and reaches `main` together with its release and advisory.
 
 | Version | Gets security fixes |
 | --- | --- |
-| The latest 0.x release: the `lemieux` Hex package and the `lmx` binaries | Yes |
+| The latest stable release: the `lemieux` Hex package and the `lmx` binaries | Yes |
 | `main` | Yes, when the fix is published |
 | Earlier releases | No; upgrade to the latest |
 
@@ -490,6 +490,8 @@ details.
 | `STATE/checkpoints/` | File contents saved for `/undo`, `/rewind` and `/redo` (`.env` included), what each undo replaced and what a forced redo overwrote; kept until you delete them. While a snapshot or an undo runs, it also holds that run's private git directory (`SESSION/git/`) |
 | `STATE/trusted-mcp.json` | Repository `.mcp.json` trust decisions, by workspace path and file digest (`lmx mcp untrust` forgets one) |
 | `STATE/permissions/DIGEST.json` | "Always allow" answers, per repository |
+| `STATE/capture/PROJECT_DIGEST/` | Bounded workspace inputs and failure/recovery drafts, private source content; defaults retain at most 128 records for 30 days. `"capture": false` disables future capture. `lmx learning forget` removes this workspace's retained captures and prevents earlier prompts from being recaptured by late delivery |
+| `STATE/learning/PROJECT_DIGEST/` | Scoped unconfirmed lessons, exposure/undo receipts and optional refinement archives. `lmx learning off` stops reuse but keeps content; `forget` prunes recalled lesson text and active applications while preserving tombstones, exposure and accounting history. Transcripts and experimental refinement archives can still contain source; inspect before separately archiving or deleting them |
 | `~/.lmx/mcp-credentials.json` | MCP OAuth tokens (mode 0600), unless `--credentials` or `LMX_CREDENTIALS` names another file. The first time `lmx` uses it, it moves in the tokens from the library's default file, `~/.lemieux/credentials.json` |
 | `STATE/logs/lmx.log` | Log lines, errors only unless `LMX_LOG_LEVEL` says otherwise (directory 0700; rotated at 1 MB, three old files kept). Setting `LMX_LOG_LEVEL` also copies them to standard error, never over the terminal UI's screen. At `warning` and below, failed requests can log provider response headers, cookies included |
 | `~/.lmx/crash/erl_crash.dump` | A crash dump, unless `ERL_CRASH_DUMP` names another file (directory 0700; `$LMX_HOME/crash` when that is set, whatever `--config` or `LMX_CONFIG` say). The installed `lmx` and every command run from a source checkout (`mix lmx`, `mix lmx.tui`) point dumps here before the command does anything else, `--config none` included |

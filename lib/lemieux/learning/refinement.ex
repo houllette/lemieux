@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Refinement do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Explicit, checkpointed task-local propose/probe/compose over the effective
   harness. Hosts supply isolation, current identity bindings, a runtime factory,

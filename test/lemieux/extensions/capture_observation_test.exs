@@ -9,6 +9,7 @@ defmodule Lemieux.Extensions.CaptureObservationTest do
   alias Lemieux.Harness
   alias Lemieux.Hooks
   alias Lemieux.Request
+  alias Lemieux.Store.JSONL
 
   @moduletag :tmp_dir
 
@@ -294,6 +295,37 @@ defmodule Lemieux.Extensions.CaptureObservationTest do
     assert {:ok, [^record]} = Capture.history(ctx.root, ctx.cwd)
     assert :ok = Capture.forget(ctx.root, ctx.cwd)
     assert {:ok, []} = Capture.history(ctx.root, ctx.cwd)
+  end
+
+  test "forget prevents late terminal delivery from recreating an earlier capture", ctx do
+    entries = failure_entries()
+    harness = harness(ctx, entries)
+    checkpoint(harness, ctx.context, Enum.take(entries, 1))
+    assert :ok = Capture.forget(ctx.root, ctx.cwd)
+    assert :ok = Hooks.session_end(harness.hooks, :normal, ctx.context)
+    assert {:ok, []} = Capture.history(ctx.root, ctx.cwd)
+
+    fresh_entries = failure_entries()
+    fresh = harness(ctx, fresh_entries)
+    checkpoint(fresh, ctx.context, Enum.take(fresh_entries, 1))
+    assert :ok = Hooks.session_end(fresh.hooks, :normal, ctx.context)
+    assert {:ok, [record]} = Capture.history(ctx.root, ctx.cwd)
+    assert record["prompt_id"] == hd(fresh_entries).id
+  end
+
+  test "forget refuses a live capture writer without removing its content", ctx do
+    record = captured(ctx)
+    locks = ctx.root <> "-locks"
+    File.mkdir_p!(locks)
+    id = Contract.digest(Storage.scope(ctx.cwd))
+    assert {:ok, claim} = JSONL.lock(%{dir: locks}, id)
+
+    try do
+      assert {:error, _busy} = Capture.forget(ctx.root, ctx.cwd)
+      assert {:ok, [^record]} = Capture.history(ctx.root, ctx.cwd)
+    after
+      JSONL.unlock(%{dir: locks}, id, claim)
+    end
   end
 
   test "private ignored publication rejects symlinks, corrupt artifacts and tampered bytes",

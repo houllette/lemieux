@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "maximum_authorized_requests": 40,
+  "model_requests_observed": 36,
+  "remote_requests_observed": 28,
+  "local_ollama_requests": 8,
+  "openai_api_token_tariff_usd": 0.182856,
+  "codex_list_tariff_usd": 0.023521,
+  "account_invoice_or_subscription_charge": "not independently verified",
+  "local_economic_cost": "UNPRICED; no remote API charge",
+  "maximum_authorized_api_cost_usd": 10,
+  "retest_reserve_maximum_api_cost_usd": 1,
+  "additional_live_runs": "none; unused allowance not dispatched",
+  "original_failure": "preserved in native-before-repair.json; no refund or history edits",
+  "google": "excluded by user"
+}

@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Selection do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Archive selection for discovery: which candidate to expand next, which
   candidate to evaluate next, and on which cases.
 

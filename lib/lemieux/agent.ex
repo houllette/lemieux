@@ -1,6 +1,6 @@
 defmodule Lemieux.Agent do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   An executable specialization of Lemieux, shared by hosts and benchmarks.
 
   Implement `c:run/2` with ordinary Elixir functions and `with` expressions.

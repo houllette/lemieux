@@ -1,6 +1,6 @@
 defmodule Lemieux.Agent.Session do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs one bounded prompt through the ordinary Lemieux session API.
 
   The caller supplies a provider and model. Credentials and provider routing

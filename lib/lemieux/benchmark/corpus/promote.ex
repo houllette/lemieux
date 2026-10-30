@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Corpus.Promote do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Moves a reviewed case draft into a benchmark manifest.
 
   The corpus is the binding constraint on self-improvement: a search can

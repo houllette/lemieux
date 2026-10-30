@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Confirmation do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The narrow, one-way bridge from discovery to independent confirmation.
 
   The host selects one candidate and supplies every confirmatory fact. Search

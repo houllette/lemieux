@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "purpose": "release path qualification, not comparative model efficacy",
+  "candidate_version": "1.0.0",
+  "predecessor_version": "0.12.0",
+  "authorization": {
+    "maximum_model_requests": 40,
+    "maximum_api_cost_usd": 10,
+    "aim": "use materially less than the ceiling",
+    "google": "excluded by user",
+    "missing_credentials": "skip; do not provision"
+  },
+  "paths": [
+    {
+      "id": "openai-api",
+      "model": "openai:gpt-6-sol",
+      "maximum_requests": 8,
+      "maximum_cost_usd": 2
+    },
+    {
+      "id": "codex-subscription",
+      "model": "openai_codex:gpt-6.1-sol",
+      "maximum_requests": 8,
+      "maximum_cost_usd": 2
+    },
+    {
+      "id": "local-ollama",
+      "model": "ollama:qwen3.8:27b-mxfp8",
+      "maximum_requests": 8,
+      "maximum_cost_usd": 0,
+      "local_cost_accounting": "UNPRICED economic cost; no remote API charge; request cap applies and unknown usage remains recorded"
+    },
+    {
+      "id": "native-terminal",
+      "model": "openai:gpt-6-sol",
+      "maximum_requests": 8,
+      "maximum_cost_usd": 2
+    }
+  ],
+  "reserve": {
+    "maximum_requests": 8,
+    "maximum_api_cost_usd": 4,
+    "dispatch": "only for an explicitly recorded incomplete qualification check; never reset a prior session allowance"
+  },
+  "required_observations": [
+    "tool call and result",
+    "workspace edit and actual verification",
+    "usage with known versus unknown accounting",
+    "persisted transcript and resume",
+    "structured output for native Codex",
+    "cancellation of actual running work",
+    "native terminal restoration and draft/session controls"
+  ],
+  "decisions": {
+    "unknown_pricing": "stop a hosted path before dispatch; local Ollama may run under its request cap while retaining UNPRICED economic cost",
+    "interrupted_or_unknown_usage": "retain debt; no automatic replay",
+    "api_or_account_failure": "retain failure; no blind retries",
+    "unavailable_hardware_or_oauth_account": "record unrun; do not infer from fixture tests",
+    "artifact_binding": "record exact source revision, archive SHA256 and runtime for each result"
+  }
+}

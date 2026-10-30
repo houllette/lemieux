@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "registered_before_retest": true,
+  "parent_registration": "registration.json",
+  "allocation": "reserve",
+  "maximum_model_requests": 8,
+  "maximum_api_cost_usd": 1,
+  "model": "openai:gpt-6-sol",
+  "reason": "Native cancellation on ee52dc4 left a session-owned free-tool hold active in the durable allowance. Offline regression also exposed loss of the settled unknown-cost count on resume. Requalify the repaired native host with actual edit/verification, cancellation, restart and resume.",
+  "prior_live_model_requests": 29,
+  "ceiling_after_retest": 37,
+  "prior_history": "Retain original receipts and transcript without editing, refunding or resetting its allowance. Use a distinct, explicitly allocated reserve job for the repaired candidate.",
+  "failure_rule": "Preserve failure and unknown usage; do not reset or automatically retry. Stop at the registered allowance.",
+  "accounting": "Include native auxiliary model requests. Token tariff estimates are separate from a verified invoice or subscription charge."
+}

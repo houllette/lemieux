@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Confirm do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Independent confirmation of one discovered profile candidate, on cases the
   search never saw, optionally on a different model.
 

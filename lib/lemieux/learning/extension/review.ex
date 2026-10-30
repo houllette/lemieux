@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Extension.Review do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Explicit host review of executable export bytes.
 

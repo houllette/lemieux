@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Builder.Workflow do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The builder's deterministic workflow, inventory and scaffolding tool.
 
   Provider state remains a host tool, outside persisted session configuration.

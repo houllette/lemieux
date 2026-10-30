@@ -1,6 +1,6 @@
 # Evaluation gates
 
-**Experimental.** May change in any 0.x release.
+**Experimental.** Not part of the stable public API.
 
 Lemieux uses one evaluation engine for four changes: a Lemieux release, a
 provider model replacement, a request-path dependency bump, and a system

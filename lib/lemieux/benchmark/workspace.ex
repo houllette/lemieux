@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Workspace do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Prepares one disposable working directory per benchmark attempt.
 
   Copying is deliberately the portable default. A host evaluating large Git

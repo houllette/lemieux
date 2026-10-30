@@ -1,6 +1,6 @@
 # Reflection and feedback
 
-**Experimental.** May change in any 0.x release.
+**Experimental.** Not part of the stable public API.
 
 `/reflect` reviews how Lemieux could have served the current task better. Use it
 in the TUI after a useful, confusing or interrupted session.

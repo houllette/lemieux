@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Discovery do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs a shadow-mode harness discovery campaign on this machine.
 
       mix lemieux.discovery examples/discovery/campaign.exs

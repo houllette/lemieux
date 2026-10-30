@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Lemieux.Extension.Export do
   @shortdoc "Exports explicit native agent extension sources to a new Mix project directory (experimental)"
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Copies the files listed in `lemieux-extension.json` without executing code.
 
       mix lemieux.extension.export path/to/extension path/to/export

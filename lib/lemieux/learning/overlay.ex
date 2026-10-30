@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Overlay do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The learned harness layer a host applies by default, with its provenance.
 
   Discovery produces candidates and confirmation produces verdicts, and until

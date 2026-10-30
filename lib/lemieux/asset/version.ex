@@ -1,6 +1,6 @@
 defmodule Lemieux.Asset.Version do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   One immutable version of a durable harness asset.
 
   Content is addressed by a SHA-256 digest and linked to its parent and

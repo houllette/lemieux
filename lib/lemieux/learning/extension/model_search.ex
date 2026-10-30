@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Extension.ModelSearch do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   User-bounded provider, model and reasoning-effort comparisons.
 
   Discovery uses the actual host provider, including its scoped credentials and

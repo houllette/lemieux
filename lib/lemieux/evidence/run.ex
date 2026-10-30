@@ -1,6 +1,6 @@
 defmodule Lemieux.Evidence.Run do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A versioned terminal manifest for one accepted Lemieux prompt.
 
   This is an index over the append-only transcript, not a second transcript.

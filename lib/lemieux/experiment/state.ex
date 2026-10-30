@@ -1,6 +1,6 @@
 defmodule Lemieux.Experiment.State do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Pure, auditable lifecycle transitions for feedback-driven experiments.
 
   The struct is a projection, not the durable authority. Hosts persist each

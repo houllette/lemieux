@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.SecretFiles do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Which files stay out of a benchmark fixture because of their names.
 
   A fixture is a copy of somebody's workspace, and the way into a corpus is a

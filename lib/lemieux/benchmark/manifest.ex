@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Manifest do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The versioned, provider-neutral input to a benchmark run.
 
   Version one is JSON with a non-empty `tasks` array. Unknown versions are

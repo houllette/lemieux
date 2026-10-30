@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Runtime.Command do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs a benchmark task through any command-line harness.
 
   The command is supplied by the caller, not built into Lemieux. That keeps

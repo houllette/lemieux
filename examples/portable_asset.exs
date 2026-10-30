@@ -132,7 +132,10 @@ defmodule PortableAssetDemo do
 
     options = [
       cwd: consumer,
-      timeout: 120_000,
+      # The consumer compiles its dependency graph from scratch. Floor-toolchain
+      # CI has taken over two minutes for this example under suite load; this
+      # is a cold build deadline, not an agent's interactive response deadline.
+      timeout: 180_000,
       max_output_bytes: 128_000,
       env: %{
         "LEMIEUX_EXTENSION_BASE" => checkout,
@@ -150,8 +153,13 @@ defmodule PortableAssetDemo do
       {:ok, result} = Command.run(args, options)
       File.write!(Path.join(consumer, name <> ".log"), result["output"])
 
-      if result["exit_status"] != 0 or result["timed_out"],
-        do: raise("consumer #{name} failed; inspect #{consumer}")
+      if result["exit_status"] != 0 or result["timed_out"] do
+        raise(
+          "consumer #{name} failed (exit #{inspect(result["exit_status"])}, " <>
+            "timed_out=#{result["timed_out"]}); inspect #{consumer}\n" <>
+            String.slice(result["output"], -8000, 8000)
+        )
+      end
     end
 
     consumer

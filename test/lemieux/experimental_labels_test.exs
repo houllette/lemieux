@@ -10,7 +10,7 @@ defmodule Lemieux.ExperimentalLabelsTest do
 
   use ExUnit.Case, async: true
 
-  @label "**Experimental.** May change in any 0.x release."
+  @label "**Experimental.** Not part of the stable public API."
 
   # Namespaces whose interfaces are experimental before 1.0 (docs/support.md:
   # learning, tuning and confirmation workflows, and the benchmarks, feedback

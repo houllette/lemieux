@@ -3,7 +3,7 @@ defmodule Lemieux.MixProject do
 
   # Dependabot evaluates a temporary copy of mix.exs without copying VERSION.
   # Keep this literal in sync with VERSION; MixProjectTest enforces the pair.
-  @version "0.12.0"
+  @version "1.0.0"
   @source_url "https://github.com/houllette/lemieux"
   @description "The Elixir runtime behind the lmx coding agent: runs the model/tool loop " <>
                  "itself and records every session as an append-only transcript you can " <>
@@ -174,7 +174,7 @@ defmodule Lemieux.MixProject do
       # same category of imposition as a web or database dependency and is
       # ruled out for the same reason. Optional means this project resolves
       # it — the standalone `lmx` host and these tests get the real thing — while a host that
-      # adds `{:lemieux, "~> 0.8"}` gets no NIF unless it asks by name.
+      # adds `{:lemieux, "~> 1.0"}` gets no NIF unless it asks by name.
       #
       # `Lemieux.TUI` is the only module that references it, nothing in the
       # core references `Lemieux.TUI`. The standalone host under `dist/lmx`
@@ -449,7 +449,7 @@ defmodule Lemieux.MixProject do
           "docs/support.md",
           "docs/roadmap.md"
         ],
-        # Last before the project files: these change in any 0.x release, and a
+        # Last before the project files: these are outside the stable public API, and a
         # newcomer browsing the sidebar should meet the supported surface first.
         "Experimental: learning and evaluation": [
           "docs/agent-extensions.md",

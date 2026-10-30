@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "runtime_source": "9f07379990748694e4223929937cac8f12b79517",
+  "retention": {
+    "targeted_tests": 53,
+    "seeded_observations": {
+      "seeds": [
+        101,
+        102,
+        103
+      ],
+      "tests_per_run": 40,
+      "outcomes": "all passed"
+    }
+  },
+  "cancelled_budgets": {
+    "test_first": "free and paid tool cancellation regressions both failed before the repair",
+    "targeted_tests": 62,
+    "result": "passed",
+    "seeded_observations": {
+      "seeds": [
+        101,
+        102,
+        103
+      ],
+      "tests_per_run": 6,
+      "outcomes": "all passed"
+    }
+  },
+  "ordinary_suite": {
+    "source": "9f07379",
+    "tests_and_doctests": 6040,
+    "result": "passed"
+  },
+  "intermediate_coverage": {
+    "source": "9f07379",
+    "seed": 349863,
+    "tests_and_doctests": 6040,
+    "passed": 6039,
+    "coverage_percent": 86.64,
+    "failure": "experimental QualificationHost first-party proposer aborted with probe_incomplete and retained in-doubt history; no promotion",
+    "evidence": "original failed workspace retained locally; no assertions or exclusions changed",
+    "narrow_recovery": [
+      {
+        "location": "qualification_host_test.exs:944",
+        "coverage": true,
+        "seed": 101,
+        "passed": 1
+      },
+      {
+        "location": "qualification_host_test.exs",
+        "coverage": true,
+        "seed": 349863,
+        "passed": 20
+      }
+    ],
+    "independent_pr_coverage": "GitHub coverage check passed on the same PR source; original local failure remains an observed divergence, not a proven root cause"
+  },
+  "floor_consumer": {
+    "failed_run": 41117651392,
+    "toolchain": "Elixir 1.19.6 / OTP 28",
+    "observed_case_seconds": [
+      124.649,
+      129.847,
+      146.651
+    ],
+    "outcomes": [
+      "passed",
+      "passed",
+      "failed"
+    ],
+    "original_diagnostic": "consumer run failed; nested output was not retained in CI artifact",
+    "repair_commit": "5f6b96e",
+    "repair": "Three-minute cold command deadlines; seven-minute enclosing case; print typed exit/timeout and bounded output on failure. Behavioral assertions unchanged.",
+    "narrow_result": "portable_asset_example_test.exs passed"
+  },
+  "full_gate": "Final outcome is reported on the PR; this file does not label intermediate failures as a passing full gate.",
+  "study_allowance_cancellation_test": {
+    "observed": "A full ordinary run received DOWN with noproc while expecting killed for its dispatch monitor.",
+    "repair": "A dispatch acknowledgement follows the monitor signal before the parent is killed, ordering monitor installation before the guardian exit. Strict killed and unknown-accounting assertions remain. An exit callback also cleans up the owned worker on assertion failure.",
+    "validation": {
+      "targeted_tests": 16,
+      "seeds": [
+        101,
+        102,
+        103
+      ],
+      "tests_per_seed": 16,
+      "outcomes": "all passed"
+    }
+  },
+  "windows_restart_receipt_test": {
+    "rehearsal": 41117747494,
+    "failed_step": "Test release host",
+    "observed": "Receipt content assertions passed, then the POSIX mode assertion compared reported Windows 0666 with Unix 0600.",
+    "repair": "Receipt contents and consumption still run on every platform. The unchanged strict 0600 assertion is a separate unix-tagged test, using the release suite existing platform contract. No Windows ACL privacy claim is made.",
+    "local_validation": "8 release CLI tests passed on Unix, including the strict owner-only mode check."
+  }
+}

@@ -15,7 +15,7 @@ defmodule ReviewExtension.MixProject do
   defp lemieux do
     case System.get_env("LEMIEUX_EXTENSION_BASE") do
       nil ->
-        {:lemieux, "~> 0.9"}
+        {:lemieux, "~> 1.0"}
 
       path ->
         {:lemieux, path: path}

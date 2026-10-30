@@ -177,6 +177,15 @@ it finds.
 `lmx help models` prints the same list with the model each key starts on.
 These are model identifiers, not a promise of access for your account.
 
+With personal state enabled, `lmx` also keeps bounded failure/recovery captures
+and can reuse scoped, unconfirmed experience. Capture and recall add no model
+requests; optional isolated refinement uses an existing finite job allowance.
+`lmx learning inspect` shows what is retained, `off` stops reuse, `undo` blocks
+the last adaptation and `forget` removes retained captures and recalled
+guidance. Opting out keeps existing data; forgetting keeps transcripts and
+accounting/audit history. See [ordinary-use controls](harness-learning.md#ordinary-use-experience-and-controls)
+for retention and the separate `"capture": false` switch.
+
 ```sh
 export ANTHROPIC_API_KEY='your-key'
 cd /path/to/your/project

@@ -1,6 +1,6 @@
 defmodule Lemieux.Agent.Composition do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Bounded fan-out and accounting for checkpointed ordinary Elixir agents.
 
   This is neither a scheduler nor another agent loop. Hosts choose the finite

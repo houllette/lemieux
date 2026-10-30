@@ -1,6 +1,6 @@
 # Support, compatibility and upgrades
 
-Lemieux is pre-1.0. This page says which parts are supported and which are
+Lemieux is preparing for 1.0. This page says which parts are supported and which are
 experimental, which platforms `lmx` runs on, and how to upgrade the library,
 the binary and your extensions. The license is
 [Apache 2.0](https://github.com/houllette/lemieux/blob/main/LICENSE).
@@ -14,9 +14,12 @@ dump, a transcript or a log to a public issue: they can hold keys and source.
 
 ## What is supported
 
-*Supported* means a documented contract, covered by tests that run without a
-network, which changes only with a changelog entry. *Experimental* means it
-may change in any 0.x release.
+*Supported* means a documented contract covered by offline tests. Beginning
+with 1.0, supported source and automation contracts remain compatible throughout
+1.x; every user-visible change has a changelog entry. *Experimental* interfaces
+are outside that stable public API and may change in a minor release, with
+their changes and any required migration documented. Provider/model task
+quality and external service behavior require separate qualification.
 
 | Surface | Status |
 | --- | --- |
@@ -37,7 +40,7 @@ Every documented module in the experimental namespaces (`Lemieux.Learning`,
 `Lemieux.Benchmark`, `Lemieux.Experiment`, `Lemieux.Asset`,
 `Lemieux.Feedback`, `Lemieux.Reflection`, `Lemieux.Evidence`,
 `Lemieux.Agent` and `Lemieux.Contract`) opens its documentation with
-"**Experimental.** May change in any 0.x release.", and so does every
+"**Experimental.** Not part of the stable public API.", and so does every
 `mix lemieux.*` task. That includes `Lemieux.Learning.Overlay`, whose Elixir
 API is experimental although `lmx` uses it to apply a learned overlay
 (`.lmx/harness.json`), and `Lemieux.Contract`, whose digests supported
@@ -127,8 +130,36 @@ privileged core API.
 
 Before 1.0, a minor release may break source compatibility; the changelog
 then says how to migrate. Patch releases keep documented source contracts.
-This is a maintenance policy, not a promise that experimental interfaces stay
-fixed.
+Beginning with 1.0:
+
+- Patch releases fix bugs while preserving supported contracts. Minor releases
+  add compatible behavior; removal or incompatible changes to supported APIs
+  require a new major version.
+- A supported API is deprecated in a minor release with a replacement and a
+  changelog entry before removal in a later major release. Security fixes can
+  tighten invalid or unsafe behavior; the advisory and changelog explain any
+  action required.
+- Documented session events and telemetry names, guaranteed keys and units,
+  tool/provider/store/hook callbacks, harness fields and extension API version
+  are part of the contract. Consumers ignore additive metadata fields and use
+  documented accessors rather than internal process state.
+- `lmx run` JSON and stream-JSON shapes, documented exit statuses, CLI flags and
+  supported configuration keys are automation contracts. New optional fields
+  and commands can be added; incompatible changes require a major release.
+- The transcript schema and extension API have independent version numbers.
+  A new schema includes readers for every version the release claims to
+  support; 1.0's baseline includes entry schemas 1 through 5 and extension API 1.
+  An incompatible extension API change requires both a new extension API number
+  and a major Lemieux release. OTP/Elixir compatibility checks still apply.
+- The latest stable release receives security fixes. Older minor/major releases
+  are not maintained as separate security branches; upgrade to the latest
+  stable. The policy and response targets are in [Security](../SECURITY.md).
+
+Experimental namespaces, experimental commands and private implementation
+modules are excluded from the 1.x source/automation promise. Their presence in
+the same package does not make experimental learning or browser task quality a
+supported guarantee. The stable host keeps its documented opt-out and recovery
+paths when experimental integrations evolve.
 [Transcript compatibility](transcript-compatibility.md) is versioned
 separately.
 

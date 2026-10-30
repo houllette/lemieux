@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Discovery.Confirm do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs the independent confirmation lane for a candidate from a campaign archive.
 
       mix lemieux.discovery.confirm examples/discovery/campaign.exs CANDIDATE_ID \\

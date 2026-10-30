@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Reporter.Console do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Human-readable terminal reporting for an evaluated benchmark artifact.
   """
 

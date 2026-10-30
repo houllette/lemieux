@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Baseline do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Creates and persists explicitly blessed evaluation baselines.
 
   Blessing is separate from running a gate. A failed report cannot become a

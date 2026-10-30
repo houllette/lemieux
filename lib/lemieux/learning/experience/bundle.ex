@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Experience.Bundle do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A versioned manifest over caller-authorized discovery experience.
 
   Raw evidence and derived findings are separate collections. Every item and

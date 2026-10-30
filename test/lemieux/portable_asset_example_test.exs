@@ -4,7 +4,9 @@ defmodule Lemieux.PortableAssetExampleTest do
   alias Lemieux.Learning.Extension.Export
 
   @moduletag :tmp_dir
-  @tag timeout: :timer.minutes(3)
+  # Two separately bounded consumer commands plus export/verification. Keep
+  # the case deadline outside their sum so a failed build retains its log.
+  @tag timeout: :timer.minutes(7)
   test "the documented offline command exports, runs and rolls back an asset in fresh consumers",
        ctx do
     output = Path.join(ctx.tmp_dir, "review")

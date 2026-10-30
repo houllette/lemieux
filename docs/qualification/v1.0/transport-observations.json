@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "purpose": "bounded release-path smoke observations; not model quality or learning efficacy",
+  "registration": "registration.json",
+  "observations": [
+    {
+      "status": "passed",
+      "version": "1.0.0",
+      "mode": "openai-api",
+      "source": "ee52dc4b0815998be10517beb70e5874c50eee57",
+      "model": "openai:gpt-6-sol",
+      "accounting": {
+        "active": 0,
+        "requests": 7,
+        "max_requests": 8,
+        "max_cost_usd": 2.0,
+        "spent_usd": 0.012693,
+        "unmeasured": 0,
+        "reserved_usd": 0.0
+      },
+      "checks": [
+        "read_edit_and_unchanged_verifier",
+        "transcript_resume_and_tool_result_replay",
+        "native_structured_output",
+        "cancelled_running_shell_process_group"
+      ],
+      "archive_sha256": "2afc2ca5570f83ead48b2f70fa849b51d7afbe6d9019d892ac8eb820d77b7544",
+      "platform": "macos_silicon",
+      "runtime": {
+        "elixir": "1.20.4",
+        "erts": "17.1",
+        "req_llm": "1.29.0"
+      },
+      "economics": "provider usage normalized with installed token tariffs; invoice not independently verified",
+      "usage": {
+        "reported_requests": 7,
+        "input_tokens_including_cache": 10883,
+        "output_tokens": 223,
+        "provider_reported_input_and_output": true
+      }
+    },
+    {
+      "status": "passed",
+      "version": "1.0.0",
+      "mode": "codex-subscription",
+      "source": "ee52dc4b0815998be10517beb70e5874c50eee57",
+      "model": "openai_codex:gpt-6.1-sol",
+      "accounting": {
+        "active": 0,
+        "requests": 7,
+        "max_requests": 8,
+        "max_cost_usd": 2.0,
+        "spent_usd": 0.023521,
+        "unmeasured": 0,
+        "reserved_usd": 0.0
+      },
+      "checks": [
+        "read_edit_and_unchanged_verifier",
+        "transcript_resume_and_tool_result_replay",
+        "native_structured_output",
+        "cancelled_running_shell_process_group"
+      ],
+      "archive_sha256": "2afc2ca5570f83ead48b2f70fa849b51d7afbe6d9019d892ac8eb820d77b7544",
+      "platform": "macos_silicon",
+      "runtime": {
+        "elixir": "1.20.4",
+        "erts": "17.1",
+        "req_llm": "1.29.0"
+      },
+      "economics": "token tariff estimate; subscription charge and quota not independently verified",
+      "usage": {
+        "reported_requests": 7,
+        "input_tokens_including_cache": 10870,
+        "output_tokens": 178,
+        "provider_reported_input_and_output": true
+      }
+    },
+    {
+      "status": "passed",
+      "version": "1.0.0",
+      "mode": "local-ollama",
+      "source": "ee52dc4b0815998be10517beb70e5874c50eee57",
+      "model": "ollama:qwen3.8:27b-mxfp8",
+      "accounting": {
+        "active": 0,
+        "requests": 8,
+        "max_requests": 8,
+        "max_cost_usd": null,
+        "spent_usd": null,
+        "unmeasured": 8,
+        "reserved_usd": 0.0
+      },
+      "checks": [
+        "read_edit_and_unchanged_verifier",
+        "transcript_resume_and_tool_result_replay",
+        "native_structured_output",
+        "cancelled_running_shell_process_group"
+      ],
+      "archive_sha256": "2afc2ca5570f83ead48b2f70fa849b51d7afbe6d9019d892ac8eb820d77b7544",
+      "platform": "macos_silicon",
+      "runtime": {
+        "elixir": "1.20.4",
+        "erts": "17.1",
+        "req_llm": "1.29.0"
+      },
+      "economics": "UNPRICED local economic cost; no remote API charge",
+      "usage": {
+        "reported_requests": 8,
+        "input_tokens_including_cache": 16137,
+        "output_tokens": 760,
+        "provider_reported_input_and_output": true
+      }
+    }
+  ],
+  "post_observation_change": "Final source additionally repairs cancellation of session-owned tool reservations and preserves settled unknown-cost counts on resume. See the separate reserve/native receipt; these original transport observations are not relabeled as runs on the repaired source.",
+  "skipped": [
+    {
+      "path": "google",
+      "reason": "excluded by user"
+    },
+    {
+      "path": "anthropic",
+      "reason": "no configured credential found; no key provisioned"
+    },
+    {
+      "path": "hosted_mcp_oauth",
+      "reason": "no configured hosted OAuth server/account; fixtures are separate offline evidence"
+    }
+  ]
+}

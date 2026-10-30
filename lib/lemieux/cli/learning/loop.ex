@@ -22,6 +22,7 @@ defmodule Lemieux.CLI.Learning.Loop do
   alias Lemieux.CLI.Learning.Journal
   alias Lemieux.CLI.Learning.Observation
   alias Lemieux.CLI.Learning.RefinementLesson
+  alias Lemieux.CLI.Learning.Retention
   alias Lemieux.CLI.Learning.TaskLocal
   alias Lemieux.Contract
   alias Lemieux.Contribution
@@ -62,7 +63,12 @@ defmodule Lemieux.CLI.Learning.Loop do
   def apply(harness, state) do
     source =
       Contribution.new!("learning", __MODULE__, state,
-        commands: %{"inspect" => :observe, "undo" => :cancel, "off" => :cancel}
+        commands: %{
+          "inspect" => :observe,
+          "undo" => :cancel,
+          "off" => :cancel,
+          "forget" => :cancel
+        }
       )
 
     harness
@@ -71,21 +77,34 @@ defmodule Lemieux.CLI.Learning.Loop do
         # Several private fsyncs form the exposure/undo transaction. A 500 ms
         # deadline interrupted it under Linux CI load; bound the whole local
         # operation at five seconds and abstain without changing the request.
-        case Worker.run(fn -> prepare(request, context, state) end, 5000) do
+        case Worker.run(
+               fn -> operation(state, context, fn -> prepare(request, context, state) end) end,
+               5000
+             ) do
           {:ok, {:ok, updated}} -> {:ok, updated}
           _unavailable -> {:ok, request}
         end
       end,
       stop: fn reason, context ->
-        Worker.run(fn -> retain(reason, context, state) end, 5000)
+        Worker.run(
+          fn -> operation(state, context, fn -> retain(reason, context, state) end) end,
+          5000
+        )
 
-        case Worker.run(fn -> refine(context, state) end, 480_000) do
+        case Worker.run(
+               fn -> operation(state, context, fn -> refine(context, state) end) end,
+               480_000
+             ) do
           {:ok, {:deny, feedback}} -> {:deny, feedback}
           _abstained -> :allow
         end
       end,
       session_end: fn reason, context ->
-        Worker.run(fn -> retain(reason, context, state) end, 5000)
+        Worker.run(
+          fn -> operation(state, context, fn -> retain(reason, context, state) end) end,
+          5000
+        )
+
         :ok
       end
     )
@@ -108,6 +127,8 @@ defmodule Lemieux.CLI.Learning.Loop do
 
     with {:ok, control} <- Journal.control(root),
          {:ok, history} <- Lessons.history(store(root, cwd)) do
+      count = history_count(root)
+
       {:ok,
        %{
          "enabled" => control["enabled"],
@@ -119,7 +140,12 @@ defmodule Lemieux.CLI.Learning.Loop do
          "learning_requests" => Map.get(control["last"] || %{}, "learning_requests", 0),
          "accounting" => get_in(control, ["last", "accounting"]),
          "refinement" => get_in(control, ["last", "reason"]) || "awaiting_experience",
-         "persistent_activation" => false
+         "persistent_activation" => false,
+         "history_records" => count,
+         "history_limit" => 1000,
+         "history_full" => count >= 1000,
+         "retention_help" =>
+           "Stop workspace sessions and archive the evidence directory before starting a fresh history. Forget removes captures and guidance; it does not reset audit or spending limits."
        }}
     end
   end
@@ -133,6 +159,9 @@ defmodule Lemieux.CLI.Learning.Loop do
   def undo(home, cwd) do
     Journal.update(root(home, cwd), &undo_control(&1, root(home, cwd)))
   end
+
+  @spec forget(home :: Path.t(), cwd :: Path.t()) :: :ok | {:error, term()}
+  def forget(home, cwd), do: Retention.forget(home, cwd, root(home, cwd))
 
   defp undo_control(control, root) do
     case control["last"] do
@@ -169,10 +198,14 @@ defmodule Lemieux.CLI.Learning.Loop do
         action = if info["last"], do: info["last"]["action"], else: "awaiting experience"
 
         %{
-          state: :ready,
+          state: if(info["history_full"], do: :unavailable, else: :ready),
           badge: if(enabled, do: "learning", else: "learning off"),
           message:
-            "#{info["retained"]} scoped observations; #{action}; #{info["learning_requests"] || "unknown"} learning requests; unconfirmed"
+            if(info["history_full"],
+              do: "Learning history is full (1000 records). #{info["retention_help"]}",
+              else:
+                "#{info["retained"]} scoped observations; #{action}; #{info["learning_requests"] || "unknown"} learning requests; unconfirmed"
+            )
         }
 
       _unavailable ->
@@ -189,8 +222,17 @@ defmodule Lemieux.CLI.Learning.Loop do
   def command(state, "off", "", context),
     do: result(set_enabled(state.home, context.cwd, false), state, context)
 
+  def command(state, "forget", "", context),
+    do: result(forget(state.home, context.cwd), state, context)
+
   def command(_state, _name, _args, _context),
-    do: %{state: :error, message: "Use learning inspect, undo or off without arguments"}
+    do: %{state: :error, message: "Use learning inspect, undo, off or forget without arguments"}
+
+  defp operation(state, context, work) do
+    if permitted?(state, context),
+      do: Journal.operation(root(state.home, context.cwd), work),
+      else: work.()
+  end
 
   defp result(:ok, state, context), do: status(state, context)
 
@@ -623,18 +665,17 @@ defmodule Lemieux.CLI.Learning.Loop do
   end
 
   defp capacity(root) do
-    dir = Path.join(root, "evidence")
-
-    names =
-      case File.ls(dir) do
-        {:ok, names} -> names
-        {:error, :enoent} -> []
-        _unavailable -> List.duplicate(nil, 1000)
-      end
-
-    if length(names) < 1000,
+    if history_count(root) < 1000,
       do: :ok,
       else: {:error, :learning_history_limit}
+  end
+
+  defp history_count(root) do
+    case File.ls(Path.join(root, "evidence")) do
+      {:ok, names} -> length(names)
+      {:error, :enoent} -> 0
+      _unavailable -> 1000
+    end
   end
 
   defp binding_file(context), do: "binding-" <> Contract.sha256(context.session_id) <> ".json"

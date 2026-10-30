@@ -152,6 +152,13 @@ defmodule Lemieux.CLI.Learning.StudyAllowanceTest do
         fn _request ->
           send(owner, {:dispatch, self()})
 
+          # A monitor signal and the guardian's exit signal have different
+          # senders. Acknowledge this caller's later message before it kills
+          # the owner, so the monitor is installed before the dispatch dies.
+          receive do
+            :monitored -> send(owner, {:dispatch_monitored, self()})
+          end
+
           receive do
             :never -> Scripted.complete("late", usage: usage())
           after
@@ -172,8 +179,11 @@ defmodule Lemieux.CLI.Learning.StudyAllowanceTest do
         end)
       end)
 
+    on_exit(fn -> Process.exit(worker, :kill) end)
     assert_receive {:dispatch, dispatch}
     dispatch_monitor = Process.monitor(dispatch)
+    send(dispatch, :monitored)
+    assert_receive {:dispatch_monitored, ^dispatch}
     Process.exit(worker, :kill)
     assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
     assert_receive {:DOWN, ^dispatch_monitor, :process, ^dispatch, :killed}

@@ -1,6 +1,6 @@
 defmodule Lemieux.Reflection do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Transcript-grounded introspection, independent of a CLI or a metrics service.
 
   Every entry contributes to counts and request-linked resource accounting,

@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Experience.Lesson do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   An immutable, scoped lesson with its complete authorized source bytes.
 
   A lesson records an observation and hypothesis, never an activation grant.

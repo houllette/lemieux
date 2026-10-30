@@ -1,6 +1,6 @@
 defmodule Lemieux.Feedback.Store.JSONL do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Local append-only JSONL feedback storage, one file per feedback id.
 
   Each line is a complete `Lemieux.Feedback` revision. Before append, the

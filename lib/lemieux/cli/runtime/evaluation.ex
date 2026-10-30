@@ -1,6 +1,6 @@
 defmodule Lemieux.CLI.Runtime.Evaluation do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Paired evaluation of the effective `lmx` harness through its ordinary assembly.
 

@@ -1,7 +1,7 @@
 if Code.ensure_loaded?(Tribunal.Assertions) do
   defmodule Lemieux.Benchmark.Judging do
     @moduledoc """
-    **Experimental.** May change in any 0.x release.
+    **Experimental.** Not part of the stable public API.
     Opt-in Tribunal LLM-as-judge scoring for genuinely subjective outputs.
 
     Only commit-message quality and explanation faithfulness are judged. Results

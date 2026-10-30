@@ -48,6 +48,7 @@ lmx learning inspect              # no provider is created or contacted
 lmx learning undo                 # block the last adaptation and its dependent lessons
 lmx learning off                  # persistent opt-out for this workspace
 lmx learning on                   # remove that workspace opt-out
+lmx learning forget               # remove workspace captures and recalled guidance
 ```
 
 The same live session exposes `/status learning inspect`,
@@ -66,6 +67,20 @@ withholds learning. Project policy never overrides a personal opt-out. Existing
 capture settings still control raw capture independently; `"capture": false`
 disables both capture and this experience lane. Opt-out preserves retained
 content rather than deleting evidence.
+
+`forget` works without a provider and preserves the workspace's on/off choice.
+It removes retained capture inputs, prunes learned lesson text and artifacts,
+and removes active application/binding files. A cutoff prevents late delivery
+from an earlier prompt from recreating its capture. An active learning or
+capture writer refuses cleanup; let it finish or stop the session and retry.
+The terminal form is `/status learning forget`.
+
+Forgetting is not a spending reset or deletion of every copy. Lesson
+tombstones, exposure receipts, session transcripts, request allowances,
+unknown-charge recovery records and experimental refinement archives remain.
+Those archives and transcripts can still hold source. Backups and separately
+exported assets are separate copies. Disable future capture with
+`"capture": false` if you also want to stop creating new input snapshots.
 
 Lessons bind to the current workspace, model, complete authorized catalog and
 environment identity. A changed binding, ambiguous lesson, missing source,
@@ -290,7 +305,7 @@ Export grants no
 release or runtime authority. Installation, credentials and rollback remain
 host-owned, and independent confirmation remains scoped to its exact evidence.
 
-**Experimental.** May change in any 0.x release.
+**Experimental.** Not part of the stable public API.
 
 **Harness learning** improves the harness a session runs with (its
 instructions, tool descriptions and other durable assets) from evidence of how

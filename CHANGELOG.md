@@ -9,8 +9,23 @@ API.
 
 ## Unreleased
 
+### Release readiness
+
+- Define the supported 1.x API, automation, transcript and extension compatibility
+  promise while keeping experimental namespaces outside the stable public API.
+  Align first-use permission and version guidance with the runtime.
+- Record the enforced main-branch quality gate and immutable version-tag rules
+  as repository configuration; require coverage, security and stock learning replay.
+- Add provider-free `lmx learning forget` and `/status learning forget` for scoped
+  capture and recalled-guidance cleanup. Preserve opt-out, transcript accounting,
+  exposure receipts and refinement audit history; refuse active writers, withhold
+  late pre-forget captures, and report full history with a recovery hint.
+
 ### Fixes
 
+- Settle and checkpoint cancelled tool reservations before ending the turn.
+  Free tools no longer strand a hold that blocks dollar-limited resume; paid
+  tools retain unknown cost and consumed requests rather than refunding them.
 - Show background-task waits in seconds and elapsed time in minutes and
   seconds, using "ran for" while retaining exact structured milliseconds. (#110)
 - Restore native Codex structured-output streaming with ReqLLM 1.29 by

@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Plan do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A frozen, proposer-visible contract for bounded exploratory search.
 
   Development and validation cases are explicit and disjoint. There is no

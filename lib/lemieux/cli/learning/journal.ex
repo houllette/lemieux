@@ -106,6 +106,23 @@ defmodule Lemieux.CLI.Learning.Journal do
     end
   end
 
+  @doc "Serializes workspace retention with bounded learning workers; a busy writer refuses cleanup."
+  @spec operation(root :: Path.t(), work :: (-> result)) :: result | {:error, term()}
+        when result: var
+  def operation(root, work) do
+    with :ok <- safe(root),
+         :ok <- File.mkdir_p(root),
+         :ok <- File.chmod(root, 0o700),
+         :ok <- lock_file(Path.join(root, "operation.lock")),
+         {:ok, claim} <- JSONL.lock(%{dir: root}, "operation") do
+      try do
+        work.()
+      after
+        JSONL.unlock(%{dir: root}, "operation", claim)
+      end
+    end
+  end
+
   @spec seal(value :: map()) :: map()
   def seal(value) do
     value = Map.delete(value, "sha256")

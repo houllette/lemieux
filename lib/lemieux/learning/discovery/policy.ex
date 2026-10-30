@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Policy do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Search policy for one discovery plan, read from `plan.extensions["search"]`.
 
   The discovery contracts (`Plan`, `Candidate`, `Evaluation`, `State`,

@@ -2,6 +2,111 @@ defmodule Lemieux.Extensions.Capture.Storage do
   @moduledoc false
   alias Lemieux.Contract
   alias Lemieux.Extensions.Capture
+  alias Lemieux.Store.JSONL
+
+  @retention "forgotten.json"
+
+  # The claim lives outside the content directory: forgetting that directory
+  # must never unlink a live lock and admit a second writer. A dead bounded
+  # worker is reclaimed using the transcript store's local-owner protocol.
+  @spec with_lock(root :: Path.t(), scope :: map(), work :: (-> result)) ::
+          result | {:error, term()}
+        when result: var
+  def with_lock(root, scope, work) do
+    locks = root <> "-locks"
+    id = Contract.digest(scope)
+
+    with :ok <- ancestors(locks),
+         :ok <- File.mkdir_p(locks),
+         :ok <- File.chmod(locks, 0o700),
+         :ok <- ancestors(Path.join(locks, id <> ".lock")),
+         {:ok, claim} <- JSONL.lock(%{dir: locks}, id) do
+      try do
+        work.()
+      after
+        JSONL.unlock(%{dir: locks}, id, claim)
+      end
+    end
+  end
+
+  @spec current?(root :: Path.t(), scope :: map(), at :: DateTime.t()) ::
+          {:ok, boolean()} | {:error, term()}
+  def current?(root, scope, at) do
+    path = Path.join(directory(root, scope), @retention)
+
+    with :ok <- ancestors(path),
+         {:ok, %{type: :regular, size: size}} when size <= 4096 <- File.lstat(path),
+         {:ok, bytes} <- File.read(path),
+         {:ok, record} <- Contract.decode(bytes),
+         :ok <- Contract.verify_digest(record, "sha256"),
+         %{"version" => 1, "before" => before} <- record,
+         {:ok, cutoff, 0} <- DateTime.from_iso8601(before) do
+      {:ok, DateTime.compare(at, cutoff) == :gt}
+    else
+      {:error, :enoent} -> {:ok, true}
+      _invalid -> {:error, :capture_retention_unavailable}
+    end
+  end
+
+  @spec forget(root :: Path.t(), scope :: map()) :: :ok | {:error, term()}
+  def forget(root, scope) do
+    with_lock(root, scope, fn -> forget_locked(root, scope) end)
+  end
+
+  defp forget_locked(root, scope) do
+    dir = directory(root, scope)
+
+    with :ok <- ancestors(dir),
+         {:ok, names} <- names(dir),
+         true <- Enum.all?(names, &retention_file?(dir, &1)),
+         :ok <- File.mkdir_p(dir),
+         :ok <- File.chmod(root, 0o700),
+         :ok <- File.chmod(dir, 0o700),
+         :ok <- replace_cutoff(Path.join(dir, @retention)),
+         :ok <- remove_captures(dir, names) do
+      :ok
+    else
+      false -> {:error, :capture_retention_conflict}
+      error -> error
+    end
+  end
+
+  defp retention_file?(dir, name) do
+    owned =
+      name in [@retention, ".gitignore"] or
+        Regex.match?(
+          ~r/\A(?:(?:capture|input)_[a-f0-9]{64}\.json|forgotten\.json)(?:\.partial-\d+)?\z/,
+          name
+        )
+
+    owned and match?({:ok, %{type: :regular}}, File.lstat(Path.join(dir, name)))
+  end
+
+  defp replace_cutoff(path) do
+    record = %{"version" => 1, "before" => DateTime.to_iso8601(DateTime.utc_now())}
+    bytes = Contract.encode!(Map.put(record, "sha256", Contract.digest(record)))
+    temporary = path <> ".partial-" <> Integer.to_string(System.unique_integer([:positive]))
+
+    try do
+      with {:ok, file} <- File.open(temporary, [:write, :binary, :exclusive]) do
+        result =
+          with :ok <- File.chmod(temporary, 0o600),
+               :ok <- IO.binwrite(file, bytes),
+               do: :file.sync(file)
+
+        File.close(file)
+        with :ok <- result, do: File.rename(temporary, path)
+      end
+    after
+      File.rm(temporary)
+    end
+  end
+
+  defp remove_captures(dir, names) do
+    names
+    |> Enum.reject(&(&1 in [@retention, ".gitignore"]))
+    |> Enum.reduce_while(:ok, fn name, :ok -> result(File.rm(Path.join(dir, name))) end)
+  end
 
   @spec scope(cwd :: Path.t()) :: map()
   def scope(cwd), do: %{"id" => "local/" <> Contract.sha256(Path.expand(cwd))}

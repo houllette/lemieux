@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Eval do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs a mechanically graded Lemieux evaluation and exits non-zero when its
   policy fails.
 

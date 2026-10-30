@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Task do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   One mechanically graded benchmark task.
 
   Tasks are data rather than callbacks so the same manifest can be run through

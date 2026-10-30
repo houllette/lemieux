@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Writers.Compare do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Runs the offline isolated-writer comparison in a new receipt directory.
 

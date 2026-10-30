@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Promotion.Memory do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Explicitly mounted reference promotion host for an in-memory harness owner.
   The registry and harness swap in one GenServer state transition. `:prepare`

@@ -1,0 +1,147 @@
+{
+  "name": "Main quality gate",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/main"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_linear_history"
+    },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "allowed_merge_methods": [
+          "squash"
+        ],
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_approving_review_count": 0,
+        "required_review_thread_resolution": true
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "required_status_checks": [
+          {
+            "context": "Commit identities",
+            "integration_id": 15368
+          },
+          {
+            "context": "Coverage threshold",
+            "integration_id": 15368
+          },
+          {
+            "context": "Dialyzer",
+            "integration_id": 15368
+          },
+          {
+            "context": "Docs links",
+            "integration_id": 15368
+          },
+          {
+            "context": "Elixir floor (1.19 / OTP 28)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example builder",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example capture",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example computer_use",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example learned_skill_witness",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example portable_procedure",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example research",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example review",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example security",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example systemone_compaction",
+            "integration_id": 15368
+          },
+          {
+            "context": "Example verifier",
+            "integration_id": 15368
+          },
+          {
+            "context": "Hex package (floor Elixir 1.19.0 / OTP 27.0)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Hex package (pinned)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Lint & test",
+            "integration_id": 15368
+          },
+          {
+            "context": "Lint workflows",
+            "integration_id": 15368
+          },
+          {
+            "context": "Public wording",
+            "integration_id": 15368
+          },
+          {
+            "context": "Secret scan (full history)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Security",
+            "integration_id": 15368
+          },
+          {
+            "context": "Standalone release host",
+            "integration_id": 15368
+          },
+          {
+            "context": "Stock learning replay",
+            "integration_id": 15368
+          },
+          {
+            "context": "Tutorial and release helpers",
+            "integration_id": 15368
+          }
+        ],
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false
+      }
+    }
+  ]
+}

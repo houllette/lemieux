@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Gate do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Scores coding-agent observations and applies release-grade comparison policy.
 
   Task success, tool selection, prompt events, safety and efficiency are derived

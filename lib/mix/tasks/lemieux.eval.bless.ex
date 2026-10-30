@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Eval.Bless do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Creates an explicit, reviewable baseline from a passing JSON report.
 
       mix lemieux.eval.bless --input tmp/eval.json \

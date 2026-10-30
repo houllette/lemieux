@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Promotion.Policy do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Immutable bounds for a named host promotion actor. Integrity is not authority:
   callers obtain this policy anew from their host on every operation. A policy

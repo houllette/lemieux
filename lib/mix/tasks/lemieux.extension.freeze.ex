@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Lemieux.Extension.Freeze do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Freezes a trusted extension and its execution profile.
 
       mix lemieux.extension.freeze freeze.exs NEW_DIRECTORY

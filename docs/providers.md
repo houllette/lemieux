@@ -346,6 +346,12 @@ other wire providers continue to receive valid general JSON Schema unchanged.
 
 ## Validation matrix
 
+This table describes test coverage, not a claim that every path passed on the
+latest release. A live result applies only to the recorded source/archive,
+provider/model, transport, account and date. Release qualification uses the
+models `lmx` actually recommends, plus any advertised subscription/local paths;
+the inexpensive smoke fixtures below remain useful separate observations.
+
 Which provider paths the test suite exercises:
 
 | Provider path | Automated fixtures | Opt-in live loop | Notes |

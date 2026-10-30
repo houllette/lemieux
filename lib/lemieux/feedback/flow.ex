@@ -1,6 +1,6 @@
 defmodule Lemieux.Feedback.Flow do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The deliberately manual first feedback-to-asset proof.
 
   This coordinator performs no model call and runs no automatic experiment. It

@@ -64,6 +64,9 @@ defmodule Lemieux.JobBudget do
     opts =
       Keyword.merge(limits,
         owner: self(),
+        # Spend and request recovery above deliberately handle interrupted
+        # reservations. Settled unknown charges must retain their debt count too.
+        recorded: Map.take(recorded, ["unmeasured"]),
         spent_usd: spent,
         requests: if(interrupted?, do: nil, else: Map.get(recorded, "requests", requests))
       )

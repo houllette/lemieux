@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Extension.Confirmation do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   One selected frozen extension, one preregistered independent comparison.
 
   `prepare/6` accepts a `Lemieux.Benchmark.Corpus` with complete direct/derived

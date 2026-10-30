@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Qualification do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   A preregistered, host-executed learning protocol.
 

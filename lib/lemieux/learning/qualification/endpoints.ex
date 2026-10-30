@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Qualification.Endpoints do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Explicitly registered quality and efficiency endpoints for research studies.
 

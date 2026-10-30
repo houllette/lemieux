@@ -1,6 +1,6 @@
 # Harness-learning cross-system acceptance runbook
 
-**Experimental.** May change in any 0.x release.
+**Experimental.** Not part of the stable public API.
 
 This is the acceptance procedure for a hosted harness-learning deployment:
 Lemieux, an **orchestrating host** (a host application that embeds Lemieux
