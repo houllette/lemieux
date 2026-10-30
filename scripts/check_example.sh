@@ -74,9 +74,7 @@ for name in "$@"; do
     # still verifies that checksum itself before extracting/loading the NIF.
     if [ "${CI:-}" = "true" ]; then
       nif_cache=$(mktemp -d "${TMPDIR:-/tmp}/lemieux-nifs.XXXXXXXX")
-      nif_version=$(elixir -e 'IO.puts(:erlang.system_info(:nif_version))')
-      python3 "$root/scripts/cache_terminal_nif.py" deps/ex_ratatui "$nif_cache" \
-        --nif-version "$nif_version"
+      elixir "$root/scripts/cache_terminal_nif.exs" deps/ex_ratatui "$nif_cache"
       export RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH="$nif_cache"
     fi
 

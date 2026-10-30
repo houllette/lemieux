@@ -10,7 +10,10 @@ defmodule Lemieux.TUI.SignalsTest do
   defp handlers, do: :gen_event.which_handlers(:erl_signal_server)
 
   # A release happens in a process of its own, so it is waited for here.
-  defp wait_for_handlers(expected, attempts \\ 100) do
+  defp wait_for_handlers(
+         expected,
+         attempts \\ div(ExUnit.configuration()[:assert_receive_timeout], 10)
+       ) do
     cond do
       handlers() == expected ->
         :ok
@@ -39,6 +42,7 @@ defmodule Lemieux.TUI.SignalsTest do
   # longer ends on: with the screen's input poll spinning on the dead
   # terminal, nothing was left to stop it.
   test "SIGHUP is never trapped, so a closed terminal still ends the VM" do
+    before = handlers()
     traps = Signals.trap(self())
 
     try do
@@ -46,6 +50,7 @@ defmodule Lemieux.TUI.SignalsTest do
       refute Enum.any?(handlers(), &match?({_module, {:sighup, _id}}, &1))
     after
       Signals.release(traps)
+      wait_for_handlers(before)
     end
   end
 
@@ -81,7 +86,7 @@ defmodule Lemieux.TUI.SignalsTest do
         receive do
           :go_on -> :ok
         after
-          2_000 -> :ok
+          60_000 -> :ok
         end
       end)
 
@@ -90,11 +95,23 @@ defmodule Lemieux.TUI.SignalsTest do
     assert_receive :handling
 
     try do
-      {micros, :ok} = :timer.tc(fn -> Signals.release(traps) end)
-      assert micros < 500_000
+      # The server stays blocked until this test releases it. A synchronous
+      # implementation cannot answer inside the suite's ordinary receive wait;
+      # a slow scheduler alone cannot make a correct implementation fail an
+      # arbitrary half-second stopwatch check.
+      releaser =
+        Task.async(fn ->
+          result = Signals.release(traps)
+          send(test, {:released, self(), result})
+          result
+        end)
+
+      pid = releaser.pid
+      assert_receive {:released, ^pid, :ok}
+      assert Task.await(releaser, :infinity) == :ok
     after
       send(server, :go_on)
-      Task.await(notifier)
+      Task.await(notifier, :infinity)
       System.untrap_signal(:sigusr2, busy)
     end
 

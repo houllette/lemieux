@@ -404,7 +404,7 @@ git push --force-with-lease
 | Hex package (pinned) and Hex package (floor Elixir 1.19.0 / OTP 27.0) | builds the package and compiles it as a dependency (`scripts/check_package.sh`) |
 | Example NAME | each example project, and the bundled System One compaction extension, against this checkout (`scripts/check_example.sh NAME`) |
 | Standalone release host | compilation, the format check and the tests of `dist/lmx` |
-| Docs links | `python3 scripts/check_links.py` |
+| Docs links | `elixir scripts/check_links.exs` |
 | Public wording | `scripts/check_public_text.sh` |
 | Lint workflows | actionlint, ShellCheck on `scripts/*.sh`, the static Linux build's checksum pins, and a check that no workflow uses a secret or a privileged trigger |
 | Tutorial and release helpers | the hello-extension tutorial and the Python release-helper tests |
@@ -423,7 +423,7 @@ reaches the examples, the package boundary or the release scripts. Some of
 its parts, and two quick text checks, also run on their own:
 
 ```sh
-python3 scripts/check_links.py                        # Docs links
+elixir scripts/check_links.exs                        # Docs links
 scripts/check_public_text.sh                          # Public wording
 python3 -m unittest discover -s test -p 'test_*.py'   # the release helpers
 mise exec -- scripts/check_example.sh hello           # one example

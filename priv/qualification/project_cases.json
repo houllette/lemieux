@@ -1,0 +1,1188 @@
+[
+  {
+    "family": "graph",
+    "contract": "Return lexically sorted topological layers for nodes and [child,parent] edges. Deduplicate edges. Reject duplicate nodes, unknown endpoints, self dependencies and cycles with null. Empty graph returns [].",
+    "cases": [
+      [
+        {
+          "nodes": [
+            "c",
+            "b",
+            "a"
+          ],
+          "edges": [
+            [
+              "c",
+              "a"
+            ]
+          ]
+        },
+        [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c"
+          ]
+        ]
+      ],
+      [
+        {
+          "nodes": [
+            "a",
+            "b"
+          ],
+          "edges": [
+            [
+              "a",
+              "b"
+            ],
+            [
+              "b",
+              "a"
+            ]
+          ]
+        },
+        null
+      ],
+      [
+        {
+          "nodes": [],
+          "edges": []
+        },
+        []
+      ],
+      [
+        {
+          "nodes": [
+            "a",
+            "a"
+          ],
+          "edges": []
+        },
+        null
+      ],
+      [
+        {
+          "nodes": [
+            "a"
+          ],
+          "edges": [
+            [
+              "a",
+              "z"
+            ]
+          ]
+        },
+        null
+      ],
+      [
+        {
+          "nodes": [
+            "a",
+            "b",
+            "c"
+          ],
+          "edges": [
+            [
+              "c",
+              "b"
+            ],
+            [
+              "b",
+              "a"
+            ],
+            [
+              "b",
+              "a"
+            ]
+          ]
+        },
+        [
+          [
+            "a"
+          ],
+          [
+            "b"
+          ],
+          [
+            "c"
+          ]
+        ]
+      ],
+      [
+        {
+          "nodes": [
+            "z"
+          ],
+          "edges": [
+            [
+              "z",
+              "z"
+            ]
+          ]
+        },
+        null
+      ],
+      [
+        {
+          "nodes": [
+            "e",
+            "d",
+            "c",
+            "b",
+            "a"
+          ],
+          "edges": [
+            [
+              "d",
+              "a"
+            ],
+            [
+              "d",
+              "b"
+            ],
+            [
+              "e",
+              "d"
+            ],
+            [
+              "e",
+              "c"
+            ]
+          ]
+        },
+        [
+          [
+            "a",
+            "b",
+            "c"
+          ],
+          [
+            "d"
+          ],
+          [
+            "e"
+          ]
+        ]
+      ]
+    ]
+  },
+  {
+    "family": "journal",
+    "contract": "Execute begin, put(key,value), delete(key), commit, rollback operations on an initially empty dictionary. Transactions nest; commit retains current changes, rollback restores the state at the innermost begin. Deleting a missing key is harmless. Unknown operations, unmatched commit/rollback or unclosed transactions return null.",
+    "cases": [
+      [
+        [
+          [
+            "put",
+            "a",
+            1
+          ],
+          [
+            "begin"
+          ],
+          [
+            "put",
+            "a",
+            2
+          ],
+          [
+            "rollback"
+          ]
+        ],
+        {
+          "a": 1
+        }
+      ],
+      [
+        [
+          [
+            "begin"
+          ],
+          [
+            "put",
+            "a",
+            1
+          ],
+          [
+            "commit"
+          ]
+        ],
+        {
+          "a": 1
+        }
+      ],
+      [
+        [],
+        {}
+      ],
+      [
+        [
+          [
+            "commit"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "begin"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "put",
+            "a",
+            {
+              "x": [
+                1
+              ]
+            }
+          ],
+          [
+            "begin"
+          ],
+          [
+            "begin"
+          ],
+          [
+            "put",
+            "a",
+            2
+          ],
+          [
+            "commit"
+          ],
+          [
+            "rollback"
+          ]
+        ],
+        {
+          "a": {
+            "x": [
+              1
+            ]
+          }
+        }
+      ],
+      [
+        [
+          [
+            "delete",
+            "missing"
+          ]
+        ],
+        {}
+      ],
+      [
+        [
+          [
+            "begin"
+          ],
+          [
+            "put",
+            "a",
+            2
+          ],
+          [
+            "rollback"
+          ],
+          [
+            "rollback"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  {
+    "family": "cache",
+    "contract": "Evaluate a capacity-bounded TTL LRU cache using supplied logical timestamps. events are [time,put,key,value,ttl] or [time,get,key]. Expire entries before each operation at expires<=time. Reads refresh LRU order but never extend TTL. Overwriting removes the old entry, including with ttl<=0. Evict least recently used live entry on new insertion. Return get results (null for misses). Reject invalid capacity (including bool) or unknown operations. Input timestamps are nondecreasing.",
+    "cases": [
+      [
+        {
+          "capacity": 1,
+          "events": [
+            [
+              0,
+              "put",
+              "a",
+              1,
+              2
+            ],
+            [
+              1,
+              "get",
+              "a"
+            ],
+            [
+              2,
+              "get",
+              "a"
+            ]
+          ]
+        },
+        [
+          1,
+          null
+        ]
+      ],
+      [
+        {
+          "capacity": 2,
+          "events": [
+            [
+              0,
+              "put",
+              "a",
+              1,
+              9
+            ],
+            [
+              0,
+              "put",
+              "b",
+              2,
+              9
+            ],
+            [
+              1,
+              "get",
+              "a"
+            ],
+            [
+              1,
+              "put",
+              "c",
+              3,
+              9
+            ],
+            [
+              2,
+              "get",
+              "b"
+            ]
+          ]
+        },
+        [
+          1,
+          null
+        ]
+      ],
+      [
+        {
+          "capacity": 0,
+          "events": [
+            [
+              0,
+              "put",
+              "x",
+              1,
+              9
+            ],
+            [
+              0,
+              "get",
+              "x"
+            ]
+          ]
+        },
+        [
+          null
+        ]
+      ],
+      [
+        {
+          "capacity": true,
+          "events": []
+        },
+        null
+      ],
+      [
+        {
+          "capacity": -1,
+          "events": []
+        },
+        null
+      ],
+      [
+        {
+          "capacity": 1,
+          "events": [
+            [
+              0,
+              "put",
+              "a",
+              1,
+              9
+            ],
+            [
+              0,
+              "put",
+              "a",
+              2,
+              0
+            ],
+            [
+              0,
+              "get",
+              "a"
+            ]
+          ]
+        },
+        [
+          null
+        ]
+      ],
+      [
+        {
+          "capacity": 1,
+          "events": [
+            [
+              0,
+              "put",
+              "a",
+              null,
+              2
+            ],
+            [
+              1,
+              "get",
+              "a"
+            ],
+            [
+              2,
+              "get",
+              "a"
+            ]
+          ]
+        },
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        {
+          "capacity": 1,
+          "events": [
+            [
+              0,
+              "unknown",
+              "x"
+            ]
+          ]
+        },
+        null
+      ]
+    ]
+  },
+  {
+    "family": "merge",
+    "contract": "Apply dictionary layers in order. Recursively merge only when both existing and new values are dictionaries. Otherwise replace, including lists and null. The exact object {\"$delete\":true} removes a key if present; other objects containing $delete are ordinary values. Reject nondictionary layers with null. Preserve inputs.",
+    "cases": [
+      [
+        [
+          {
+            "a": {
+              "b": 1,
+              "c": 2
+            }
+          },
+          {
+            "a": {
+              "b": 3
+            }
+          }
+        ],
+        {
+          "a": {
+            "b": 3,
+            "c": 2
+          }
+        }
+      ],
+      [
+        [
+          {
+            "a": [
+              1
+            ]
+          },
+          {
+            "a": [
+              2
+            ]
+          }
+        ],
+        {
+          "a": [
+            2
+          ]
+        }
+      ],
+      [
+        [],
+        {}
+      ],
+      [
+        [
+          {
+            "a": 1
+          },
+          {
+            "a": {
+              "$delete": true
+            }
+          }
+        ],
+        {}
+      ],
+      [
+        [
+          {
+            "a": {
+              "b": 1
+            }
+          },
+          {
+            "a": null
+          }
+        ],
+        {
+          "a": null
+        }
+      ],
+      [
+        [
+          {
+            "a": 1
+          },
+          2
+        ],
+        null
+      ],
+      [
+        [
+          {
+            "a": {
+              "b": 1
+            }
+          },
+          {
+            "a": {
+              "b": {
+                "$delete": true
+              },
+              "c": 2
+            }
+          }
+        ],
+        {
+          "a": {
+            "c": 2
+          }
+        }
+      ],
+      [
+        [
+          {
+            "a": 1
+          },
+          {
+            "a": {
+              "$delete": true,
+              "extra": 2
+            }
+          }
+        ],
+        {
+          "a": {
+            "$delete": true,
+            "extra": 2
+          }
+        }
+      ],
+      [
+        [
+          {
+            "a": 1
+          },
+          {
+            "a": {
+              "$delete": 1
+            }
+          }
+        ],
+        {
+          "a": {
+            "$delete": 1
+          }
+        }
+      ]
+    ]
+  },
+  {
+    "family": "reconcile",
+    "contract": "Reconcile events by string id and nonnegative integer version (bool is invalid). Largest version wins; last input event wins version ties. A winning deleted:true is a tombstone and suppresses that id, including older later-arriving data. Return live [{id,value}] sorted by id; a missing value is null. Reject invalid versions with null.",
+    "cases": [
+      [
+        [
+          {
+            "id": "a",
+            "version": 2,
+            "value": 9
+          },
+          {
+            "id": "a",
+            "version": 1,
+            "value": 3
+          }
+        ],
+        [
+          {
+            "id": "a",
+            "value": 9
+          }
+        ]
+      ],
+      [
+        [
+          {
+            "id": "a",
+            "version": 1,
+            "value": 2
+          },
+          {
+            "id": "a",
+            "version": 1,
+            "deleted": true
+          }
+        ],
+        []
+      ],
+      [
+        [],
+        []
+      ],
+      [
+        [
+          {
+            "id": "a",
+            "version": true
+          }
+        ],
+        null
+      ],
+      [
+        [
+          {
+            "id": "a",
+            "version": -1
+          }
+        ],
+        null
+      ],
+      [
+        [
+          {
+            "id": "b",
+            "version": 3,
+            "deleted": true
+          },
+          {
+            "id": "b",
+            "version": 2,
+            "value": 7
+          }
+        ],
+        []
+      ],
+      [
+        [
+          {
+            "id": "b",
+            "version": 0
+          },
+          {
+            "id": "a",
+            "version": 1,
+            "value": false
+          }
+        ],
+        [
+          {
+            "id": "a",
+            "value": false
+          },
+          {
+            "id": "b",
+            "value": null
+          }
+        ]
+      ],
+      [
+        [
+          {
+            "id": "a",
+            "version": 2,
+            "deleted": true
+          },
+          {
+            "id": "a",
+            "version": 3,
+            "value": 4
+          }
+        ],
+        [
+          {
+            "id": "a",
+            "value": 4
+          }
+        ]
+      ]
+    ]
+  },
+  {
+    "family": "intervals",
+    "contract": "Convert weighted half-open intervals [start,end,weight] to sorted disjoint [start,end,total_weight] segments. Sum overlapping loads. Omit zero-load and empty segments. Merge adjacent segments of the same positive load. Reject start>end or negative weights with null. Endpoints and weights are integers.",
+    "cases": [
+      [
+        [
+          [
+            0,
+            3,
+            2
+          ],
+          [
+            1,
+            4,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            1,
+            3,
+            3
+          ],
+          [
+            3,
+            4,
+            1
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            2,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            2,
+            1
+          ]
+        ]
+      ],
+      [
+        [],
+        []
+      ],
+      [
+        [
+          [
+            2,
+            1,
+            3
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            1,
+            1,
+            9
+          ],
+          [
+            0,
+            2,
+            0
+          ]
+        ],
+        []
+      ],
+      [
+        [
+          [
+            -3,
+            -1,
+            2
+          ],
+          [
+            -2,
+            0,
+            2
+          ]
+        ],
+        [
+          [
+            -3,
+            -2,
+            2
+          ],
+          [
+            -2,
+            -1,
+            4
+          ],
+          [
+            -1,
+            0,
+            2
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            0,
+            4,
+            1
+          ],
+          [
+            1,
+            2,
+            1
+          ],
+          [
+            2,
+            3,
+            1
+          ]
+        ],
+        [
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            1,
+            3,
+            2
+          ],
+          [
+            3,
+            4,
+            1
+          ]
+        ]
+      ],
+      [
+        [
+          [
+            0,
+            2,
+            -1
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  {
+    "family": "allocation",
+    "contract": "Apportion integer total among nonnegative integer weights by largest remainder (Hamilton method). Reject bools, negative or noninteger totals/weights with null. Allocate floor(total*w/sum(weights)), then remaining units to largest exact fractional remainders, breaking ties by original index. Zero total permits all-zero or empty weights; positive total with zero weight sum returns null. Use integer arithmetic for arbitrarily large totals.",
+    "cases": [
+      [
+        {
+          "total": 5,
+          "weights": [
+            1,
+            1,
+            1
+          ]
+        },
+        [
+          2,
+          2,
+          1
+        ]
+      ],
+      [
+        {
+          "total": 10,
+          "weights": [
+            1,
+            2,
+            3
+          ]
+        },
+        [
+          2,
+          3,
+          5
+        ]
+      ],
+      [
+        {
+          "total": 0,
+          "weights": []
+        },
+        []
+      ],
+      [
+        {
+          "total": 3,
+          "weights": [
+            0,
+            0
+          ]
+        },
+        null
+      ],
+      [
+        {
+          "total": true,
+          "weights": [
+            1
+          ]
+        },
+        null
+      ],
+      [
+        {
+          "total": 3,
+          "weights": [
+            true,
+            2
+          ]
+        },
+        null
+      ],
+      [
+        {
+          "total": 10000000000000000000000001,
+          "weights": [
+            1,
+            1,
+            1
+          ]
+        },
+        [
+          3333333333333333333333334,
+          3333333333333333333333334,
+          3333333333333333333333333
+        ]
+      ],
+      [
+        {
+          "total": 7,
+          "weights": [
+            0,
+            1,
+            0
+          ]
+        },
+        [
+          0,
+          7,
+          0
+        ]
+      ]
+    ]
+  },
+  {
+    "family": "patch",
+    "contract": "Apply atomic dictionary-only patch operations. Paths start with / and use JSON Pointer ~1 for slash and ~0 for tilde. Empty keys are legal. Every intermediate key must exist and name a dictionary. set creates/replaces a final key; remove requires an existing key; test requires an existing key equal to value. On any invalid path/op/test return {ok:false,document:original}, undoing earlier operations. Otherwise return {ok:true,document:updated}. Preserve input objects. Lists are values, not traversable containers.",
+    "cases": [
+      [
+        {
+          "document": {
+            "a": 1
+          },
+          "operations": [
+            {
+              "op": "set",
+              "path": "/a",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "ok": true,
+          "document": {
+            "a": 2
+          }
+        }
+      ],
+      [
+        {
+          "document": {
+            "a": 1
+          },
+          "operations": [
+            {
+              "op": "set",
+              "path": "/a",
+              "value": 2
+            },
+            {
+              "op": "test",
+              "path": "/a",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "ok": false,
+          "document": {
+            "a": 1
+          }
+        }
+      ],
+      [
+        {
+          "document": {
+            "a/b": {
+              "~": 1
+            }
+          },
+          "operations": [
+            {
+              "op": "set",
+              "path": "/a~1b/~0",
+              "value": 9
+            }
+          ]
+        },
+        {
+          "ok": true,
+          "document": {
+            "a/b": {
+              "~": 9
+            }
+          }
+        }
+      ],
+      [
+        {
+          "document": {},
+          "operations": [
+            {
+              "op": "remove",
+              "path": "/missing"
+            }
+          ]
+        },
+        {
+          "ok": false,
+          "document": {}
+        }
+      ],
+      [
+        {
+          "document": {
+            "a": []
+          },
+          "operations": [
+            {
+              "op": "set",
+              "path": "/a/0",
+              "value": 9
+            }
+          ]
+        },
+        {
+          "ok": false,
+          "document": {
+            "a": []
+          }
+        }
+      ],
+      [
+        {
+          "document": {},
+          "operations": [
+            {
+              "op": "set",
+              "path": "/",
+              "value": 7
+            }
+          ]
+        },
+        {
+          "ok": true,
+          "document": {
+            "": 7
+          }
+        }
+      ],
+      [
+        {
+          "document": {},
+          "operations": [
+            {
+              "op": "set",
+              "path": "a",
+              "value": 9
+            }
+          ]
+        },
+        {
+          "ok": false,
+          "document": {}
+        }
+      ],
+      [
+        {
+          "document": {
+            "a": {}
+          },
+          "operations": [
+            {
+              "op": "set",
+              "path": "/a/x",
+              "value": [
+                1
+              ]
+            },
+            {
+              "op": "remove",
+              "path": "/a/x"
+            }
+          ]
+        },
+        {
+          "ok": true,
+          "document": {
+            "a": {}
+          }
+        }
+      ]
+    ]
+  }
+]

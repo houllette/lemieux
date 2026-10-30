@@ -6,13 +6,22 @@ defmodule Lemieux.CLI.SourceUpdateTest do
   alias Lemieux.TUI
   alias Lemieux.TUI.Notices
   alias Lemieux.TUI.Updates
+  alias LemieuxTest.Shell
 
-  setup do
-    base = Path.join(System.tmp_dir!(), "lmx-update-#{System.unique_integer([:positive])}")
+  @moduletag :tmp_dir
+
+  setup_all do
+    base =
+      Path.join(
+        System.tmp_dir!(),
+        "lmx-update-template-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+      )
+
     remote = Path.join(base, "remote.git")
     seed = Path.join(base, "seed")
     source = Path.join(base, "source 'checkout")
-    File.mkdir_p!(base)
+    File.mkdir!(base)
+    File.chmod!(base, 0o700)
     on_exit(fn -> File.rm_rf!(base) end)
     git!(base, ["init", "--bare", "--initial-branch=main", remote])
     git!(base, ["clone", remote, seed])
@@ -23,6 +32,21 @@ defmodule Lemieux.CLI.SourceUpdateTest do
     git!(seed, ["push", "-u", "origin", "main"])
     git!(base, ["clone", remote, source])
     configure(source)
+    %{template: base}
+  end
+
+  setup %{tmp_dir: base, template: template} do
+    # Each case owns all three repositories, including their objects and refs.
+    # Rebuilding the same initial commit and configuring two clones in every
+    # case exercises no update behavior; sharing a mutable remote would race.
+    for name <- ["remote.git", "seed", "source 'checkout"] do
+      File.cp_r!(Path.join(template, name), Path.join(base, name))
+    end
+
+    remote = Path.join(base, "remote.git")
+    seed = Path.join(base, "seed")
+    source = Path.join(base, "source 'checkout")
+    for path <- [seed, source], do: git!(path, ["remote", "set-url", "origin", remote])
     %{base: base, seed: seed, source: source, opts: [source_path: source]}
   end
 
@@ -199,9 +223,9 @@ defmodule Lemieux.CLI.SourceUpdateTest do
 
   test "a silent Git fetch is bounded and leaves HEAD unchanged", ctx do
     script = Path.join(ctx.base, "slow-upload-pack")
-    File.write!(script, "#!/bin/sh\nexec sleep 3\n")
+    File.write!(script, "#!/bin/sh\nexec sleep 60\n")
     File.chmod!(script, 0o700)
-    git!(ctx.source, ["config", "remote.origin.uploadpack", script])
+    git!(ctx.source, ["config", "remote.origin.uploadpack", Shell.quoted(script)])
     head = git!(ctx.source, ["rev-parse", "HEAD"])
 
     assert SourceUpdate.check(ctx.opts ++ [timeout_ms: 1_000]) ==
@@ -212,7 +236,7 @@ defmodule Lemieux.CLI.SourceUpdateTest do
 
   defp finish_task(state) do
     ref = state.status.update.task.ref
-    assert_receive {^ref, result}, 5_000
+    assert_receive {^ref, result}
     {:noreply, state} = TUI.handle_info({ref, result}, state)
     state
   end
