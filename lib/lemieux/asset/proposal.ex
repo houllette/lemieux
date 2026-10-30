@@ -1,6 +1,6 @@
 defmodule Lemieux.Asset.Proposal do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Explicit review state for one immutable asset version.
 
   No helper implicitly approves a proposal. `Learning.Promotion` may record

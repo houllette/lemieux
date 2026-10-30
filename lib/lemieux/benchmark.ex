@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Comparative, mechanically graded evaluation for coding-agent runtimes.
 
   A benchmark combines a versioned `Lemieux.Benchmark.Manifest` with two or

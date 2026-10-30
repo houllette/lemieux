@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Runtime do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A runtime that attempts one benchmark task.
 
   The behaviour is intentionally smaller than an agent adapter. A benchmark

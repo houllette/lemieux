@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Comparison do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Comparative evidence for the proposer, assembled from development-split
   evaluations.
 

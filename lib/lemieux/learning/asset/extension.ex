@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Asset.Extension do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   An explicitly selected typed asset through the normal harness seam.
 

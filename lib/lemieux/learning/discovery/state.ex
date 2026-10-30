@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.State do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Append-only, restartable state for one foreground or host-orchestrated search.
 
   The projection records candidate and evaluation idempotency keys before a

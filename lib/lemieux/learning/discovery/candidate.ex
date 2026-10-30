@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Candidate do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   An immutable exploratory candidate with content-addressed lineage.
 
   A candidate is never active and carries no activation capability. Parents

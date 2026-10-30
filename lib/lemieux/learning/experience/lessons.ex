@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Experience.Lessons do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Host-owned lesson persistence and exposure-gated recall.
 
   Adapters implement atomic, idempotent append and durable pruning. They bind

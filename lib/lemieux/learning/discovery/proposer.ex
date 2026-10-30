@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Proposer do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Behaviour for a host-supplied exploratory proposer.
 
   Implementations normally launch an ordinary fresh root `Lemieux.Session`

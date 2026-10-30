@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Builder do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   First-party extension-building agent using the public extension contracts.
 
   A deterministic workflow tool supplies templates and current API guidance;

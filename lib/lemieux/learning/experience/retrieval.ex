@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Experience.Retrieval do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Deterministic, bounded retrieval of scoped lessons for a later proposal.
 
   `freeze/3` pins an inventory, not authority. Every inspection or retrieval

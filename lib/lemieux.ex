@@ -82,7 +82,7 @@ defmodule Lemieux do
   Guides: [First embedded agent](first-embedded-agent.md),
   [Embedding Lemieux](embedding.md) and [Customizing Lemieux](customization.md);
   the [documentation overview](guides.html) maps the rest. A module whose
-  documentation opens with **Experimental.** may change in any 0.x release.
+  documentation opens with **Experimental.** is outside the stable public API.
 
   ## Design
 

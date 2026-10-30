@@ -1,6 +1,6 @@
 # Benchmarking harnesses
 
-**Experimental.** May change in any 0.x release.
+**Experimental.** Not part of the stable public API.
 
 Lemieux includes a small comparative benchmark runner because agent quality is
 an empirical question. A native loop can be cheaper, more observable and more

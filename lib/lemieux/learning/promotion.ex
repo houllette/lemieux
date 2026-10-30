@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Promotion do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Host-owned automatic guidance through ordinary asset proposals and approvals.
   Retention, task-local use, independently confirmed canaries and reviewed code

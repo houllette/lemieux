@@ -1,6 +1,6 @@
 defmodule Lemieux.Feedback.CaseDraft do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A frozen, reviewable benchmark case derived from verifiable feedback.
 
   `create/4` copies the starting repository before returning a task and writes

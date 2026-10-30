@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Asset.Source do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Source files for a typed asset inside an ordinary native Mix extension.
 

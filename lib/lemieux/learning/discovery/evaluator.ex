@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Evaluator do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Turns benchmark reports into discovery evaluations, and runs one candidate
   to produce them.
 

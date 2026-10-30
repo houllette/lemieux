@@ -1,6 +1,6 @@
 defmodule Lemieux.Experiment.CodeGate do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Fail-closed evidence gate for harness-code candidates.
 
   Passing this gate means a candidate is reviewable, not deployed. Generated

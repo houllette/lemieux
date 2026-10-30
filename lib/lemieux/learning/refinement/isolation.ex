@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Refinement.Isolation do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Host-owned effect isolation for task-local probes. A copied transcript or
   directory alone is not a sandbox. The host must confine all tool, hook,

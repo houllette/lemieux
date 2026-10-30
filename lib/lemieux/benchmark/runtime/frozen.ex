@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Runtime.Frozen do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A fresh compiled consumer for each attempt of a pinned extension build.
   """
   @behaviour Lemieux.Benchmark.Runtime

@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Extension.Build do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A pinned source tree, configuration and dependency runtime for local evaluation.
 
   `freeze/4` preserves the extension's declared files and snapshots dependency

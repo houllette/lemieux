@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Proposer do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   First-party discovery proposer: digester, planner, evolver, critic.
 
   This is the search half of harness self-improvement, built as an ordinary

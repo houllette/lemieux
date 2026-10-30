@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Runtime.Fixture do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Replays provider-neutral benchmark observations without making a model call.
 
   A version-one fixture set is a JSON object with an `observations` object keyed

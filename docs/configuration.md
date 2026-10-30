@@ -1702,6 +1702,8 @@ config file says; crash dumps move only when `LMX_HOME` is set.
 | Command snapshots for `/undo` | Unreferenced objects in the repository's own `.git/objects` | Kept until `git gc` prunes them |
 | Repository MCP trust decisions | `~/.lmx/trusted-mcp.json` | `LMX_HOME`; `lmx mcp untrust` |
 | "Always allow" permission answers | `~/.lmx/permissions/REPO-DIGEST.json` | `LMX_HOME` |
+| Captured workspace inputs and failure/recovery drafts | `~/.lmx/capture/PROJECT_DIGEST/`; private, at most 128 records for 30 days by default | `LMX_HOME`; `"capture": false`; `lmx learning forget` removes retained captures |
+| Scoped unconfirmed experience | `~/.lmx/learning/PROJECT_DIGEST/`; lesson content, tombstones, exposure receipts and optional refinement archives | `LMX_HOME`; `lmx learning off` stops reuse; `forget` prunes recalled content while preserving audit/accounting history |
 | Log file | `~/.lmx/logs/lmx.log` (rotated at 1 MB, three old files kept) | `LMX_HOME`; none with `--config none` and no `LMX_HOME` |
 | Crash dumps | `~/.lmx/crash/erl_crash.dump` (directory `0700`), whatever the config file says, `--config none` included | `ERL_CRASH_DUMP`; `LMX_HOME` moves it to `crash/` there |
 | MCP OAuth tokens | `~/.lmx/mcp-credentials.json` (mode `0600`) | `--credentials`, `LMX_CREDENTIALS` |

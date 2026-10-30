@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Grader.Command do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A mechanical grader expressed as an executable and argument vector.
 
   Commands are never passed through a shell. Manifest authors can interpolate

@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Resources do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Native, request-linked resource accounting for evaluation.
 
   Full input includes cache reads and writes exactly once, regardless of the

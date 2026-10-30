@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Change do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Validates the change identity attached to an evaluation gate.
 
   Lemieux releases and dependency versions use SemVer. This task is narrowly a

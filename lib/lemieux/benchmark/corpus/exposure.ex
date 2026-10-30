@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Corpus.Exposure do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A versioned record of direct or derived case exposure.
 
   It carries only identifiers and digests. Case prompts, fixtures, graders,

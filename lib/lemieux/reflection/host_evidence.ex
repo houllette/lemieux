@@ -1,6 +1,6 @@
 defmodule Lemieux.Reflection.HostEvidence do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   What a host's gateway saw, correlated with what this session recorded — and
   never added to it.
 

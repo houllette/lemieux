@@ -1,6 +1,6 @@
 defmodule Lemieux.Feedback.Dialogue do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The question-and-answer flow behind `/feedback`, with nothing about a screen.
 
   Capturing feedback in-session is a short conversation of its own: which

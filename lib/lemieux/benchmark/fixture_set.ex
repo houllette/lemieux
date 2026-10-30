@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.FixtureSet do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Versioned configuration for one or more recorded benchmark variants.
   """
 

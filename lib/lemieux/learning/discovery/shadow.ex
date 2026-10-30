@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Shadow do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Foreground shadow discovery over host-supplied proposer and evaluator calls.
 
   This helper deliberately has no scheduler, persistence, sandbox client, or

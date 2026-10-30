@@ -1,6 +1,6 @@
 defmodule Lemieux.Experiment.Decision do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Lexicographic experiment decisions with paired uncertainty.
 
   Safety and critical regressions are hard failures. Only after those gates

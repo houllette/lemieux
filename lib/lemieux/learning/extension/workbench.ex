@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Extension.Workbench do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Local development of agent extensions using the paired benchmark runner.
 
   `open/2` accepts the same trusted configuration as `mix lemieux.extension.eval`,

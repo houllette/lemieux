@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Lemieux.Extension.Eval do
   @shortdoc "Compares native extensions using a trusted local evaluation configuration (experimental)"
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Runs the existing paired benchmark machinery with installed agent modules.
 
       mix lemieux.extension.eval bench/compare.exs --allow-live

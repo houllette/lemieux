@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Meta do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The recursive step: a discovery campaign whose candidates are proposer
   profiles and whose cases are inner discovery campaigns.
 

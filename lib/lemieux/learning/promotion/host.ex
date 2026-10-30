@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Promotion.Host do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Atomic host installation of a promotion transition. Serialize policy changes,
   registry changes, canary feedback and runtime installation in one authority

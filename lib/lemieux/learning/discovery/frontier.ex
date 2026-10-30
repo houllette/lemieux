@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Frontier do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Deterministic Pareto membership after hard-invalid candidates are removed.
 
   Interface, safety, completeness, terminality, and budget are eligibility

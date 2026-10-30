@@ -1,6 +1,6 @@
 defmodule Lemieux.Feedback.Store do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Persistence contract for feedback revisions.
 
   This store is intentionally separate from `Lemieux.Store`. Transcript

@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Extension.Workbench.View do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Plain terminal views of development comparisons.
 
   Normal completion and mechanical acceptance are separate facts. Missing

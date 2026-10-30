@@ -1,6 +1,6 @@
 defmodule Lemieux.Reflection.Opportunities do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Mines a transcript for opportunities and records them as feedback, never as
   assets.
 

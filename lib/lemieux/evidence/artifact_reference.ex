@@ -1,6 +1,6 @@
 defmodule Lemieux.Evidence.ArtifactReference do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A content-addressed reference used by evidence and discovery contracts.
 
   A locator is deliberately optional and never grants access. Hosts resolve a

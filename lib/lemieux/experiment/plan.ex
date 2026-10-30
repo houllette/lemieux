@@ -1,6 +1,6 @@
 defmodule Lemieux.Experiment.Plan do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A versioned preregistration for one bounded control/variant comparison.
 
   Plans are immutable once attempts begin. Requiring one declared change,

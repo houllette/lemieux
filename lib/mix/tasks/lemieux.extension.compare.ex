@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Lemieux.Extension.Compare do
   @shortdoc "Plans or runs a user-selected model/effort comparison for an extension (experimental)"
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Uses a trusted workbench configuration and an explicit JSON shortlist:
 
       mix lemieux.extension.compare bench/workbench.exs bench/models.json

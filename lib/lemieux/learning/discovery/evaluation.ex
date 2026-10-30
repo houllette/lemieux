@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Evaluation do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A terminal development or validation observation for one candidate.
 
   Safety, completeness, and budget status remain separate from objective

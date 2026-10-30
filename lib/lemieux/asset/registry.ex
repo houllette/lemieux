@@ -1,6 +1,6 @@
 defmodule Lemieux.Asset.Registry do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Pure activation pointers and rollback history for asset versions.
 
   The registry is data, not a global process. A standalone host may serialize

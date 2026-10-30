@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Digest do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Compresses evaluation transcripts into clustered failure signatures.
 
   A proposer that reads raw trajectories pays for every token twice: once to

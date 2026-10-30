@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Experience.Lessons.File do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A process-free local lesson adapter, bound to an exact host scope.
 
   Records contain their evidence, so a single synced temporary file and atomic

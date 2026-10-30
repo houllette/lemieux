@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Corpus do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Versioned corpus membership and case-exposure history.
 
   Hidden is a statement about access history, not a label somebody may add

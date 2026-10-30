@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Experience.Materializer do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Deterministically materializes an authorized experience bundle.
 
   The caller supplies all bytes and the destination. Lemieux validates scope,

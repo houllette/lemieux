@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Progress do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Live, best-effort visibility for long benchmark runs.
 
   The reporter consumes the attempt events emitted by `Lemieux.Benchmark` and

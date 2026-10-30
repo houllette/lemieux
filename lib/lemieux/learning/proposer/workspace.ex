@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Proposer.Workspace do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The filesystem a proposer session works in: read-only evidence, one
   writable `proposal/` directory.
 

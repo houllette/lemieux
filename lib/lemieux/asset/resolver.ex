@@ -1,6 +1,6 @@
 defmodule Lemieux.Asset.Resolver do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Deterministic release-to-session asset layering with non-weakenable safety.
 
   Asset content remains ordered by layer so prompt/workflow consumers can

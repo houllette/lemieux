@@ -20,7 +20,7 @@ the repository root unless they start with `cd dist/lmx`.
 On your trusted macOS or Linux machine, from the repository root:
 
 ```sh
-./scripts/release.sh 0.12.0 /Volumes/LMX-KEYS/lmx-release.key
+./scripts/release.sh 1.0.0 /Volumes/LMX-KEYS/lmx-release.key
 ```
 
 Pass the prepared stable version and the existing signing key. A leading `v`
@@ -97,7 +97,7 @@ Workflow waits default to four hours each; `--timeout SECONDS` accepts 60 throug
 86400. A failed workflow stops with its URL. To retry its failed jobs once:
 
 ```sh
-./scripts/release.sh 0.12.0 /Volumes/LMX-KEYS/lmx-release.key --retry-failed
+./scripts/release.sh 1.0.0 /Volumes/LMX-KEYS/lmx-release.key --retry-failed
 ```
 
 Human terminal/provider [qualification](#qualification) remains the maintainer's
@@ -737,11 +737,22 @@ required at all: update the ruleset in the same change.
 - From `public-readiness.yml`: `Tutorial and release helpers`,
   `Commit identities` and `Secret scan (full history)`.
 
-`Security` (the dependency audits) turns red when an advisory is published,
-whatever the pull request changed; require it only if you want merges to wait
-until advisories are handled. Do not require `Submit Mix dependencies`.
+The active `Main quality gate` additionally requires `Coverage threshold`,
+`Security`, `Stock learning replay`, `Example learned_skill_witness` and
+`Example portable_procedure`. All 25 CI/Public readiness jobs are required and
+must originate from GitHub Actions. `Security` turns red when an advisory is
+published, whatever the pull request changed; address it before merging.
+Do not require `Submit Mix dependencies`.
 `Commit identities` refuses commits whose author or committer address is not a
 GitHub noreply address, contributors' included.
+
+The gate requires an up-to-date pull request, a squash merge and resolved
+conversations. It blocks force pushes and deletion, has no bypass actors and
+requires zero approving reviews so a sole maintainer can merge their own work.
+`Immutable version tags` permits creation of `v*` tags but blocks moving or
+deleting them, without bypass actors. The reviewed payloads, active IDs and
+administrator update commands live in [.github/rulesets](.github/rulesets/README.md).
+The ordinary suite checks their job names against the workflow matrices.
 
 ### Launch checklist
 

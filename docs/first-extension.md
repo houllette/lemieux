@@ -27,7 +27,7 @@ personal or project skills with the same names override the bundled ones.
 | Reusable model instructions | An Agent Skill |
 
 Profiles are data; tools and extensions are code. An agent owns a whole task,
-and that API is experimental: it may change in any 0.x release. Plugin bundles
+and that API is experimental: it is outside the stable public API. Plugin bundles
 are a separate format, from the Claude Code ecosystem. See the
 [extension reference](extensions.md).
 
@@ -48,7 +48,7 @@ No provider key is needed. The tests drive a real Lemieux session with
 scripted model responses and check that the tool's result reaches the
 transcript. `LEMIEUX_EXTENSION_BASE` points the example at your checkout. For
 a project of your own, copy the directory and replace the `lemieux()`
-dependency in its `mix.exs` with `{:lemieux, "~> 0.9"}` from Hex.
+dependency in its `mix.exs` with `{:lemieux, "~> 1.0"}` from Hex.
 
 Read the complete [implementation](https://github.com/houllette/lemieux/blob/main/examples/extensions/hello/lib/hello_extension.ex):
 
@@ -128,7 +128,7 @@ loads it. Its manifest names only the Lemieux it was written for, as a version
 
 ```json
 {"schema_version": 1, "name": "planning", "module": "LemieuxPlanningExample",
- "script": "planning.exs", "versions": {"lemieux": "~> 0.9"}}
+ "script": "planning.exs", "versions": {"lemieux": "~> 1.0"}}
 ```
 
 [`examples/extensions/planning`](https://github.com/houllette/lemieux/blob/main/examples/extensions/planning/README.md)

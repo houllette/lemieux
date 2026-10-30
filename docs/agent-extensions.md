@@ -1,6 +1,6 @@
 # Build and tune an agent extension
 
-**Experimental.** May change in any 0.x release.
+**Experimental.** Not part of the stable public API.
 
 For a first tool or harness customization, start with [Your first extension](first-extension.md).
 This is the optional whole-task development and evaluation lane.

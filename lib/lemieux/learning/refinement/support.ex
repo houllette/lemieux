@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Refinement.Support do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
 
   Frozen task-local selection rules. The default requires separated observations.
 

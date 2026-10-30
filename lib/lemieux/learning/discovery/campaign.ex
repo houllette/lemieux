@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Campaign do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   A standalone-host discovery campaign: plan, search, persist.
 
   A hosted deployment gives scheduling, persistence and activation to its

@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Surface do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   The bounded edit surface for profile-shaped candidates, checked mechanically.
 
   Every 2026 self-improving harness that reports stable gains restricts what

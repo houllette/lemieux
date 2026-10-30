@@ -12,7 +12,7 @@ defmodule Mix.Tasks.LemieuxTasksTest do
 
   use ExUnit.Case, async: true
 
-  @label "**Experimental.** May change in any 0.x release."
+  @label "**Experimental.** Not part of the stable public API."
 
   @repository_only [
     Mix.Tasks.Lemieux.Discovery,

@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Builder.Scaffold do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Deterministic, source-preserving starter projects for the guided builder.
 
   The starter has a real agent and a deliberately failing acceptance case. A

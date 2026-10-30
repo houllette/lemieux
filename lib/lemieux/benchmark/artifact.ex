@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Artifact do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Writes the complete JSON artifact from a benchmark run.
 
   The file is written only after the run is complete. Long-running hosts that

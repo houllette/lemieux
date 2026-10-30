@@ -55,7 +55,7 @@ from:
   becomes an error the model can read, not a dead session. An installed
   `lmx` is an OTP release, so a compatible, signed update can load into the
   terminal UI while it runs.
-- **The same loop runs in your application.** Add `{:lemieux, "~> 0.12.0"}`,
+- **The same loop runs in your application.** Add `{:lemieux, "~> 1.0"}`,
   mount `Lemieux.Supervisor`, and supply your own tools, store, approval
   policy and interface through the API `lmx` uses; `lmx` has no private path
   into the library. [First embedded agent](docs/first-embedded-agent.md) runs
@@ -143,7 +143,7 @@ shows how to make `lmx` work from any directory.
 
 ```elixir
 def deps do
-  [{:lemieux, "~> 0.12.0"}]
+  [{:lemieux, "~> 1.0"}]
 end
 ```
 
@@ -188,13 +188,18 @@ leaves; `lmx -c` picks up where you left off. Settings live in
 
 ## Safety
 
-`lmx` starts in **full auto**, and its startup banner says so: it runs every
-tool call without asking, and its commands run as your user, without a
-sandbox, in the environment you started it in, less variables whose names
-contain `KEY`, `TOKEN`, `SECRET`, `PASSWORD` or `PASSWD` (by name only: a
-password inside `DATABASE_URL` still passes). After a turn that edits files
-it also runs the check command the repository chose, unasked;
-`"verify": false` in `~/.lmx/config.json` turns that off.
+`lmx` starts in **auto**: workspace file edits run automatically, and commands
+run automatically only inside an available OS sandbox. Without one, commands
+ask for approval. MCP, web and Elixir-evaluation tools ask either way;
+unattended calls that would ask are denied. The startup banner reports the
+actual mode and sandbox. `--permission-mode full_auto` explicitly bypasses
+approval prompts; deny rules still apply.
+
+Commands inherit your environment, less variables whose names contain `KEY`,
+`TOKEN`, `SECRET`, `PASSWORD` or `PASSWD` (by name only: a password inside
+`DATABASE_URL` still passes). After a turn that edits files, the repository's
+check runs through the same command policy. `"verify": false` in
+`~/.lmx/config.json` turns verification off.
 
 - **Ask first:** `lmx --permission-mode ask` asks before edits and commands;
   `--permission-mode accept_edits` asks only before commands.
@@ -301,17 +306,24 @@ guides and the API reference are on [HexDocs](https://hexdocs.pm/lemieux).
 
 ## Project status
 
-Lemieux is at 0.9, with one maintainer; 0.8 was its first public release.
+Lemieux is at 1.0.0 in this release candidate, with one maintainer; 0.8 was its first public release.
 The contracts that [Support and compatibility](docs/support.md) lists as
 supported (sessions, tools, transcripts, resume and fork, extensions) have
 offline tests, and `lmx` is the supported first-party host. APIs may still change before 1.0,
 with migration notes in the [changelog](CHANGELOG.md).
 
-Experimental, and free to change in any 0.x release: the harness-learning,
+Experimental and outside the stable public API: the harness-learning,
 feedback, benchmarking and evaluation tools (modules whose documentation opens
 with **Experimental.**, `lmx feedback`, `lmx corpus` and `lmx harness`, and
 the `mix lemieux.*` tasks), the Windows build, and the computer-use example.
 The [roadmap](docs/roadmap.md) lists what comes next.
+
+Version 1.0 stabilizes the supported library, CLI and extension contracts in
+[Support and compatibility](docs/support.md#public-api). Learning remains
+experimental: retained experience and observed reuse do not establish better
+task outcomes or lower cost. `lmx learning inspect`, `off`, `undo` and `forget`
+give you local controls; [retention](docs/harness-learning.md#ordinary-use-experience-and-controls)
+explains what is removed and what audit history remains.
 
 ## Contributing and community
 

@@ -1,6 +1,6 @@
 defmodule Lemieux.Benchmark.Runtime.Agent do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Evaluates an installed `Lemieux.Agent` through its normal entry point.
 
   Pass `agent: MyAgent` and `agent_options: [...]` to `Runtime.new/3`.

@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Lemieux.Extension.Workbench do
   @shortdoc "Opens the local agent extension evaluation workbench (experimental)"
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Opens a terminal workbench using a trusted Elixir configuration:
 
       mix lemieux.extension.workbench bench/compare.exs

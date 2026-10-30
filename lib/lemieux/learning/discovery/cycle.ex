@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Discovery.Cycle do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   One generation of routine self-improvement: search, confirm, recommend.
 
   A campaign on its own is an experiment somebody remembers to run. What

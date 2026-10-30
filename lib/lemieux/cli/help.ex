@@ -67,7 +67,7 @@ defmodule Lemieux.CLI.Help do
   def command("learning"),
     do:
       {:ok,
-       "lmx learning [inspect|undo|off|on] [options]\n\nInspect scoped ordinary-use experience without a provider. Undo blocks the last recalled lessons and restores the next request's base prompt. Off persists for this workspace in the current personal state directory. Personal learning:false and project opt-outs still take precedence over on. No extra inference allowance or persistent promotion is granted."}
+       "lmx learning [inspect|undo|off|on|forget] [options]\n\nInspect scoped ordinary-use experience without a provider. Undo blocks the last recalled lessons and restores the next request's base prompt. Off persists for this workspace in the current personal state directory. Forget removes retained captures and recalled guidance, keeping opt-out, transcripts and accounting/audit history. Personal learning:false and project opt-outs still take precedence over on. No extra inference allowance or persistent promotion is granted."}
 
   def command("plugin"), do: topic("plugins")
   def command("extension"), do: topic("extensions")

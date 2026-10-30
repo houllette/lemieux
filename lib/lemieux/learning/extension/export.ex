@@ -1,6 +1,6 @@
 defmodule Lemieux.Learning.Extension.Export do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Source-preserving export of native Elixir agent extensions.
 
   An extension is an ordinary Mix project implementing `Lemieux.Agent`.

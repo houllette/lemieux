@@ -1,6 +1,6 @@
 defmodule Lemieux.Feedback do
   @moduledoc """
-  **Experimental.** May change in any 0.x release.
+  **Experimental.** Not part of the stable public API.
   Immutable, anchored human feedback and its append-only interpretations.
 
   Feedback is deliberately not a transcript entry. A complaint is evidence
