@@ -77,7 +77,17 @@ defmodule Lmx.CLITest do
              "/work space"
            ]
 
-    assert {:ok, %File.Stat{mode: mode}} = File.stat(path)
+    assert {:ok, %File.Stat{type: :regular}} = File.stat(path)
+  end
+
+  # Erlang's Windows mode bits are not an ACL privacy check. Keep this
+  # assertion on Unix while receipt contents and consumption run everywhere.
+  @tag :unix
+  @tag :tmp_dir
+  test "a restart receipt is owner-only on Unix", %{tmp_dir: dir} do
+    path = Path.join(dir, "restart.json")
+    assert :ok = CLI.prepare_restart([], %{id: "exact-session", cwd: dir}, path)
+    assert {:ok, %File.Stat{type: :regular, mode: mode}} = File.stat(path)
     assert Bitwise.band(mode, 0o777) == 0o600
   end
 

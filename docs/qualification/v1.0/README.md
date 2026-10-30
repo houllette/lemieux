@@ -51,9 +51,12 @@ The [local archive receipt](native-archive.json) and
 Apple Silicon checks to the archive and restart-plan digests. The cross-platform
 GitHub rehearsal is a separate result.
 [Current PR checks](https://github.com/houllette/lemieux/pull/117/checks) cover the
-final review head. The [release rehearsal](https://github.com/houllette/lemieux/actions/runs/41117747494)
-builds source `9f07379`; subsequent test-synchronization, example-deadline and evidence commits do not
-change the runtime or release-host code. Rebuilding for the final tag still
+final review head. The initial [release rehearsal](https://github.com/houllette/lemieux/actions/runs/41117747494)
+built source `9f07379` and caught a Unix-mode assertion in the Windows release-host
+test. The corrected platform test retains all receipt-content assertions. The
+replacement rehearsal and its exact archive/report hashes are recorded on the
+pull request. Subsequent test-synchronization, example-deadline and evidence
+commits do not change the runtime or release-host code. Rebuilding for the final tag still
 requires qualification of the exact final archives.
 
 The [coding/cancellation recording](native-coding-cancellation.cast) and

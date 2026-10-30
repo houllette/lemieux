@@ -88,5 +88,12 @@
       "tests_per_seed": 16,
       "outcomes": "all passed"
     }
+  },
+  "windows_restart_receipt_test": {
+    "rehearsal": 41117747494,
+    "failed_step": "Test release host",
+    "observed": "Receipt content assertions passed, then the POSIX mode assertion compared reported Windows 0666 with Unix 0600.",
+    "repair": "Receipt contents and consumption still run on every platform. The unchanged strict 0600 assertion is a separate unix-tagged test, using the release suite existing platform contract. No Windows ACL privacy claim is made.",
+    "local_validation": "8 release CLI tests passed on Unix, including the strict owner-only mode check."
   }
 }
