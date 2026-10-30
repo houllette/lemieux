@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "runtime_source": "9f07379990748694e4223929937cac8f12b79517",
+  "retention": {
+    "targeted_tests": 53,
+    "seeded_observations": {
+      "seeds": [
+        101,
+        102,
+        103
+      ],
+      "tests_per_run": 40,
+      "outcomes": "all passed"
+    }
+  },
+  "cancelled_budgets": {
+    "test_first": "free and paid tool cancellation regressions both failed before the repair",
+    "targeted_tests": 62,
+    "result": "passed",
+    "seeded_observations": {
+      "seeds": [
+        101,
+        102,
+        103
+      ],
+      "tests_per_run": 6,
+      "outcomes": "all passed"
+    }
+  },
+  "ordinary_suite": {
+    "source": "9f07379",
+    "tests_and_doctests": 6040,
+    "result": "passed"
+  },
+  "intermediate_coverage": {
+    "source": "9f07379",
+    "seed": 349863,
+    "tests_and_doctests": 6040,
+    "passed": 6039,
+    "coverage_percent": 86.64,
+    "failure": "experimental QualificationHost first-party proposer aborted with probe_incomplete and retained in-doubt history; no promotion",
+    "evidence": "original failed workspace retained locally; no assertions or exclusions changed",
+    "narrow_recovery": [
+      {
+        "location": "qualification_host_test.exs:944",
+        "coverage": true,
+        "seed": 101,
+        "passed": 1
+      },
+      {
+        "location": "qualification_host_test.exs",
+        "coverage": true,
+        "seed": 349863,
+        "passed": 20
+      }
+    ],
+    "independent_pr_coverage": "GitHub coverage check passed on the same PR source; original local failure remains an observed divergence, not a proven root cause"
+  },
+  "floor_consumer": {
+    "failed_run": 41117651392,
+    "toolchain": "Elixir 1.19.6 / OTP 28",
+    "observed_case_seconds": [
+      124.649,
+      129.847,
+      146.651
+    ],
+    "outcomes": [
+      "passed",
+      "passed",
+      "failed"
+    ],
+    "original_diagnostic": "consumer run failed; nested output was not retained in CI artifact",
+    "repair_commit": "5f6b96e",
+    "repair": "Three-minute cold command deadlines; seven-minute enclosing case; print typed exit/timeout and bounded output on failure. Behavioral assertions unchanged.",
+    "narrow_result": "portable_asset_example_test.exs passed"
+  },
+  "full_gate": "Final outcome is reported on the PR; this file does not label intermediate failures as a passing full gate."
+}

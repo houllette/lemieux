@@ -19,6 +19,56 @@ cost stays UNPRICED and its request cap still applies. Interrupted calls stay in
 passes. Cost derived from token tariffs is identified separately from an
 account-side invoice or subscription quota.
 
+## Recorded results
+
+The native candidate and repaired live observations use source
+`9f07379990748694e4223929937cac8f12b79517`.
+The transport driver ran on `ee52dc4b0815998be10517beb70e5874c50eee57`; its
+results keep that identity. A subsequent native check exposed a cancellation
+accounting bug. The repaired source was qualified with a distinct registered
+reserve job, without modifying or refunding the original history.
+
+| Observation | Requests | Result |
+| --- | ---: | --- |
+| OpenAI API, `openai:gpt-6-sol` | 7 | Tool/edit/check, resume, structured output and running-shell cancellation passed |
+| Codex subscription, `openai_codex:gpt-6.1-sol` | 7 | Same checks passed; subscription billing/quota not independently verified |
+| Local Ollama, `qwen3.8:27b-mxfp8` | 8 | Same checks passed; economic cost remains UNPRICED |
+| Original native TUI, OpenAI | 7 | Coding, UI controls and process cancellation passed; saved free-tool hold stayed active |
+| Repaired native TUI, OpenAI | 7 | Coding, undo/redo, cancellation and continuation after restart passed; final active/debt counts zero |
+
+[Accounting](accounting.json) records all 36 calls, including native auxiliary
+requests. OpenAI API token-tariff accounting totals $0.182856; Codex list-tariff
+accounting totals $0.023521. These are usage-based estimates, not an independently
+verified invoice. No further live calls were made. Google was excluded;
+Anthropic credentials and a configured hosted MCP OAuth account were unavailable.
+
+The original [transport observations](transport-observations.json),
+[native failure](native-before-repair.json),
+[reserve registration](reserve-cancellation.json) and
+[repaired native receipt](native-after-repair.json) retain that distinction.
+The [local archive receipt](native-archive.json) and
+[actual upgrade report](upgrade-report-macos-silicon-local.json) bind the local
+Apple Silicon checks to the archive and restart-plan digests. The cross-platform
+GitHub rehearsal is a separate result.
+[Current PR checks](https://github.com/houllette/lemieux/pull/117/checks) cover the
+final review head. The [release rehearsal](https://github.com/houllette/lemieux/actions/runs/41117747494)
+builds source `9f07379`; subsequent example-deadline and evidence commits do not
+change the runtime or release-host code. Rebuilding for the final tag still
+requires qualification of the exact final archives.
+
+The [coding/cancellation recording](native-coding-cancellation.cast) and
+[resume recording](native-resume.cast) are native OpenAI terminal runs with only
+synthetic fixture content. Replay with an asciicast v2 player. They retain
+original timing and are qualification recordings, not a polished promotional
+video. Native pseudo-terminal cells were inspected; the computer-use tool refused
+Ghostty access for safety reasons, so desktop visual inspection remains unrun.
+The [announcement draft](announcement-draft.md) is prepared for publication after
+the maintainer completes the signed release and installation checks.
+
+[Offline observations](offline-observations.json) preserve the targeted results
+and intermediate failures. Full local gate and exact-head CI outcomes are reported
+in the pull request; an intermediate passing subset is not a full-gate claim.
+
 ## Candidate and archive gates
 
 The candidate source prepares version 1.0.0 with a reviewed restart decision

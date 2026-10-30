@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "source": "ee52dc4b0815998be10517beb70e5874c50eee57",
+  "archive_sha256": "2afc2ca5570f83ead48b2f70fa849b51d7afbe6d9019d892ac8eb820d77b7544",
+  "status": "failed_durable_cancellation_accounting",
+  "model": "openai:gpt-6-sol",
+  "requests": 7,
+  "accounting": {
+    "active": 1,
+    "max_cost_usd": 2.0,
+    "max_requests": 8,
+    "requests": 7,
+    "reserved_usd": 0.0,
+    "spent_usd": 0.084938,
+    "unmeasured": 0
+  },
+  "observed": [
+    "no-key provider panel and skip (separate zero-request invocation)",
+    "multiline composer",
+    "draft preserved in Tasks and after resize from 110x32 to 80x24",
+    "tools tray",
+    "actual read/edit/bash check with unchanged Makefile",
+    "undo restored original bytes; redo restored edited bytes",
+    "cross-process resume answered from prior tool results",
+    "Ctrl-C cancelled a running shell; owned process gone",
+    "normal quit restored alternate screen and exited zero"
+  ],
+  "failure": "A cancelled free-tool reservation remained active in the saved ledger. A later dollar-limited resume treats an active saved reservation as unknown spend. Original history and allowance were retained without mutation or refund.",
+  "repair": "9f07379990748694e4223929937cac8f12b79517",
+  "reserve_registration": "reserve-cancellation.json",
+  "visual_inspection": "unrun: computer-use access to Ghostty was refused for safety reasons; native pseudo-terminal output was inspected instead"
+}

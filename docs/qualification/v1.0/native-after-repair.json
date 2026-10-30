@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "source": "9f07379990748694e4223929937cac8f12b79517",
+  "archive_sha256": "f482e2b1a01f340b3c17b72d7c8a4a32686f9e3a7425aab65858d26d70962cb5",
+  "target": "macos_silicon",
+  "model": "openai:gpt-6-sol",
+  "status": "passed",
+  "reserve_registration": "reserve-cancellation.json",
+  "accounting": {
+    "active": 0,
+    "max_cost_usd": 1.0,
+    "max_requests": 8,
+    "requests": 7,
+    "reserved_usd": 0.0,
+    "spent_usd": 0.085225,
+    "unmeasured": 0
+  },
+  "requests_include_auxiliary_calls": true,
+  "observed": [
+    "real read/edit/bash tool loop",
+    "exact edited bytes and unchanged Makefile; make exited successfully",
+    "undo restored original bytes and redo restored edited bytes",
+    "Ctrl-C cancelled the running shell before its 60 second timer; owned process gone",
+    "durable budget active=0 and unmeasured=0 after cancellation",
+    "restart retained five requests and measured cost; continuation returned integer 7",
+    "final accounting retains seven requests and includes native session-summary request",
+    "normal quit restored terminal alternate screen and exited zero"
+  ],
+  "recovery": "Earlier failed history was retained; this is a distinct bounded reserve job. Paid-tool unknown-cost preservation is covered by offline regressions, not an invented paid external effect.",
+  "visual_inspection": "native pseudo-terminal cells inspected; access to Ghostty refused by the computer-use tool for safety reasons; no desktop visual QA claim"
+}
