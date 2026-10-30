@@ -232,6 +232,15 @@ answer its filter stopped), which a predicate should not retry: it is
 usually refused again, and each attempt is another flagged request on the
 account.
 
+Local loop guards and turn ceilings instead populate `harness_error`, with
+`stop_reason` (for example, `no_progress` or `max_turns`) and the original
+diagnostic `reason`. Their transcript `error` entries carry `source: "harness"`;
+provider failures carry `source: "provider"`. A guard stop keeps its failed
+status and finish reason, but does not count as an inference failure. Custom
+guard reasons and messages use the same provenance. Unmarked legacy error
+entries still project into `provider_error`, including uncategorized failures;
+consumers of older observations must account for that broader legacy meaning.
+
 Native benchmark, discovery, confirmation and profile runs inherit the session's
 shipped provider retry policy. Use `session_options: [provider_retry: false]`
 on a native runtime when the host owns retries; discovery's override is

@@ -38,6 +38,13 @@ defmodule Lemieux.Agent.Session do
   Failed requests without usage still leave total spend unknown, even when a
   retry succeeds. Network recovery must not make missing billing disappear.
 
+  Observations keep provider failures in `provider_error` and local loop or
+  turn-budget stops in `harness_error`, whose `stop_reason` and diagnostic
+  `reason` preserve the host's decision and wording. Their transcript error
+  entries carry `source: "provider"` or `source: "harness"`. Classification
+  uses that provenance, never the wording or absence of a provider category;
+  unmarked legacy errors remain provider errors rather than losing failures.
+
   A guardian cancels and removes the owned session if its calling worker dies.
   Sharing the mounted runtime does not give an attempt an unowned lifetime.
 
@@ -399,6 +406,7 @@ defmodule Lemieux.Agent.Session do
        "resources" => Resources.from_entries(current),
        "tool_metrics" => metrics,
        "provider_error" => provider_error(current),
+       "harness_error" => harness_error(current),
        "provider_retries" => retries,
        "transcript" => Enum.map(snapshot.entries, &entry/1)
      }}
@@ -417,7 +425,7 @@ defmodule Lemieux.Agent.Session do
   defp provider_error(entries) do
     entries
     |> Enum.reverse()
-    |> Enum.find(&(&1.type == :error))
+    |> Enum.find(&(&1.type == :error and &1.payload["source"] != "harness"))
     |> case do
       nil ->
         nil
@@ -429,6 +437,16 @@ defmodule Lemieux.Agent.Session do
           "http_status" => payload["http_status"],
           "code" => payload["code"]
         }
+    end
+  end
+
+  defp harness_error(entries) do
+    entries
+    |> Enum.reverse()
+    |> Enum.find(&(&1.type == :error and &1.payload["source"] == "harness"))
+    |> case do
+      nil -> nil
+      %Entry{payload: payload} -> Map.take(payload, ["stop_reason", "reason"])
     end
   end
 

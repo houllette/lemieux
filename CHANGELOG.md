@@ -16,6 +16,9 @@ API.
 - Restore native Codex structured-output streaming with ReqLLM 1.29 by
   removing its copied private model option before stream validation, retaining
   the prepared schema, context and output-validation policy. (#113)
+- Record local guard and budget stops as `harness_error` in experimental
+  agent/benchmark observations, with typed transcript provenance. Preserve
+  provider failures in `provider_error`, including unclassified errors. (#114)
 
 ### Features
 

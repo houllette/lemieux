@@ -482,11 +482,15 @@ defmodule Lemieux.Session.ToolWave do
   end
 
   def stop(state, reason, said) do
+    stop_reason = reason |> Instrumentation.telemetry_stop_reason() |> Atom.to_string()
+
     state
     |> Instrumentation.finish_turn_telemetry(reason)
     |> Instrumentation.finish_prompt_telemetry(reason)
     |> Audit.ensure_harness_snapshot()
-    |> Core.append({:error, %{"reason" => said}, nil})
+    |> Core.append(
+      {:error, %{"source" => "harness", "stop_reason" => stop_reason, "reason" => said}, nil}
+    )
     |> Audit.finalize_run(reason)
     |> then(&Core.emit(&1, {:context, Compacting.context(&1)}))
     |> Core.emit({:finished, reason})
