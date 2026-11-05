@@ -598,12 +598,11 @@ defmodule Lemieux.MixProject do
       # The release host is a separate Mix project with its own lock, so a
       # bump here never reaches the binary on its own. Drift is refused unless
       # reviewed: the bundled System One compaction extension's SDK pulls
-      # in sinter 0.3.2, which pins jsv ~> 0.21.2 (and with it texture 1.x),
-      # and pristine 0.4.0, which pins finch ~> 0.23.0. The library resolves
-      # jsv 0.26.0 and finch 0.24.0. Drop each exception when its upstream
-      # constraint relaxes; the check says when that happens.
+      # in pristine 0.4.0, which pins finch ~> 0.23.0. The library resolves
+      # finch 0.24.0. Drop this exception when its upstream constraint relaxes;
+      # the check says when that happens.
       "deps.drift":
-        "cmd elixir scripts/check_lock_drift.exs --allow finch,jsv,texture mix.lock dist/lmx/mix.lock",
+        "cmd elixir scripts/check_lock_drift.exs --allow finch mix.lock dist/lmx/mix.lock",
       "test.distributed": [
         "cmd epmd -daemon",
         "test --only distributed --warnings-as-errors"
