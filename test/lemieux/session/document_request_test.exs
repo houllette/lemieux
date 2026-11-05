@@ -149,6 +149,11 @@ defmodule Lemieux.Session.DocumentRequestTest do
       start(dir, [
         fn _request ->
           send(parent, {:started, self()})
+
+          receive do
+            {:monitor_ready, ref} -> send(parent, {:monitor_ready, ref})
+          end
+
           Scripted.delayed(60_000, Scripted.complete("orphaned"))
         end
       ])
@@ -156,7 +161,7 @@ defmodule Lemieux.Session.DocumentRequestTest do
     caller =
       Task.async(fn ->
         try do
-          Session.generate_document(session, "label", 0, request(), &build/1)
+          Session.generate_document(session, "label", 0, request(), &build/1, timeout_ms: 60_000)
         catch
           :exit, reason -> {:session_down, reason}
         end
@@ -165,6 +170,11 @@ defmodule Lemieux.Session.DocumentRequestTest do
     assert_receive {:started, worker}
     on_exit(fn -> Process.exit(worker, :kill) end)
     monitor = Process.monitor(worker)
+    # The monitor and this message have the same sender and target. The reply
+    # establishes the monitor before a different process's exit kills the
+    # worker; otherwise a late monitor can legitimately report :noproc.
+    send(worker, {:monitor_ready, monitor})
+    assert_receive {:monitor_ready, ^monitor}
     Process.exit(session, :kill)
 
     assert {:session_down, {:killed, _call}} = Task.await(caller)
