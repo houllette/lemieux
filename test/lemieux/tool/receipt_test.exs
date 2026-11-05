@@ -43,9 +43,12 @@ defmodule Lemieux.Tool.ReceiptTest do
   @call %{id: "t1", name: "remote", arguments: %{"to" => "ops"}}
 
   describe "record/2" do
-    test "sends the receipt to the session, keyed by the call" do
-      assert Receipt.record(%{session: self(), call_id: "t1"}, %{"id" => "msg_1"}) == :ok
-      assert_receive {:tool_receipt, "t1", %{"id" => "msg_1"}}
+    test "sends the receipt to the session, keyed by the execution and call" do
+      ref = make_ref()
+      context = %{session: self(), call_id: "t1", tool_execution_ref: ref}
+
+      assert Receipt.record(context, %{"id" => "msg_1"}) == :ok
+      assert_receive {:tool_receipt, ^ref, "t1", %{"id" => "msg_1"}}
     end
 
     test "refuses a receipt the transcript could not hold" do
@@ -55,7 +58,7 @@ defmodule Lemieux.Tool.ReceiptTest do
       assert Receipt.record(%{session: self(), call_id: "t1"}, %{atom: "key"}) ==
                {:error, :not_json}
 
-      refute_receive {:tool_receipt, _id, _receipt}
+      refute_receive {:tool_receipt, _ref, _id, _receipt}
     end
   end
 

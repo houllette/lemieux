@@ -149,6 +149,11 @@ defmodule Lemieux.Tool do
   `tool_wave_id` ties a receipt to its original assistant entry when a provider
   reuses call IDs in later waves. Neither field restores authority from history.
 
+  `tool_execution_ref` is the session's live correlation reference for this
+  invocation. `Lemieux.Tool.Receipt.record/2` uses it to reject a delayed receipt
+  from an earlier call, even when the model reuses its call ID. Preserve it when
+  forwarding the context to a helper; never put it in transcript evidence.
+
   `input_modalities` is what the session's model can be shown besides text,
   as the model catalog names it (`:image`, `:pdf`), or `:unknown`. A tool that
   can return an attachment (`Lemieux.Tool.Attachment`) asks it first, and
@@ -164,6 +169,7 @@ defmodule Lemieux.Tool do
           optional(:execution) => Lemieux.Execution.t(),
           optional(:root_session_id) => String.t(),
           optional(:tool_wave_id) => String.t() | nil,
+          optional(:tool_execution_ref) => reference(),
           optional(:input_modalities) => [atom()] | :unknown,
           optional(:current_input) => Lemieux.Input.t() | nil,
           optional(:input_original) => Lemieux.Input.capability(),

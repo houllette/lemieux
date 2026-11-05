@@ -67,8 +67,12 @@ defmodule Lemieux.Session.DocumentRequest do
     session = self()
     ref = make_ref()
 
+    # Like an ordinary turn, this provider request belongs to the session.
+    # terminate/2 cannot run after :kill, so an unlinked task would keep calling
+    # the provider after its only writer and timeout owner had disappeared.
+    # The session traps exits; a task crash is still handled through its monitor.
     task =
-      Task.Supervisor.async_nolink(Sup.task_supervisor(state.supervisor), fn ->
+      Task.Supervisor.async(Sup.task_supervisor(state.supervisor), fn ->
         OpenTelemetry.with_context(route.id, :document, request_id, fn ->
           Accounting.run_provider(
             provider,

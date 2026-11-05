@@ -204,8 +204,13 @@ defmodule Lemieux.Session.ToolWave do
     session = self()
     descriptor = call_descriptor(state, call)
     timeout_ms = descriptor_timeout(descriptor, state.tool_timeout_ms)
-    context = tool_context(state, call, session, timeout_ms)
     stream_ref = make_ref()
+
+    context =
+      state
+      |> tool_context(call, session, timeout_ms)
+      |> Map.put(:tool_execution_ref, stream_ref)
+
     started = System.monotonic_time(:millisecond)
 
     Telemetry.start(
@@ -436,10 +441,13 @@ defmodule Lemieux.Session.ToolWave do
   defp descriptor_identity(nil), do: nil
   defp descriptor_identity(descriptor), do: descriptor.identity
 
-  def running_call(state, call_id) do
+  def running_call(state, call_id, execution_ref) do
     Enum.find_value(state.wave.tool_tasks, fn
-      {_ref, {_task, %{id: ^call_id} = call, _stream_ref, _started, _timer, _descriptor}} -> call
-      _other -> nil
+      {_ref, {_task, %{id: ^call_id} = call, ^execution_ref, _started, _timer, _descriptor}} ->
+        call
+
+      _other ->
+        nil
     end)
   end
 
