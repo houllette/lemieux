@@ -1,12 +1,12 @@
 Rust crates in the ex_ratatui terminal NIF
 ==========================================
 
-ex_ratatui: 0.17.1
-Cargo.lock sha256: d3808e13dfe134e4f32f106f193a3a79142334ea0b362322a39b576686a0a080
+ex_ratatui: 0.18.0
+Cargo.lock sha256: 370d1962976af9d1a3b79750f2d82a5842de143ee5dd815ebd8e3fca45d06052
 Targets: aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc
 Licenses: Apache-2.0, ISC, MIT, Zlib
 
-The terminal library's native code (lib/ex_ratatui-0.17.1/priv/native)
+The terminal library's native code (lib/ex_ratatui-0.18.0/priv/native)
 is compiled from these crates. Each entry gives the crate, its version and
 its declared license; where the crate offers a choice, the license lmx
 uses it under follows "used under". The copyright lines its license files
@@ -69,7 +69,7 @@ equivalent 1.0.2: Apache-2.0 OR MIT; used under MIT
     Copyright (c) 2016--2023
 errno 0.3.14: MIT OR Apache-2.0; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
     Copyright (c) 2014 Chris Wong
-ex_ratatui 0.17.1: MIT
+ex_ratatui 0.18.0: MIT
 fast-srgb8 1.0.0: MIT OR Apache-2.0 OR CC0-1.0; used under MIT
     Copyright 2016 The Miri Developers
     Copyright (c) 2021 Thom Chiovoloni
@@ -113,7 +113,7 @@ kasuari 0.4.12: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2024 Josh McKinney
 libc 0.2.186: MIT OR Apache-2.0; used under MIT
     Copyright (c) The Rust Project Developers
-libloading 0.9.0: ISC  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
+libloading 0.9.0: ISC  (aarch64-apple-darwin, x86_64-apple-darwin)
     Copyright © 2015, Simonas Kazlauskas
 libm 0.2.16: MIT
     Copyright (c) 2018 Jorge Aparicio
@@ -228,7 +228,7 @@ ratatui-image 11.1.0: MIT
 ratatui-macros 0.7.2: MIT
     Copyright (c) 2024 Dheepak Krishnamurthy
     Copyright (c) 2025 The Ratatui Developers
-ratatui-textarea 0.9.2: MIT
+ratatui-textarea 0.9.3: MIT
     Copyright (c) 2022 rhysd
     Copyright (c) The Ratatui Developers
 ratatui-widgets 0.3.2: MIT
@@ -244,7 +244,7 @@ regex-syntax 0.8.10: MIT OR Apache-2.0; used under MIT
 render3d 0.1.0: MIT
 rustix 0.38.44: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
 rustix 1.1.4: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT; used under MIT  (aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu)
-rustler 0.38.0: MIT OR Apache-2.0; used under MIT
+rustler 0.39.0: MIT OR Apache-2.0; used under MIT
 ryu 1.0.23: Apache-2.0 OR BSL-1.0; used under Apache-2.0
 safe_arch 0.9.3: Zlib OR Apache-2.0 OR MIT; used under MIT
     Copyright (c) 2023 Daniel "Lokathor" Gee.
@@ -287,7 +287,7 @@ tracing 0.1.44: MIT
 tracing-core 0.1.36: MIT
     Copyright (c) 2019 Tokio Contributors
 tui-big-text 0.8.10: MIT OR Apache-2.0; used under MIT
-tui-markdown 0.3.10: MIT OR Apache-2.0; used under MIT
+tui-markdown 0.3.11: MIT OR Apache-2.0; used under MIT
 unicase 2.9.0: MIT OR Apache-2.0; used under MIT
     Copyright (c) 2014-2026 Sean McArthur
 unicode-segmentation 1.13.2: MIT OR Apache-2.0; used under MIT
@@ -331,7 +331,7 @@ zune-jpeg 0.5.15: MIT OR Apache-2.0 OR Zlib; used under MIT
 Files these crates carry
 ------------------------
 
---- ex_ratatui 0.17.1: syntaxes/LICENSE ---
+--- ex_ratatui 0.18.0: syntaxes/LICENSE ---
 
 MIT License
 
