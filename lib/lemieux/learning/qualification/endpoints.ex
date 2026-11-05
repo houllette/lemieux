@@ -58,7 +58,7 @@ defmodule Lemieux.Learning.Qualification.Endpoints do
           {arm, compare(streams, arm, seeds, plan)}
         end)
 
-      mechanism = mechanism?(ordinary)
+      mechanism = mechanism?(plan, ordinary)
       complete = ordinary["mechanics"] == "passed" and mechanism
 
       quality? =
@@ -91,12 +91,25 @@ defmodule Lemieux.Learning.Qualification.Endpoints do
     end
   end
 
-  defp mechanism?(report) do
+  defp mechanism?(
+         %{
+           "runtime" => %{"research_protocol" => %{"id" => "whole_record_research/v7"} = protocol}
+         },
+         report
+       ) do
+    updating = Enum.filter(report["rows"], &(&1["arm"] == "updating"))
+    kinds = get_in(protocol, ["asset_search", "kinds"]) || []
+    profile = protocol["profile_search"] != true or profile_exercised?(report["arms"]["updating"])
+
+    assets = Enum.all?(kinds, fn kind -> Enum.any?(updating, &asset_exercised?(&1, kind)) end)
+
+    (protocol["profile_search"] == true or kinds != []) and profile and assets
+  end
+
+  defp mechanism?(_historical, report) do
     updating = report["arms"]["updating"]
 
-    profile =
-      updating["candidate_count"] > 0 and updating["promotion_count"] > 0 and
-        updating["promotion_count"] == updating["rollback_count"]
+    profile = profile_exercised?(updating)
 
     assets =
       updating["asset_candidate_count"] > 0 and updating["asset_application_count"] > 0 and
@@ -104,6 +117,33 @@ defmodule Lemieux.Learning.Qualification.Endpoints do
 
     profile or assets
   end
+
+  defp asset_exercised?(
+         %{
+           "asset_kind_evidence" => evidence,
+           "asset_candidate_count" => candidates,
+           "asset_application_count" => applications,
+           "asset_restoration_count" => applications
+         },
+         kind
+       )
+       when is_integer(candidates) and candidates > 0 and is_integer(applications) and
+              applications > 0 do
+    case evidence[kind] do
+      [_ | _] = digests ->
+        Enum.all?(digests, &(is_binary(&1) and Regex.match?(~r/\A[a-f0-9]{64}\z/, &1)))
+
+      _unused ->
+        false
+    end
+  end
+
+  defp asset_exercised?(_unused, _kind), do: false
+
+  defp profile_exercised?(updating),
+    do:
+      updating["candidate_count"] > 0 and updating["promotion_count"] > 0 and
+        updating["promotion_count"] == updating["rollback_count"]
 
   defp powered?(%{"claim" => "independent_confirmation"} = plan) do
     quality_power(plan)["all_three_lower_bound"] >= plan["analysis"]["desired_power"]

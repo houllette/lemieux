@@ -7,6 +7,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
   alias Lemieux.Benchmark.Corpus.Exposure
   alias Lemieux.Benchmark.Runtime, as: BenchmarkRuntime
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.Learning.AssetEvidence
   alias Lemieux.CLI.Learning.AssetLane
   alias Lemieux.CLI.Learning.CapturedLesson
   alias Lemieux.CLI.Learning.Fixtures
@@ -400,6 +401,7 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
       "original_budget_stop" => original.observation["finish_reason"] == ":max_turns",
       "selected_budget_stop" => result.selected.observation["finish_reason"] == ":max_turns",
       "probe_budget_stops" => probe_budget_stops(result),
+      "asset_kind_evidence" => AssetEvidence.observed(evidence),
       "asset_candidate_count" => asset_candidate_count(result),
       "asset_application_count" => asset_application_count(result),
       "asset_restoration_count" => asset_restoration_count(result),

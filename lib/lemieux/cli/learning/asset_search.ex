@@ -33,8 +33,9 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   @system """
   You are Lemieux's typed asset proposer. Use the public task trajectory and
   authorized earlier experience to propose reusable harness components. Return
-  JSON only: {"assets":[ASSET,...]}. At most two assets: one skill/procedure tree
-  and one shipped configuration. Return {"assets":[]} if no concrete hypothesis is justified.
+  JSON only: {"assets":[ASSET,...]}. At most two assets, one of each selected kind:
+  a skill/procedure tree, shipped configuration, or tool descriptions.
+  Return {"assets":[]} if no concrete hypothesis is justified.
   Each ASSET has exactly kind, payload, files, requires_tools, triggers.
   A skill has kind "skill", payload {"name":"lowercase-hyphenated-name"},
   with no other payload keys. Description belongs only in SKILL.md frontmatter.
@@ -50,6 +51,9 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   A configuration has kind "configuration", payload {"extension":"search",
   "glob_after_requests":0..4}, files {}, triggers [], requires_tools ["glob"].
   It changes only discovery of an already available tool. Do not invent settings.
+  A tool description has kind "tool_description", payload {"read":"bounded guidance"}
+  using only description_tools supplied by the host, files {}, triggers [], and
+  requires_tools listing those tools. It cannot change schemas or permissions.
   Use only allowed_asset_kinds from the host input. A host may disable helper source.
   All assets are unconfirmed hypotheses. Cite the observed workflow in the skill
   body and describe conditions and uncertainty. Never refer to benchmark cases,
@@ -72,8 +76,9 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   @spec protocol(opts :: keyword()) :: map()
   def protocol(opts),
     do: %{
-      "id" => "reviewed_assets/v3",
-      "maximum_candidates" => length(Keyword.get(opts, :kinds, ["skill", "configuration"])),
+      "id" => "reviewed_assets/v4",
+      "maximum_candidates" =>
+        min(2, length(Keyword.get(opts, :kinds, ["skill", "configuration"]))),
       "repetitions" => 2,
       "kinds" => Keyword.get(opts, :kinds, ["skill", "configuration"]),
       "helper_extensions" => Keyword.get(opts, :helper_extensions, [".py"]),
@@ -212,6 +217,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
       JSON.encode!(%{
         "public_record" => record,
         "available_tools" => context.tools,
+        "description_tools" => context.description_tools,
         "allowed_asset_kinds" =>
           Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
         "settings_allowlist" => context.settings_allowlist,
@@ -375,6 +381,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
     }
 
   defp search_surface?(%{"kind" => "skill"}), do: true
+  defp search_surface?(%{"kind" => "tool_description"}), do: true
 
   defp search_surface?(%{
          "kind" => "configuration",

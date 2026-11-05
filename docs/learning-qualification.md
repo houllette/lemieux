@@ -1,5 +1,65 @@
 # Qualifying learning before release
 
+## Planning the 1.1 learning work
+
+The remaining [learning tracker](https://github.com/houllette/lemieux/issues/47)
+covers independent outcome qualification, typed assets and reusable exports.
+Passing scripted mechanics does not satisfy the hosted efficacy requirement.
+The [1.1 qualification packet](qualification/2026-11-05-rsi-v1.1/README.md)
+retains the offline gate and capped hosted skill pilot: complete accounting,
+an unobserved updating skill mechanism, and inconclusive quality and efficiency.
+
+Use `--plan-only` to review the existing runner's registration before authorizing
+requests. It writes `registration.json` and a digest-bound `planning.json`, then
+stops before opening an allowance, preparing credentials, starting sessions or
+running tasks. A synthetic plan needs no Docker daemon; executing it still
+requires the pinned image. Imported repository plans validate their local source,
+grader and cached-image prerequisites through the existing importer.
+
+For example, this **makes no hosted request**:
+
+```sh
+mix run scripts/qualify_learning_study.exs --plan-only --research --stage mechanism \
+  --assets --asset-only --asset-kinds skill --no-asset-helpers \
+  --model openai_codex:gpt-6-luna --effort low \
+  --editor-model openai_codex:gpt-6-sol --editor-effort high \
+  --allowance-dir tmp/proposed-learning-allowance \
+  --max-total-requests 800 --max-total-tokens 8000000 \
+  --max-total-time-ms 7200000 --output tmp/proposed-learning-plan
+```
+
+The proposed ceiling is separate from the registered sample's maximum request
+envelope, which includes acquisition and every arm and repetition. A smaller
+ceiling can interrupt the sample; it does not permit dropping episodes or
+qualifying a partial result. Planning grants no execution authorization. After
+review and explicit authorization, use a new output directory for execution.
+
+New research registrations use `whole_record_research/v7`. Their v2 mechanism
+receipts bind the full execution configuration, including the host toolchain,
+container images, isolation, generation horizon, transport and resource policies.
+Only fresh corpus membership, acquired seed usage, stage and the shared allowance
+ledger vary between stages. Historical v1 receipts retain their original scope
+and cannot unlock a v7 run.
+
+Every enabled asset kind must be observed in the updating arm before either
+registered endpoint can be supported. Evidence names exact selected digests in
+verified effective snapshots, actual procedure loading or affected-tool calls,
+changed configuration disclosure, and restoration. An unrelated existing skill,
+an activation counter or a successful profile search cannot qualify another kind.
+`--asset-kinds tool_description` enables explicit experiments over descriptions
+of already authorized tools; up to two distinct assets share the existing bounded
+search allocation. Skills and shipped configuration retain their existing paths.
+These experiments grant no automatic persistent selection or permission changes.
+Qualify a new kind in its own registered `--asset-only --asset-kinds KIND` study
+before considering it for a default controller. Observing several kinds in one
+successful combined arm does not identify each kind's independent contribution.
+
+Use the local `lemieux-bench` host for its scripted container canaries and public
+reference/no-op grader controls against the chosen `LEMIEUX_PATH`. Its task
+manifests and exposure ledger remain authoritative: partitioning an exposed pool
+does not create fresh independent learning streams. Keep benchmark-host results,
+stock CLI/TUI learning replay, typed-asset evidence and efficacy separate.
+
 ## Whole-record research sequence
 
 The [recorded research sequence](qualification/2026-10-21-research-sequence/README.md)

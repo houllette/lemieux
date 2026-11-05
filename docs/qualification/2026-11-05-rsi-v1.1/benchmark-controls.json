@@ -1,0 +1,1 @@
+{"by_task":{"strict-json-persistence":{"nop":{"error":null,"finish_reason":":stop","passed":false,"solution_exit_status":null},"oracle":{"error":null,"finish_reason":":stop","passed":true,"solution_exit_status":0}}},"nop_passed":[],"oracle_failed":[],"tasks":1}

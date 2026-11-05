@@ -153,6 +153,57 @@ defmodule Lemieux.CLI.Learning.MechanismTest do
              )
   end
 
+  test "v7 binds the complete execution environment and cannot inherit a historical canary" do
+    runtime = %{
+      "revision" => String.duplicate("a", 40),
+      "environment" => "networkless_nonroot_container",
+      "image" => "sha256:python",
+      "generation" => %{"task_requests" => 12, "max_tokens" => 8192},
+      "inference_route" => "scripted",
+      "research_protocol" => %{
+        "id" => "whole_record_research/v7",
+        "stage" => "mechanism",
+        "profile_search" => true,
+        "asset_search" => nil
+      }
+    }
+
+    required = Mechanism.requirements(runtime)
+
+    receipt =
+      seal(%{
+        "kind" => "observed_learning_mechanism/v2",
+        "status" => "passed",
+        "required_checks" => required,
+        "checks" => Map.new(required, fn {key, _} -> {key, true} end),
+        "binding" => Mechanism.execution_binding(runtime, "model", "low")
+      })
+
+    current = put_in(runtime, ["research_protocol", "stage"], "development")
+    assert :ok = Mechanism.gate(receipt, current, "model", "low")
+
+    for changed <- [
+          Map.put(current, "image", "sha256:other"),
+          Map.put(current, "environment", "network_enabled"),
+          put_in(current, ["generation", "task_requests"], 24),
+          put_in(current, ["generation", "max_tokens"], 16_384)
+        ] do
+      assert {:error, :matching_mechanism_required} =
+               Mechanism.gate(receipt, changed, "model", "low")
+    end
+
+    assert {:error, :matching_mechanism_required} =
+             Mechanism.gate(
+               seal(Map.put(receipt, "kind", "observed_learning_mechanism/v1")),
+               current,
+               "model",
+               "low"
+             )
+
+    assert {:error, :matching_mechanism_required} =
+             Mechanism.gate(seal(Map.put(receipt, "checks", %{})), current, "model", "low")
+  end
+
   defp seal(map),
     do: map |> Map.delete("sha256") |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
 end

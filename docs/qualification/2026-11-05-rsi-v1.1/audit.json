@@ -1,0 +1,926 @@
+{
+  "active_dispatches_at_close": 0,
+  "all_role_totals_match_durable_ledger": true,
+  "all_row_totals_match_meters": true,
+  "all_workspace_evidence_complete": true,
+  "allowance_owner_lock_removed": true,
+  "authorization_sha256": "8a157adfb8f1e1fd4efe4c895be69e53defa8479c5e90b6102fc174218842032",
+  "by_model": {
+    "openai_codex:gpt-6-luna": {
+      "requests": 522,
+      "tokens": 2580888
+    },
+    "openai_codex:gpt-6-sol": {
+      "requests": 25,
+      "tokens": 1398004
+    }
+  },
+  "by_role": {
+    "critic": {
+      "requests": 6,
+      "tokens": 202505
+    },
+    "probe": {
+      "requests": 356,
+      "tokens": 1766717
+    },
+    "proposer": {
+      "requests": 10,
+      "tokens": 209551
+    },
+    "reflection": {
+      "requests": 9,
+      "tokens": 985948
+    },
+    "task": {
+      "requests": 166,
+      "tokens": 814171
+    }
+  },
+  "completed_episodes": 13,
+  "contract_verification": {
+    "all_episode_run_evidence_verified": true,
+    "all_verified": true,
+    "base_report_recomputed": true,
+    "evidence_digest_and_asset_use_rows": 13,
+    "larger_study_unlocked": false,
+    "mechanism_recomputed_from_private_raw_evidence": true,
+    "mechanism_sha256": "6d31a133bcbc03c61e0fc19a1bb87823e81095e11d3b23fc60a0a106b6047820",
+    "method": "native_Contract_Qualification_Endpoints_Mechanism_AssetEvidence",
+    "plan_sha256": "67679f1ff1a50dcdf74f4a4cb0eee31743a98120e95d40f9a406c3c7deeec17f",
+    "report_sha256": "57b6d18eace234aed84c37a24f3c092e13158dc7397263ad3bedbc2828d76d55",
+    "research_endpoints_recomputed": true
+  },
+  "durable_controller_bytes_sha256": "beb0233f9acf531bac94426214b018c4496b2271bb05071142271fa64c8b58d9",
+  "elapsed_to_report_ms": 2366742,
+  "episodes": [
+    {
+      "arm": "disabled",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 11,
+      "physical_tokens": 51058,
+      "repetition": 1,
+      "row": {
+        "allocated_requests": 11,
+        "arm": "disabled",
+        "asset_application_count": 0,
+        "asset_candidate_count": 0,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [],
+        "evidence_sha256": "0bfd3f4a188adfe0e664259c0e21473013b3bfb9db03e54c11afe115bb288edb",
+        "exposed_case_ids": [],
+        "latency_ms": 45961,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 1,
+        "requests": 11,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 51058,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "0bfd3f4a188adfe0e664259c0e21473013b3bfb9db03e54c11afe115bb288edb",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "frozen",
+      "asset_restored": true,
+      "asset_selected_sha256": [
+        "d7b65f88926c840ddb0fa31c8877981cc8002db617d1cf090f6de4c4a8a50e4c"
+      ],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 82,
+      "physical_tokens": 602077,
+      "repetition": 1,
+      "row": {
+        "allocated_requests": 123,
+        "arm": "frozen",
+        "asset_application_count": 1,
+        "asset_candidate_count": 1,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 1,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_e149a2da0cccde1c5a502fcf1f1e98dc062f83eb3e621dc77504def1d1586118",
+          "lesson_f69d04b2ea6ff314b84c1b98548fea3b7212f03ce6a4309820c58c4daa269886",
+          "lesson_ed0131e611e808ddff086ac6043f27efd37f999d974a008201bdf6fbfc20e067"
+        ],
+        "evidence_sha256": "7b5974a1e1a886ec13ad8864c51757a0b20f9dcefb064543689f5b56454483ac",
+        "exposed_case_ids": [
+          "seed-graph-1"
+        ],
+        "latency_ms": 371234,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 1,
+        "requests": 82,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 602077,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "7b5974a1e1a886ec13ad8864c51757a0b20f9dcefb064543689f5b56454483ac",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "no_experience",
+      "asset_restored": true,
+      "asset_selected_sha256": [
+        "04cb3b8da94639dc782debbff1009205c31b78981e8037bab3e5492197a3e9a4"
+      ],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 82,
+      "physical_tokens": 622983,
+      "repetition": 1,
+      "row": {
+        "allocated_requests": 120,
+        "arm": "no_experience",
+        "asset_application_count": 1,
+        "asset_candidate_count": 1,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [
+            "04cb3b8da94639dc782debbff1009205c31b78981e8037bab3e5492197a3e9a4"
+          ],
+          "tool_description": []
+        },
+        "asset_restoration_count": 1,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_abdb225900ca528954e52c33bca37c06d1d43805837f835fab00baa9ae28c2d1",
+          "lesson_a557da25ed7282413032e2421be006edddeb957fefe4fb51762b4190547cac3a",
+          "lesson_8473f2f6b98fc0de521155a2e6a971e69a1d3ca297fb04c8c530d576f844ad2f",
+          "lesson_bae56c9349be5bd2f62429854766e25a2cdfd841d8280450018ea0e8264d500e"
+        ],
+        "evidence_sha256": "cf0b04dd894140648d0b2dc11ad158067e3ecd7a4832a7f156ad84a481ffa7cd",
+        "exposed_case_ids": [],
+        "latency_ms": 355843,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 1,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 1,
+        "requests": 82,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 622983,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "cf0b04dd894140648d0b2dc11ad158067e3ecd7a4832a7f156ad84a481ffa7cd",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "retrieval",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 11,
+      "physical_tokens": 85788,
+      "repetition": 1,
+      "row": {
+        "allocated_requests": 11,
+        "arm": "retrieval",
+        "asset_application_count": 0,
+        "asset_candidate_count": 0,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_2b5f2181a3c45f71702eba4155cd559d353b187773171fcd4eaf9f4611e5167c",
+          "lesson_1becc729a8c099aaa98f5a7fa3cdcff2ae219d70c4003784100f9da5400a896d",
+          "lesson_2a4893bc4fdf4bc6ea26788ef67ecb6ca23f2a442ce02c81b3d0f2bcaab29360"
+        ],
+        "evidence_sha256": "63259c286f48e10ea4a8119ceab61d7b1eac366a4035393c03fc2d4ec4197546",
+        "exposed_case_ids": [
+          "seed-graph-1"
+        ],
+        "latency_ms": 55977,
+        "original_budget_stop": false,
+        "passed": false,
+        "private_confirmation_passed": false,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 1,
+        "requests": 11,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 85788,
+        "visible_verification_passed": false,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "63259c286f48e10ea4a8119ceab61d7b1eac366a4035393c03fc2d4ec4197546",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "retry",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 10,
+      "physical_tokens": 51211,
+      "repetition": 1,
+      "row": {
+        "allocated_requests": 10,
+        "arm": "retry",
+        "asset_application_count": 0,
+        "asset_candidate_count": 0,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [],
+        "evidence_sha256": "b5ac5a7511dd30a81a26e0fa7e9cbf143752da0b7243b7851db96891038dd82b",
+        "exposed_case_ids": [],
+        "latency_ms": 41048,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 1,
+        "requests": 10,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 51211,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "b5ac5a7511dd30a81a26e0fa7e9cbf143752da0b7243b7851db96891038dd82b",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "updating",
+      "asset_restored": true,
+      "asset_selected_sha256": [
+        "8887cf26581b44f3beaa8625d5a605581dd660bb6c95f08ccda0daa2dccb0a17"
+      ],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 83,
+      "physical_tokens": 628930,
+      "repetition": 1,
+      "row": {
+        "allocated_requests": 118,
+        "arm": "updating",
+        "asset_application_count": 1,
+        "asset_candidate_count": 1,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 1,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_2b3ac000936e277a69482f4009b1bd524b5a3e3f92780774c004729b5fc62a27",
+          "lesson_241a88d7b31b174547915527c1437c413f0396b039997d9aad7aee33855c523a",
+          "lesson_8ff2ac3a15cb5310f91ceaf04e321671e354455a61b17365fc3d41cccf7ff70c"
+        ],
+        "evidence_sha256": "52546de72b021fe898b6d2a52defb1b92a1813b71889248952ead9edaba12df4",
+        "exposed_case_ids": [
+          "seed-graph-1"
+        ],
+        "latency_ms": 338332,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 3,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 1,
+        "requests": 83,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 628930,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "52546de72b021fe898b6d2a52defb1b92a1813b71889248952ead9edaba12df4",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "disabled",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":max_turns",
+          "harness_error": true,
+          "provider_error": false,
+          "status": "failed"
+        },
+        "selected": {
+          "finish_reason": ":max_turns",
+          "harness_error": true,
+          "provider_error": false,
+          "status": "failed"
+        }
+      },
+      "physical_request_count": 12,
+      "physical_tokens": 64703,
+      "repetition": 2,
+      "row": {
+        "allocated_requests": 12,
+        "arm": "disabled",
+        "asset_application_count": 0,
+        "asset_candidate_count": 0,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [],
+        "evidence_sha256": "f02b19f522b7c39bacaff436fee66add24c57df2c69d5af17f87d92a0b0e360f",
+        "exposed_case_ids": [],
+        "latency_ms": 47201,
+        "original_budget_stop": true,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 2,
+        "requests": 12,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": true,
+        "task_id": "development-graph-2",
+        "tokens": 64703,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "f02b19f522b7c39bacaff436fee66add24c57df2c69d5af17f87d92a0b0e360f",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "frozen",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 68,
+      "physical_tokens": 500847,
+      "repetition": 2,
+      "row": {
+        "allocated_requests": 108,
+        "arm": "frozen",
+        "asset_application_count": 0,
+        "asset_candidate_count": 1,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_9fc54685de2261f2eda20579ca9ae44cc21d02c7cee20c89179b0ff8ef1b8bfd",
+          "lesson_052e59aa35f9ee0ae02e034cb37fdd80862850b30c448746c7b28dcd2f47a51f",
+          "lesson_97c6966fff0d605b555ebf755bf9a0c454823e6bec1284d48971706348153199"
+        ],
+        "evidence_sha256": "336d583465d56c5added27915158fd15150dd63bfddcbcf78fb351f728c28641",
+        "exposed_case_ids": [
+          "seed-graph-1"
+        ],
+        "latency_ms": 314375,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 1,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 2,
+        "requests": 68,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 500847,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "336d583465d56c5added27915158fd15150dd63bfddcbcf78fb351f728c28641",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "no_experience",
+      "asset_restored": true,
+      "asset_selected_sha256": [
+        "6d0932f05275fed6389671297171828e3de80362e3de892831d50cccb12c2962"
+      ],
+      "observations": {
+        "original": {
+          "finish_reason": ":max_turns",
+          "harness_error": true,
+          "provider_error": false,
+          "status": "failed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 90,
+      "physical_tokens": 669534,
+      "repetition": 2,
+      "row": {
+        "allocated_requests": 123,
+        "arm": "no_experience",
+        "asset_application_count": 1,
+        "asset_candidate_count": 1,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [
+            "6d0932f05275fed6389671297171828e3de80362e3de892831d50cccb12c2962"
+          ],
+          "tool_description": []
+        },
+        "asset_restoration_count": 1,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_2d750047afcd02ff33bd684e7febb271a804efdf09d60d3a31358cf2caf24597",
+          "lesson_a9ee5aa870db784dabcef5f4413c88070953197e1bc4efc4deb714c13cd7c81f",
+          "lesson_ee8c7bae9a1153b83de96500d24a219a61d58b0c55341e70b7431f8f93ea29a7"
+        ],
+        "evidence_sha256": "f18a6ff332b7094ef206d95866adc2a55a754d2c28bb3d59a9929f41b5a8bc9a",
+        "exposed_case_ids": [],
+        "latency_ms": 359105,
+        "original_budget_stop": true,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 1,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 2,
+        "requests": 90,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 669534,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "f18a6ff332b7094ef206d95866adc2a55a754d2c28bb3d59a9929f41b5a8bc9a",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "retrieval",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 12,
+      "physical_tokens": 82285,
+      "repetition": 2,
+      "row": {
+        "allocated_requests": 12,
+        "arm": "retrieval",
+        "asset_application_count": 0,
+        "asset_candidate_count": 0,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_2c40f39bcc7da9f6c0d00cc1e38ea795881afff20ac083cf681554db79bbc181",
+          "lesson_439a1e5ff3731754bb7d1e6537e8e15b3e6f977636b39117f67da56ef7383ebe"
+        ],
+        "evidence_sha256": "f51391368aa022bec6cc805af8332a5e2321471d6311bd3e01e996abcf1d2cbf",
+        "exposed_case_ids": [
+          "seed-graph-1"
+        ],
+        "latency_ms": 44796,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 2,
+        "requests": 12,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 82285,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "f51391368aa022bec6cc805af8332a5e2321471d6311bd3e01e996abcf1d2cbf",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "retry",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 7,
+      "physical_tokens": 31326,
+      "repetition": 2,
+      "row": {
+        "allocated_requests": 7,
+        "arm": "retry",
+        "asset_application_count": 0,
+        "asset_candidate_count": 0,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [],
+        "evidence_sha256": "f1ca7d6f5cdcc8536b93471bff62e0bc6f1c0a002ec478723083e45adb9fe760",
+        "exposed_case_ids": [],
+        "latency_ms": 32233,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 2,
+        "requests": 7,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 31326,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "f1ca7d6f5cdcc8536b93471bff62e0bc6f1c0a002ec478723083e45adb9fe760",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "updating",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 70,
+      "physical_tokens": 520678,
+      "repetition": 2,
+      "row": {
+        "allocated_requests": 111,
+        "arm": "updating",
+        "asset_application_count": 0,
+        "asset_candidate_count": 1,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_e19e8b55c0d236691ddc907566f2409a6ad9311d6aa3a235f93c2ff8d3959f22",
+          "lesson_5c643d24736aff2886ef13c6c1bdedeb5d3f9c8c4260b2e9088d8a2d688c1f94",
+          "lesson_66f27d0cc105e738a233f998f5e63bba65bdbad07e520e0b3b01edf76f933c6d"
+        ],
+        "evidence_sha256": "dc57c7208041d0f2f8cf58700c2c60901898054799d48613c844f159503e6df0",
+        "exposed_case_ids": [
+          "seed-graph-1"
+        ],
+        "latency_ms": 310226,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 1,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 2,
+        "requests": 70,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "development-graph-2",
+        "tokens": 520678,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "dc57c7208041d0f2f8cf58700c2c60901898054799d48613c844f159503e6df0",
+      "task_id": "development-graph-2",
+      "unknown_dispatch_usage": 0
+    },
+    {
+      "arm": "retrieval",
+      "asset_restored": null,
+      "asset_selected_sha256": [],
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "provider_error": false,
+          "status": "completed"
+        }
+      },
+      "physical_request_count": 9,
+      "physical_tokens": 67472,
+      "repetition": 1,
+      "row": {
+        "allocated_requests": 9,
+        "arm": "retrieval",
+        "asset_application_count": 0,
+        "asset_candidate_count": 0,
+        "asset_kind_evidence": {
+          "configuration": [],
+          "skill": [],
+          "tool_description": []
+        },
+        "asset_restoration_count": 0,
+        "candidate_count": 0,
+        "cost_usd": null,
+        "created_lesson_ids": [
+          "lesson_5ff3c83f53cbe3ff77ebf7cfffaa85e5f56e29e9ed9e4c4f36e44f69e1adeab0",
+          "lesson_0ce3f5011b11963999f666b5db43eef4fc9ab9a8dcddcd06bf8d672b14eaa53f",
+          "lesson_d858f95c8b33e15b743129065e5e7e78e4f2bad50a44f511e3d1bd6e6056b2c5"
+        ],
+        "evidence_sha256": "1aa28b4edee668c5c02114b9fecdb60a6fcd1c787729f5b7ec1495bdf15be11e",
+        "exposed_case_ids": [],
+        "latency_ms": 50105,
+        "original_budget_stop": false,
+        "passed": true,
+        "private_confirmation_passed": true,
+        "probe_budget_stops": 0,
+        "promotion_count": 0,
+        "qualification_complete": true,
+        "repetition": 1,
+        "requests": 9,
+        "requests_kind": "physical_dispatches",
+        "rollback_count": 0,
+        "safety_failures": [],
+        "selected_budget_stop": false,
+        "task_id": "seed-graph-1",
+        "tokens": 67472,
+        "visible_verification_passed": true,
+        "workspace_evidence_complete": true
+      },
+      "row_matches_physical_meter": true,
+      "source_evidence_bytes_sha256": "1aa28b4edee668c5c02114b9fecdb60a6fcd1c787729f5b7ec1495bdf15be11e",
+      "task_id": "seed-graph-1",
+      "unknown_dispatch_usage": 0
+    }
+  ],
+  "incomplete_episodes": 0,
+  "interpretation": "development_mechanism_evidence_no_independent_efficacy_or_default_enablement",
+  "kind": "hosted_mechanism_pilot_accounting_audit",
+  "mechanism_sha256": "6d31a133bcbc03c61e0fc19a1bb87823e81095e11d3b23fc60a0a106b6047820",
+  "oauth_loan_removed": true,
+  "plan_sha256": "67679f1ff1a50dcdf74f4a4cb0eee31743a98120e95d40f9a406c3c7deeec17f",
+  "projection": "counts_and_digests_no_transcripts_credentials_or_task_solutions",
+  "registered_episodes": 13,
+  "report_sha256": "57b6d18eace234aed84c37a24f3c092e13158dc7397263ad3bedbc2828d76d55",
+  "report_written_ms": 1793917598825,
+  "safety_failure_count": 0,
+  "schema_version": 1,
+  "shared_cap_stopped_sample": false,
+  "shared_limits": {
+    "max_requests": 800,
+    "max_time_ms": 7200000,
+    "max_tokens": 8000000
+  },
+  "source_report_bytes_sha256": "ccdcc3e8d2aace0d56587bb26fa375bf5178b8d78ffb3c391c841fa2b0efab66",
+  "source_revision": "601bdd31b8fb78c94d2406f108acf85e02ff0161",
+  "source_tree_clean_at_registration": true,
+  "started_ms": 1793915232083,
+  "subscription_cost_interpretation": "informational_dollars_not_measured_api_billing",
+  "task_containers_remaining": 0,
+  "total_physical_requests": 547,
+  "total_tokens": 3978892,
+  "unknown_dispatch_usage": 0,
+  "unrelated_containers_preserved": 45
+}

@@ -1,0 +1,291 @@
+{
+  "control_image": "sha256:518d150f8dcfec4af07bda64802125fe9684d42c4237d3f0867d887ab108e3be",
+  "control_manifest_bytes_sha256": "1991ff6316d26e8fb796d2b8f69b54bdddd428c92f44bcd3dbc8cf150b757691",
+  "controls_bytes_sha256": "ca6aed19bf443c47fb7d290c0b6f1afcc2035d0c282f55c3a97b6db4251032cf",
+  "dependency_lock": "aligned_to_target_library",
+  "host_contracts_bytes_sha256": "3775659ef431b0bd06a03443e73771f05f473571e19b218aa0311732e5d00c56",
+  "hosted_requests": 0,
+  "kind": "local_benchmark_apparatus_snapshot",
+  "library_path": "task_worktree",
+  "library_source_revision": "601bdd31b8fb78c94d2406f108acf85e02ff0161",
+  "primary_benchmark_checkout": "unchanged_dirty_checkout",
+  "snapshot_dependency_lock": "target_library_lock",
+  "source_files": [
+    {
+      "sha256": "05fa4931a7d3cd4b3b0f752565335ab396d2da404fb5f773c1c262d85c8b7b2f",
+      "path": ".tool-versions"
+    },
+    {
+      "sha256": "b68464b27d373bf15d640b7afd26377c0cfad8fe653a2f06fac3541ac7adff53",
+      "path": "lib/lemieux_bench/admission.ex"
+    },
+    {
+      "sha256": "dad0292615a8534dca46939515de92b5189ef7de11afadc663314bc47d1a0a3e",
+      "path": "lib/lemieux_bench/analysis.ex"
+    },
+    {
+      "sha256": "5cdeb2bb694c3a62148e249df6da0716f3231115ed5ba3eac12fc1f68cd5fa3c",
+      "path": "lib/lemieux_bench/artifacts.ex"
+    },
+    {
+      "sha256": "f6d494409a47b981ade56723b5d388dec07364624129c2e1ab2825096aa1712c",
+      "path": "lib/lemieux_bench/audit.ex"
+    },
+    {
+      "sha256": "6e2151cd5a1d8ccff5de0f3b44427615f09d1fd322589631786500d6fc9f5551",
+      "path": "lib/lemieux_bench/campaign.ex"
+    },
+    {
+      "sha256": "a9485c30fd555de9e0bd431820d9af6536e0efe7bb7bdb8409fbec57f7e1259c",
+      "path": "lib/lemieux_bench/codex_auth.ex"
+    },
+    {
+      "sha256": "d7fb94e0d4b52c0dacbb5af434a61fa73fa617152896fa67ccf7c3ad83e5411c",
+      "path": "lib/lemieux_bench/compare.ex"
+    },
+    {
+      "sha256": "e11f726f6a7daf6974cef8a60b4788885acdcf6a6bb25d63af4d0cd61bd1ee14",
+      "path": "lib/lemieux_bench/container_harness.ex"
+    },
+    {
+      "sha256": "a4d7173ce7729b9e64d9c6da97dd9050e242a8b9b06a2f2303a4dcb3c07cb800",
+      "path": "lib/lemieux_bench/diagnostics.ex"
+    },
+    {
+      "sha256": "02bfd68587501fb07e9d9ed2a15142e96d0589df5a2f912fd990df0308c64982",
+      "path": "lib/lemieux_bench/doc_links.ex"
+    },
+    {
+      "sha256": "fdd723450fef5ebb89ae0de63bb8e299ac3f7e472ebd1dcf6f34ab8cbf64d52b",
+      "path": "lib/lemieux_bench/docker.ex"
+    },
+    {
+      "sha256": "e0ca61289238e092d9915a6bfbdce81721d409780f352cde57c507b9dbcbcecb",
+      "path": "lib/lemieux_bench/environment/docker.ex"
+    },
+    {
+      "sha256": "693aefe94730a14c68c3960e48ce4f79f751550f85d57da8f3656a3f59fbc4bc",
+      "path": "lib/lemieux_bench/environment/read_only.ex"
+    },
+    {
+      "sha256": "d395401903295e5c77c52a67b09c3c413df2f91464a1e922a6b1e45fd1847e1d",
+      "path": "lib/lemieux_bench/execution.ex"
+    },
+    {
+      "sha256": "a053c0ea20ecd4952661eb2ad006e3ab9d21e9f83e81d3b971954e4e5d7fcd38",
+      "path": "lib/lemieux_bench/execution/adapter.ex"
+    },
+    {
+      "sha256": "53327e21e4ba797b7cb94a2b4c20c50d5149253384704291feae6f35261caf1f",
+      "path": "lib/lemieux_bench/failure_review.ex"
+    },
+    {
+      "sha256": "551e6d65acc9b6a6a60bfe09420e8217218b050e08911fd6d39af61bd0cd89ab",
+      "path": "lib/lemieux_bench/fault_proxy.ex"
+    },
+    {
+      "sha256": "0e8077bcf43ae9682a0c25f22191a9860adec36f4834bc8c962c71de098e2293",
+      "path": "lib/lemieux_bench/gateway_errors.ex"
+    },
+    {
+      "sha256": "9409f23f67ed8813bb4e24cb473ec937e7d94a1e4ddb9ec30f4e51f801c828e6",
+      "path": "lib/lemieux_bench/grading.ex"
+    },
+    {
+      "sha256": "1ac813808ed761159c2fb29197ef4278c9e9e22f4dba9c6809cb4ca3deff5d24",
+      "path": "lib/lemieux_bench/harbor.ex"
+    },
+    {
+      "sha256": "8a0843ac38afc883a966d6d19539d345b7314af722831fa2954c7d339868c496",
+      "path": "lib/lemieux_bench/holdout.ex"
+    },
+    {
+      "sha256": "6cf713521da06c00a31f096b26116e0e283b363e32ee15aa27ee1bbe74aa4f90",
+      "path": "lib/lemieux_bench/interventions.ex"
+    },
+    {
+      "sha256": "a70477f817309850c1795ffc52e6737521af4d4ab6a08d1af5351527ee87dc44",
+      "path": "lib/lemieux_bench/judge.ex"
+    },
+    {
+      "sha256": "96396c4fb288b14cd0b8ad47a80986b8124da36f3f6c733da88f3ec4c42dfc41",
+      "path": "lib/lemieux_bench/lifecycle.ex"
+    },
+    {
+      "sha256": "7da6512f6b66bb884e54530d69da3ed709681aa75af303583f73eb305dc1de2b",
+      "path": "lib/lemieux_bench/manifest.ex"
+    },
+    {
+      "sha256": "206104b8b306d2dc51b07264a4454e32c1ebee065b17f9b46313406fc82ee214",
+      "path": "lib/lemieux_bench/pool.ex"
+    },
+    {
+      "sha256": "74cf6ae6bfb280bafcc9e428c4902e8edc197e9a9701a67b9c22cc2f974357aa",
+      "path": "lib/lemieux_bench/price_card.ex"
+    },
+    {
+      "sha256": "7ac7a4f172ab403ea85a6b26646897147dbe59c15de5bababbd278b08c10d266",
+      "path": "lib/lemieux_bench/provider.ex"
+    },
+    {
+      "sha256": "f805b5fe2531cc86fb07ab955e03dd8797e63ded9e3c8dce03134aa4da9d33d1",
+      "path": "lib/lemieux_bench/qualification.ex"
+    },
+    {
+      "sha256": "923728cb81999e078e22f82dc3a4d652826b9725c0eead5536242505e6fc68f1",
+      "path": "lib/lemieux_bench/qualification/canaries.ex"
+    },
+    {
+      "sha256": "137162f8c8d323e2f5d60c721aacecf0a467f61459f08106c8806c25fcf8a482",
+      "path": "lib/lemieux_bench/replay.ex"
+    },
+    {
+      "sha256": "d667d68d7857c1dbf90c48cd4c74458faf483500296f2fba833d26012cef0ec5",
+      "path": "lib/lemieux_bench/reports.ex"
+    },
+    {
+      "sha256": "87877cf2e6eb360de9a1adb94d376ad38e93b2e44c82cb1f97b1d4b33735a0d8",
+      "path": "lib/lemieux_bench/repository_pool.ex"
+    },
+    {
+      "sha256": "92db9f6a06e48007d48db1b8ede501b64e2fe4b5162e290ceb430ffeb6728dd3",
+      "path": "lib/lemieux_bench/resource_ledger.ex"
+    },
+    {
+      "sha256": "00a2ea3cef602c767345e0587ddbc416873b7a5a581232578fe93fb2e7f7d235",
+      "path": "lib/lemieux_bench/results.ex"
+    },
+    {
+      "sha256": "b4650a45905e46c38f92efe4843a06e58a8181b526395150ad71d61d51f0dbdb",
+      "path": "lib/lemieux_bench/run.ex"
+    },
+    {
+      "sha256": "fce4edae4d9775842b24e4618d26af681b20feadd76019c6ec16159eadac5adf",
+      "path": "lib/lemieux_bench/runtime.ex"
+    },
+    {
+      "sha256": "28208f718b22d92ecf7c1d6d99e0131ac9b700d4928a99f977a9e6ead4dcd9ec",
+      "path": "lib/lemieux_bench/runtime/control.ex"
+    },
+    {
+      "sha256": "dce463f1df4b47f12793dfe67810b800bc6f2c1f4b0eeadddd4278008e030b29",
+      "path": "lib/lemieux_bench/stats.ex"
+    },
+    {
+      "sha256": "519038a806b5b245851fc680fbd69caa03377459e3328ab94f944f423afcb39a",
+      "path": "lib/lemieux_bench/suite.ex"
+    },
+    {
+      "sha256": "22ff3523ced3a995dc469275c6889cbe053a3016564de36be5a8f460655d614b",
+      "path": "lib/lemieux_bench/swebench/execution.ex"
+    },
+    {
+      "sha256": "9c3b7c76ff3c62bc6205b4e8c36f86391bfbede53614289c9d1f563e23986c47",
+      "path": "lib/lemieux_bench/swebench/report.ex"
+    },
+    {
+      "sha256": "46f62abc1eae2d36c6264ee958df5265c8474ff6f48c90bd907fc3cfb33d61e3",
+      "path": "lib/lemieux_bench/task_toml.ex"
+    },
+    {
+      "sha256": "d76c87ead8fed54a32a2de473d2481fa59a4dc3e3d149d0fcc56fe6e4b48f263",
+      "path": "lib/lemieux_bench/upstream.ex"
+    },
+    {
+      "sha256": "c03f3e0c28ad897c17c4c65d607f7a9b67821066a805dcb8d69cdd48ad5c4435",
+      "path": "lib/lemieux_bench/workspace.ex"
+    },
+    {
+      "sha256": "6953e8971a595b5169d54510c1fb14742c65c2b1eee23e8d1535b850910509f8",
+      "path": "lib/lemieux_bench/workspace_snapshot.ex"
+    },
+    {
+      "sha256": "15a11e0b61821c085e0f837b95ec703f6dd70b5e5a368e73f4f9384511779de8",
+      "path": "lib/mix/tasks/lemieux_bench.agent.ex"
+    },
+    {
+      "sha256": "55981b9c4b7a912975ee88f537d911516d8c275d61d789f6c52377957ca75ad0",
+      "path": "lib/mix/tasks/lemieux_bench.analyze.ex"
+    },
+    {
+      "sha256": "f1ea4fe72af3073e4db07a7e64e7c63825b5fd4c685535721c09534c852b5dae",
+      "path": "lib/mix/tasks/lemieux_bench.campaign.ex"
+    },
+    {
+      "sha256": "dd11867aecfa15f85fb36ea690036d31ba6b92a9e3681c25d253ab6c2eb56a28",
+      "path": "lib/mix/tasks/lemieux_bench.check_docs.ex"
+    },
+    {
+      "sha256": "4d463c3716ade15e55d34c0ef5e493f825bb981b23c956f02a318d16074f9a94",
+      "path": "lib/mix/tasks/lemieux_bench.compare.ex"
+    },
+    {
+      "sha256": "1ff449345014eab0c48f2a211c4f16cf231b58e2e657f220198f75338957d0f6",
+      "path": "lib/mix/tasks/lemieux_bench.controls.ex"
+    },
+    {
+      "sha256": "87ad1117714675a47c8a5f6c99e995a5b32210faef1fee755278b4d505b70761",
+      "path": "lib/mix/tasks/lemieux_bench.diagnose.ex"
+    },
+    {
+      "sha256": "1c2a1ea644bd703d1854fa7005cd5c98379a153eca31222299a430278bc84533",
+      "path": "lib/mix/tasks/lemieux_bench.fetch.ex"
+    },
+    {
+      "sha256": "32e050a79019acf9145261bb932867bae2407365bf55ef233ccac9f3a8c3ff8f",
+      "path": "lib/mix/tasks/lemieux_bench.fixture.ex"
+    },
+    {
+      "sha256": "994ef32d65bbc72a5761d6a62a7dd9962fc7d65f894b0169cf0c1e56c55a95e9",
+      "path": "lib/mix/tasks/lemieux_bench.gateway_errors.ex"
+    },
+    {
+      "sha256": "c20c178082744dc96ae0afd351ec498f7ec8c67c4bb42e0593cb5acd41c56bc3",
+      "path": "lib/mix/tasks/lemieux_bench.harbor.import.ex"
+    },
+    {
+      "sha256": "74c99b732c0cc2a084798dc3ced9f4969ed1816d704da2fc5f717adc1578522d",
+      "path": "lib/mix/tasks/lemieux_bench.interventions.ex"
+    },
+    {
+      "sha256": "c31147db862832083eb5d7e2a5fdd70c0df009396906bcd53aac3184112adfc6",
+      "path": "lib/mix/tasks/lemieux_bench.judge.ex"
+    },
+    {
+      "sha256": "29c56436e9176eab571538a0c2e7a6c85505f2b78ee374d93cd31ae058526904",
+      "path": "lib/mix/tasks/lemieux_bench.manifest.ex"
+    },
+    {
+      "sha256": "cf576dc7895fc5a22cd445afbff94d5463ea3b238226f18706b69712f296bfea",
+      "path": "lib/mix/tasks/lemieux_bench.pool.ex"
+    },
+    {
+      "sha256": "bb929d7527c6fde162f4142eeaebca021ab10f8be2f3abd1e1c7cb8ab87ada43",
+      "path": "lib/mix/tasks/lemieux_bench.qualify.ex"
+    },
+    {
+      "sha256": "fdcdb27bd3e086bbf3db741bd8017f4838a6cbb03465507cf4f70aa8b250b3cc",
+      "path": "lib/mix/tasks/lemieux_bench.repository_pool.ex"
+    },
+    {
+      "sha256": "28db827f134fd0801f79ec078aeb39231f8514f6e2f0e125ff6191856c9df318",
+      "path": "lib/mix/tasks/lemieux_bench.reproducer.ex"
+    },
+    {
+      "sha256": "3960f57ca0b69fb0070e1b19d47851091e8f030f9369c4adf486134f629b2066",
+      "path": "lib/mix/tasks/lemieux_bench.run.ex"
+    },
+    {
+      "sha256": "c34545bf7a96bb022eed7f10f921e062a594e633b50190e7239c6b026d27ee8e",
+      "path": "lib/mix/tasks/lemieux_bench.swebench_manifest.ex"
+    },
+    {
+      "sha256": "904e5090b39e397fbe432bb59f21765b2dcdd2d84713ad6aaf39c9d49c787d3e",
+      "path": "mix.exs"
+    },
+    {
+      "sha256": "ebf0ba0b0eccd64a226e72f80bcf401dca68fb4bdfc4f4fc3ea4ae257c50a149",
+      "path": "mix.lock"
+    }
+  ]
+}

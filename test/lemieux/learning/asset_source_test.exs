@@ -135,6 +135,76 @@ defmodule Lemieux.Learning.AssetSourceTest do
     end
   end
 
+  test "export refuses a portable asset whose complete source is absent from its manifest", ctx do
+    project = Path.join(ctx.tmp_dir, "incomplete-project")
+    File.mkdir_p!(Path.join(project, "priv"))
+    File.mkdir_p!(Path.join(project, "lib"))
+    assert :ok = Source.write(ctx.version, Path.join(project, "priv/learned"), ctx.context)
+    File.write!(Path.join(project, "mix.exs"), "# owner-supplied project\n")
+    File.write!(Path.join(project, "lib/example.ex"), "defmodule SourceExample do\nend\n")
+    paths = ~w(mix.exs lib/example.ex priv/learned/asset.json priv/learned/files/SKILL.md)
+
+    File.write!(
+      Path.join(project, "lemieux-extension.json"),
+      JSON.encode!(%{
+        "schema_version" => 1,
+        "module" => "SourceExample",
+        "files" => paths,
+        "dependencies" => Map.new(paths, &{&1, []}),
+        "capabilities" => []
+      })
+    )
+
+    destination = Path.join(ctx.tmp_dir, "incomplete-export")
+    assert {:error, _} = Export.export(project, destination)
+    refute File.exists?(destination)
+
+    manifest_path = Path.join(project, "lemieux-extension.json")
+    complete = JSON.decode!(File.read!(manifest_path))
+    helper = "priv/learned/files/references/checks.md"
+
+    complete =
+      complete
+      |> Map.update!("files", &(&1 ++ [helper]))
+      |> put_in(["dependencies", helper], [])
+
+    File.write!(manifest_path, JSON.encode!(complete))
+
+    assert {:error, {:incomplete_packaged_asset, "priv/learned/asset.json"}} =
+             Export.export(project, destination)
+
+    refute File.exists?(destination)
+
+    complete =
+      complete
+      |> put_in(["dependencies", "priv/learned/asset.json"], ["priv/learned/files/SKILL.md"])
+      |> put_in(["dependencies", "priv/learned/files/SKILL.md"], [helper])
+
+    File.write!(manifest_path, JSON.encode!(complete))
+    assert {:ok, _} = Export.export(project, destination)
+    assert :ok = Export.verify(destination)
+    assert {:ok, version, _} = Source.read(Path.join(destination, "priv/learned"), ctx.context)
+    assert version == ctx.version
+
+    cyclic =
+      put_in(complete, ["dependencies", "priv/learned/files/SKILL.md"], [
+        "priv/learned/asset.json",
+        helper
+      ])
+
+    File.write!(manifest_path, JSON.encode!(cyclic))
+    assert {:ok, _} = Export.export(project, destination <> "-cycle")
+    assert :ok = Export.verify(destination <> "-cycle")
+
+    File.write!(Path.join(project, helper), "altered dependency")
+    altered = destination <> "-altered"
+
+    assert {:error, {:incomplete_packaged_asset, "priv/learned/asset.json"}} =
+             Export.export(project, altered)
+
+    refute File.exists?(altered)
+  end
+
   test "scope, runtime and host policy are validated again at the receiving host", ctx do
     root = Path.join(ctx.tmp_dir, "source")
     assert :ok = Source.write(ctx.version, root, ctx.context)
