@@ -5,6 +5,9 @@
 The remaining [learning tracker](https://github.com/houllette/lemieux/issues/47)
 covers independent outcome qualification, typed assets and reusable exports.
 Passing scripted mechanics does not satisfy the hosted efficacy requirement.
+The [1.1 qualification packet](qualification/2026-11-05-rsi-v1.1/README.md)
+retains the offline gate and capped hosted skill pilot: complete accounting,
+an unobserved updating skill mechanism, and inconclusive quality and efficiency.
 
 Use `--plan-only` to review the existing runner's registration before authorizing
 requests. It writes `registration.json` and a digest-bound `planning.json`, then

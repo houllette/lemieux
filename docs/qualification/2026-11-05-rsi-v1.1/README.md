@@ -46,10 +46,105 @@ after JSON persistence; registration now stores string keys. These were fixed
 before the final gate. Earlier dirty-tree observations are development records,
 not independent flake or efficacy evidence.
 
-A separately approved hosted mechanism pilot is limited to GPT-6 Luna/low task
-execution and GPT-6 Sol/high proposal/reflection, one seed plus twelve comparison
-episodes, at most 800 shared requests, 8 million tokens and two hours. Its full
-registered request envelope is 2,496, so the outer cap may interrupt the sample.
-The raw records and durable allowance remain private under the task worktree's
-ignored `tmp/`; a public result must retain exact digests and report incomplete,
-inconclusive or failed outcomes without implying independent confirmation.
+## Final offline gate
+
+The [validation record](validation.json) retains the passing `mix precommit.full`
+gate and hashes of the earlier failed attempts. Ordinary and coverage runs each
+passed 6,055 cases (12 doctests and 6,043 tests), with 11 skipped and 47 excluded;
+coverage was 86.69%. Dialyzer reported zero errors. The release host passed 123
+tests, the distributed suite passed 25, all eleven examples checked successfully,
+the fresh packaged consumer passed, and all 80 Python tests passed. Four stock
+CLI/TUI container replays and six bounded observations of the two new integration
+tests also passed. Those seeded observations used a dirty development tree and
+do not erase its earlier deliberate failures.
+
+The [benchmark apparatus identity](benchmark-apparatus.json) records the copied
+host's source-file hashes, aligned dependency lock, pinned control image and
+receipt hashes. Its eight canaries were rerun against the clean committed library;
+their receipt matches [benchmark-host.json](benchmark-host.json) byte for byte.
+The first PR secret scan flagged a source-file SHA-256 stored under a filename
+containing `auth`. The [scan review](ci-scan-review.json) retains that failed
+attempt and verification against the copied bytes. The inventory now uses
+separate path and digest fields, with no scanner-rule or ignore-list change.
+
+## Approved hosted pilot
+
+The executor was `openai_codex:gpt-6-luna` at low effort; proposal, review and
+reflection used `openai_codex:gpt-6-sol` at high effort through Codex subscription
+authentication. The user separately approved one seed plus twelve comparison
+episodes, capped at 800 shared requests, 8 million tokens and two hours. The
+[registration](registration.json) froze a maximum envelope of 2,496 requests;
+the smaller outer cap did not interrupt this sample. It tested skills only,
+without executable helpers or profile search, on one developer-visible synthetic
+graph stream with two repetitions. No independent confirmation was dispatched.
+
+The [plan](plan.json) binds source commit
+`601bdd31b8fb78c94d2406f108acf85e02ff0161`, registered from a clean tree with
+Elixir 1.20.4 and Erlang/OTP 29.1.1. No source or build artifact changed during
+execution. The subsequent evidence commit changes documentation only. This
+receipt retains its exact original revision binding.
+
+The [report](report.json) records complete execution and accounting, with quality
+and efficiency both **inconclusive**. The [mechanism receipt](mechanism.json) is
+**not demonstrated**: the updating arm never loaded its selected skill. Its
+required lesson-to-execution and procedure-use checks both fail. Checks marked
+unrequired are not observations of helpers, settings, profiles or descriptions.
+This receipt refuses admission to a larger hosted research stage.
+
+| Arm | Passed targets | Physical requests | Tokens | Episode wall time, seconds | Selected skill applied / restored | Actual skill use |
+| --- | ---: | ---: | ---: | --- | ---: | ---: |
+| Disabled | 2/2 | 23 | 115,761 | 45.961; 47.201 | 0 / 0 | 0 |
+| Retrieval | 1/2 | 23 | 168,073 | 55.977; 44.796 | 0 / 0 | 0 |
+| Retry | 2/2 | 17 | 82,537 | 41.048; 32.233 | 0 / 0 | 0 |
+| Frozen | 2/2 | 150 | 1,102,924 | 371.234; 314.375 | 2 / 2 | 0 |
+| Updating | 2/2 | 153 | 1,149,608 | 338.332; 310.226 | 2 / 2 | 0 |
+| Experience withheld | 2/2 | 172 | 1,292,517 | 355.843; 359.105 | 2 / 2 | 2 |
+
+The passing seed added nine requests and 67,472 tokens. Total usage was **547
+physical requests and 3,978,892 tokens** over 39 minutes 26.742 seconds. The
+registered efficiency comparison charges acquisition to updating: 162 requests,
+or 9.53 times retry and 7.04 times disabled. Its 5.81% request saving versus the
+experience-withheld improver is below the registered 20% threshold. One related
+stream cannot identify an effect from earlier experience or establish transfer.
+Subscription dollar values in the raw accounting are informational, not measured
+API billing.
+
+The failed retrieval output is retained. A disabled final execution reached its
+task request limit while leaving a verified passing artifact. The report also
+retains the experience-withheld original's budget stop and seven budget-stopped
+probes. Passing artifact grades do not imply that those agent turns completed.
+The [audit](audit.json) includes every episode's outcome, latency, stops, selected
+digest, observed use, restoration, meter totals and original evidence-byte hash.
+Native verification recomputed the plan/report seals, ordinary report, registered
+endpoints, transcript evidence for all thirteen episodes and the mechanism from
+private raw evidence.
+An independent sum reconciled per-episode physical meters and per-role totals
+with the durable shared ledger. Unknown usage and active calls at close were
+both zero. The access-only OAuth loan and allowance owner lock were removed;
+no task-mounted containers remained, and unrelated containers were preserved.
+
+## Remaining qualification
+
+| Tracker | Established here | Remaining gate |
+| --- | --- | --- |
+| #79 | Provider-free planning, complete bounded six-arm development execution, full accounting and an honestly refused mechanism receipt. | Reliable lesson-to-execution behavior, lower search overhead, then a fresh separately authorized mechanism and adequately powered independent coding-task study. |
+| #80 | Actual-loader/catalog checks, exact per-kind use evidence, scripted skills/configuration/description coverage and hosted skill use in the experience-withheld arm. | An updating skill mechanism and separate per-kind outcome qualification before default enablement; no hosted configuration or description claim is made. |
+| #81 | Complete transitive portable source closure, fresh host approval, source-preserving export and consumer/rollback gates. | An independently qualified reusable improvement and its reviewed release; this pilot exported no independently confirmed asset. |
+
+Concrete tuning should first test whether a workflow needs and actually loads a
+procedure, and whether selective search can justify its full cost when a baseline
+already finishes cheaply. Freeze those hypotheses and stopping rules before a
+new run. Increasing repetitions of this graph task or repartitioning the exposed
+benchmark pools cannot supply independent efficacy. The present findings leave
+the parent and remaining children open, with no new default asset-kind authority.
+
+Plan, registration, report and mechanism are copied byte for byte from this scope.
+Raw transcripts, generated task solutions, grader source and the durable ledger
+remain private under ignored `tmp/`. Public projections retain their original
+byte hashes without credentials or solution text. `SHA256SUMS` binds this packet;
+verify it from the repository root with:
+
+```sh
+cd docs/qualification/2026-11-05-rsi-v1.1
+shasum -a 256 -c SHA256SUMS
+```

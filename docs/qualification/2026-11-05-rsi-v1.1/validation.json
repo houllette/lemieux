@@ -1,0 +1,58 @@
+{
+  "coverage": {
+    "minimum_percent": 85,
+    "passed": 6055,
+    "percent": 86.69
+  },
+  "dialyzer_errors": 0,
+  "distributed_passed": 25,
+  "examples_checked": 11,
+  "fixture_controls": {
+    "reference_passed": 1,
+    "tasks": 1,
+    "untouched_failed": 1
+  },
+  "flake_observations": {
+    "all_passed": true,
+    "interpretation": "six_bounded_observations_no_observed_divergence_not_independent_flake_proof",
+    "max_cases": 4,
+    "seeds": [
+      101,
+      102,
+      103
+    ],
+    "selected_tests": 2,
+    "source_tree": "dirty_development_tree"
+  },
+  "gate": "mix precommit.full",
+  "gate_execution": "final_worktree_then_committed_without_code_changes",
+  "gate_exit_code": 0,
+  "interpretation": "offline_mechanics_package_and_host_checks_no_hosted_efficacy_or_release_claim",
+  "kind": "offline_rsi_qualification",
+  "ordinary": {
+    "doctests": 12,
+    "excluded": 47,
+    "passed": 6055,
+    "skipped": 11,
+    "tests": 6043
+  },
+  "private_log_bytes_sha256": {
+    "lemieux-rsi-v1.1-bench-controls.log": "3509fd6c84d48674e6a6ce3015488b850b65f4d15c459697ce994206d7848527",
+    "lemieux-rsi-v1.1-bench-final.log": "359b826b94f7344ceaf7b0139bceaa7d15a7b8dc562cde1c3727abbf3657f030",
+    "lemieux-rsi-v1.1-flakes.log": "2cd3247a870ea5455dd57fa212e00ae90bfc422adc4e181f3cd98975f1278770",
+    "lemieux-rsi-v1.1-precommit-full-final.log": "74bb2269dad3602fef526039276b6903298912ca27181f7d02aa002aef3d9d47",
+    "lemieux-rsi-v1.1-precommit-full-qualified.log": "f9412160952deb62e922b97f2f4fedba9c2449d7d75706a95581946c14d73c84",
+    "lemieux-rsi-v1.1-precommit-full.log": "ab89067e9a28fc2343dabe94437d804c0366e1f50f96f81586ff2b9db1341ed3",
+    "lemieux-rsi-v1.1-stock.log": "981ef9e8fc6de0748bc820f07fbd16f024337ec22cd0846cbfae9809169312ee"
+  },
+  "python_passed": 80,
+  "release_host_passed": 123,
+  "schema_version": 1,
+  "scripted_benchmark_canaries_passed": 8,
+  "stock_cli_tui_container_replays_passed": 4,
+  "superseded_gate_failures": [
+    "Credo complexity; extracted same_episode predicate, then focused checks",
+    "Dialyzer opaque recursive MapSet; used visited map and added cyclic graph regression, then focused checks"
+  ],
+  "validated_source_revision": "601bdd31b8fb78c94d2406f108acf85e02ff0161"
+}

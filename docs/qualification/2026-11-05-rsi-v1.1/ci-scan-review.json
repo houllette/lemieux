@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "kind": "reviewed_ci_scan_finding",
+  "original_head": "9edec7139949b3fc24c2780f0eb61fee96a5ea70",
+  "job_url": "https://github.com/houllette/lemieux/actions/runs/42122128425/job/127576918574",
+  "scanner_version": "8.30.1",
+  "rule": "generic-api-key",
+  "finding_file": "docs/qualification/2026-11-05-rsi-v1.1/benchmark-apparatus.json",
+  "finding_line": 20,
+  "original_file_bytes_sha256": "25fba6affd3bef77278262b2fe935c020e20e09b335403e1e4933f0472c8cbdc",
+  "classification": "sha256_source_file_digest_false_positive",
+  "reviewed_source": {
+    "sha256": "a9485c30fd555de9e0bd431820d9af6536e0efe7bb7bdb8409fbec57f7e1259c",
+    "path": "lib/lemieux_bench/codex_auth.ex"
+  },
+  "source_bytes_digest_verified": true,
+  "correction": "source_files_records_with_separate_path_and_sha256_fields",
+  "scanner_configuration_changed": false,
+  "new_ignore_entries": 0,
+  "pilot_code_revision_preserved": "601bdd31b8fb78c94d2406f108acf85e02ff0161",
+  "interpretation": "retain_failed_ci_attempt_and_digest_review_without_secret_material"
+}
