@@ -12,6 +12,7 @@ alias Lemieux.CLI.Learning.Repositories
 alias Lemieux.CLI.Learning.Reflection
 alias Lemieux.CLI.Learning.StudyBudget
 alias Lemieux.CLI.Learning.StudyAllowance
+alias Lemieux.CLI.Learning.StudyPlanning
 alias Lemieux.CLI.Learning.Transport
 alias Lemieux.Contract
 alias Lemieux.Learning.Experience.Lessons
@@ -27,6 +28,7 @@ Code.require_file(Application.app_dir(:lemieux, "priv/qualification/reference.ex
   OptionParser.parse(System.argv(),
     strict: [
       allow_live: :boolean,
+      plan_only: :boolean,
       output: :string,
       model: :string,
       effort: :string,
@@ -52,6 +54,8 @@ Code.require_file(Application.app_dir(:lemieux, "priv/qualification/reference.ex
   )
 
 live = opts[:allow_live] == true
+planning = opts[:plan_only] == true
+hosted = live or (planning and String.starts_with?(opts[:model] || "", "openai_codex:"))
 
 study_limits = [
   max_requests: opts[:max_total_requests],
@@ -59,7 +63,7 @@ study_limits = [
   max_time_ms: opts[:max_total_time_ms]
 ]
 
-if (live or is_binary(opts[:allowance_dir])) and
+if (hosted or is_binary(opts[:allowance_dir])) and
      not (is_binary(opts[:allowance_dir]) and
             Enum.all?(study_limits, fn {_key, value} -> is_integer(value) and value > 0 end)),
    do:
@@ -87,7 +91,7 @@ asset_kinds =
 
 true =
   asset_kinds != [] and Enum.uniq(asset_kinds) == asset_kinds and
-    Enum.all?(asset_kinds, &(&1 in ["skill", "configuration"]))
+    Enum.all?(asset_kinds, &(&1 in ["skill", "configuration", "tool_description"]))
 
 asset_helpers =
   if opts[:asset_helpers] == false or "skill" not in asset_kinds, do: [], else: [".py"]
@@ -103,43 +107,55 @@ if stage == "confirmation" and is_nil(opts[:manifest]),
 requests = opts[:task_requests] || 12
 repetitions = opts[:repetitions] || 2
 true = requests in 8..if(research, do: 200, else: 24) and repetitions in 2..10
-model = opts[:model] || if(live, do: "openai_codex:gpt-6-luna", else: "test:model")
-effort = opts[:effort] || if(live, do: "low", else: "default")
+model = opts[:model] || if(hosted, do: "openai_codex:gpt-6-luna", else: "test:model")
+effort = opts[:effort] || if(hosted, do: "low", else: "default")
 
 editor_model =
-  opts[:editor_model] || if(live and research, do: "openai_codex:gpt-6-sol", else: model)
+  opts[:editor_model] || if(hosted and research, do: "openai_codex:gpt-6-sol", else: model)
 
-editor_effort = opts[:editor_effort] || if(live and research, do: "high", else: effort)
+editor_effort = opts[:editor_effort] || if(hosted and research, do: "high", else: effort)
 
 if not research and (opts[:editor_model] || opts[:editor_effort]),
   do: raise("Separate editor requires --research")
 
 true =
-  if live,
+  if hosted,
     do:
       String.starts_with?(editor_model, "openai_codex:") and
         editor_effort in ~w(low medium high xhigh max),
     else: editor_model == "test:model" and editor_effort == "default"
 
 true =
-  if live,
+  if hosted,
     do: String.starts_with?(model, "openai_codex:") and effort in ~w(low medium high xhigh max),
     else: model == "test:model" and effort == "default"
 
 {revision, 0} = System.cmd("git", ["rev-parse", "HEAD"])
 {status, 0} = System.cmd("git", ["status", "--porcelain"])
-if live and status != "", do: raise("Commit qualification code before live execution")
+
+if live and not planning and status != "",
+  do: raise("Commit qualification code before live execution")
+
 root = Path.expand(opts[:output] || "tmp/learning-study-#{Lemieux.ID.generate()}")
 :ok = File.mkdir_p(Path.dirname(root))
 :ok = File.mkdir(root)
 :ok = File.chmod(root, 0o700)
 Logger.configure(level: :warning)
-if live, do: :ok = Transport.prepare()
+if live and not planning, do: :ok = Transport.prepare()
 
-{:ok, environment} =
-  Container.new("python@sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059")
+image = "sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059"
 
-{:ok, _} = Lemieux.Supervisor.start_link(name: Lemieux.StudySupervisor)
+environment =
+  if planning do
+    # A plan declares an image; it does not claim Docker readiness and is not
+    # an executable environment. Ordinary execution still resolves the image.
+    {:planning_only, %{image: image}}
+  else
+    {:ok, environment} = Container.new(image)
+    environment
+  end
+
+unless planning, do: {:ok, _} = Lemieux.Supervisor.start_link(name: Lemieux.StudySupervisor)
 scope = %{"id" => "qualification-study/" <> Contract.sha256(root)}
 
 {fixtures, corpus, fixture_module} =
@@ -236,6 +252,22 @@ analysis = %{
 
 runtime = %{
   "revision" => String.trim(revision),
+  "host" => %{
+    "lemieux" => Lemieux.version(),
+    "elixir" => System.version(),
+    "otp" => System.otp_release(),
+    "otp_version" =>
+      Path.join([
+        List.to_string(:code.root_dir()),
+        "releases",
+        System.otp_release(),
+        "OTP_VERSION"
+      ])
+      |> File.read!()
+      |> String.trim(),
+    "erts" => List.to_string(:erlang.system_info(:version)),
+    "architecture" => List.to_string(:erlang.system_info(:system_architecture))
+  },
   "source_tree_clean" => status == "",
   "environment" => "networkless_nonroot_container",
   "image" => if(opts[:manifest], do: "per_task_environments", else: elem(environment, 1).image),
@@ -254,16 +286,16 @@ runtime = %{
   "transport_max_retries" => 0,
   "http_transport" => Transport.policy(),
   "study_allowance" =>
-    if(live,
+    if(hosted,
       do: %{
         "id" => Contract.sha256(Path.expand(opts[:allowance_dir])),
-        "limits" => Map.new(study_limits),
+        "limits" => Contract.json(Map.new(study_limits)),
         "policy" => "durable_shared_actual_usage_and_explicit_budget_reserves",
         "uncertainty_policy" => "uncovered_unmeasured_usage_closes_admission",
         "reserve_scope" => "user_approved_exact_quota_task_record_only"
       }
     ),
-  "inference_route" => if(live, do: "codex_subscription", else: "scripted"),
+  "inference_route" => if(hosted, do: "codex_subscription", else: "scripted"),
   "cost_kind" => "subscription_quota_not_api_billing",
   "cost_estimate_policy" => "subscription_dollars_informational_no_usd_admission_estimate",
   "feedback" => "public_cases_only_no_private_grade_in_proposal_or_selection",
@@ -295,7 +327,7 @@ runtime =
   if research do
     Map.merge(runtime, %{
       "research_protocol" => %{
-        "id" => "whole_record_research/v6",
+        "id" => "whole_record_research/v7",
         "http_transport" => Transport.policy(),
         "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
@@ -351,7 +383,7 @@ runtime =
 
 runtime = Map.put(runtime, "sha256", Contract.digest(runtime))
 
-if live and research and stage in ~w(development confirmation) do
+if live and not planning and research and stage in ~w(development confirmation) do
   if is_nil(opts[:mechanism]),
     do: raise("A matching hosted --mechanism receipt is required before a larger research study")
 
@@ -474,328 +506,336 @@ end
 # before any paid work. Only actual immutable seed bytes are filled in later.
 template = build_plan.(Contract.digest(%{"lessons" => []}), runtime)
 
-:ok =
-  Installation.write(Path.join(root, "registration.json"), %{
-    "template" => template,
-    "seed_recipe" => "one_fixed_ordinary_capture_per_stream_no_search_or_selection",
-    "seed_tasks" =>
-      Enum.map(
-        seeds,
-        &%{"id" => &1.id, "cluster" => &1.cluster, "source_sha256" => &1.source_sha256}
-      ),
-    "seed_allowance" => allowance,
-    "stopping" => "complete_fixed_seed_prefix_then_complete_target_sample"
-  })
+registration = %{
+  "template" => template,
+  "seed_recipe" => "one_fixed_ordinary_capture_per_stream_no_search_or_selection",
+  "seed_tasks" =>
+    Enum.map(
+      seeds,
+      &%{"id" => &1.id, "cluster" => &1.cluster, "source_sha256" => &1.source_sha256}
+    ),
+  "seed_allowance" => allowance,
+  "stopping" => "complete_fixed_seed_prefix_then_complete_target_sample"
+}
 
-study_allowance =
-  if opts[:allowance_dir] do
-    {:ok, handle} = StudyAllowance.open(opts[:allowance_dir], study_limits)
-    handle
-  end
+:ok = Installation.write(Path.join(root, "registration.json"), registration)
 
-auth = if live, do: Path.join(root, ".auth/oauth.json")
-System.at_exit(fn _ -> if auth, do: CodexAuth.cleanup(auth) end)
-
-try do
-  if study_allowance && is_nil(StudyAllowance.admission_tokens(study_allowance)),
-    do: raise("Shared allowance has uncovered unmeasured usage; admission remains closed")
-
-  if live do
-    {:ok, ^auth, _summary} = CodexAuth.prepare(path: auth, min_validity_hours: 2)
-  end
-
-  execute = fn context, config ->
-    IO.puts("episode #{context["repetition"]}/#{context["task"]["id"]}/#{context["arm"]}")
-    {:ok, meter} = Agent.start_link(fn -> %{} end)
-    fixture = Map.fetch!(config.fixtures, context["task"]["id"])
-
-    provider = fn role ->
-      raw =
-        cond do
-          live ->
-            Recording.new(
-              meter,
-              ReqLLM.new(
-                receive_timeout: :infinity,
-                max_retries: 0,
-                response_metadata: [headers: ["x-request-id", "x-openai-request-id"]]
-              ),
-              role: role,
-              cost_mode: :quota
-            )
-
-          research ->
-            LemieuxQualificationReference.provider(role, fixture, model, effort, requests)
-
-          fixture[:offline_oracle] ->
-            # Reference implementations remain host-only. This branch is
-            # unreachable for a hosted provider and makes no efficacy claim.
-            usage = %{"input_tokens" => 2, "output_tokens" => 2}
-
-            Scripted.new([
-              Scripted.tool_call("reproduce", "bash", %{"command" => "python checks.py"},
-                usage: usage
-              ),
-              Scripted.tool_call("read-source", "read", %{"path" => "src/project/core.py"},
-                usage: usage
-              ),
-              Scripted.tool_call("read-built", "read", %{"path" => ".build/project/core.py"},
-                usage: usage
-              ),
-              Scripted.tool_call(
-                "source",
-                "write",
-                %{"path" => "src/project/core.py", "content" => fixture.offline_oracle},
-                usage: usage
-              ),
-              Scripted.tool_call(
-                "built",
-                "write",
-                %{"path" => ".build/project/core.py", "content" => fixture.offline_oracle},
-                usage: usage
-              ),
-              Scripted.tool_call("verify", "bash", %{"command" => "python checks.py"},
-                usage: usage
-              ),
-              Scripted.complete("offline reference repair", usage: usage)
-            ])
-
-          true ->
-            Scripted.new([
-              Scripted.complete("offline mechanics",
-                usage: %{"input_tokens" => 2, "output_tokens" => 2}
-              )
-            ])
-        end
-
-      if study_allowance,
-        do: StudyAllowance.provider(study_allowance, role, raw),
-        else: raw
+if planning do
+  review = StudyPlanning.review(registration, study_limits)
+  :ok = Installation.write(Path.join(root, "planning.json"), review)
+  IO.puts(JSON.encode!(review))
+else
+  study_allowance =
+    if opts[:allowance_dir] do
+      {:ok, handle} = StudyAllowance.open(opts[:allowance_dir], study_limits)
+      handle
     end
 
-    current =
-      config
-      |> Map.put(:provider, provider)
-      |> Map.put(:environment, Map.get(fixture, :environment, environment))
+  auth = if live, do: Path.join(root, ".auth/oauth.json")
+  System.at_exit(fn _ -> if auth, do: CodexAuth.cleanup(auth) end)
 
-    current = if live, do: Map.put(current, :meter, meter), else: current
+  try do
+    if study_allowance && is_nil(StudyAllowance.admission_tokens(study_allowance)),
+      do: raise("Shared allowance has uncovered unmeasured usage; admission remains closed")
 
-    current =
-      if context["arm"] == "reference" do
-        fixture = Map.fetch!(current.fixtures, context["task"]["id"])
+    if live do
+      {:ok, ^auth, _summary} = CodexAuth.prepare(path: auth, min_validity_hours: 2)
+    end
 
-        put_in(
-          current.fixtures[fixture.id].task.prompt,
-          fixture.task.prompt <> "\nReference workflow guidance:\n" <> fixture.reference_guidance
-        )
-      else
-        current
+    execute = fn context, config ->
+      IO.puts("episode #{context["repetition"]}/#{context["task"]["id"]}/#{context["arm"]}")
+      {:ok, meter} = Agent.start_link(fn -> %{} end)
+      fixture = Map.fetch!(config.fixtures, context["task"]["id"])
+
+      provider = fn role ->
+        raw =
+          cond do
+            live ->
+              Recording.new(
+                meter,
+                ReqLLM.new(
+                  receive_timeout: :infinity,
+                  max_retries: 0,
+                  response_metadata: [headers: ["x-request-id", "x-openai-request-id"]]
+                ),
+                role: role,
+                cost_mode: :quota
+              )
+
+            research ->
+              LemieuxQualificationReference.provider(role, fixture, model, effort, requests)
+
+            fixture[:offline_oracle] ->
+              # Reference implementations remain host-only. This branch is
+              # unreachable for a hosted provider and makes no efficacy claim.
+              usage = %{"input_tokens" => 2, "output_tokens" => 2}
+
+              Scripted.new([
+                Scripted.tool_call("reproduce", "bash", %{"command" => "python checks.py"},
+                  usage: usage
+                ),
+                Scripted.tool_call("read-source", "read", %{"path" => "src/project/core.py"},
+                  usage: usage
+                ),
+                Scripted.tool_call("read-built", "read", %{"path" => ".build/project/core.py"},
+                  usage: usage
+                ),
+                Scripted.tool_call(
+                  "source",
+                  "write",
+                  %{"path" => "src/project/core.py", "content" => fixture.offline_oracle},
+                  usage: usage
+                ),
+                Scripted.tool_call(
+                  "built",
+                  "write",
+                  %{"path" => ".build/project/core.py", "content" => fixture.offline_oracle},
+                  usage: usage
+                ),
+                Scripted.tool_call("verify", "bash", %{"command" => "python checks.py"},
+                  usage: usage
+                ),
+                Scripted.complete("offline reference repair", usage: usage)
+              ])
+
+            true ->
+              Scripted.new([
+                Scripted.complete("offline mechanics",
+                  usage: %{"input_tokens" => 2, "output_tokens" => 2}
+                )
+              ])
+          end
+
+        if study_allowance,
+          do: StudyAllowance.provider(study_allowance, role, raw),
+          else: raw
       end
 
-    try do
-      Host.episode(current, context)
-    after
-      Agent.stop(meter)
-    end
-  end
+      current =
+        config
+        |> Map.put(:provider, provider)
+        |> Map.put(:environment, Map.get(fixture, :environment, environment))
 
-  observer = fn event, payload ->
-    task_id = payload["task_id"] || get_in(payload, ["task", "id"])
+      current = if live, do: Map.put(current, :meter, meter), else: current
 
-    name =
-      if event == "report",
-        do: "report",
-        else: "#{payload["repetition"]}-#{task_id}-#{payload["arm"]}-#{event}"
+      current =
+        if context["arm"] == "reference" do
+          fixture = Map.fetch!(current.fixtures, context["task"]["id"])
 
-    Installation.write(Path.join(root, name <> ".json"), payload)
-  end
-
-  warmup =
-    Enum.map(seeds, fn fixture ->
-      context = %{
-        "arm" => "retrieval",
-        "repetition" => 1,
-        "task" => %{"id" => fixture.id, "source_sha256" => fixture.source_sha256},
-        "allowance" => allowance,
-        "prior_lesson_ids" => [],
-        "available_case_ids" => [],
-        "stream_id" => fixture.cluster
-      }
-
-      :ok = observer.("intent", context)
-      {:ok, row} = execute.(context, config)
-      :ok = Installation.write(Path.join(root, fixture.id <> "-seed-completed.json"), row)
-      true = is_integer(row["tokens"]) and row["qualification_complete"]
-      row
-    end)
-
-  libraries =
-    Map.new(seeds, fn fixture ->
-      path = Path.join(root, "library-retrieval-1-" <> Contract.sha256(fixture.cluster))
-      store = LessonFiles.new(path, scope)
-      {:ok, ids} = Lessons.inventory(store)
-
-      lessons =
-        Enum.map(ids, fn id ->
-          {:ok, lesson} = Lessons.read(store, id)
-          lesson
-        end)
-
-      {fixture.cluster, lessons}
-    end)
-
-  {inventory_status, inventory} =
-    Lemieux.CLI.Learning.SeedInventory.check(libraries, Enum.map(seeds, & &1.cluster))
-
-  :ok = Installation.write(Path.join(root, "seed-inventory.json"), inventory)
-
-  if inventory_status == :error do
-    raise "Seed inventory incomplete; no target episodes dispatched. Review seed-inventory.json; do not replay the frozen intent."
-  end
-
-  library_sha =
-    Contract.digest(
-      Map.new(libraries, fn {stream, lessons} ->
-        {stream, Enum.map(lessons, & &1.sha256) |> Enum.sort()}
-      end)
-    )
-
-  config = Map.put(config, :seed_libraries, libraries)
-
-  seed_usage = %{
-    "requests" => Enum.sum(Enum.map(warmup, & &1["requests"])),
-    "tokens" => Enum.sum(Enum.map(warmup, & &1["tokens"])),
-    "episodes" => length(warmup),
-    "requests_by_stream" =>
-      Map.new(streams, fn stream ->
-        {stream,
-         warmup
-         |> Enum.filter(&(config.fixtures[&1["task_id"]].cluster == stream))
-         |> Enum.map(& &1["requests"])
-         |> Enum.sum()}
-      end)
-  }
-
-  runtime =
-    runtime
-    |> Map.put("seed_usage", seed_usage)
-    |> Map.delete("sha256")
-    |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
-
-  plan = build_plan.(library_sha, runtime)
-  :ok = Installation.write(Path.join(root, "plan.json"), plan)
-
-  report =
-    if stage != "calibration" do
-      {:ok, report} = Qualification.run(plan, &execute.(&1, config), observer: observer)
-      report
-    else
-      rows =
-        for fixture <- fixtures, arm <- ~w(disabled reference) do
-          context = %{
-            "arm" => arm,
-            "repetition" => 1,
-            "task" => %{"id" => fixture.id, "source_sha256" => fixture.source_sha256},
-            "allowance" => allowance,
-            "prior_lesson_ids" => [],
-            "available_case_ids" => [],
-            "stream_id" => fixture.cluster
-          }
-
-          :ok = observer.("intent", context)
-          {:ok, row} = execute.(context, config)
-          :ok = Installation.write(Path.join(root, "#{fixture.id}-#{arm}-completed.json"), row)
-          row
+          put_in(
+            current.fixtures[fixture.id].task.prompt,
+            fixture.task.prompt <>
+              "\nReference workflow guidance:\n" <> fixture.reference_guidance
+          )
+        else
+          current
         end
 
-      Calibration.report(plan, rows)
+      try do
+        Host.episode(current, context)
+      after
+        Agent.stop(meter)
+      end
     end
 
-  if not live and fixture_module == Projects do
-    true = Enum.all?(warmup ++ report["rows"], & &1["passed"])
-  end
+    observer = fn event, payload ->
+      task_id = payload["task_id"] || get_in(payload, ["task", "id"])
 
-  report =
-    if research and stage != "calibration" do
-      {:ok, endpoints} = Endpoints.report(plan, report["rows"])
+      name =
+        if event == "report",
+          do: "report",
+          else: "#{payload["repetition"]}-#{task_id}-#{payload["arm"]}-#{event}"
 
-      stops =
-        Map.new(Enum.group_by(report["rows"], & &1["arm"]), fn {arm, rows} ->
-          {arm,
-           %{
-             "original" => Enum.count(rows, & &1["original_budget_stop"]),
-             "selected" => Enum.count(rows, & &1["selected_budget_stop"]),
-             "probes" => Enum.sum(Enum.map(rows, & &1["probe_budget_stops"]))
-           }}
-        end)
-
-      report
-      |> Map.put("research_endpoints", endpoints)
-      |> Map.put("budget_stops", %{
-        "by_arm" => stops,
-        "interpretation" =>
-          "Original and selected are overlapping views. Verified artifact success does not imply agent completion; probe counts cover task executions, not editor sessions."
-      })
-    else
-      report
+      Installation.write(Path.join(root, name <> ".json"), payload)
     end
 
-  report =
-    report
-    |> Map.put("runtime", runtime)
-    |> Map.put("warmup_rows", warmup)
-    |> Map.put("initial_library_sha256", library_sha)
-    |> Map.put(
-      "workspace_artifacts",
-      Enum.map(Path.wildcard(Path.join([root, "workspaces", "*.json"])), fn path ->
-        bytes = File.read!(path)
-        content = JSON.decode!(bytes)
-
-        %{
-          "file" => Path.basename(path),
-          "bytes_sha256" => Contract.sha256(bytes),
-          "sha256" => content["sha256"],
-          "complete" => content["complete"],
-          "changed_files" => length(content["changed_paths"] || [])
+    warmup =
+      Enum.map(seeds, fn fixture ->
+        context = %{
+          "arm" => "retrieval",
+          "repetition" => 1,
+          "task" => %{"id" => fixture.id, "source_sha256" => fixture.source_sha256},
+          "allowance" => allowance,
+          "prior_lesson_ids" => [],
+          "available_case_ids" => [],
+          "stream_id" => fixture.cluster
         }
+
+        :ok = observer.("intent", context)
+        {:ok, row} = execute.(context, config)
+        :ok = Installation.write(Path.join(root, fixture.id <> "-seed-completed.json"), row)
+        true = is_integer(row["tokens"]) and row["qualification_complete"]
+        row
       end)
-    )
-    |> Map.put(
-      "study_allowance",
-      if(study_allowance, do: StudyAllowance.snapshot(study_allowance))
-    )
-    |> Map.delete("sha256")
-    |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
 
-  :ok = Installation.write(Path.join(root, "report.json"), report)
+    libraries =
+      Map.new(seeds, fn fixture ->
+        path = Path.join(root, "library-retrieval-1-" <> Contract.sha256(fixture.cluster))
+        store = LessonFiles.new(path, scope)
+        {:ok, ids} = Lessons.inventory(store)
 
-  if stage == "mechanism" do
-    {:ok, mechanism} = Mechanism.audit(root, plan, report)
-    :ok = Installation.write(Path.join(root, "mechanism.json"), mechanism)
+        lessons =
+          Enum.map(ids, fn id ->
+            {:ok, lesson} = Lessons.read(store, id)
+            lesson
+          end)
+
+        {fixture.cluster, lessons}
+      end)
+
+    {inventory_status, inventory} =
+      Lemieux.CLI.Learning.SeedInventory.check(libraries, Enum.map(seeds, & &1.cluster))
+
+    :ok = Installation.write(Path.join(root, "seed-inventory.json"), inventory)
+
+    if inventory_status == :error do
+      raise "Seed inventory incomplete; no target episodes dispatched. Review seed-inventory.json; do not replay the frozen intent."
+    end
+
+    library_sha =
+      Contract.digest(
+        Map.new(libraries, fn {stream, lessons} ->
+          {stream, Enum.map(lessons, & &1.sha256) |> Enum.sort()}
+        end)
+      )
+
+    config = Map.put(config, :seed_libraries, libraries)
+
+    seed_usage = %{
+      "requests" => Enum.sum(Enum.map(warmup, & &1["requests"])),
+      "tokens" => Enum.sum(Enum.map(warmup, & &1["tokens"])),
+      "episodes" => length(warmup),
+      "requests_by_stream" =>
+        Map.new(streams, fn stream ->
+          {stream,
+           warmup
+           |> Enum.filter(&(config.fixtures[&1["task_id"]].cluster == stream))
+           |> Enum.map(& &1["requests"])
+           |> Enum.sum()}
+        end)
+    }
+
+    runtime =
+      runtime
+      |> Map.put("seed_usage", seed_usage)
+      |> Map.delete("sha256")
+      |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
+
+    plan = build_plan.(library_sha, runtime)
+    :ok = Installation.write(Path.join(root, "plan.json"), plan)
+
+    report =
+      if stage != "calibration" do
+        {:ok, report} = Qualification.run(plan, &execute.(&1, config), observer: observer)
+        report
+      else
+        rows =
+          for fixture <- fixtures, arm <- ~w(disabled reference) do
+            context = %{
+              "arm" => arm,
+              "repetition" => 1,
+              "task" => %{"id" => fixture.id, "source_sha256" => fixture.source_sha256},
+              "allowance" => allowance,
+              "prior_lesson_ids" => [],
+              "available_case_ids" => [],
+              "stream_id" => fixture.cluster
+            }
+
+            :ok = observer.("intent", context)
+            {:ok, row} = execute.(context, config)
+            :ok = Installation.write(Path.join(root, "#{fixture.id}-#{arm}-completed.json"), row)
+            row
+          end
+
+        Calibration.report(plan, rows)
+      end
+
+    if not live and fixture_module == Projects do
+      true = Enum.all?(warmup ++ report["rows"], & &1["passed"])
+    end
+
+    report =
+      if research and stage != "calibration" do
+        {:ok, endpoints} = Endpoints.report(plan, report["rows"])
+
+        stops =
+          Map.new(Enum.group_by(report["rows"], & &1["arm"]), fn {arm, rows} ->
+            {arm,
+             %{
+               "original" => Enum.count(rows, & &1["original_budget_stop"]),
+               "selected" => Enum.count(rows, & &1["selected_budget_stop"]),
+               "probes" => Enum.sum(Enum.map(rows, & &1["probe_budget_stops"]))
+             }}
+          end)
+
+        report
+        |> Map.put("research_endpoints", endpoints)
+        |> Map.put("budget_stops", %{
+          "by_arm" => stops,
+          "interpretation" =>
+            "Original and selected are overlapping views. Verified artifact success does not imply agent completion; probe counts cover task executions, not editor sessions."
+        })
+      else
+        report
+      end
+
+    report =
+      report
+      |> Map.put("runtime", runtime)
+      |> Map.put("warmup_rows", warmup)
+      |> Map.put("initial_library_sha256", library_sha)
+      |> Map.put(
+        "workspace_artifacts",
+        Enum.map(Path.wildcard(Path.join([root, "workspaces", "*.json"])), fn path ->
+          bytes = File.read!(path)
+          content = JSON.decode!(bytes)
+
+          %{
+            "file" => Path.basename(path),
+            "bytes_sha256" => Contract.sha256(bytes),
+            "sha256" => content["sha256"],
+            "complete" => content["complete"],
+            "changed_files" => length(content["changed_paths"] || [])
+          }
+        end)
+      )
+      |> Map.put(
+        "study_allowance",
+        if(study_allowance, do: StudyAllowance.snapshot(study_allowance))
+      )
+      |> Map.delete("sha256")
+      |> then(&Map.put(&1, "sha256", Contract.digest(&1)))
+
+    :ok = Installation.write(Path.join(root, "report.json"), report)
+
+    if stage == "mechanism" do
+      {:ok, mechanism} = Mechanism.audit(root, plan, report)
+      :ok = Installation.write(Path.join(root, "mechanism.json"), mechanism)
+
+      IO.puts(
+        JSON.encode!(
+          Map.take(mechanism, ~w(status checks required_checks observed_checks interpretation))
+        )
+      )
+    end
+
+    if not live and stage != "calibration" do
+      true = report["mechanics"] == "passed"
+    end
 
     IO.puts(
       JSON.encode!(
-        Map.take(mechanism, ~w(status checks required_checks observed_checks interpretation))
+        Map.take(
+          report,
+          ~w(kind status execution_complete unknown_token_rows mechanics benefit baseline_success has_headroom analysis arms)
+        )
       )
     )
+
+    if stage == "calibration" and report["execution_complete"] != true,
+      do: raise("Calibration incomplete; retained report cannot establish difficulty or headroom")
+  after
+    if auth, do: CodexAuth.cleanup(auth)
+    if study_allowance, do: StudyAllowance.close(study_allowance)
   end
-
-  if not live and stage != "calibration" do
-    true = report["mechanics"] == "passed"
-  end
-
-  IO.puts(
-    JSON.encode!(
-      Map.take(
-        report,
-        ~w(kind status execution_complete unknown_token_rows mechanics benefit baseline_success has_headroom analysis arms)
-      )
-    )
-  )
-
-  if stage == "calibration" and report["execution_complete"] != true,
-    do: raise("Calibration incomplete; retained report cannot establish difficulty or headroom")
-after
-  if auth, do: CodexAuth.cleanup(auth)
-  if study_allowance, do: StudyAllowance.close(study_allowance)
 end

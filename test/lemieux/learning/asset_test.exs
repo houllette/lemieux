@@ -133,6 +133,53 @@ defmodule Lemieux.Learning.AssetTest do
     assert {:error, _} = Asset.new(put_in(attrs["files"]["outside.py"], "pass"), personal)
   end
 
+  test "assembly rejects tools absent from the actual host, despite stale validation context", %{
+    tmp_dir: dir
+  } do
+    assert {:ok, version} = Asset.new(skill(), context())
+    root = Path.join(dir, "stale-tools")
+    assert {:ok, _} = Asset.materialize(version, root, context())
+    approved = %{context() | approved_digests: [version.digest]}
+
+    assert_raise ArgumentError, ~r/unavailable.*read/, fn ->
+      Harness.assemble(Harness.new(tools: []), [
+        {Extension, version: version, root: root, context: approved}
+      ])
+    end
+  end
+
+  test "a description changes an authorized host tool through the same extension seam", %{
+    tmp_dir: dir
+  } do
+    attrs = %{
+      "kind" => "tool_description",
+      "payload" => %{"read" => "Inspect current bytes before editing."},
+      "requires_tools" => [],
+      "triggers" => [],
+      "files" => %{}
+    }
+
+    context = %{context() | trust: "personal"}
+    assert {:ok, version} = Asset.new(attrs, context)
+    root = Path.join(dir, "host-description")
+    assert {:ok, nil} = Asset.materialize(version, root, context)
+
+    spec =
+      {Extension,
+       version: version, root: root, context: %{context | approved_digests: [version.digest]}}
+
+    base = Harness.new(tools: [], host_tools: [Read])
+    assert {:ok, applied} = Harness.assemble(base, [spec])
+    assert [tool] = applied.host_tools
+    assert Tool.description(tool) == attrs["payload"]["read"]
+    assert Tool.schema(tool) == Tool.schema(Read)
+    assert {:ok, ^base} = Harness.assemble(base, [])
+
+    assert_raise ArgumentError, ~r/unavailable.*read/, fn ->
+      Harness.assemble(Harness.new(tools: []), [spec])
+    end
+  end
+
   test "trusted descriptions and shipped settings cannot change host authority", %{tmp_dir: dir} do
     attrs = %{
       "kind" => "tool_description",

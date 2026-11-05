@@ -8,6 +8,7 @@ defmodule LemieuxTest.FrozenRuntime do
   @modules [
     Lemieux.Agent,
     Lemieux.Learning.Extension.Export,
+    Lemieux.Learning.Asset.Source,
     Lemieux.Learning.Extension.Build,
     Lemieux.Learning.Extension.Consumer,
     Lemieux.Learning.Extension.Tree,

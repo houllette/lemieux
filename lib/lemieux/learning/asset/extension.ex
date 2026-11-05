@@ -17,6 +17,10 @@ defmodule Lemieux.Learning.Asset.Extension do
   skill executor. Check the live catalog again at assembly: it can change
   after candidate validation, and approving bytes does not approve an executor
   replacement.
+
+  Validation context can become stale between review and assembly. Recheck
+  required tools against the actual harness rather than recording an applied
+  asset that silently changed nothing or advertises an unavailable procedure.
   """
   @behaviour Lemieux.Extension
   import Kernel, except: [apply: 2]
@@ -71,6 +75,7 @@ defmodule Lemieux.Learning.Asset.Extension do
 
   @impl true
   def apply(harness, %{version: %{content: %{"kind" => "skill"}}} = state) do
+    validate_tools!(harness, state.version.content)
     validate_catalog!(harness.host_tools || [], state.skill)
 
     existing =
@@ -102,15 +107,16 @@ defmodule Lemieux.Learning.Asset.Extension do
         harness,
         %{version: %{content: %{"kind" => "tool_description", "payload" => descriptions}}} = state
       ) do
+    validate_tools!(harness, state.version.content)
+
+    overrides =
+      Map.new(descriptions, fn {name, text} ->
+        {name, fn tool -> Override.new!(tool, description: text) end}
+      end)
+
     harness
-    |> Harness.update_tools(
-      &Tool.decorate(
-        &1,
-        Map.new(descriptions, fn {name, text} ->
-          {name, fn tool -> Override.new!(tool, description: text) end}
-        end)
-      )
-    )
+    |> Harness.update_tools(&decorate_present(&1, overrides))
+    |> Map.update!(:host_tools, &decorate_present(&1 || [], overrides))
     |> record(state)
   end
 
@@ -118,11 +124,35 @@ defmodule Lemieux.Learning.Asset.Extension do
         harness,
         %{version: %{content: %{"kind" => "configuration", "payload" => payload}}} = state
       ) do
+    validate_tools!(harness, state.version.content)
     # Disclosure only. Do not add a missing tool: an asset cannot equip a host.
     harness
     |> Search.configure(payload["glob_after_requests"])
     |> record(state)
   end
+
+  defp validate_tools!(harness, content) do
+    available = Enum.map((harness.tools || []) ++ (harness.host_tools || []), &Tool.name/1)
+    required = Enum.uniq(content["requires_tools"] ++ affected_tools(content))
+
+    case required -- available do
+      [] ->
+        :ok
+
+      missing ->
+        raise ArgumentError,
+              "learned asset requires unavailable tools: #{Enum.join(missing, ", ")}"
+    end
+  end
+
+  defp affected_tools(%{"kind" => "tool_description", "payload" => descriptions}),
+    do: Map.keys(descriptions)
+
+  defp affected_tools(%{"kind" => "configuration"}), do: ["glob"]
+  defp affected_tools(_skill), do: []
+
+  defp decorate_present(tools, overrides),
+    do: Tool.decorate(tools, Map.take(overrides, Enum.map(tools, &Tool.name/1)))
 
   defp validate_catalog!(tools, skill) do
     Enum.each(tools, fn

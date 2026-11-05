@@ -243,6 +243,15 @@ files travel through the same source-preserving export, frozen build,
 confirmation and CodeGate path as the extension's owner-supplied Elixir source.
 There is no additional package format or generated executable wrapper.
 
+Export now checks embedded portable asset manifests against the actual source
+tree before publishing the destination directory. Every named file must be
+present, match its immutable asset bytes and pass the real loader. If the native
+manifest declares a dependency graph, every supporting file must be reachable
+from its `asset.json` entry. An entry for every file with no dependency edges is
+insufficient. Missing trees, altered bytes and incompatible runtime metadata
+refuse export even when the owning native module would compile successfully.
+These integrity checks grant no receiving-host approval or efficacy claim.
+
 The installed host verifies the package and retained confirmation using the
 existing export APIs, obtains its current context and explicitly approves the
 asset digest. It then loads through the normal harness seam:
@@ -263,7 +272,10 @@ The reconstructed version keeps its ID, digest and creation time. Loading
 rechecks scope, runtime binding, validator, tools, trust, dependencies and the
 actual skill loader. Changed files, unexpected source files, symlinks,
 incompatible runtime metadata and conflicting in-memory/source options refuse
-use. Source carries no approval or active registry pointer. Its asset remains
+use. Assembly also checks required and affected tools against the actual
+assembled catalog, including host tools; a stale validation context cannot
+advertise a procedure whose tools are unavailable. Source carries no approval or
+active registry pointer. Its asset remains
 labelled `unconfirmed`: confirming an owning native extension does not prove
 independent efficacy for each contained asset. Scripted confirmation tests
 establish this workflow's mechanics; they do not complete the hosted

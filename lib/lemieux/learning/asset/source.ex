@@ -66,6 +66,130 @@ defmodule Lemieux.Learning.Asset.Source do
     end
   end
 
+  @doc """
+  Checks portable asset trees embedded in a source-preserving extension export.
+
+  The document supplies enough context to check its internal consistency; this
+  grants no receiving-host approval. Revalidate with `read/2` at activation.
+  The package must include every byte named by the asset, and an explicit
+  dependency graph must reach every supporting file from its asset manifest.
+  Otherwise a valid native wrapper can conceal an incomplete procedure tree.
+  """
+  @spec verify_package(root :: Path.t(), manifest :: map()) :: :ok | {:error, term()}
+  def verify_package(root, manifest) do
+    manifest["files"]
+    |> Enum.filter(&(Path.basename(&1) == "asset.json"))
+    |> Enum.reduce_while(:ok, fn path, :ok ->
+      case package_asset(root, path, manifest) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp package_asset(root, path, manifest) do
+    with {:ok, document} <- Tree.read(Path.join(root, path)) do
+      if Map.has_key?(document, "asset_sha256") or Map.has_key?(document, "asset_id"),
+        do: portable_asset(root, path, document, manifest),
+        else: :ok
+    end
+  end
+
+  defp portable_asset(root, path, document, manifest) do
+    content = document["content"]
+    directory = Path.dirname(path)
+
+    with %{"requires_tools" => tools, "payload" => payload, "validator" => validator}
+         when is_list(tools) and is_map(payload) and is_map(validator) <- content,
+         context = integrity_context(content),
+         :ok <- layout(Path.join(root, directory)),
+         {:ok, current} <- package_version(document, context),
+         {:ok, _skill} <- Asset.installed(current, Path.join([root, directory, "files"]), context),
+         required =
+           Enum.map(Map.keys(current.content["files"]), &Path.join([directory, "files", &1])),
+         true <- Enum.all?(required, &(&1 in manifest["files"])),
+         true <- dependency_closure?(path, required, manifest["dependencies"]) do
+      :ok
+    else
+      _invalid -> {:error, {:incomplete_packaged_asset, path}}
+    end
+  end
+
+  defp package_version(document, context) do
+    content = document["content"]
+
+    with true <- Enum.sort(Map.keys(document)) == Enum.sort(@fields),
+         true <- document["schema_version"] == 1 and document["runtime"] == runtime(),
+         :ok <- Contract.verify_digest(document, "sha256"),
+         {:ok, current} <- Asset.new(Map.take(content, @asset_fields), context),
+         true <- Map.delete(current.content, "validator") == Map.delete(content, "validator"),
+         true <-
+           Map.delete(current.content["validator"], "code_sha256") ==
+             Map.delete(content["validator"], "code_sha256"),
+         digest when is_binary(digest) <- content["validator"]["code_sha256"],
+         true <- Regex.match?(~r/\A[a-f0-9]{64}\z/, digest),
+         {:ok, stored} <-
+           Version.new(%{
+             type: current.type,
+             layer: current.layer,
+             scope: current.scope,
+             project_id: current.project_id,
+             content: content
+           }),
+         true <- stored.digest == document["asset_sha256"],
+         id when is_binary(id) and byte_size(id) in 1..256 <- document["asset_id"],
+         timestamp when is_binary(timestamp) <- document["created_at"],
+         {:ok, _created_at, 0} <- DateTime.from_iso8601(timestamp) do
+      # Integrity verification does not activate this version. Coverage and a
+      # fresh consumer may load different BEAM variants of the same validator;
+      # activation still checks the exact stored validator through read/2.
+      {:ok, current}
+    else
+      _invalid -> {:error, :invalid_asset_source}
+    end
+  end
+
+  # These values validate stored bytes only. No session or extension is assembled,
+  # and no candidate-supplied value can grant the receiving host any authority.
+  defp integrity_context(content) do
+    %{
+      scope: content["scope"],
+      binding: content["binding"],
+      trust: "personal",
+      tools: Enum.uniq((content["requires_tools"] || []) ++ description_tools(content)),
+      description_tools: description_tools(content),
+      settings_allowlist: ["search.glob_after_requests"],
+      helper_extensions: get_in(content, ["validator", "helper_extensions"]) || [],
+      approved_digests: []
+    }
+  end
+
+  defp description_tools(%{"kind" => "tool_description", "payload" => payload})
+       when is_map(payload),
+       do: Map.keys(payload)
+
+  defp description_tools(_other), do: []
+
+  defp dependency_closure?(_path, _required, nil), do: true
+
+  defp dependency_closure?(path, required, graph) do
+    reachable = reachable([path], graph, %{})
+    Enum.all?(required, &Map.has_key?(reachable, &1))
+  end
+
+  @spec reachable(
+          paths :: [Path.t()],
+          graph :: %{Path.t() => [Path.t()]},
+          visited :: %{Path.t() => true}
+        ) :: %{Path.t() => true}
+  defp reachable([], _graph, visited), do: visited
+
+  defp reachable([path | rest], graph, visited) do
+    if Map.has_key?(visited, path),
+      do: reachable(rest, graph, visited),
+      else: reachable(Map.fetch!(graph, path) ++ rest, graph, Map.put(visited, path, true))
+  end
+
   defp write_into(version, root, context, document) do
     with :ok <- File.chmod(root, 0o700),
          {:ok, _skill} <- Asset.materialize(version, Path.join(root, "files"), context),

@@ -63,6 +63,10 @@ research acceptance items below retain their own completion criteria.
   Independent efficacy, qualified persistent promotion and automatic selection
   of new typed assets remain separate gates; scripted task-local replay is not
   their qualification evidence.
+  The [1.1 qualification workflow](learning-qualification.md#planning-the-11-learning-work)
+  adds provider-free registration review, complete execution binding, actual
+  per-kind usage evidence and embedded export dependency checks. These checks
+  prepare the remaining work in #79–#81; they do not supply hosted confirmation.
   The [hosted pilot](qualification/2026-10-20-default-learning/README.md) records
   stock-path reuse and the unresolved efficacy and recovery work for V2/V9.
   The [staged study](qualification/2026-10-20-learning-study/README.md) adds

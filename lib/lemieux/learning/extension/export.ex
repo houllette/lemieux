@@ -21,6 +21,7 @@ defmodule Lemieux.Learning.Extension.Export do
   """
 
   alias Lemieux.Contract
+  alias Lemieux.Learning.Asset.Source
   alias Lemieux.Learning.Extension.Review
 
   @manifest "lemieux-extension.json"
@@ -62,6 +63,7 @@ defmodule Lemieux.Learning.Extension.Export do
          :ok <- matching_files(root, receipt["files"]),
          {:ok, files} <- read_files(root, Map.keys(receipt["files"])) do
       with :ok <- verify_files(files, receipt["files"]),
+           :ok <- Source.verify_package(root, manifest),
            do: qualification(root, receipt)
     end
   end
@@ -276,6 +278,7 @@ defmodule Lemieux.Learning.Extension.Export do
          :ok <- File.mkdir(stage) do
       try do
         with :ok <- write_files(stage, files),
+             :ok <- verify(stage),
              :ok <- available(destination) do
           File.rename(stage, destination)
         end

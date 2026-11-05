@@ -44,6 +44,12 @@ API.
 
 ### Features
 
+- Add provider-free planning for learning studies and a v7 protocol binding
+  mechanism receipts to the full execution configuration. Require observed use
+  of every enabled typed asset kind, add explicit tool-description experiments,
+  and validate embedded procedure bytes and dependency closure before export.
+  These experimental checks prepare the 1.1 learning work; hosted efficacy and
+  automatic persistent selection remain separately gated. (#47, #79, #80, #81)
 - Start an independent todo list with `action: "new"` or `Planning.new/2`,
   retaining earlier plans in the transcript and keeping task ids monotonic.
   `set` still continues the current work; completed plans no longer appear as

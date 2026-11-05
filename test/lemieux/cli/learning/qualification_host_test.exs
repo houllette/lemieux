@@ -609,6 +609,107 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
     assert Lemieux.sessions(config.supervisor) == []
   end
 
+  test "generated procedures and tool descriptions are reviewed, loaded and observed by exact kind",
+       ctx do
+    skill = %{
+      "kind" => "skill",
+      "payload" => %{"name" => "check-records"},
+      "requires_tools" => ["read", "write"],
+      "triggers" => ["archive paths"],
+      "files" => %{
+        "SKILL.md" =>
+          "---\nname: check-records\ndescription: Use for archive paths.\n---\nRead current source, repair it and rerun public verification.\n"
+      }
+    }
+
+    description = %{
+      "kind" => "tool_description",
+      "payload" => %{"read" => "Inspect current source before repair."},
+      "requires_tools" => ["read"],
+      "triggers" => [],
+      "files" => %{}
+    }
+
+    for attrs <- [skill, description] do
+      provider = fn
+        :asset_proposer ->
+          Scripted.new([Scripted.complete(JSON.encode!(%{"assets" => [attrs]}), usage: usage())])
+
+        :asset_critic ->
+          Scripted.new([
+            fn request ->
+              user = request.entries |> Enum.filter(&(&1.type == :user)) |> List.last()
+              input = JSON.decode!(user.payload["text"])
+
+              Scripted.complete(
+                JSON.encode!(%{
+                  "asset_sha256" => input["asset_sha256"],
+                  "decision" => "approve",
+                  "reason" => "A bounded non-executable workflow hypothesis."
+                }),
+                usage: usage()
+              )
+            end
+          ])
+
+        _task_or_probe ->
+          Scripted.new([
+            fn request ->
+              if Enum.any?(request.tools, &(Lemieux.Tool.name(&1) == "skill")),
+                do:
+                  Scripted.tool_call("procedure", "skill", %{"name" => "check-records"},
+                    usage: usage()
+                  ),
+                else:
+                  Scripted.tool_call("check", "bash", %{"command" => "python checks.py"},
+                    usage: usage()
+                  )
+            end,
+            Scripted.tool_call("read", "read", %{"path" => "solution.py"}, usage: usage()),
+            Scripted.tool_call("fix", "write", %{"path" => "solution.py", "content" => "fixed"},
+              usage: usage()
+            ),
+            Scripted.complete("done", usage: usage())
+          ])
+      end
+
+      config =
+        Map.merge(ctx.config, %{
+          root: Path.join(ctx.config.root, attrs["kind"]),
+          asset_search: true,
+          asset_kinds: [attrs["kind"]],
+          asset_helper_extensions: [],
+          profile_search: false,
+          terminal_rule: :artifact_outcome,
+          task_requests: 3,
+          asset_tokens: 1_000_000,
+          provider: provider,
+          support_policy: %{
+            "id" => "experimental_mean/v2",
+            "verified_ties" => true,
+            "minimum_gain" => 0.1,
+            "minimum_repetitions" => 2
+          }
+        })
+
+      File.mkdir!(config.root)
+      assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+      assert row["passed"] and row["qualification_complete"]
+      assert row["asset_application_count"] == 1
+      assert row["asset_restoration_count"] == 1
+
+      evidence =
+        Path.join(config.root, "1-#{ctx.fixture.id}-updating/evidence.json")
+        |> File.read!()
+        |> JSON.decode!()
+
+      [digest] = evidence["asset_search"]["selected_asset_sha256"]
+      assert row["asset_kind_evidence"][attrs["kind"]] == [digest]
+      assert row["asset_kind_evidence"]["configuration"] == []
+      assert Lemieux.sessions(config.supervisor) == []
+    end
+  end
+
   test "failed source archival withholds asset activation and preserves the ordinary result",
        ctx do
     obstruction =

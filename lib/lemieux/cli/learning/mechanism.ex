@@ -8,6 +8,7 @@ defmodule Lemieux.CLI.Learning.Mechanism do
   This proves an observed data path, never a causal benefit. The six-arm study
   and independent endpoints remain responsible for efficacy.
   """
+  alias Lemieux.CLI.Learning.AssetEvidence
   alias Lemieux.Contract
   alias Lemieux.Evidence.Run
   alias Lemieux.Learning.Qualification
@@ -17,10 +18,18 @@ defmodule Lemieux.CLI.Learning.Mechanism do
     with :ok <- Qualification.verify(plan),
          :ok <- Contract.verify_digest(report, "sha256"),
          true <- report["plan_sha256"] == plan["sha256"],
+         {:ok, rebuilt} <- Qualification.report(plan, report["rows"]),
+         true <-
+           Map.take(report, Map.keys(rebuilt) -- ["sha256"]) == Map.delete(rebuilt, "sha256"),
          true <- report["mechanics"] == "passed",
+         true <- is_list(report["warmup_rows"]),
          true <- get_in(plan, ["runtime", "research_protocol", "stage"]) == "mechanism",
          {:ok, records} <- records(root, report["rows"]),
-         true <- Enum.all?(records, &complete?/1) do
+         true <- Enum.all?(records, &complete?(&1, plan)) do
+      strict_assets? =
+        get_in(plan, ["runtime", "research_protocol", "id"]) == "whole_record_research/v7"
+
+      records = Enum.map(records, &Map.put(&1, :strict_assets, strict_assets?))
       updating = Enum.filter(records, &(&1.evidence["context"]["arm"] == "updating"))
       withheld = Enum.filter(records, &(&1.evidence["context"]["arm"] == "no_experience"))
       profile? = get_in(plan, ["runtime", "research_protocol", "profile_search"]) == true
@@ -36,14 +45,16 @@ defmodule Lemieux.CLI.Learning.Mechanism do
         "profile_exercised" => Enum.any?(updating, &profile?/1),
         "procedure_exercised" => Enum.any?(updating, &procedure?/1),
         "helper_executed" => Enum.any?(updating, &helper?/1),
-        "setting_exercised" => Enum.any?(updating, &setting?/1)
+        "setting_exercised" => Enum.any?(updating, &setting?/1),
+        "description_exercised" => Enum.any?(updating, &description?/1)
       }
 
-      checks = Map.new(observed, fn {key, value} -> {key, value or not required[key]} end)
+      checks =
+        Map.new(observed, fn {key, value} -> {key, value or not Map.get(required, key, false)} end)
 
       receipt = %{
         "schema_version" => 1,
-        "kind" => "observed_learning_mechanism/v1",
+        "kind" => receipt_kind(plan["runtime"]),
         "status" => if(Enum.all?(checks, &elem(&1, 1)), do: "passed", else: "not_demonstrated"),
         "checks" => checks,
         "required_checks" => required,
@@ -68,7 +79,7 @@ defmodule Lemieux.CLI.Learning.Mechanism do
     kinds = asset["kinds"] || []
     skill? = "skill" in kinds
 
-    %{
+    required = %{
       "retained_seed_lessons" => true,
       "experience_withheld" => true,
       "observed_lesson_to_execution" => true,
@@ -77,15 +88,20 @@ defmodule Lemieux.CLI.Learning.Mechanism do
       "helper_executed" => skill? and (asset["helper_extensions"] || []) != [],
       "setting_exercised" => "configuration" in kinds
     }
+
+    if get_in(runtime, ["research_protocol", "id"]) == "whole_record_research/v7",
+      do: Map.put(required, "description_exercised", "tool_description" in kinds),
+      else: required
   end
 
   @spec gate(receipt :: map(), runtime :: map(), model :: String.t(), effort :: String.t()) ::
           :ok | {:error, term()}
   def gate(receipt, runtime, model, effort) do
     with :ok <- Contract.verify_digest(receipt, "sha256"),
-         "observed_learning_mechanism/v1" <- receipt["kind"],
+         true <- receipt["kind"] == receipt_kind(runtime),
          "passed" <- receipt["status"],
          true <- receipt["binding"] == binding(runtime, model, effort),
+         true <- is_map(receipt["checks"]),
          true <- scoped_requirements?(receipt, runtime),
          true <- Enum.all?(receipt["checks"], &elem(&1, 1)) do
       :ok
@@ -98,10 +114,29 @@ defmodule Lemieux.CLI.Learning.Mechanism do
          receipt,
          %{"research_protocol" => %{"id" => id}} = runtime
        )
-       when id in ["whole_record_research/v5", "whole_record_research/v6"],
-       do: receipt["required_checks"] == requirements(runtime)
+       when id in [
+              "whole_record_research/v5",
+              "whole_record_research/v6",
+              "whole_record_research/v7"
+            ],
+       do:
+         receipt["required_checks"] == requirements(runtime) and
+           (id != "whole_record_research/v7" or
+              Enum.sort(Map.keys(receipt["checks"])) == Enum.sort(Map.keys(requirements(runtime))))
 
   defp scoped_requirements?(_receipt, _runtime), do: true
+
+  defp receipt_kind(%{"research_protocol" => %{"id" => "whole_record_research/v7"}}),
+    do: "observed_learning_mechanism/v2"
+
+  defp receipt_kind(_historical), do: "observed_learning_mechanism/v1"
+
+  defp binding(
+         %{"research_protocol" => %{"id" => "whole_record_research/v7"}} = runtime,
+         model,
+         effort
+       ),
+       do: execution_binding(runtime, model, effort)
 
   defp binding(runtime, model, effort),
     do: %{
@@ -111,6 +146,22 @@ defmodule Lemieux.CLI.Learning.Mechanism do
       "inference_route" => runtime["inference_route"],
       "research_protocol" => Map.delete(runtime["research_protocol"], "stage")
     }
+
+  @doc """
+  Pins a v7 canary to its complete execution configuration.
+
+  Fresh cases, acquired seed bytes and the shared study ledger change between
+  stages. Exclude only those and the stage itself; images, isolation, generation,
+  retries, tools, transport and resource policies must match. Historical v1
+  receipts keep their original meaning and cannot unlock this protocol.
+  """
+  @spec execution_binding(runtime :: map(), model :: String.t(), effort :: String.t()) :: map()
+  def execution_binding(runtime, model, effort) do
+    runtime
+    |> Map.drop(~w(sha256 corpus seed_usage study_allowance))
+    |> Map.update!("research_protocol", &Map.delete(&1, "stage"))
+    |> Map.merge(%{"model" => model, "effort" => effort})
+  end
 
   defp records(root, rows) do
     index =
@@ -127,14 +178,23 @@ defmodule Lemieux.CLI.Learning.Mechanism do
       else: {:error, :missing_evidence}
   end
 
-  defp complete?(record) do
-    record.row["qualification_complete"] == true and is_integer(record.row["tokens"]) and
+  defp complete?(record, plan) do
+    same_episode?(record, plan) and
+      record.row["qualification_complete"] == true and is_integer(record.row["tokens"]) and
       record.row["safety_failures"] == [] and
       Enum.all?(~w(original selected), fn key ->
         transcript = record.evidence[key]["transcript"]
         terminal = Enum.find(Enum.reverse(transcript), &(&1["type"] == "run_evidence"))
         terminal != nil and Run.verify_transcript(terminal["payload"], transcript) == :ok
       end)
+  end
+
+  defp same_episode?(record, plan) do
+    context = record.evidence["context"] || %{}
+
+    context["plan_sha256"] == plan["sha256"] and context["arm"] == record.row["arm"] and
+      context["repetition"] == record.row["repetition"] and
+      get_in(context, ["task", "id"]) == record.row["task_id"]
   end
 
   defp withheld?(record) do
@@ -172,7 +232,8 @@ defmodule Lemieux.CLI.Learning.Mechanism do
   defp consumed?(record, profile?, assets?),
     do:
       (profile? and profile?(record) and proposer_read?(record)) or
-        (assets? and (procedure?(record) or setting?(record)) and asset_experience?(record))
+        (assets? and (procedure?(record) or setting?(record) or description?(record)) and
+           asset_experience?(record))
 
   defp profile?(record) do
     receipt = record.evidence["refinement"] || %{}
@@ -212,6 +273,9 @@ defmodule Lemieux.CLI.Learning.Mechanism do
     end
   end
 
+  defp procedure?(%{strict_assets: true} = record),
+    do: AssetEvidence.observed(record.evidence)["skill"] != []
+
   defp procedure?(record),
     do:
       Enum.any?(
@@ -236,6 +300,12 @@ defmodule Lemieux.CLI.Learning.Mechanism do
       )
     end)
   end
+
+  defp description?(record),
+    do: AssetEvidence.observed(record.evidence)["tool_description"] != []
+
+  defp setting?(%{strict_assets: true} = record),
+    do: AssetEvidence.observed(record.evidence)["configuration"] != []
 
   defp setting?(record) do
     candidates = get_in(record.evidence, ["asset_search", "candidates"]) || []
