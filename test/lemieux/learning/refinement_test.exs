@@ -66,7 +66,9 @@ defmodule Lemieux.Learning.RefinementTest do
            id: id,
            cwd: dir,
            prompt: "fix result.txt",
-           timeout_ms: 5000,
+           # The fixture tests outcomes; host load must not turn a scripted
+           # two-turn answer into recovery-required evidence first.
+           timeout_ms: 60_000,
            grader: %Lemieux.Benchmark.Grader.Command{command: ["true"]}
          },
          session: [environment: {Confined, nil}]
@@ -264,6 +266,11 @@ defmodule Lemieux.Learning.RefinementTest do
 
     opts = [
       baseline: profile(),
+      # These probes test refinement decisions, not host scheduling speed.
+      # Short startup deadlines made slow CI report unknown execution
+      # instead of reaching the conflict and evidence assertions below. The
+      # acquisition-timeout test overrides this window explicitly.
+      acquisition_timeout_ms: 60_000,
       bindings: bindings,
       original: %{"answer" => "original output"},
       allocation: %{requests: 40, tokens: 10_000, time_ms: 60_000, cost_usd: nil},
