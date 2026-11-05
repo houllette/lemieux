@@ -13,6 +13,10 @@ defmodule LemieuxSystemOneCompaction.MixProject do
         {:lemieux, path: System.get_env("LEMIEUX_EXTENSION_BASE", "../../../..")},
         {:system_one_sdk, "~> 0.6.0"},
         {:pristine, "~> 0.4.0"},
+        # Sinter 0.3.2 pins vulnerable jsv ~> 0.21.2. Keep the existing
+        # validator patched until Sinter relaxes that constraint; the dependency
+        # security tests cover both the bypass and Sinter's schema API.
+        {:jsv, "~> 0.26.2", override: true},
         {:req_llm, "~> 1.28"},
         {:dotenvy, "~> 1.2"}
       ],

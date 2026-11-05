@@ -9,6 +9,13 @@ API.
 
 ## Unreleased
 
+### Dependencies
+
+- Update the library and standalone host to ExRatatui 0.18.0 and patched
+  JSV 0.26.2, fixing CVE-2026-117680 in both dependency graphs. Override the
+  bundled compaction SDK's older validator constraint with compatibility
+  coverage until its upstream dependency permits the patched version.
+
 ### Release readiness
 
 - Define the supported 1.x API, automation, transcript and extension compatibility
