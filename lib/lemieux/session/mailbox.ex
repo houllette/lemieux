@@ -301,10 +301,12 @@ defmodule Lemieux.Session.Mailbox do
 
   # A receipt is the tool saying the remote side has committed its effect, sent
   # from inside the call so it survives whatever happens to the call afterwards.
-  # Kept only while the call runs: one for a call this wave is not running is a
-  # late message from a task whose result is already written.
-  def message({:tool_receipt, call_id, receipt}, state) when is_map(receipt) do
-    case ToolWave.running_call(state, call_id) do
+  # A provider can reuse its call ID in a later wave. Match the live execution
+  # reference too, or a helper retaining an old context could attribute an old
+  # remote effect to the new call. The reference is never restored from history.
+  def message({:tool_receipt, execution_ref, call_id, receipt}, state)
+      when is_reference(execution_ref) and is_map(receipt) do
+    case ToolWave.running_call(state, call_id, execution_ref) do
       nil ->
         {:noreply, state}
 

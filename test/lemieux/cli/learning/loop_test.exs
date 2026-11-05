@@ -125,17 +125,14 @@ defmodule Lemieux.CLI.Learning.LoopTest do
     provider = Scripted.new(provider)
     host = Keyword.merge(ctx.host, provider: provider, interactive?: true, max_requests: 8)
     assert {:ok, session} = Runtime.start_session(ctx.options, host)
-    id = Session.id(session)
 
     for prompt <- ["Fix the failing test", "Investigate the next failing test"] do
-      assert :ok = Session.prompt(session, prompt)
-      assert_receive {:lemieux, ^id, {:finished, _}}
+      await_prompt(session, prompt)
     end
 
     assert Enum.at(Scripted.requests(provider), 5).system =~ "Prior scoped experience"
     assert :ok = Loop.set_enabled(ctx.options.host.state_dir, ctx.cwd, false)
-    assert :ok = Session.prompt(session, "Investigate a third failing test")
-    assert_receive {:lemieux, ^id, {:finished, _}}
+    await_prompt(session, "Investigate a third failing test")
     refute List.last(Scripted.requests(provider)).system =~ "Prior scoped experience"
     GenServer.stop(session)
     assert length(Scripted.requests(provider)) == 8
@@ -393,9 +390,18 @@ defmodule Lemieux.CLI.Learning.LoopTest do
   defp run(ctx, provider, prompt, interactive) do
     host = Keyword.merge(ctx.host, provider: provider, interactive?: interactive, max_requests: 5)
     assert {:ok, session} = Runtime.start_session(ctx.options, host)
-    id = Session.id(session)
-    assert :ok = Session.prompt(session, prompt)
-    assert_receive {:lemieux, ^id, {:finished, _reason}}
+    await_prompt(session, prompt)
     GenServer.stop(session)
+  end
+
+  defp await_prompt(session, prompt) do
+    id = Session.id(session)
+
+    # One training prompt contains five tool/model turns and their capture
+    # hooks. CI can legitimately take longer than one event's five-second
+    # window for all of that. Await the bounded prompt's completion first;
+    # the subscriber must still receive its terminal event at the default wait.
+    assert {:ok, _result} = Session.await(session, prompt)
+    assert_receive {:lemieux, ^id, {:finished, _reason}}
   end
 end

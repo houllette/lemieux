@@ -373,7 +373,9 @@ Thanks also to [Alloy](https://github.com/alloy-ex/alloy),
 [ex_athena](https://github.com/udin-io/ex_athena), whose published designs
 informed Lemieux's tool, feedback, telemetry, evaluation and terminal
 boundaries; [Why Lemieux](docs/why-lemieux.md#what-came-from-other-harnesses)
-describes those influences. The bundled System One compaction extension adapts the
+describes those influences. [Hayata](https://github.com/zgbjgg/hayata)'s
+Erlang/OTP design informed execution-scoped tool receipts and ownership of
+auxiliary model tasks. The bundled System One compaction extension adapts the
 selective idea in [fast-jev-compaction](https://github.com/tamaratran/fast-jev-compaction),
 and the experimental computer-use example adapts portions of
 [jev-ultrafast](https://github.com/browser-use/jev-ultrafast) (MIT).

@@ -72,6 +72,11 @@ tool-feedback, telemetry, receipt and testing boundaries.
 reference attachment and terminal scrollback. No comparator's source code is
 vendored.
 
+[Hayata](https://github.com/zgbjgg/hayata)'s Erlang/OTP execution model
+informed rejection of stale tool receipts and ownership of auxiliary model
+tasks: each receipt belongs to a specific live execution, and a document
+request's worker ends when its session dies.
+
 The [MCP guide](mcp.md#oauth-ownership-and-security) explains OAuth ownership;
 the [harness-learning contracts](harness-learning.md) (experimental) define
 discovery and independent confirmation.

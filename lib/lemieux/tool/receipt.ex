@@ -64,14 +64,16 @@ defmodule Lemieux.Tool.Receipt do
   asynchronous; the receipt is ordered before the tool's own return because
   both come from the task running it.
 
-  A receipt for a call the session is no longer running is dropped, the way
-  a late output chunk is.
+  Pass the original session-supplied context, including its live execution
+  reference. A helper may use that context while the call runs. A receipt for
+  an execution the session is no longer running is dropped, even when the
+  provider reuses its call ID in a later wave, the way a late output chunk is.
   """
   @spec record(context :: Tool.context(), receipt :: map()) :: :ok | {:error, :not_json}
-  def record(%{session: session, call_id: call_id}, receipt)
+  def record(%{session: session, call_id: call_id} = context, receipt)
       when is_pid(session) and is_binary(call_id) and is_map(receipt) do
     if json?(receipt) do
-      send(session, {:tool_receipt, call_id, receipt})
+      send(session, {:tool_receipt, context[:tool_execution_ref], call_id, receipt})
       :ok
     else
       {:error, :not_json}

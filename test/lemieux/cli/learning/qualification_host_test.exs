@@ -54,6 +54,10 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
       enabled: true,
       model: "test:model",
       effort: "default",
+      # Preparing a disk-backed episode can exceed five seconds on CI. These
+      # fixtures exercise learning/accounting; resource timeout behavior has
+      # its own tests and must not decide an ordinary episode's outcome here.
+      acquisition_timeout_ms: 60_000,
       supervisor: supervisor,
       scope: %{"id" => "qualification/test"},
       environment: {Confined, fixture.cases},

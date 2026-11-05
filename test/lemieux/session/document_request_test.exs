@@ -142,6 +142,57 @@ defmodule Lemieux.Session.DocumentRequestTest do
     assert {:ok, %{value: %{"failed" => true}}} = Session.document(session, "label")
   end
 
+  test "a killed session also stops its document provider task", %{tmp_dir: dir} do
+    parent = self()
+
+    {session, _provider, _runtime} =
+      start(dir, [
+        fn _request ->
+          send(parent, {:started, self()})
+
+          receive do
+            {:monitor_ready, ref} -> send(parent, {:monitor_ready, ref})
+          end
+
+          Scripted.delayed(60_000, Scripted.complete("orphaned"))
+        end
+      ])
+
+    caller =
+      Task.async(fn ->
+        try do
+          Session.generate_document(session, "label", 0, request(), &build/1, timeout_ms: 60_000)
+        catch
+          :exit, reason -> {:session_down, reason}
+        end
+      end)
+
+    assert_receive {:started, worker}
+    on_exit(fn -> Process.exit(worker, :kill) end)
+    monitor = Process.monitor(worker)
+    # The monitor and this message have the same sender and target. The reply
+    # establishes the monitor before a different process's exit kills the
+    # worker; otherwise a late monitor can legitimately report :noproc.
+    send(worker, {:monitor_ready, monitor})
+    assert_receive {:monitor_ready, ^monitor}
+    Process.exit(session, :kill)
+
+    assert {:session_down, {:killed, _call}} = Task.await(caller)
+    assert_receive {:DOWN, ^monitor, :process, ^worker, :killed}
+  end
+
+  @tag :capture_log
+  test "a document provider crash leaves the session usable and spend unknown", %{tmp_dir: dir} do
+    {session, _provider, _runtime} =
+      start(dir, [fn _request -> exit(:document_provider_crashed) end, Scripted.complete("next")])
+
+    assert {:ok, %{value: %{"failed" => true}}} =
+             Session.generate_document(session, "label", 0, request(), &build/1)
+
+    assert %{requests: 1, spent_usd: nil} = Session.budget(session)
+    assert {:ok, %{text: "next", stop_reason: :stop}} = Session.await(session, "continue")
+  end
+
   test "a competing writer wins and usage is counted once", %{tmp_dir: dir} do
     parent = self()
 

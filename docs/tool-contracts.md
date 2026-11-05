@@ -369,6 +369,11 @@ reconcile against it rather than guess. A tool that recorded a receipt has
 said its effect is committed, so its lost result is unknown whatever its
 descriptor says.
 
+Pass the original session-supplied context to `record/2`, including when a
+helper records the receipt. The session correlates it with that specific live
+execution, so a delayed receipt from a completed or cancelled call cannot
+attach to a later call that reuses the model's call ID.
+
 The `:tool_result` entry carries `"receipt"` only when one of the two applies:
 `"reported"` is the map the tool recorded and `"lost"` is why the outcome is
 unknown — `"crashed"`, `"timeout"`, `"cancelled"` or `"session_ended"`. A
