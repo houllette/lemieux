@@ -121,5 +121,23 @@
     },
     "scope": "Evidence and documentation append only; production source unchanged from the passing full gate.",
     "hosted_requests": 0
+  },
+  "ci_initial_attempt": {
+    "revision": "bf993c5853ee96854e43ce8dcb1dd486ab164a22",
+    "status": "failed_secret_scan",
+    "run_url": "https://github.com/houllette/lemieux/actions/runs/42177305323",
+    "rule": "generic-api-key",
+    "finding": "A source-file SHA-256 digest under apparatus_files in benchmark.json was mistaken for authentication data because its filename names the authentication implementation.",
+    "verification": "The value exactly matches the digest of the retained owned source bytes. No credential content was published.",
+    "correction": "Separate scanner configuration commit adds only the exact commit/path/rule/line fingerprint to the existing reviewed historical list. New occurrences remain scanned.",
+    "runtime_changed": false,
+    "hosted_requests": 0
+  },
+  "reviewed_history_scan": {
+    "scanner": "gitleaks 8.30.1",
+    "status": "passed",
+    "scope": "All 73 commits reachable from the initial PR head, with the reviewed fingerprint present.",
+    "log_sha256": "18c2be410a41709712c29b7fdb150eafcf531f8091c6da1522630acf93de2358",
+    "remaining_findings": 0
   }
 }
