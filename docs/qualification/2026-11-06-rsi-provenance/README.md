@@ -84,6 +84,15 @@ library files are pinned in the receipt; the primary benchmark checkout receives
 no writes. The intentional scripted retry is retained in its log. These host
 contracts do not establish a learning benefit.
 
+Fresh repository preparation also exposed an apparatus defect: `git archive`
+on a commit adds a global metadata entry that the strict extractor refuses.
+The preparer now archives that exact commit's tree. A real-Git regression
+advances HEAD and adds uncommitted edits before preparation; the extracted
+source still matches the pinned commit. [Paired controls](archive-controls.json)
+on two actual repository archives preserve every source-file byte, reject both
+original commit archives and accept both tree archives. Accepted member types,
+path checks and no-overwrite rules remain unchanged.
+
 Further efficacy requires cases with pinned pre-effect inputs and runtime,
 public baseline/repair controls, source exposure retained, and a genuinely
 failed public baseline to admit selective refinement. Freeze the complete

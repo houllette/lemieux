@@ -83,6 +83,18 @@ for {path, expected} <- benchmark["library_files"] do
   true = expected == Contract.sha256(File.read!(Path.join(repository, path)))
 end
 
+archives = read.("archive-controls.json")
+0 = archives["hosted_requests"]
+2 = length(archives["rows"])
+
+for row <- archives["rows"] do
+  true = row["commit_archive_refused"]
+  true = row["tree_archive_accepted"]
+  true = row["source_file_bytes_preserved"]
+  1 = row["commit_unknown_members"]
+  0 = row["tree_unknown_members"]
+end
+
 "passed" = read.("validation.json")["final_gate"]["status"]
 
 IO.puts(

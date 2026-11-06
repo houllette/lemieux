@@ -186,14 +186,17 @@ defmodule Lemieux.Reflection.Opportunities do
 
       model = Keyword.get(opts, :model, "unknown")
       opts = Keyword.put(opts, :evidence_validation, validation)
-
-      Enum.reduce_while(opportunities, {:ok, []}, fn opportunity, {:ok, ids} ->
-        case record_one(opportunity, provenance, store, model, opts) do
-          {:ok, id} -> {:cont, {:ok, ids ++ [id]}}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
-      end)
+      append_opportunities(opportunities, provenance, store, model, opts)
     end
+  end
+
+  defp append_opportunities(opportunities, provenance, store, model, opts) do
+    Enum.reduce_while(opportunities, {:ok, []}, fn opportunity, {:ok, ids} ->
+      case record_one(opportunity, provenance, store, model, opts) do
+        {:ok, id} -> {:cont, {:ok, ids ++ [id]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   defp source_entries(opts) do

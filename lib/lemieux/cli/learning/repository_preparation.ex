@@ -42,7 +42,11 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparation do
           "-C",
           "/testbed",
           "archive",
-          instance["base_commit"]
+          # A commit archive adds a global PAX comment that erl_tar reports as
+          # an unknown member. Keep the extractor's strict type checks: archive
+          # this exact commit's tree, which has identical source files without
+          # that metadata. Never substitute HEAD or the image's working tree.
+          instance["base_commit"] <> "^{tree}"
         ],
         []
       )

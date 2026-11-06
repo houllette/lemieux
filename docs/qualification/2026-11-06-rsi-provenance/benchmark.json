@@ -76,11 +76,12 @@
   "library_files": {
     ".tool-versions": "6286da51456f864e5f1d8f2280e6de86d6fb1ee4517c40819760ec54d203c846",
     "lib/lemieux/cli/feedback.ex": "159718d1cab1c80dee97eb07960c0484dfa9a91859ba36dcf4d3e2add09d9cf4",
-    "lib/lemieux/reflection/opportunities.ex": "89b69d1bb9efb6a98e8a197082de0c74e02c3f7de7aac45ccd1423060ffc54eb",
+    "lib/lemieux/cli/learning/repository_preparation.ex": "9ab915ba9b3b0cc81c517aeff50bce6cc319003ad051d4c9fc0429c83fdd68bc",
+    "lib/lemieux/reflection/opportunities.ex": "3ee3e1c4e0c40ea8ba6b43663eed66088fa6e3dacef3fabfa45ed6c916234206",
     "mix.exs": "2c17ac2d6752c0f4dff1004d2410a4be8d2966bef3468cb132adb6955e4d760c",
     "mix.lock": "ebf0ba0b0eccd64a226e72f80bcf401dca68fb4bdfc4f4fc3ea4ae257c50a149"
   },
-  "log_sha256": "94ec48f1150798d7d102a10b599221cd303eb1b43e7fb3a36f75e69a78b1bd6d",
+  "log_sha256": "6345bce386b1179db1b18eeab96d8498a3af9f21673453108639f27f060c269e",
   "receipt": {
     "image": "python@sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059",
     "kind": "deterministic_host_contracts",

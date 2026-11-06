@@ -186,6 +186,95 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
   end
 
   @tag :tmp_dir
+  test "preparation can extract the pinned tree from a real Git archive", %{tmp_dir: root} do
+    repo = Path.join(root, "source repository")
+    File.mkdir!(repo)
+    File.write!(Path.join(repo, "value.py"), "broken\n")
+    File.write!(Path.join(repo, "test_value.py"), "original\n")
+    {_, 0} = System.cmd("git", ["-c", "init.templateDir=", "init", "-q", repo])
+    {_, 0} = System.cmd("git", ["-C", repo, "add", "."])
+
+    identity = [
+      "-c",
+      "user.name=Fixture",
+      "-c",
+      "user.email=fixture@example.test",
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      "core.hooksPath=/dev/null"
+    ]
+
+    {_, 0} = System.cmd("git", identity ++ ["-C", repo, "commit", "-qm", "source"])
+    {base, 0} = System.cmd("git", ["-C", repo, "rev-parse", "HEAD"])
+    File.write!(Path.join(repo, "value.py"), "new HEAD\n")
+    {_, 0} = System.cmd("git", identity ++ ["-C", repo, "commit", "-qam", "later"])
+    File.write!(Path.join(repo, "value.py"), "uncommitted\n")
+
+    opts = validation_fixture(root)
+
+    dataset = %{
+      "instance_id" => opts[:instance],
+      "base_commit" => String.trim(base),
+      "repo" => "owner/project",
+      "problem_statement" => "Repair the value.",
+      "test_patch" => change("test_value.py", "original", "private"),
+      "patch" => change("value.py", "broken", "fixed"),
+      "FAIL_TO_PASS" => ["test_value.py::test_value"],
+      "PASS_TO_PASS" => []
+    }
+
+    File.write!(opts[:dataset], JSON.encode!([dataset]))
+    public = Path.join(root, "public.py")
+    File.write!(public, "public check\n")
+    opts = Keyword.merge(opts, public_check: public, repo: File.cwd!())
+
+    runner = fn
+      ["docker", "image", "inspect" | _], _ ->
+        JSON.encode!(%{
+          "Config" => %{
+            "Env" => [
+              "PYTHONDONTWRITEBYTECODE=1",
+              "PYTEST_ADDOPTS=-p no:cacheprovider"
+            ]
+          }
+        })
+
+      [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--entrypoint",
+        "git",
+        _image,
+        "-C",
+        "/testbed",
+        "archive",
+        ref
+      ],
+      _ ->
+        {archive, 0} = System.cmd("git", ["-C", repo, "archive", ref])
+        archive
+
+      ["docker", "run", "--rm", "--network", "none", "--read-only", "--entrypoint", "sh" | _],
+      _ ->
+        ""
+
+      ["mix", "run", "scripts/freeze_learning_repository.exs", "--template", _], _ ->
+        ""
+    end
+
+    assert Preparation.prepare(opts, runner) == Path.join(opts[:output], "manifest.json")
+    assert File.read!(Path.join(opts[:output], "source/value.py")) == "broken\n"
+    assert File.read!(Path.join(opts[:output], "oracle/value.py")) == "fixed\n"
+    refute File.exists?(Path.join(opts[:output], "source/.git"))
+    assert File.read!(Path.join(repo, "value.py")) == "uncommitted\n"
+  end
+
+  @tag :tmp_dir
   test "preparation keeps private patches out of source and binds the native template to its inputs",
        %{tmp_dir: root} do
     archive =
@@ -319,7 +408,7 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
                 "-C",
                 "/testbed",
                 "archive",
-                instance["base_commit"]
+                instance["base_commit"] <> "^{tree}"
               ], []},
              {[
                 "mix",

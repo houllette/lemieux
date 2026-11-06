@@ -27,5 +27,29 @@
     "status": "failed",
     "reason": "The legacy experiments manifest lacks a version; the current reader refuses it. The completed audit retains that refusal and separately exercises the trusted raw task grader, without importing or qualifying the manifest."
   },
-  "hosted_requests": 0
+  "hosted_requests": 0,
+  "first_full_gate": {
+    "status": "failed",
+    "step": "credo --strict",
+    "finding": "record/4 body nested one level above the configured limit; helper extracted, with no suppression."
+  },
+  "archive_regression_red": {
+    "passed": 10,
+    "total": 11,
+    "seed": 218471,
+    "failure": "Real commit archive rejected by strict extractor."
+  },
+  "targeted_recovery": {
+    "passed": 26,
+    "seed": 515428,
+    "seconds": 0.8,
+    "scope": "Reflection opportunities and repository preparation, including the real Git source-pin regression and unchanged hostile-archive controls."
+  },
+  "credo_recovery": {
+    "status": "passed",
+    "seconds": 23.4
+  },
+  "final_gate": {
+    "status": "pending"
+  }
 }
