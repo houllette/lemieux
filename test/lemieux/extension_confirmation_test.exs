@@ -283,7 +283,10 @@ defmodule Lemieux.ExtensionConfirmationTest do
       JSON.encode!([" alpha ", "", " beta "])
     )
 
-    input = %{prompt: "Normalize records", cwd: context.tmp_dir, timeout_ms: 10_000}
+    # This starts a fresh VM before exercising the packaged skill and rollback.
+    # A ten-second startup cap failed the identity check under host contention;
+    # use the native consumer's minute budget rather than asserting startup speed.
+    input = %{prompt: "Normalize records", cwd: context.tmp_dir, timeout_ms: 60_000}
     assert {:ok, result} = Build.run(installed, input)
 
     assert JSON.decode!(File.read!(Path.join(context.tmp_dir, "normalized.json"))) == [
