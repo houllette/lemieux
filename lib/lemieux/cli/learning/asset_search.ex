@@ -14,7 +14,10 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   """
   alias Lemieux.Agent.Session
   alias Lemieux.Asset.Version
+  alias Lemieux.CLI.Learning.AssetEvidence
+  alias Lemieux.CLI.Learning.AssetPolicy
   alias Lemieux.CLI.Learning.Reflection
+  alias Lemieux.CLI.Learning.SkillInvocation
   alias Lemieux.Contract
   alias Lemieux.Evidence.Run
   alias Lemieux.Extension.Profile
@@ -74,8 +77,8 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
   def protocol, do: protocol([])
 
   @spec protocol(opts :: keyword()) :: map()
-  def protocol(opts),
-    do: %{
+  def protocol(opts) do
+    protocol = %{
       "id" => "reviewed_assets/v4",
       "maximum_candidates" =>
         min(2, length(Keyword.get(opts, :kinds, ["skill", "configuration"]))),
@@ -87,14 +90,25 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
       "activation" => "isolated_task_only_exact_digest_review"
     }
 
+    if AssetPolicy.valid?(opts[:selection_policy]),
+      do:
+        protocol
+        |> Map.put("id", "reviewed_assets/v5")
+        |> Map.put("selection_policy", opts[:selection_policy]),
+      else: protocol
+  end
+
   @spec run(record :: map(), context :: map(), opts :: keyword()) ::
           {:ok, map(), [map()]} | {:error, term()}
   def run(record, context, opts) do
     protocol =
       protocol(
         kinds: Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
-        helper_extensions: Map.get(context, :helper_extensions, [])
+        helper_extensions: Map.get(context, :helper_extensions, []),
+        selection_policy: opts[:selection_policy]
       )
+
+    opts = Keyword.put(opts, :trigger_source, AssetPolicy.trigger_source(record))
 
     plan = %{
       "schema_version" => 1,
@@ -136,8 +150,37 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
 
     with :ok <- Refinement.preflight(opts[:isolation], opts[:bindings]),
          :ok <- Support.verify(opts[:support_policy]),
-         :ok <- opts[:intent].(plan),
-         true <-
+         true <- is_nil(opts[:selection_policy]) or AssetPolicy.valid?(opts[:selection_policy]),
+         :ok <- opts[:intent].(plan) do
+      admission = if selective?(opts), do: AssetPolicy.admission(record)
+      run_admitted(admission, record, context, opts, plan)
+    else
+      failure -> {:error, {:asset_search_incomplete, failure_name(failure)}}
+    end
+  end
+
+  defp run_admitted(%{"decision" => "abstain"} = admission, _record, _context, _opts, plan) do
+    receipt = %{
+      "schema_version" => 1,
+      "kind" => "experimental_asset_search",
+      "decision" => "baseline",
+      "qualification" => "experimental_task_local",
+      "admission" => admission,
+      "plan" => plan,
+      "proposal" => nil,
+      "reviews" => [],
+      "control" => [],
+      "candidates" => [],
+      "composition" => [],
+      "selected_asset_sha256" => [],
+      "accounting" => %{"requests" => 0, "tokens" => 0, "time_ms" => 0, "cost_usd" => nil}
+    }
+
+    {:ok, Map.put(receipt, "sha256", Contract.digest(receipt)), []}
+  end
+
+  defp run_admitted(admission, record, context, opts, plan) do
+    with true <-
            opts[:allow_live] == true or Controller.scripted?(opts[:provider].(:asset_proposer)),
          {:ok, {:ok, receipt, selected}, accounting} <-
            Controller.experiment(
@@ -150,6 +193,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
              end
            ) do
       receipt = receipt |> Map.put("plan", plan) |> Map.put("accounting", accounting)
+      receipt = if admission, do: Map.put(receipt, "admission", admission), else: receipt
       {:ok, Map.put(receipt, "sha256", Contract.digest(receipt)), selected}
     else
       failure -> {:error, {:asset_search_incomplete, failure_name(failure)}}
@@ -167,6 +211,12 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
     do: select_composition([], [], [], proposal, reviews, opts)
 
   defp evaluate(reviewed, proposal, reviews, opts) do
+    if selective?(opts),
+      do: evaluate_selective(reviewed, proposal, reviews, opts),
+      else: evaluate_all(reviewed, proposal, reviews, opts)
+  end
+
+  defp evaluate_all(reviewed, proposal, reviews, opts) do
     with {:ok, control} <- probes([], opts),
          {:ok, candidates} <- candidates(reviewed, opts) do
       supported =
@@ -180,8 +230,32 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
     end
   end
 
+  defp evaluate_selective(reviewed, proposal, reviews, opts) do
+    with {:ok, candidates} <- candidates(reviewed, opts),
+         viable = Enum.filter(candidates, &(not Map.has_key?(&1, :rejection))),
+         {:ok, control} <- selective_control(viable, opts) do
+      supported =
+        Enum.filter(
+          viable,
+          &Support.supported?(control, &1.evaluations, true, opts[:support_policy])
+        )
+
+      select_composition(
+        Enum.map(supported, & &1.item),
+        control,
+        candidates,
+        proposal,
+        reviews,
+        opts
+      )
+    end
+  end
+
+  defp selective_control([], _opts), do: {:ok, []}
+  defp selective_control(_viable, opts), do: probes([], opts)
+
   defp select_composition(selected, control, candidates, proposal, reviews, opts) do
-    with {:ok, composed} <- composition(selected, opts) do
+    with {:ok, composed} <- composition(selected, candidates, opts) do
       selected =
         if selected != [] and Support.supported?(control, composed, true, opts[:support_policy]),
           do: selected,
@@ -198,11 +272,14 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
         "candidates" =>
           Enum.map(
             candidates,
-            &%{
-              "asset" => wire(&1.item.version),
-              "review" => &1.item.review,
-              "evaluations" => &1.evaluations
-            }
+            fn candidate ->
+              %{
+                "asset" => wire(candidate.item.version),
+                "review" => candidate.item.review,
+                "evaluations" => candidate.evaluations
+              }
+              |> candidate_rejection(candidate)
+            end
           ),
         "composition" => composed,
         "selected_asset_sha256" => Enum.map(selected, & &1.version.digest)
@@ -211,6 +288,11 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
       {:ok, receipt, selected}
     end
   end
+
+  defp candidate_rejection(receipt, %{rejection: reason}),
+    do: Map.put(receipt, "rejection", reason)
+
+  defp candidate_rejection(receipt, _candidate), do: receipt
 
   defp propose(record, context, opts) do
     prompt =
@@ -224,7 +306,8 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
         "helper_extensions" => context[:helper_extensions] || []
       })
 
-    with {:ok, observation} <- session(@system, prompt, :proposer, :asset_proposer, opts) do
+    with {:ok, observation} <-
+           session(proposer_system(opts), prompt, :proposer, :asset_proposer, opts) do
       case validate_answer(observation["answer"], context, opts) do
         {:ok, attrs} -> {:ok, attrs, model_observation(observation)}
         {:error, reason} -> repair(observation, reason, context, opts)
@@ -232,22 +315,36 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
     end
   end
 
-  defp repair(original, reason, context, opts) do
-    prompt =
-      JSON.encode!(%{
-        "format_repair_only" => true,
-        "original_answer" => original["answer"],
-        "validation_error" => reason,
-        "instructions" =>
-          "Preserve the original hypotheses and components; correct only schema/loader formatting. Do not invent improvements, helpers or settings. Return exactly {\"assets\":[...]}. Each asset has only kind,payload,files,requires_tools,triggers. A skill payload has ONLY name; put description only in SKILL.md frontmatter. Each trigger must be an exact literal substring of that description. Include all referenced files. No probe feedback or quality retry is available.",
-        "available_tools" => context.tools,
-        "allowed_asset_kinds" =>
-          Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
-        "settings_allowlist" => context.settings_allowlist,
-        "helper_extensions" => context[:helper_extensions] || []
-      })
+  defp proposer_system(opts) do
+    if selective?(opts),
+      do:
+        @system <>
+          "\nFor a skill, choose triggers as exact literal phrases of 8..160 characters and at least two words from the CURRENT public task or its observed trajectory, not solely from earlier experience. Preserve those phrases in its description. A matched procedure is offered through the real loader before task tools; a declined or unused procedure is rejected. Do not claim that loading it proves benefit.",
+      else: @system
+  end
 
-    with {:ok, repaired} <- session(@system, prompt, :proposer, :asset_proposer, opts) do
+  defp repair(original, reason, context, opts) do
+    input = %{
+      "format_repair_only" => true,
+      "original_answer" => original["answer"],
+      "validation_error" => reason,
+      "instructions" =>
+        "Preserve the original hypotheses and components; correct only schema/loader formatting. Do not invent improvements, helpers or settings. Return exactly {\"assets\":[...]}. Each asset has only kind,payload,files,requires_tools,triggers. A skill payload has ONLY name; put description only in SKILL.md frontmatter. Each trigger must be an exact literal substring of that description. Include all referenced files. No probe feedback or quality retry is available.",
+      "available_tools" => context.tools,
+      "allowed_asset_kinds" => Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
+      "settings_allowlist" => context.settings_allowlist,
+      "helper_extensions" => context[:helper_extensions] || []
+    }
+
+    input =
+      if selective?(opts),
+        do: Map.put(input, "current_public_trigger_source", opts[:trigger_source]),
+        else: input
+
+    prompt = JSON.encode!(input)
+
+    with {:ok, repaired} <-
+           session(proposer_system(opts), prompt, :proposer, :asset_proposer, opts) do
       receipt =
         model_observation(repaired)
         |> Map.put("structural_repair", %{
@@ -287,6 +384,7 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
 
     try do
       with true <- search_surface?(attrs),
+           true <- matched_trigger?(attrs, opts),
            true <-
              attrs["kind"] in Map.get(context, :allowed_asset_kinds, ["skill", "configuration"]),
            {:ok, version} <- Asset.new(attrs, context),
@@ -391,17 +489,41 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
 
   defp search_surface?(_attrs), do: false
 
+  defp matched_trigger?(%{"kind" => "skill", "triggers" => triggers}, opts),
+    do: not selective?(opts) or AssetPolicy.matches?(triggers, opts[:trigger_source])
+
+  defp matched_trigger?(_attrs, _opts), do: true
+
   defp candidates(reviewed, opts) do
     Enum.reduce_while(reviewed, {:ok, []}, fn item, {:ok, results} ->
       case probes([item], opts) do
-        {:ok, evaluations} -> {:cont, {:ok, results ++ [%{item: item, evaluations: evaluations}]}}
-        error -> {:halt, error}
+        {:ok, evaluations} ->
+          {:cont, {:ok, results ++ [candidate_result(item, evaluations, opts)]}}
+
+        error ->
+          {:halt, error}
       end
     end)
   end
 
-  defp composition([], _opts), do: {:ok, []}
-  defp composition(selected, opts), do: probes(selected, opts)
+  defp candidate_result(item, evaluations, opts) do
+    result = %{item: item, evaluations: evaluations}
+
+    if selective?(opts) and not Enum.all?(evaluations, &used_assets?(&1, [item])),
+      do: Map.put(result, :rejection, "asset_not_exercised"),
+      else: result
+  end
+
+  defp composition([], _candidates, _opts), do: {:ok, []}
+
+  defp composition([item] = selected, candidates, opts) do
+    if selective?(opts),
+      do:
+        {:ok, Enum.find(candidates, &(&1.item.version.digest == item.version.digest)).evaluations},
+      else: probes(selected, opts)
+  end
+
+  defp composition(selected, _candidates, opts), do: probes(selected, opts)
 
   defp probes(assets, opts) do
     Enum.reduce_while(1..2, {:ok, []}, fn _, {:ok, results} ->
@@ -413,13 +535,44 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
                Enum.map(assets, & &1.version.digest),
                opts[:task_model],
                opts[:terminal_rule] || :completed_task
-             ) do
-        {:cont, {:ok, results ++ [evidence]}}
+             ),
+           :ok <- Refinement.preflight(opts[:isolation], opts[:bindings]) do
+        evidence = observed_probe(evidence, attempt, assets, opts)
+
+        probe_continuation(evidence, assets, results, opts)
       else
         _invalid -> {:halt, {:error, :asset_probe_incomplete}}
       end
     end)
   end
+
+  defp probe_continuation(evidence, assets, results, opts) do
+    if selective?(opts) and not used_assets?(evidence, assets),
+      do: {:halt, {:ok, results ++ [evidence]}},
+      else: {:cont, {:ok, results ++ [evidence]}}
+  end
+
+  defp observed_probe(evidence, attempt, assets, opts) do
+    if selective?(opts) do
+      used =
+        for item <- assets,
+            AssetEvidence.exercised?(
+              wire(item.version),
+              opts[:original_observation] || %{},
+              attempt.observation
+            ),
+            do: item.version.digest
+
+      Map.put(evidence, "exercised_asset_sha256", used)
+    else
+      evidence
+    end
+  end
+
+  defp used_assets?(evidence, assets),
+    do: Enum.all?(assets, &(&1.version.digest in (evidence["exercised_asset_sha256"] || [])))
+
+  defp selective?(opts), do: AssetPolicy.valid?(opts[:selection_policy])
 
   defp session(system, prompt, role, provider_role, opts) do
     provider =
@@ -464,7 +617,15 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
           root :: Path.t(),
           environment :: term()
         ) :: {:ok, Harness.t()} | {:error, term()}
-  def apply(assets, base, context, root, environment) do
+  @spec apply(
+          assets :: [map()],
+          base :: Harness.t(),
+          context :: map(),
+          root :: Path.t(),
+          environment :: term(),
+          opts :: keyword()
+        ) :: {:ok, Harness.t()} | {:error, term()}
+  def apply(assets, base, context, root, environment, opts \\ []) do
     specifications =
       Enum.map(assets, fn item ->
         asset_root = Path.join(root, item.version.id)
@@ -497,7 +658,16 @@ defmodule Lemieux.CLI.Learning.AssetSearch do
                  &1.review["asset_sha256"] == &1.version.digest)
            ),
          {:ok, harness} <- Harness.assemble(base, specifications) do
-      {:ok, harness}
+      if selective?(opts),
+        do:
+          {:ok,
+           SkillInvocation.configure(
+             harness,
+             assets,
+             Keyword.fetch!(opts, :task_request),
+             opts[:trigger_source]
+           )},
+        else: {:ok, harness}
     else
       _unreviewed -> {:error, :asset_not_reviewed}
     end

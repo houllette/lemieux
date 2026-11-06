@@ -1,0 +1,222 @@
+{
+  "base_revision": "f3510351eebbe7679f8016e4f133af015035c992",
+  "benchmark": {
+    "apparatus_source_manifest": "../2026-11-05-rsi-v1.1/benchmark-apparatus.json",
+    "apparatus_source_manifest_bytes_sha256": "ec2af921798023594e3740ac1b7adef1e127cb6e19fc6c9c76451f4d6639863a",
+    "bytes_sha256": "854289e393e8d5fbe0afea7db98df9d5aa9aea2c7013c378b71cd4553db46958",
+    "docker_context": "desktop-linux",
+    "image_id": "sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059",
+    "path": "lemieux-rsi-selective-bench-final.log",
+    "primary_checkout_status_sha256": "17d6e863a5c5fd140ede845400fa14752593793be0ef47c1814c80b89900027c",
+    "receipt": "benchmark-host.json",
+    "receipt_bytes_sha256": "13d5e2a1773c0ae7fa28d139c7c8d5198c04c7caa59aeda0ba553b1c63b1199a",
+    "remaining_benchmark_labelled_containers": 0,
+    "scenarios_passed": 8,
+    "snapshot_lock_matches_library": true,
+    "source_files_checked": 69,
+    "source_mismatches": 0
+  },
+  "changed_source_and_test_files": [
+    {
+      "path": "lib/lemieux/cli/learning/asset_evidence.ex",
+      "sha256": "4e391071148ad36cb885f23c5dd0bf80f85f5830184161a190cfb687465ee778"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/asset_lane.ex",
+      "sha256": "4b676287bd048688eba3fd41aba774487ea3f18e0c6fdf8b8b77d81a771ec767"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/asset_policy.ex",
+      "sha256": "0eb2a78081f5de91282ce94edea8e8ae5235864f11ef92122dab23466aa6a3d5"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/asset_search.ex",
+      "sha256": "d751a2c45af45bdad21b3186c60ed4e36b1e113a2622c562f6bbcbf70632e67a"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/mechanism.ex",
+      "sha256": "a2838972a7440b3b1e9a293ccd78440b2c847c90f348f889a1a57d7fa316118d"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/qualification_host.ex",
+      "sha256": "b7ccb392318ef11fb3ab223cb6cad3f0b2537fa6b81165d41935fe08b53a6bb8"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/skill_invocation.ex",
+      "sha256": "a818a0b9bb27230d5e55e9b0167757b283cc4eaadacfdf17acdcd8bf894be763"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/study_budget.ex",
+      "sha256": "96f833c61353f240d5199cfc5bf34afdd96bc573d193f261f91b18065f8b61e2"
+    },
+    {
+      "path": "lib/lemieux/learning/qualification/endpoints.ex",
+      "sha256": "ec1c40633afdf30c7ec0447abf7e9ee569851ef7b5057b86f9601c6fefda28c5"
+    },
+    {
+      "path": "scripts/qualify_learning_study.exs",
+      "sha256": "af7d9109d44ddc7079d16b5d58a7f85acdd11029a3b1310ae54ec4d583f4fb6a"
+    },
+    {
+      "path": "test/lemieux/cli/learning/asset_evidence_test.exs",
+      "sha256": "8549a5e1774dad1931f72f788ec3242c7c836289a5ad824f82da8ebf7d872920"
+    },
+    {
+      "path": "test/lemieux/cli/learning/asset_policy_test.exs",
+      "sha256": "b4d864fafe976039d3039bb869db50b0a582b09db5ed9e2038a409665a9c253a"
+    },
+    {
+      "path": "test/lemieux/cli/learning/mechanism_test.exs",
+      "sha256": "3f8032363e7c7cf8fdccc13629d1f28a0a581a6dfb7d2240a9003758412d8b1e"
+    },
+    {
+      "path": "test/lemieux/cli/learning/qualification_host_test.exs",
+      "sha256": "d89b894770e6f3168bd15ce213528391cf95c356929f8ff3967f7f0d9c660071"
+    },
+    {
+      "path": "test/lemieux/cli/learning/skill_invocation_test.exs",
+      "sha256": "a50cf628458eb72488ea8e5e921270fded48dca89a9dec7944b4be8957d767f2"
+    },
+    {
+      "path": "test/lemieux/cli/learning/study_budget_test.exs",
+      "sha256": "cb7fa6a8eab5fd84fddd9d6dfe9dbb082ac4b8da58c1e63ad879f6441935a515"
+    },
+    {
+      "path": "test/lemieux/cli/learning/study_planning_test.exs",
+      "sha256": "dfbf4f9a5b4634145c1345cc7a75b1c343155ca861e95e41f372809c29c34499"
+    },
+    {
+      "path": "test/lemieux/learning/qualification/endpoints_test.exs",
+      "sha256": "32a13ae7b2eb8e139486facdce5f8d9ceaf8db46235537930eb676150635e5e3"
+    }
+  ],
+  "claim": "Offline mechanics only. No new hosted mechanism or independent efficacy; historical pilot unchanged.",
+  "final_metadata_regression": {
+    "bytes_sha256": "ede75dbbe567f4a3a2743a5300961a4e768f53a2e7c627aa6465f7af6a9404e3",
+    "passed": 7,
+    "path": "lemieux-rsi-selective-guidance.log"
+  },
+  "gate": {
+    "bytes_sha256": "d8e43e26f3b8026124478678a50f4886b1cd11562bc6df18438711dfb750588e",
+    "command": "ulimit -n 4096; LMX_CONFIG=none MIX_ENV=test ERL_FLAGS='+S 4:4' mise exec -- mix precommit.full",
+    "coverage": {
+      "floor_percent": 85,
+      "max_cases": 1,
+      "passed": 6078,
+      "percent": 86.72,
+      "seconds": 615.4,
+      "seed": 844597
+    },
+    "dialyzer_errors": 0,
+    "distributed_passed": 25,
+    "examples": [
+      "examples/extensions/builder",
+      "examples/extensions/capture",
+      "examples/extensions/computer_use",
+      "examples/extensions/hello",
+      "examples/extensions/learned_skill_witness",
+      "examples/extensions/portable_procedure",
+      "examples/extensions/research",
+      "examples/extensions/review",
+      "examples/extensions/security",
+      "dist/lmx/extensions/systemone_compaction",
+      "examples/extensions/verifier"
+    ],
+    "ordinary": {
+      "doctests": 12,
+      "excluded": 47,
+      "passed": 6078,
+      "seconds": 321.5,
+      "seed": 982752,
+      "skipped": 11,
+      "tests": 6066
+    },
+    "package_consumer": "compiled_seeded_resumed_tightened",
+    "path": "lemieux-rsi-selective-precommit-full-final.log",
+    "python_tests_passed": 80,
+    "release_host_passed": 123,
+    "status": "passed"
+  },
+  "hosted_requests": 0,
+  "interrupted_prior_gate": {
+    "bytes_sha256": "ab81277e137a26680ffacc030bb15c4e4fbb277b5cbf589415b0d4329138e645",
+    "path": "lemieux-rsi-selective-precommit-full.log",
+    "reason": "Review exposed prior system guidance supplying a current-task trigger; added failing regression and corrected it before restarting.",
+    "status": "intentionally_interrupted"
+  },
+  "kind": "offline_selective_asset_mechanics",
+  "retained_intentional_red_regressions": [
+    {
+      "bytes_sha256": "d7ced093d1a0a68828870d70f4a82e87501aea60c9ee327bcddb5c4c993a16b0",
+      "path": "lemieux-rsi-selective-budget-red.log"
+    },
+    {
+      "bytes_sha256": "33ca80a71a9e453886907b0875d075af38083e3947311bd69591d02c972fc824",
+      "path": "lemieux-rsi-selective-budget-stop-red.log"
+    },
+    {
+      "bytes_sha256": "d65d3de83543fc36b48b43ad24f5bf2b691bea38e7b8234210a3f991859c1492",
+      "path": "lemieux-rsi-selective-feedback-red.log"
+    },
+    {
+      "bytes_sha256": "773ba07f29d5b2d4dc3f728ec0c9f0023781c59b82bd903e82b7a736732bb11f",
+      "path": "lemieux-rsi-selective-guidance-red.log"
+    },
+    {
+      "bytes_sha256": "1fba1afead45b6149efe4686630621e978c0e2444721ee8b92c02a2af8a02761",
+      "path": "lemieux-rsi-selective-literal-red.log"
+    },
+    {
+      "bytes_sha256": "6ad1636f1ffb321cfdda0fd4c4478ea3c709609f413e5f92437d1aa9ce760988",
+      "path": "lemieux-rsi-selective-pages-red.log"
+    },
+    {
+      "bytes_sha256": "7668de20a5dd33f22e98dbc3af7cc99dc8e0aea478136bb892c5402851a38405",
+      "path": "lemieux-rsi-selective-prerequisite-red.log"
+    },
+    {
+      "bytes_sha256": "4b0c1d6ee75b450cf1c7014f98ebe330d055870c2dcd5de26ce7cedc72fc75c7",
+      "path": "lemieux-rsi-selective-search-red.log"
+    },
+    {
+      "bytes_sha256": "0ad1908e15d0d77551a40ebc353babc168d8f9369eeda821e8a947475bf2dee8",
+      "path": "lemieux-rsi-selective-v8-red.log"
+    }
+  ],
+  "retained_unexpected_divergence": {
+    "bytes_sha256": "b6802d4ae06f5252f91b0a80f5dde40ab8ab826984f77cfb739014e1ba0808e9",
+    "case": "failed promoted request cannot replace partial original work on an equal score",
+    "cause": "unattributed",
+    "expected_tokens": null,
+    "focused_result": "61/62 passed",
+    "isolated_recheck": {
+      "bytes_sha256": "428ec2704c377d47f3cb6db257b2abd18c88fce0a019a655628725c17d54fc9d",
+      "path": "lemieux-rsi-selective-promoted-recheck.log"
+    },
+    "observed_tokens": 48,
+    "path": "lemieux-rsi-selective-focused-final.log",
+    "subsequent_observations": "Passed isolated case, seeds 101-103 and both final gate suites."
+  },
+  "schema_version": 1,
+  "seeded_observations": {
+    "logs": [
+      {
+        "bytes_sha256": "0b739de5a9d213a50ad2ad15cb7319b474102d1576bb3df7bf812f80c6dcbbcb",
+        "path": "lemieux-rsi-selective-flakes.log"
+      },
+      {
+        "bytes_sha256": "47a46569ec2391215bca6bea397677900786f0598bd9c34204d3bd5981a09f8a",
+        "path": "lemieux-rsi-selective-budget-flakes.log"
+      }
+    ],
+    "max_cases": 4,
+    "passed": 45,
+    "scope": "Before final system/session metadata exclusion; final source covered by seven focused cases and full gate.",
+    "seeds": [
+      101,
+      102,
+      103
+    ]
+  },
+  "source_state": "task_worktree_before_publication"
+}

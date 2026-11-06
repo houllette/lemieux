@@ -8,6 +8,7 @@ defmodule Lemieux.CLI.Learning.AssetEvidence do
   profile search cannot supply evidence for a new learned asset kind. The host
   separately verifies complete transcripts, accounting and behavioral outcomes.
   """
+  alias Lemieux.CLI.Learning.SkillInvocation
   alias Lemieux.Harness.Snapshot
 
   @kinds ~w(skill configuration tool_description)
@@ -27,12 +28,37 @@ defmodule Lemieux.CLI.Learning.AssetEvidence do
             application["restored"] == true,
             asset["sha256"] in selected,
             Enum.any?(snapshots, &bound?(&1, asset)),
-            used?(kind, asset, evidence, snapshots),
+            exercised_kind?(kind, asset, evidence, snapshots),
             do: asset["sha256"]
 
       {kind, Enum.uniq(digests)}
     end)
   end
+
+  @doc "Observed use in a complete probe; callers separately verify accounting and restoration."
+  @spec exercised?(asset :: map(), original :: map(), selected :: map()) :: boolean()
+  def exercised?(asset, original, selected) do
+    evidence = %{"original" => original, "selected" => selected}
+    snapshots = snapshots(selected)
+
+    Enum.any?(snapshots, &bound?(&1, asset)) and
+      strict_use?(asset["content"]["kind"], asset, evidence, snapshots)
+  end
+
+  defp exercised_kind?(kind, asset, evidence, snapshots) do
+    if get_in(evidence, ["asset_search", "plan", "protocol", "id"]) == "reviewed_assets/v5",
+      do: strict_use?(kind, asset, evidence, snapshots),
+      else: used?(kind, asset, evidence, snapshots)
+  end
+
+  defp strict_use?("skill", asset, evidence, _snapshots),
+    do:
+      SkillInvocation.loaded?(
+        transcript(evidence["selected"]),
+        asset["content"]["payload"]["name"]
+      )
+
+  defp strict_use?(kind, asset, evidence, snapshots), do: used?(kind, asset, evidence, snapshots)
 
   defp bound?(snapshot, asset),
     do:

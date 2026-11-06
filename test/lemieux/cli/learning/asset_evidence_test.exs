@@ -55,6 +55,21 @@ defmodule Lemieux.CLI.Learning.AssetEvidenceTest do
     assert AssetEvidence.observed(unused)["tool_description"] == []
   end
 
+  test "selective skills require an actual complete body while legacy evidence keeps its meaning" do
+    asset = asset("skill", %{"name" => "check-records"})
+    original = evidence(asset, [Read], [result("skill", %{"name" => "check-records"})])
+
+    selective =
+      put_in(original, ["asset_search", "plan"], %{"protocol" => %{"id" => "reviewed_assets/v5"}})
+
+    assert AssetEvidence.observed(original)["skill"] == [asset["sha256"]]
+    assert AssetEvidence.observed(selective)["skill"] == []
+    read = result("skill", %{"name" => "check-records", "file" => ""})
+    read = put_in(read, ["payload", "output"], "Skill: check-records\nComplete body")
+    selective = put_in(selective, ["selected", "transcript"], [snapshot([asset], [Read]), read])
+    assert AssetEvidence.observed(selective)["skill"] == [asset["sha256"]]
+  end
+
   test "configuration must change actual tool disclosure at its declared request index" do
     asset = asset("configuration", %{"extension" => "search", "glob_after_requests" => 0})
     evidence = evidence(asset, [Read], [catalog(true), catalog(true)])

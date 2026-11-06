@@ -44,6 +44,11 @@ API.
 
 ### Features
 
+- Add a selective experimental asset policy: abstain on verified passing
+  baselines, invoke matching reviewed procedures through the actual loader,
+  reject unused candidates early and reuse exact single-component probe results.
+  New v8 registrations require a fresh v3 mechanism receipt; the prior pilot's
+  failed mechanism and inconclusive efficacy remain unchanged. (#47, #79, #80)
 - Add provider-free planning for learning studies and a v7 protocol binding
   mechanism receipts to the full execution configuration. Require observed use
   of every enabled typed asset kind, add explicit tool-description experiments,

@@ -1,5 +1,6 @@
 defmodule Lemieux.CLI.Learning.QualificationHostTest do
   use ExUnit.Case, async: true
+  alias Lemieux.CLI.Learning.AssetPolicy
   alias Lemieux.CLI.Learning.AssetSearch
   alias Lemieux.CLI.Learning.Fixtures
   alias Lemieux.CLI.Learning.QualificationHost, as: Host
@@ -899,6 +900,228 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
     assert evidence["asset_search"]["proposal"]["rejected"] ==
              "invalid_asset_schema_or_literal_trigger_or_complete_loader_tree"
+  end
+
+  test "selective assets abstain on a verified baseline without resolving an improver", ctx do
+    provider = fn
+      :task -> task_provider(true)
+      role -> flunk("passing baseline must not resolve #{role}")
+    end
+
+    config = selective_config(ctx, provider)
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"] and row["qualification_complete"]
+    assert row["asset_candidate_count"] == 0
+    assert row["asset_application_count"] == 0
+    search = selective_evidence(config, ctx)["asset_search"]
+    assert search["admission"]["reason"] == "verified_baseline_has_no_quality_headroom"
+    assert search["accounting"]["requests"] == 0
+  end
+
+  test "selective search rejects an unused skill after one probe and retains that attempt", ctx do
+    provider = selective_provider(self(), :ignore)
+    config = selective_config(ctx, provider)
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    refute row["passed"]
+    assert row["qualification_complete"]
+    assert row["asset_application_count"] == 0
+    search = selective_evidence(config, ctx)["asset_search"]
+    assert search["control"] == []
+    assert search["composition"] == []
+    assert search["selected_asset_sha256"] == []
+    assert [candidate] = search["candidates"]
+    assert candidate["rejection"] == "asset_not_exercised"
+    assert length(candidate["evaluations"]) == 1
+    assert_receive :selective_probe
+    refute_receive :selective_probe, 30
+    assert Lemieux.sessions(config.supervisor) == []
+  end
+
+  test "a used single candidate reuses its exact evaluations instead of paying for composition",
+       ctx do
+    config = selective_config(ctx, selective_provider(self(), :use))
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"] and row["qualification_complete"]
+    assert row["asset_application_count"] == row["asset_restoration_count"]
+    assert row["asset_application_count"] == 1
+    search = selective_evidence(config, ctx)["asset_search"]
+    assert [candidate] = search["candidates"]
+    assert search["composition"] == candidate["evaluations"]
+    assert length(search["control"]) == 2
+    assert length(candidate["evaluations"]) == 2
+    assert [digest] = search["selected_asset_sha256"]
+    assert row["asset_kind_evidence"]["skill"] == [digest]
+    for _ <- 1..4, do: assert_receive(:selective_probe)
+    refute_receive :selective_probe, 30
+    assert Lemieux.sessions(config.supervisor) == []
+  end
+
+  test "reused composition references do not count a budget-stopped probe twice", ctx do
+    config =
+      ctx
+      |> selective_config(selective_provider(self(), :use))
+      |> Map.merge(%{task_requests: 3, terminal_rule: :artifact_outcome})
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"] and row["qualification_complete"]
+    assert row["probe_budget_stops"] == 2
+    assert row["selected_budget_stop"]
+  end
+
+  test "two selected components still receive fresh joint probes with both actual-use digests",
+       ctx do
+    config =
+      ctx
+      |> selective_config(selective_provider(self(), :use, true))
+      |> Map.merge(%{asset_kinds: ["skill", "tool_description"], asset_requests: 68})
+
+    assert {:ok, row} = Host.episode(config, context(ctx.fixture, "updating"))
+    assert row["passed"] and row["qualification_complete"]
+    search = selective_evidence(config, ctx)["asset_search"]
+    assert search["plan"]["protocol"]["id"] == "reviewed_assets/v5"
+    assert length(search["selected_asset_sha256"]) == 2
+    assert length(search["composition"]) == 2
+
+    assert Enum.all?(
+             search["composition"],
+             &(Enum.sort(&1["exercised_asset_sha256"]) ==
+                 Enum.sort(search["selected_asset_sha256"]))
+           )
+
+    individual = Enum.flat_map(search["candidates"], & &1["evaluations"])
+    refute Enum.any?(search["composition"], &(&1 in individual))
+    for _ <- 1..8, do: assert_receive(:selective_probe)
+    refute_receive :selective_probe, 30
+    assert row["asset_kind_evidence"]["skill"] != []
+    assert row["asset_kind_evidence"]["tool_description"] != []
+  end
+
+  defp selective_config(ctx, provider) do
+    fixture = %{
+      ctx.fixture
+      | task: %{ctx.fixture.task | prompt: "Normalize archive paths. " <> ctx.fixture.task.prompt}
+    }
+
+    Map.merge(ctx.config, %{
+      fixtures: %{fixture.id => fixture},
+      asset_search: true,
+      asset_kinds: ["skill"],
+      asset_selection_policy: AssetPolicy.policy(),
+      asset_helper_extensions: [],
+      profile_search: false,
+      task_requests: 8,
+      asset_requests: 35,
+      asset_tokens: 1_000_000,
+      support_policy: %{"id" => "strict/v1"},
+      provider: provider
+    })
+  end
+
+  defp selective_evidence(config, ctx),
+    do:
+      Path.join(config.root, "1-#{ctx.fixture.id}-updating/evidence.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+  defp selective_provider(owner, mode, description? \\ false) do
+    fn
+      :asset_proposer ->
+        attrs = %{
+          "kind" => "skill",
+          "payload" => %{"name" => "archive-repair"},
+          "requires_tools" => ["write"],
+          "triggers" => ["archive paths"],
+          "files" => %{
+            "SKILL.md" =>
+              "---\nname: archive-repair\ndescription: Use for archive paths.\n---\nInspect current source and verify the repair.\n"
+          }
+        }
+
+        components =
+          if description?,
+            do: [
+              attrs,
+              %{
+                "kind" => "tool_description",
+                "payload" => %{"read" => "Inspect current source before repair."},
+                "requires_tools" => ["read"],
+                "triggers" => [],
+                "files" => %{}
+              }
+            ],
+            else: [attrs]
+
+        Scripted.new([Scripted.complete(JSON.encode!(%{"assets" => components}), usage: usage())])
+
+      :asset_critic ->
+        Scripted.new([
+          fn request ->
+            user = request.entries |> Enum.filter(&(&1.type == :user)) |> List.last()
+            input = JSON.decode!(user.payload["text"])
+
+            Scripted.complete(
+              JSON.encode!(%{
+                "asset_sha256" => input["asset_sha256"],
+                "decision" => "approve",
+                "reason" => "A bounded workflow for the public task."
+              }),
+              usage: usage()
+            )
+          end
+        ])
+
+      role ->
+        if role == :probe, do: send(owner, :selective_probe)
+
+        Scripted.new([
+          &selective_start(&1, mode),
+          fn request ->
+            if mode == :use and Enum.any?(request.tools, &(Lemieux.Tool.name(&1) == "skill")),
+              do: Scripted.tool_call("read", "read", %{"path" => "solution.py"}, usage: usage()),
+              else:
+                Scripted.tool_call(
+                  "fix",
+                  "write",
+                  %{"path" => "solution.py", "content" => "fixed"},
+                  usage: usage()
+                )
+          end,
+          fn request ->
+            if mode == :use and Enum.any?(request.tools, &(Lemieux.Tool.name(&1) == "skill")),
+              do:
+                Scripted.tool_call(
+                  "fix",
+                  "write",
+                  %{"path" => "solution.py", "content" => "fixed"},
+                  usage: usage()
+                ),
+              else: Scripted.complete("procedure declined", usage: usage())
+          end,
+          Scripted.complete("done", usage: usage())
+        ])
+    end
+  end
+
+  defp selective_start(request, mode) do
+    skill? = Enum.any?(request.tools, &(Lemieux.Tool.name(&1) == "skill"))
+
+    description? =
+      Enum.any?(
+        request.tools,
+        &(Lemieux.Tool.name(&1) == "read" and
+            Lemieux.Tool.description(&1) == "Inspect current source before repair.")
+      )
+
+    cond do
+      skill? and mode == :use ->
+        Scripted.tool_call("load", "skill", %{"name" => "archive-repair"}, usage: usage())
+
+      skill? or description? ->
+        Scripted.tool_call("read", "read", %{"path" => "solution.py"}, usage: usage())
+
+      true ->
+        Scripted.complete("baseline unchanged", usage: usage())
+    end
   end
 
   defp causal_provider(task_id) do

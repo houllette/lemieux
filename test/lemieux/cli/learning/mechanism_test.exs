@@ -1,5 +1,7 @@
 defmodule Lemieux.CLI.Learning.MechanismTest do
   use ExUnit.Case, async: true
+  alias Lemieux.CLI.Learning.AssetPolicy
+  alias Lemieux.CLI.Learning.AssetSearch
   alias Lemieux.CLI.Learning.Mechanism
   alias Lemieux.CLI.Learning.Transport
   alias Lemieux.Contract
@@ -202,6 +204,50 @@ defmodule Lemieux.CLI.Learning.MechanismTest do
 
     assert {:error, :matching_mechanism_required} =
              Mechanism.gate(seal(Map.put(receipt, "checks", %{})), current, "model", "low")
+  end
+
+  test "v8 selective search needs a fresh v3 receipt with its exact policy and budget" do
+    runtime = %{
+      "revision" => String.duplicate("a", 40),
+      "research_protocol" => %{
+        "id" => "whole_record_research/v8",
+        "stage" => "mechanism",
+        "profile_search" => false,
+        "asset_search" =>
+          AssetSearch.protocol(kinds: ["skill"], selection_policy: AssetPolicy.policy())
+      }
+    }
+
+    required = Mechanism.requirements(runtime)
+
+    receipt =
+      seal(%{
+        "kind" => "observed_learning_mechanism/v3",
+        "status" => "passed",
+        "required_checks" => required,
+        "checks" => Map.new(required, fn {key, _} -> {key, true} end),
+        "binding" => Mechanism.execution_binding(runtime, "model", "low")
+      })
+
+    assert :ok = Mechanism.gate(receipt, runtime, "model", "low")
+
+    changed =
+      put_in(
+        runtime,
+        ["research_protocol", "asset_search", "selection_policy", "admission"],
+        "all_observations"
+      )
+
+    assert {:error, :matching_mechanism_required} =
+             Mechanism.gate(receipt, changed, "model", "low")
+
+    assert {:error, :matching_mechanism_required} =
+             Mechanism.gate(
+               seal(Map.put(receipt, "kind", "observed_learning_mechanism/v2")),
+               runtime,
+               "model",
+               "low"
+             )
   end
 
   defp seal(map),

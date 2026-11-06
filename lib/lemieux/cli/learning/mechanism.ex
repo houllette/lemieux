@@ -27,7 +27,7 @@ defmodule Lemieux.CLI.Learning.Mechanism do
          {:ok, records} <- records(root, report["rows"]),
          true <- Enum.all?(records, &complete?(&1, plan)) do
       strict_assets? =
-        get_in(plan, ["runtime", "research_protocol", "id"]) == "whole_record_research/v7"
+        get_in(plan, ["runtime", "research_protocol", "id"]) in ~w(whole_record_research/v7 whole_record_research/v8)
 
       records = Enum.map(records, &Map.put(&1, :strict_assets, strict_assets?))
       updating = Enum.filter(records, &(&1.evidence["context"]["arm"] == "updating"))
@@ -89,7 +89,7 @@ defmodule Lemieux.CLI.Learning.Mechanism do
       "setting_exercised" => "configuration" in kinds
     }
 
-    if get_in(runtime, ["research_protocol", "id"]) == "whole_record_research/v7",
+    if get_in(runtime, ["research_protocol", "id"]) in ~w(whole_record_research/v7 whole_record_research/v8),
       do: Map.put(required, "description_exercised", "tool_description" in kinds),
       else: required
   end
@@ -117,14 +117,18 @@ defmodule Lemieux.CLI.Learning.Mechanism do
        when id in [
               "whole_record_research/v5",
               "whole_record_research/v6",
-              "whole_record_research/v7"
+              "whole_record_research/v7",
+              "whole_record_research/v8"
             ],
        do:
          receipt["required_checks"] == requirements(runtime) and
-           (id != "whole_record_research/v7" or
+           (id not in ~w(whole_record_research/v7 whole_record_research/v8) or
               Enum.sort(Map.keys(receipt["checks"])) == Enum.sort(Map.keys(requirements(runtime))))
 
   defp scoped_requirements?(_receipt, _runtime), do: true
+
+  defp receipt_kind(%{"research_protocol" => %{"id" => "whole_record_research/v8"}}),
+    do: "observed_learning_mechanism/v3"
 
   defp receipt_kind(%{"research_protocol" => %{"id" => "whole_record_research/v7"}}),
     do: "observed_learning_mechanism/v2"
@@ -132,10 +136,11 @@ defmodule Lemieux.CLI.Learning.Mechanism do
   defp receipt_kind(_historical), do: "observed_learning_mechanism/v1"
 
   defp binding(
-         %{"research_protocol" => %{"id" => "whole_record_research/v7"}} = runtime,
+         %{"research_protocol" => %{"id" => id}} = runtime,
          model,
          effort
-       ),
+       )
+       when id in ~w(whole_record_research/v7 whole_record_research/v8),
        do: execution_binding(runtime, model, effort)
 
   defp binding(runtime, model, effort),
@@ -148,7 +153,7 @@ defmodule Lemieux.CLI.Learning.Mechanism do
     }
 
   @doc """
-  Pins a v7 canary to its complete execution configuration.
+  Pins a v7/v8 canary to its complete execution configuration.
 
   Fresh cases, acquired seed bytes and the shared study ledger change between
   stages. Exclude only those and the stage itself; images, isolation, generation,

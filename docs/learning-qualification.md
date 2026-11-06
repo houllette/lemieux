@@ -34,12 +34,13 @@ ceiling can interrupt the sample; it does not permit dropping episodes or
 qualifying a partial result. Planning grants no execution authorization. After
 review and explicit authorization, use a new output directory for execution.
 
-New research registrations use `whole_record_research/v7`. Their v2 mechanism
+New research registrations use `whole_record_research/v8`. Their v3 mechanism
 receipts bind the full execution configuration, including the host toolchain,
 container images, isolation, generation horizon, transport and resource policies.
 Only fresh corpus membership, acquired seed usage, stage and the shared allowance
-ledger vary between stages. Historical v1 receipts retain their original scope
-and cannot unlock a v7 run.
+ledger vary between stages. Historical v1/v2 receipts retain their original scope
+and cannot unlock a v8 run. The archived November 5 v7 pilot retains its original
+scoring and failed mechanism; this policy change does not rescore it.
 
 Every enabled asset kind must be observed in the updating arm before either
 registered endpoint can be supported. Evidence names exact selected digests in
@@ -53,6 +54,38 @@ These experiments grant no automatic persistent selection or permission changes.
 Qualify a new kind in its own registered `--asset-only --asset-kinds KIND` study
 before considering it for a default controller. Observing several kinds in one
 successful combined arm does not identify each kind's independent contribution.
+
+The v8 asset lane binds `reviewed_assets/v5` and `selective_assets/v1`. It searches
+only after a completed, safe, fully accounted baseline fails public verification.
+A passing or unavailable baseline retains its outcome without resolving an
+improver or spending search requests. This is quality-directed search: the
+baseline has already run, and abstention does not establish efficiency or
+amortized reuse across tasks. Profile search retains its separate all-record
+research policy.
+
+A proposed skill needs an 8–160 character literal phrase with at least two words
+in current public conversation/tool evidence, excluding earlier experience,
+system guidance, session metadata and private grades.
+For that exact task, the host initially discloses the existing approved skill
+loader and requires a complete body read before effectful calls. Certified reads
+and questions remain permitted. One ordinary, metered stop continuation can ask
+for the procedure; a second stop declines it. A real read or loader refusal
+restores the ordinary catalog. Existing host denials, session ceilings and
+authority checks remain in force. The body is fetched on demand, never inserted
+into the system prompt. Matching and loading are applicability/use evidence,
+not proof that the procedure helps.
+
+An unused candidate stops after its first probe, with its failed evidence
+retained. A viable single candidate uses two probes and two shared controls;
+its exact evaluations also represent the identical one-component composition.
+Two selected components still require two fresh joint probes, for up to eight
+probes total. Reused records do not count as extra executions or budget stops.
+One candidate with a 12-request task horizon reserves 51 search requests
+(four probes, proposal, one structural repair and review), or 77 requests per
+episode including the original, final execution and reflection. The example
+above therefore plans a 1,001-request maximum across its seed and twelve target
+episodes; an 800-request cap could still interrupt it. These are ceilings, not
+measured savings. See the [selective-policy checks](qualification/2026-11-05-rsi-selective/README.md).
 
 Use the local `lemieux-bench` host for its scripted container canaries and public
 reference/no-op grader controls against the chosen `LEMIEUX_PATH`. Its task
@@ -77,8 +110,10 @@ Its positive, negative and uncertain lessons retain source pointers and remain
 unconfirmed. One metered structural repair may correct malformed reflection;
 it cannot retry an experiment or select a better outcome.
 
-The research search reviews successful as well as failed tasks, proposes general
-and domain changes, and probes their composition. `experimental_mean/v2` admits
+Profile research and historical asset research review successful as well as
+failed tasks; v8 asset search admits failed public verification as described
+above. Search proposes general and domain changes and probes their composition.
+`experimental_mean/v2` admits
 repeated mean gains or repeated fully verified ties for **task-local research**.
 A tie is a search choice, never evidence of improvement. Strict dominance and
 fresh host authority remain required by the existing persistent policy.
