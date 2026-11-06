@@ -9,6 +9,7 @@ defmodule Lemieux.CLI.Learning.AssetLane do
   inventing historical timestamps. These sources carry no receiving-host
   approval or qualification; a failed archive withholds activation.
   """
+  alias Lemieux.CLI.Learning.AssetPolicy
   alias Lemieux.CLI.Learning.AssetSearch
   alias Lemieux.CLI.Learning.Installation
   alias Lemieux.CLI.Learning.Leases
@@ -47,6 +48,7 @@ defmodule Lemieux.CLI.Learning.AssetLane do
     }
 
     :ok = Installation.write(Path.join(root, "source.json"), record)
+    details = Map.put(details, :asset_trigger_source, AssetPolicy.trigger_source(record))
 
     try do
       outcome =
@@ -56,6 +58,8 @@ defmodule Lemieux.CLI.Learning.AssetLane do
           bindings: details.lease.bindings,
           allocation: allocation(config),
           support_policy: config.support_policy,
+          selection_policy: config[:asset_selection_policy],
+          original_observation: details.result.selected.observation,
           terminal_rule: Map.get(config, :terminal_rule, :completed_task),
           allow_live: config[:allow_live] == true,
           task_model: config.model,
@@ -168,7 +172,11 @@ defmodule Lemieux.CLI.Learning.AssetLane do
       {:ok, current} = authority.()
 
       {:ok, harness} =
-        AssetSearch.apply(assets, prepared.harness, current, root, config.environment)
+        AssetSearch.apply(assets, prepared.harness, current, root, config.environment,
+          selection_policy: config[:asset_selection_policy],
+          task_request: details.fixture.task.prompt,
+          trigger_source: details.asset_trigger_source
+        )
 
       harness
     end

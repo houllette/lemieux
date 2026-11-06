@@ -1,6 +1,26 @@
 defmodule Lemieux.CLI.Learning.StudyBudgetTest do
   use ExUnit.Case, async: true
+  alias Lemieux.CLI.Learning.AssetPolicy
+  alias Lemieux.CLI.Learning.AssetSearch
   alias Lemieux.CLI.Learning.StudyBudget
+
+  test "selective single-kind budgets fund four probes and every possible editor call" do
+    protocol = AssetSearch.protocol(kinds: ["skill"], selection_policy: AssetPolicy.policy())
+    budget = StudyBudget.research(12, false, true, asset_protocol: protocol)
+    assert budget.asset_requests == 4 * 12 + 3
+    assert budget.allowance["requests"] == budget.asset_requests + 2 * 12 + 2
+
+    combined =
+      AssetSearch.protocol(
+        kinds: ["skill", "configuration"],
+        selection_policy: AssetPolicy.policy()
+      )
+
+    assert StudyBudget.research(12, false, true, asset_protocol: combined).asset_requests ==
+             8 * 12 + 4
+
+    assert StudyBudget.research(12, false, true).asset_requests == 8 * 12 + 4
+  end
 
   test "every allowed horizon funds complete experiments plus originals, final executions and reflection" do
     for requests <- [8, 12, 24, 64, 200],

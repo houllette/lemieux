@@ -1,4 +1,5 @@
 # Explicitly authorized, staged qualification. Never loaded by ordinary lmx.
+alias Lemieux.CLI.Learning.AssetPolicy
 alias Lemieux.CLI.Learning.AssetSearch
 alias Lemieux.CLI.Learning.Calibration
 alias Lemieux.CLI.Learning.CodexAuth
@@ -96,7 +97,14 @@ true =
 asset_helpers =
   if opts[:asset_helpers] == false or "skill" not in asset_kinds, do: [], else: [".py"]
 
-asset_protocol = AssetSearch.protocol(kinds: asset_kinds, helper_extensions: asset_helpers)
+asset_policy = if research and assets, do: AssetPolicy.policy()
+
+asset_protocol =
+  AssetSearch.protocol(
+    kinds: asset_kinds,
+    helper_extensions: asset_helpers,
+    selection_policy: asset_policy
+  )
 
 if stage == "mechanism" and not research, do: raise("Mechanism stage requires --research")
 
@@ -217,7 +225,11 @@ seeds = Enum.filter(seeds, &(&1.cluster in streams))
 seed_ids = Enum.map(seeds, & &1.id)
 
 research_budget =
-  if research, do: StudyBudget.research(requests, opts[:asset_only] != true, assets)
+  if research,
+    do:
+      StudyBudget.research(requests, opts[:asset_only] != true, assets,
+        asset_protocol: asset_protocol
+      )
 
 allowance =
   if research,
@@ -304,7 +316,14 @@ runtime = %{
   "workspace_evidence" => "bounded_actual_changed_file_bytes_before_lease_release",
   "offline_smoke" => opts[:offline_smoke] == true,
   "probe_selection" =>
-    if(research, do: "all_completed_task_records", else: "visible_verification_failed"),
+    if(research,
+      do:
+        if(assets,
+          do: "profiles_all_records_assets_failed_public_verification",
+          else: "all_completed_task_records"
+        ),
+      else: "visible_verification_failed"
+    ),
   "probe_terminal_rule" => "verified_accounted_max_turns_is_scored_failure",
   "proposal_task_request" => "explicit_public_prompt_without_private_grading",
   "search_directory_policy" => "owned_workspace_root_and_in_environment_directory_change",
@@ -327,7 +346,7 @@ runtime =
   if research do
     Map.merge(runtime, %{
       "research_protocol" => %{
-        "id" => "whole_record_research/v7",
+        "id" => "whole_record_research/v8",
         "http_transport" => Transport.policy(),
         "terminal_rule" => "verified_artifact_outcome_same_as_ordinary_arms",
         "stage" => stage,
@@ -430,6 +449,7 @@ config =
         probe_when: :all_observations,
         terminal_rule: :artifact_outcome,
         asset_search: assets,
+        asset_selection_policy: asset_policy,
         asset_kinds: asset_kinds,
         asset_helper_extensions: asset_helpers,
         profile_search: opts[:asset_only] != true,

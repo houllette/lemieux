@@ -1224,13 +1224,22 @@ defmodule Lemieux.CLI.Learning.QualificationHost do
         (profile["composition"] || []) ++
         Enum.flat_map(profile["candidates"] || [], & &1["evaluations"])
 
-    asset_records =
+    Enum.count(profile_records, &(&1["stop_reason"] == "max_turns")) +
+      Enum.count(
+        asset_probe_records(assets),
+        &(get_in(&1, ["observation", "finish_reason"]) == ":max_turns")
+      )
+  end
+
+  defp asset_probe_records(assets) do
+    records =
       (assets["control"] || []) ++
         (assets["composition"] || []) ++
         Enum.flat_map(assets["candidates"] || [], & &1["evaluations"])
 
-    Enum.count(profile_records, &(&1["stop_reason"] == "max_turns")) +
-      Enum.count(asset_records, &(get_in(&1, ["observation", "finish_reason"]) == ":max_turns"))
+    if get_in(assets, ["plan", "protocol", "id"]) == "reviewed_assets/v5",
+      do: Enum.uniq_by(records, & &1["observation_sha256"]),
+      else: records
   end
 
   defp refinement_time(config), do: config[:refinement_time_ms] || 1_500_000

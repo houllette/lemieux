@@ -93,10 +93,11 @@ defmodule Lemieux.Learning.Qualification.Endpoints do
 
   defp mechanism?(
          %{
-           "runtime" => %{"research_protocol" => %{"id" => "whole_record_research/v7"} = protocol}
+           "runtime" => %{"research_protocol" => %{"id" => id} = protocol}
          },
          report
-       ) do
+       )
+       when id in ~w(whole_record_research/v7 whole_record_research/v8) do
     updating = Enum.filter(report["rows"], &(&1["arm"] == "updating"))
     kinds = get_in(protocol, ["asset_search", "kinds"]) || []
     profile = protocol["profile_search"] != true or profile_exercised?(report["arms"]["updating"])

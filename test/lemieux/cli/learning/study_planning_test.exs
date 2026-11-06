@@ -64,6 +64,13 @@ defmodule Lemieux.CLI.Learning.StudyPlanningTest do
     registration = JSON.decode!(File.read!(Path.join(output, "registration.json")))
     assert review["dispatches"] == 0
     assert review["target_episodes"] == 12
+    assert review["maximum_registered_requests"] == 13 * 77
+
+    assert get_in(registration, ["template", "runtime", "research_protocol", "id"]) ==
+             "whole_record_research/v8"
+
+    assert get_in(registration, ["template", "runtime", "research_protocol", "asset_search", "id"]) ==
+             "reviewed_assets/v5"
 
     assert get_in(registration, [
              "template",

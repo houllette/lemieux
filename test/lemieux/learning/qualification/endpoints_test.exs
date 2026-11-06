@@ -103,58 +103,60 @@ defmodule Lemieux.Learning.Qualification.EndpointsTest do
     assert report["efficiency_power"] == "not_estimated_no_quality_power_claim_for_efficiency"
   end
 
-  test "v7 requires actual use of every enabled asset kind alongside profile search" do
-    historical = plan(60)
+  for protocol <- ~w(whole_record_research/v7 whole_record_research/v8) do
+    test "#{protocol} requires actual use of every enabled asset kind alongside profile search" do
+      historical = plan(60)
 
-    attrs =
-      Map.take(
-        historical,
-        ~w(id model effort runtime seed_case_ids initial_library_sha256 repetitions allowance alpha claim tasks analysis ablation)
-      )
+      attrs =
+        Map.take(
+          historical,
+          ~w(id model effort runtime seed_case_ids initial_library_sha256 repetitions allowance alpha claim tasks analysis ablation)
+        )
 
-    attrs =
-      attrs
-      |> put_in(["runtime", "research_protocol", "id"], "whole_record_research/v7")
-      |> put_in(["runtime", "research_protocol", "profile_search"], true)
-      |> put_in(["runtime", "research_protocol", "asset_search"], %{
-        "kinds" => ["skill", "tool_description"]
-      })
+      attrs =
+        attrs
+        |> put_in(["runtime", "research_protocol", "id"], unquote(protocol))
+        |> put_in(["runtime", "research_protocol", "profile_search"], true)
+        |> put_in(["runtime", "research_protocol", "asset_search"], %{
+          "kinds" => ["skill", "tool_description"]
+        })
 
-    assert {:ok, current} = Qualification.plan(attrs)
-    observations = rows(current)
-    assert {:ok, report} = Endpoints.report(current, observations)
-    refute report["mechanism_exercised"]
-    assert report["efficiency"] == "inconclusive"
+      assert {:ok, current} = Qualification.plan(attrs)
+      observations = rows(current)
+      assert {:ok, report} = Endpoints.report(current, observations)
+      refute report["mechanism_exercised"]
+      assert report["efficiency"] == "inconclusive"
 
-    observations =
-      Enum.map(observations, fn row ->
-        if row["arm"] == "updating",
-          do:
-            Map.merge(row, %{
-              "asset_application_count" => 1,
-              "asset_restoration_count" => 1,
-              "asset_candidate_count" => 1,
-              "asset_kind_evidence" => %{
-                "skill" => [Contract.sha256("skill")],
-                "tool_description" => [Contract.sha256("description")]
-              }
-            }),
-          else: row
-      end)
+      observations =
+        Enum.map(observations, fn row ->
+          if row["arm"] == "updating",
+            do:
+              Map.merge(row, %{
+                "asset_application_count" => 1,
+                "asset_restoration_count" => 1,
+                "asset_candidate_count" => 1,
+                "asset_kind_evidence" => %{
+                  "skill" => [Contract.sha256("skill")],
+                  "tool_description" => [Contract.sha256("description")]
+                }
+              }),
+            else: row
+        end)
 
-    assert {:ok, report} = Endpoints.report(current, observations)
-    assert report["mechanism_exercised"]
-    assert report["efficiency"] == "supported_in_registered_scope"
+      assert {:ok, report} = Endpoints.report(current, observations)
+      assert report["mechanism_exercised"]
+      assert report["efficiency"] == "supported_in_registered_scope"
 
-    missing =
-      Enum.map(
-        observations,
-        &Map.put(&1, "asset_kind_evidence", %{"skill" => [Contract.sha256("skill")]})
-      )
+      missing =
+        Enum.map(
+          observations,
+          &Map.put(&1, "asset_kind_evidence", %{"skill" => [Contract.sha256("skill")]})
+        )
 
-    assert {:ok, report} = Endpoints.report(current, missing)
-    refute report["mechanism_exercised"]
-    assert report["efficiency"] == "inconclusive"
+      assert {:ok, report} = Endpoints.report(current, missing)
+      refute report["mechanism_exercised"]
+      assert report["efficiency"] == "inconclusive"
+    end
   end
 
   defp plan(n, acquisition \\ 0) do
