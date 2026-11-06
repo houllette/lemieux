@@ -271,7 +271,8 @@ defmodule Lemieux.CLI.Feedback do
              },
              feedback_store(parsed, opts),
              model: model,
-             fallback_entry_id: entry.id
+             fallback_entry_id: entry.id,
+             source_entries: entries
            ) do
       IO.puts("mined #{length(ids)} opportunities from #{session_id}")
       Enum.each(ids, &IO.puts("  feedback #{&1}"))
@@ -415,6 +416,7 @@ defmodule Lemieux.CLI.Feedback do
     |> Opportunities.record(provenance, feedback_store([], opts),
       model: Map.get(snapshot, :model, "unknown"),
       fallback_entry_id: fallback,
+      source_entries: entries,
       scope: Keyword.get(opts, :scope, :project)
     )
   end
@@ -449,6 +451,10 @@ defmodule Lemieux.CLI.Feedback do
   defp describe(:feedback_required), do: "feedback text cannot be empty"
   defp describe(:not_found), do: "no such session"
   defp describe(:empty_session), do: "the session has no entries to anchor"
+
+  defp describe({:invalid_evidence_entry_ids, _ids}),
+    do: "reflection cited entries outside its source evidence; no feedback was recorded"
+
   defp describe({:entry_not_found, id}), do: "no entry #{id} in that session"
   defp describe({:invalid_option, flag}), do: "unrecognised feedback option #{flag}"
   defp describe({:invalid_scope, scope}), do: "unknown feedback scope #{inspect(scope)}"

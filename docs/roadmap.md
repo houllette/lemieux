@@ -97,6 +97,13 @@ target. This is one exposed development case, with no demonstrated learning
 benefit. V2's consecutive-item review and V9's independent confirmation remain
 open, as do #47, #79, #80 and #81.
 
+The [consecutive feedback audit](qualification/2026-11-06-rsi-provenance/README.md)
+reviews the first twenty retained records without substituting later items.
+It finds missing citations in two mined records and permissive legacy answer
+graders. The provenance defect is reproduced and corrected; original records
+and scores remain intact. No new case is approved, historical curation timings
+are unavailable, and the retrospective cohort does not satisfy V2 or V9.
+
 | ID | What remains | What counts as done |
 | --- | --- | --- |
 | V1 | Independently confirm a revised recipe for the guided extension builder (`lmx --build-ext`). The current recipe was chosen on development cases and was never confirmed. | Freeze baseline, candidate, runtime, graders, fresh cases and budget before running; report both arms, failures, authoring cost, complete usage and exposure. See [confirmation](agent-extensions.md#confirmation-and-qualified-export). |

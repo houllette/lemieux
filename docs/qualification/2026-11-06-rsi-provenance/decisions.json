@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "review_actor": "codex_model_curator",
+  "independent_human_review": false,
+  "interpretation": "Retrospective triage. No record is promoted on the strength of a model classification or unbound historical state.",
+  "rows": [
+    {
+      "item": 1,
+      "family": "tool_route",
+      "disposition": "needs_environmental_replay",
+      "approved": false,
+      "review_note": "Reported tool denial is observable; later records correct its cause to provider routing. Existing answer grader does not establish tool use."
+    },
+    {
+      "item": 2,
+      "family": "tool_route",
+      "disposition": "duplicate_observation",
+      "approved": false,
+      "review_note": "Same capability-denial family; the distinction between missing delegate and available inspection tools must remain."
+    },
+    {
+      "item": 3,
+      "family": "tool_route",
+      "disposition": "superseding_diagnosis",
+      "approved": false,
+      "review_note": "Corrects an earlier attribution using an external provider experiment; historical gateway state is unavailable."
+    },
+    {
+      "item": 4,
+      "family": "tool_route",
+      "disposition": "resolved_followup",
+      "approved": false,
+      "review_note": "Reports resolution of the earlier route defect, not another independent failure."
+    },
+    {
+      "item": 5,
+      "family": "termination",
+      "disposition": "needs_model_reproduction",
+      "approved": false,
+      "review_note": "Reported nontermination depends on the historical provider and response stream; no replayable pre-effect task state is retained."
+    },
+    {
+      "item": 6,
+      "family": "delegation_budget",
+      "disposition": "needs_runtime_binding",
+      "approved": false,
+      "review_note": "A budget-description observation has an existing answer-only case, but its historical runtime and workflow cannot be certified from that grader."
+    },
+    {
+      "item": 7,
+      "family": "delegation_budget",
+      "disposition": "needs_artifact_binding",
+      "approved": false,
+      "review_note": "Reports a controlled failed-delegation experiment. Its current anchor belongs to the earlier capability-denial session, not that experiment."
+    },
+    {
+      "item": 8,
+      "family": "delegation_budget",
+      "disposition": "resolved_followup",
+      "approved": false,
+      "review_note": "Summarizes the controlled budget experiment and its resolution; do not count repetitions as fresh ordinary-use cases."
+    },
+    {
+      "item": 9,
+      "family": "delegation_honesty",
+      "disposition": "revised_followup",
+      "approved": false,
+      "review_note": "Revises an earlier fabrication claim after forced-failure experiments; task instructions and model scope differ."
+    },
+    {
+      "item": 10,
+      "family": "tool_route",
+      "disposition": "invalid_citations",
+      "approved": false,
+      "review_note": "Two cited IDs are absent from the source session; retain the raw finding without granting it grounded provenance."
+    },
+    {
+      "item": 11,
+      "family": "capability_policy",
+      "disposition": "needs_host_requirement",
+      "approved": false,
+      "review_note": "An absent optional delegation capability is observable, but its absence alone does not establish an implementation defect."
+    },
+    {
+      "item": 12,
+      "family": "provider_auth",
+      "disposition": "invalid_citations",
+      "approved": false,
+      "review_note": "The primary cited entry is absent. Historical backend credential availability also cannot be reconstructed."
+    },
+    {
+      "item": 13,
+      "family": "fallback_guidance",
+      "disposition": "human_review",
+      "approved": false,
+      "review_note": "A suggested prompt rule has no mechanically justified acceptance oracle or failure/repair controls."
+    },
+    {
+      "item": 14,
+      "family": "cache_accounting",
+      "disposition": "unsupported_inference",
+      "approved": false,
+      "review_note": "Zero reported cache reads do not establish absent caching support, repeated billing or a missing harness configuration."
+    },
+    {
+      "item": 15,
+      "family": "delegation_budget",
+      "disposition": "needs_runtime_binding",
+      "approved": false,
+      "review_note": "Failed children are observable. The report alone does not reconstruct the original source, budgets and isolated case."
+    },
+    {
+      "item": 16,
+      "family": "capability_policy",
+      "disposition": "needs_host_requirement",
+      "approved": false,
+      "review_note": "Restricted child tools can be an intentional host policy. The proposed causal explanation is unproven."
+    },
+    {
+      "item": 17,
+      "family": "tool_outcomes",
+      "disposition": "unsupported_inference",
+      "approved": false,
+      "review_note": "A successfully invoked delegate tool may return failed child results. These two outcome classes must not be conflated."
+    },
+    {
+      "item": 18,
+      "family": "stop_reason",
+      "disposition": "needs_runtime_binding",
+      "approved": false,
+      "review_note": "A missing structured diagnostic is a candidate product requirement; the exact historical implementation is not pinned."
+    },
+    {
+      "item": 19,
+      "family": "usage_schema",
+      "disposition": "needs_encoder_reproduction",
+      "approved": false,
+      "review_note": "A suspicious unknown-cost representation requires the responsible serializer and its original input, not a model assertion alone."
+    },
+    {
+      "item": 20,
+      "family": "cancellation_accounting",
+      "disposition": "needs_cancellation_replay",
+      "approved": false,
+      "review_note": "A cancellation boundary and unknown usage are observable; absent final usage cannot be rewritten to zero or assumed billable usage."
+    }
+  ]
+}

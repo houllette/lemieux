@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "phase": "validation_in_progress",
+  "targeted": {
+    "reflection_and_flow_and_boundary": {
+      "passed": 43,
+      "seed": 507690,
+      "seconds": 0.4
+    },
+    "feedback_contract_and_cli": {
+      "passed": 19,
+      "seed": 562533,
+      "seconds": 0.1
+    }
+  },
+  "test_first": {
+    "failed": 6,
+    "total": 13,
+    "seed": 115443,
+    "interpretation": "Intentional pre-implementation witnesses. Initial test draft also warned about an undefined store-list helper; its name was corrected before passing validation. The passing tests include the final host-source guard and CLI refusal cases."
+  },
+  "initial_compile_attempt": {
+    "status": "failed",
+    "reason": "A stray if keyword in a with binding caused a syntax error; corrected before the passing focused run."
+  },
+  "native_audit_initial_attempt": {
+    "status": "failed",
+    "reason": "The legacy experiments manifest lacks a version; the current reader refuses it. The completed audit retains that refusal and separately exercises the trusted raw task grader, without importing or qualifying the manifest."
+  },
+  "hosted_requests": 0
+}

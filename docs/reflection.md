@@ -198,6 +198,21 @@ anchored on its first evidence entry. From the command line:
 lmx feedback --mine SESSION [--model provider:model]
 ```
 
+Mining checks every citation against the bounded evidence actually shown to
+the model. An invented or omitted entry ID refuses the batch. The raw answer
+remains in its reflection transcript; no repair request is made. Direct callers
+of the experimental `Opportunities.record/4` must now pass `source_entries:`
+resolved by the host for that session. All citations and any fallback anchor
+must belong to those entries before the first feedback append. A later storage
+failure can still leave a partially persisted batch.
+
+Each new record retains a canonical source-entry digest and count. Its
+`evidence_validation.anchor_kind` distinguishes `citation` from `fallback`;
+an uncited claim does not acquire a model citation by receiving a host anchor.
+Entry membership gives the reviewer somewhere to inspect; it does not establish
+the claim's truth, a reproducible defect, case approval or an improvement.
+Historical records keep their original bytes and remain subject to review.
+
 From inside a session, `/reflect opportunities` in the TUI runs
 the same request against the transcript you are already in, then reads its
 answer back and records what it named. There is no second reflection to pay

@@ -11,6 +11,11 @@ API.
 
 ### Learning
 
+- Validate mined feedback citations before recording. Reject invented IDs and
+  IDs omitted from the model's evidence, bind new records to host-supplied
+  transcript entries, and label fallback anchors. Direct experimental
+  `Opportunities.record/4` callers must supply `source_entries:`. CLI mining and
+  interactive reflection retain invalid raw answers without another model call.
 - Add provider-free `lmx corpus review` and matched public failure/repair controls
   for `corpus promote --reference`. Bind the controls to frozen draft bytes and
   exact source changes; reject mismatched checks, stale fixtures and grader
