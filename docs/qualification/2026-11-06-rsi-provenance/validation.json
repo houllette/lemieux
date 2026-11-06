@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "phase": "validation_in_progress",
+  "phase": "complete",
   "targeted": {
     "reflection_and_flow_and_boundary": {
       "passed": 43,
@@ -27,7 +27,7 @@
     "status": "failed",
     "reason": "The legacy experiments manifest lacks a version; the current reader refuses it. The completed audit retains that refusal and separately exercises the trusted raw task grader, without importing or qualifying the manifest."
   },
-  "hosted_requests": 0,
+  "hosted_requests": 21,
   "first_full_gate": {
     "status": "failed",
     "step": "credo --strict",
@@ -50,7 +50,23 @@
     "seconds": 23.4
   },
   "final_gate": {
-    "status": "pending"
+    "status": "passed",
+    "revision": "e83d20b36b9a2ae7baa560b7af36597b9cfbda7d",
+    "command": "ulimit -n 4096; env LMX_CONFIG=none MIX_ENV=test ERL_FLAGS='+S 2:2' mise exec -- mix precommit",
+    "log_sha256": "9bbaf855cc07aa361771763bc4f957b9cf398eb67f2281249908289af6fd11c9",
+    "ordinary_passed": 6098,
+    "ordinary_seed": 230232,
+    "ordinary_seconds": 264.7,
+    "coverage_passed": 6098,
+    "coverage_seed": 442188,
+    "coverage_seconds": 566.1,
+    "coverage_percent": 86.73,
+    "dialyzer_errors": 0,
+    "release_host_passed": 123,
+    "release_host_seed": 115154,
+    "release_host_seconds": 21.7,
+    "root_and_release_audits": "passed",
+    "coverage_warning": "Any fixture reloaded/unloaded warning remains in the retained log; no threshold bypass or exclusion added."
   },
   "interrupted_gate": {
     "status": "operator_cancelled",
@@ -77,5 +93,33 @@
   "final_credo": {
     "status": "passed",
     "seconds": 25.9
+  },
+  "hosted_study": "study/outcome.json",
+  "historical_feedback_audit_hosted_requests": 0,
+  "evidence_append_checks": {
+    "public_packet": {
+      "status": "passed",
+      "log_sha256": "6f6eec2fa1e6125bf58f556455da45e468ca2451a9c60af4a72605f72d990f50"
+    },
+    "docs": {
+      "status": "passed",
+      "log_sha256": "10094e509de769e90843601ce2dda9bfeb7437d962a68ea7d95e915fe47c0d8e"
+    },
+    "links": {
+      "status": "passed",
+      "log_sha256": "282e4b3ba4ad8250c32611166bd951486f62bf8f079a040597307ebed8f9496e",
+      "broken": 0,
+      "existing_history_ref_warnings": 4
+    },
+    "public_text": {
+      "status": "passed",
+      "log_sha256": "a97f5f3d949aaf65c00376922a1ae1c08c07aa3b50bb3b529d0b2146a209b94b"
+    },
+    "public_study_consistency": {
+      "status": "passed",
+      "log_sha256": "e64b73a6a17048e74e9b7a74b5503ec298b40eca6f2a436ab2f3f1ae07f706d4"
+    },
+    "scope": "Evidence and documentation append only; production source unchanged from the passing full gate.",
+    "hosted_requests": 0
   }
 }

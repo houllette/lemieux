@@ -1,0 +1,38 @@
+"""Public requirement: Requests API exceptions must not expose urllib3 types.
+
+Uses deterministic in-memory connection doubles; no socket or service is used.
+Derived from the public issue and baseline adapter/model entry points only.
+"""
+import pytest
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.exceptions import DecodeError, ReadTimeoutError
+
+
+class BrokenPool:
+    def __init__(self, failure):
+        self.failure = failure
+
+    def urlopen(self, **kwargs):
+        raise self.failure
+
+
+@pytest.mark.parametrize("failure", [DecodeError("bad payload"), ReadTimeoutError(None, "/", "slow")])
+def test_adapter_exposes_requests_exception(monkeypatch, failure):
+    adapter = HTTPAdapter()
+    monkeypatch.setattr(adapter, "get_connection", lambda *args, **kwargs: BrokenPool(failure))
+    request = requests.Request("GET", "http://example.invalid/resource").prepare()
+    with pytest.raises(requests.exceptions.RequestException):
+        adapter.send(request, timeout=1)
+
+
+def test_content_keeps_existing_decode_translation():
+    class Raw:
+        def stream(self, *args, **kwargs):
+            raise DecodeError("broken compressed content")
+
+    response = requests.Response()
+    response.status_code = 200
+    response.raw = Raw()
+    with pytest.raises(requests.exceptions.ContentDecodingError):
+        _ = response.content

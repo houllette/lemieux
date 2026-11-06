@@ -1,0 +1,28 @@
+"""Public invalid-proxy reproduction with network disabled and no DNS lookup."""
+import socket
+import pytest
+import requests
+from requests.adapters import HTTPAdapter
+
+
+@pytest.mark.parametrize("proxy", ["http:/proxy.invalid:3128", "http:proxy.invalid:3128"])
+def test_invalid_proxy_is_a_requests_error_before_network(monkeypatch, proxy):
+    def no_dns(*args, **kwargs):
+        raise AssertionError("Invalid proxy validation must happen before DNS")
+
+    monkeypatch.setattr(socket, "getaddrinfo", no_dns)
+    session = requests.Session()
+    session.trust_env = False
+    with pytest.raises(requests.exceptions.RequestException):
+        session.get("https://origin.invalid/", proxies={"https": proxy}, timeout=0.1)
+
+
+def test_valid_proxy_connection_can_still_be_prepared():
+    connection = HTTPAdapter().get_connection(
+        "https://origin.invalid/", proxies={"https": "http://proxy.invalid:3128"}
+    )
+    assert connection.host == "origin.invalid"
+
+
+def test_direct_connection_can_still_be_prepared():
+    assert HTTPAdapter().get_connection("http://origin.invalid/").host == "origin.invalid"

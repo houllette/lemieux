@@ -1,0 +1,14 @@
+{
+  "checks": {
+    "1376_private.py": "20c50d2774d6754ecdd74c9c3f5f0aa3ad5807eb3ddaf7fa3ff68fef0d97b586",
+    "1376_public.py": "4de860946d07bd9c11e135d78b5fdc8a7afec341f073d6a32a300046d8a0a4c7",
+    "2674_private.py": "2a00d4cc8402328c7d8d747806b4d36d0275446660ddcb13b94b8433b04619c8",
+    "2674_public.py": "cc22ff221067487ed26dba8b1f438ee409f2d0e66d991a3e145776a885da72e6"
+  },
+  "private_grading": "New owner-written private values and entry-point variants; no official SWE-bench score claim.",
+  "public_sources": "Only the public issue statements and pinned baseline adapter/model code were read before these checks were frozen.",
+  "reference": "Gold patch bytes remain unopened at this registration; they may be used only for development preflight, not sent to models.",
+  "registered_at_utc": "2026-11-06T05:53:07.863517+00:00",
+  "schema_version": 1,
+  "source_exposure": "New exposed development cases, same Requests cluster. No independent efficacy claim."
+}

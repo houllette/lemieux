@@ -1,0 +1,29 @@
+"""Public regression: multipart data field names must preserve string identity.
+
+The reported prepare-only reproduction needs no server or network.
+"""
+import pytest
+import requests
+
+
+@pytest.mark.parametrize("field", [b"stuff", b"other_field", "stuff"])
+def test_multipart_field_name_is_not_a_bytes_repr(field):
+    prepared = requests.Request(
+        "POST", "http://example.invalid/upload", data={field: "value"},
+        files={"file": ("payload.txt", b"content")},
+    ).prepare()
+    expected = field.encode("utf-8") if isinstance(field, str) else field
+    assert b'name="' + expected + b'"' in prepared.body
+    assert b'name="b\'' + expected not in prepared.body
+
+
+def test_mixed_form_fields_and_file_are_preserved():
+    prepared = requests.Request(
+        "POST", "http://example.invalid/upload",
+        data=[(b"first", "one"), ("second", "two")],
+        files={"file": ("payload.txt", b"content")},
+    ).prepare()
+    assert b'name="first"' in prepared.body
+    assert b'name="second"' in prepared.body
+    assert b'filename="payload.txt"' in prepared.body
+    assert b"one" in prepared.body and b"two" in prepared.body and b"content" in prepared.body

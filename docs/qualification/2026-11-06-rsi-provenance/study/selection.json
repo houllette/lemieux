@@ -1,0 +1,35 @@
+{
+  "calibration_report_bytes_sha256": "37249aa11c65bc86a2d48cf2420a731b5cd05d31b1655501c263082bbf8430ae",
+  "decisions": [
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "4afa04dcb5e632a298b4632a5f590a1d369a598040001bb8e719d679b56870c2"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "f032535a5eddf050379cf33b35ee9dc86eecc5c2b46b643058fed60ab3c6da44"
+        }
+      },
+      "cluster": "psf-requests",
+      "eligible": false,
+      "task_id": "psf-requests-5087-public-v1"
+    }
+  ],
+  "eligible_targets": [],
+  "fixed_seed": "psf-requests-4356-public-v1",
+  "kind": "preregistered_calibration_selection/v1",
+  "private_confirmation_used_for_selection": false,
+  "selected_target": null
+}

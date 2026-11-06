@@ -1,0 +1,15 @@
+{
+  "basis": "Public issue statements and baseline source only. The CID fixture explicitly requires one logical header per case-insensitive key; the added contract is disclosed to every arm.",
+  "checks": {
+    "1339_private.py": "169b232fc416d7da2c2ba24f62eab787b5fca8868274777a280b9693fb0a5014",
+    "1339_public.py": "33dfdef5338f56b293a4958fc280546954107649e5423bcc4716ce68ceab12f8",
+    "4356_private.py": "54324dc7b808b87fe03305d211616ea2c666ba63ff299f9e6c5ca0bb722c4e61",
+    "4356_public.py": "8c5c1adc69058d1d51b95431a4a8adca36cbb69ce6ecb48936daad723ec1b12a"
+  },
+  "exposure": "developer_exposed",
+  "private_original_test_patch_inspected": false,
+  "qualification": "New custom public/private development checks; not official SWE-bench scoring.",
+  "reference_gold_opened": false,
+  "registered_at_utc": "2026-11-06T06:05:36.801697+00:00",
+  "schema_version": 1
+}

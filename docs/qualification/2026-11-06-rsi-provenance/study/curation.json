@@ -1,0 +1,59 @@
+{
+  "decisions": [
+    {
+      "controls_sha256": "65c1b2b930872304f86e23cae2105247afffd7ca3ed43e16c406ae0ae0e8e2b2",
+      "earlier_attempt": "original cached image lacked urllib3; no grader/model execution. A new pinned dependency image supplies the public-report versions before controls.",
+      "id": "psf__requests-4356",
+      "status": "eligible_seed"
+    },
+    {
+      "controls_sha256": "56c474d0ded8f08f53ee85c7f0e9789baf0622f9bd78e0066fdbb863473040d2",
+      "id": "psf__requests-2674",
+      "meaning": "The frozen DecodeError API checks fail on the reference too. The upstream gold patch addresses ClosedPoolError, so this adaptation is not accepted. No model outcome exists.",
+      "status": "rejected_reference_control"
+    },
+    {
+      "id": "psf__requests-2466",
+      "meaning": "Public reproduction requires Windows/Python 2 pyinstaller; no matching local qualified environment.",
+      "status": "unavailable"
+    },
+    {
+      "id": "psf__requests-1888",
+      "meaning": "Public reproduction requires Windows/legacy PyOpenSSL/SNI; no matching local qualified environment.",
+      "status": "unavailable"
+    },
+    {
+      "controls_sha256": "0cefc71e1bfdeeb81d3430a5eba271d5d17084d93487e2933c4e9e06137ffb32",
+      "id": "psf__requests-1376",
+      "meaning": "Untouched source already passes all frozen public and private checks in the declared Python 3 environment.",
+      "status": "rejected_nondiscriminating"
+    },
+    {
+      "id": "psf__requests-2413",
+      "meaning": "The reported unicode-filename defect requires Python 2, outside the available pinned Python 3 environment.",
+      "status": "unavailable"
+    },
+    {
+      "controls_sha256": "bb53e667a621d300967292b3620b60224ea1eef7e1021857cbc63767e440ef09",
+      "id": "psf__requests-5087",
+      "status": "eligible_target"
+    },
+    {
+      "controls_sha256": "3d822bde0ff87a319588bde44e8a451470acd23124ecd408687b8c9464c44b48",
+      "id": "psf__requests-1339",
+      "meaning": "Prepared while earlier candidates were validated; not substituted for the earlier eligible target. No model evaluation.",
+      "status": "eligible_unused"
+    }
+  ],
+  "hosted_requests": 0,
+  "independent_confirmation": false,
+  "ordinary_use_items_added": 0,
+  "private_check_scope": "New curator-written variants; not original SWE-bench test patches or official benchmark scoring. Reference code used solely for preflight after checks froze.",
+  "public_check_revision": "4356 second proxy value corrected from an accepted normalization form to the reported missing-one-slash form after public baseline-source review, before any grading/reference inspection. Earlier bytes retained.",
+  "repository_clusters": 1,
+  "schema_version": 1,
+  "selected_seed": "psf-requests-4356-public-v1",
+  "selected_target": "psf-requests-5087-public-v1",
+  "selection_seed": "rsi-public-failure-20261106/v1",
+  "source_exposure": "developer_exposed"
+}

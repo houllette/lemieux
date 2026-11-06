@@ -78,6 +78,13 @@ The focused reflection, CLI, feedback, flow and boundary checks pass. The
 failures as well as final results. No hosted request is needed to reproduce or
 qualify this provenance correction.
 
+The final `mix precommit` passes at clean runtime commit `e83d20b`: 6,098
+ordinary cases, 6,098 coverage cases at 86.73%, zero Dialyzer errors and 123
+release-host tests. Root and release-host dependency audits also pass. A prior
+gate was stopped after its ordinary suite passed when the source-image transport
+defect was confirmed. Its incomplete coverage attempt remains cancelled even
+though its process exited zero; it is never counted as a passing full gate.
+
 All eight [scripted benchmark canaries](benchmark.json) also execute and pass in
 fresh containers against the corrected library. The task-owned apparatus and
 library files are pinned in the receipt; the primary benchmark checkout receives
@@ -102,9 +109,65 @@ strict extraction, with all 1,761 regular files' bytes preserved. Malformed
 platform metadata refuses before private output or archive execution. Other
 unexpected archive output continues to fail closed.
 
+## New repository-case calibration
+
+The frozen [curation order and dispositions](study/curation.json) produce two
+new Requests development fixtures. Public checks are written from the public
+reports and baseline source before reference inspection. Separate private
+variants and the reference are used only for matched preflight controls; these
+are custom development cases, not official SWE-bench scoring or independent
+confirmation. Runtime/image pins and source omissions remain explicit in the
+[environment receipt](study/environment.json) and control metadata.
+
+| Fixture | Untouched public | Reference public | Untouched private | Reference private |
+| --- | ---: | ---: | ---: | ---: |
+| Fixed seed: malformed proxy handling | 2/4 | 4/4 | 0/2 | 2/2 |
+| Target: repeated reads after a body error | 2/4 | 4/4 | 0/3 | 3/3 |
+
+The [refused reference](study/refused-reference-controls.json) still fails its
+adapted checks. Another [untouched case](study/nondiscriminating-controls.json)
+already passes all checks in the declared Python environment. Both stay rejected.
+An eligible later fixture is retained as unused, never substituted for the
+earlier eligible target. Unavailable Windows/Python-2 cases remain unavailable.
+One proxy input was corrected after reviewing the public normalization function,
+before any grading or gold inspection; its original bytes and registration are
+retained. No model outcome or private model grade selects this development pool.
+
+The [study protocol](study/protocol.json) and both stage registrations freeze
+Luna/low for tasks and Sol/high for proposing/reflection, skill assets only,
+no executable helpers, and one shared Codex-subscription allowance of 800
+requests, 8 million tokens and two hours. The maximum registered envelope is
+4,395 requests, so the cap could interrupt an admitted mechanism sample. Plans
+are ceilings and declarations; their unexecuted episodes are not results.
+
+The [hosted calibration](study/outcome.json) completes its two episodes:
+
+| Arm | Public checks | Private variants | Requests | Tokens |
+| --- | ---: | ---: | ---: | ---: |
+| Learning disabled | 4/4 | 3/3 | 11 | 77,015 |
+| Fixed generic workflow guidance | 4/4 | 3/3 | 10 | 130,631 |
+
+Both originals complete without provider errors. The [public-only selector](study/selection.json)
+therefore admits no target. Hosted work stops before seed acquisition, proposing,
+reflection or the conditional twelve mechanism episodes. Sol/high receives no
+request. The cap does not cause the stop. There is no qualified asset, export,
+efficiency result or learning benefit. These related cases count as one repository
+cluster and add no ordinary-use item to V2.
+
+The [native audit](study/calibration-audit.json) reconstructs the report, verifies
+both original and selected transcripts and matches unique physical dispatches
+to the settled durable controller: **21 requests and 207,646 tokens**, with no
+unknown usage or learning calls. Executed registration bytes match the frozen
+registration. Dollar fields in native records are informational price estimates,
+not API billing or subscription quota charges. [Cleanup](study/cleanup.json)
+confirms no task-owned containers, credential loan, owner lock or active request.
+The allowance and consumption are retained without a reset or cap increase.
+
+## What remains
+
 Further efficacy requires cases with pinned pre-effect inputs and runtime,
-public baseline/repair controls, source exposure retained, and a genuinely
-failed public baseline to admit selective refinement. Freeze the complete
+public baseline/repair controls, source exposure retained, and a failed public
+baseline to admit selective refinement. Freeze the complete
 mechanism protocol, model/effort and shared allowance before dispatch. Fresh
 independent confirmation and qualified export remain separate later gates.
 

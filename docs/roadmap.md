@@ -103,6 +103,9 @@ It finds missing citations in two mined records and permissive legacy answer
 graders. The provenance defect is reproduced and corrected; original records
 and scores remain intact. No new case is approved, historical curation timings
 are unavailable, and the retrospective cohort does not satisfy V2 or V9.
+New Requests development fixtures pass matched controls. Their hosted calibration
+uses 21 requests and 207,646 tokens; both arms pass public verification, so no
+selective mechanism trial is admitted. The independent efficacy gate remains open.
 
 | ID | What remains | What counts as done |
 | --- | --- | --- |
