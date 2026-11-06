@@ -1,0 +1,130 @@
+{
+  "base_revision": "f3510351eebbe7679f8016e4f133af015035c992",
+  "blocking_findings": [],
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "e60203bd64f3a895ab4bf2711ee2689f14fbea85a3f5d8ab832d90018a9317ea"
+    },
+    {
+      "path": "docs/learning-qualification.md",
+      "sha256": "1ace3db946f3f7f55f2e2cb2d400f3ed5e4ab5bbfd77713e4dcc05862a6624e1"
+    },
+    {
+      "path": "docs/qualification/2026-11-05-rsi-selective/README.md",
+      "sha256": "f6ee10ac3b000b03369cf0bc82e29c495646935a920245c6da8c4f301051b5d8"
+    },
+    {
+      "path": "docs/qualification/2026-11-05-rsi-selective/SHA256SUMS",
+      "sha256": "7fa5f5458fb005485d842b69c9b98e55ca3ec6f294ad9cfbad7b362f19043f1d"
+    },
+    {
+      "path": "docs/qualification/2026-11-05-rsi-selective/benchmark-host.json",
+      "sha256": "13d5e2a1773c0ae7fa28d139c7c8d5198c04c7caa59aeda0ba553b1c63b1199a"
+    },
+    {
+      "path": "docs/qualification/2026-11-05-rsi-selective/validation.json",
+      "sha256": "b02e5d153a0f326046b5a022bddcfcde414a2f28424db3ac330cc90f35e108b3"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/asset_evidence.ex",
+      "sha256": "4e391071148ad36cb885f23c5dd0bf80f85f5830184161a190cfb687465ee778"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/asset_lane.ex",
+      "sha256": "4b676287bd048688eba3fd41aba774487ea3f18e0c6fdf8b8b77d81a771ec767"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/asset_policy.ex",
+      "sha256": "0eb2a78081f5de91282ce94edea8e8ae5235864f11ef92122dab23466aa6a3d5"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/asset_search.ex",
+      "sha256": "d751a2c45af45bdad21b3186c60ed4e36b1e113a2622c562f6bbcbf70632e67a"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/mechanism.ex",
+      "sha256": "a2838972a7440b3b1e9a293ccd78440b2c847c90f348f889a1a57d7fa316118d"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/qualification_host.ex",
+      "sha256": "b7ccb392318ef11fb3ab223cb6cad3f0b2537fa6b81165d41935fe08b53a6bb8"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/skill_invocation.ex",
+      "sha256": "a818a0b9bb27230d5e55e9b0167757b283cc4eaadacfdf17acdcd8bf894be763"
+    },
+    {
+      "path": "lib/lemieux/cli/learning/study_budget.ex",
+      "sha256": "96f833c61353f240d5199cfc5bf34afdd96bc573d193f261f91b18065f8b61e2"
+    },
+    {
+      "path": "lib/lemieux/learning/qualification/endpoints.ex",
+      "sha256": "ec1c40633afdf30c7ec0447abf7e9ee569851ef7b5057b86f9601c6fefda28c5"
+    },
+    {
+      "path": "scripts/qualify_learning_study.exs",
+      "sha256": "af7d9109d44ddc7079d16b5d58a7f85acdd11029a3b1310ae54ec4d583f4fb6a"
+    },
+    {
+      "path": "test/lemieux/cli/learning/asset_evidence_test.exs",
+      "sha256": "8549a5e1774dad1931f72f788ec3242c7c836289a5ad824f82da8ebf7d872920"
+    },
+    {
+      "path": "test/lemieux/cli/learning/asset_policy_test.exs",
+      "sha256": "b4d864fafe976039d3039bb869db50b0a582b09db5ed9e2038a409665a9c253a"
+    },
+    {
+      "path": "test/lemieux/cli/learning/mechanism_test.exs",
+      "sha256": "3f8032363e7c7cf8fdccc13629d1f28a0a581a6dfb7d2240a9003758412d8b1e"
+    },
+    {
+      "path": "test/lemieux/cli/learning/qualification_host_test.exs",
+      "sha256": "d89b894770e6f3168bd15ce213528391cf95c356929f8ff3967f7f0d9c660071"
+    },
+    {
+      "path": "test/lemieux/cli/learning/skill_invocation_test.exs",
+      "sha256": "a50cf628458eb72488ea8e5e921270fded48dca89a9dec7944b4be8957d767f2"
+    },
+    {
+      "path": "test/lemieux/cli/learning/study_budget_test.exs",
+      "sha256": "cb7fa6a8eab5fd84fddd9d6dfe9dbb082ac4b8da58c1e63ad879f6441935a515"
+    },
+    {
+      "path": "test/lemieux/cli/learning/study_planning_test.exs",
+      "sha256": "dfbf4f9a5b4634145c1345cc7a75b1c343155ca861e95e41f372809c29c34499"
+    },
+    {
+      "path": "test/lemieux/learning/qualification/endpoints_test.exs",
+      "sha256": "32a13ae7b2eb8e139486facdce5f8d9ceaf8db46235537930eb676150635e5e3"
+    }
+  ],
+  "kind": "pr_source_review/v1",
+  "local_review_tests": {
+    "log_bytes_sha256": "29995a1dbad1cb700680ce6b2f949980a77da22560fdd3a622ba0560f47ffcf2",
+    "max_cases": 4,
+    "passed": 61,
+    "seconds": 124.7,
+    "seed": 825735
+  },
+  "merge_method": "squash with exact reviewed-head guard",
+  "merge_revision": "404737075f022d0384d41742c66cb2eca7832f3a",
+  "method": "Static diff inspection, exact artifact/source hash checks, host and evidence boundary review, then targeted offline tests. This is not an independent peer review or an efficacy claim.",
+  "pull_request": 122,
+  "required_pr_checks_at_reviewed_head": {
+    "failed": 0,
+    "passed": 25,
+    "pending": 0
+  },
+  "review_threads_at_merge": 0,
+  "reviewed_boundaries": [
+    "Current public trigger evidence excludes private grades and prior system/session guidance.",
+    "Complete native skill-body reads and host denials remain enforced.",
+    "One bounded continuation and ordinary request accounting stay inside session ceilings.",
+    "Unused candidates stop early; identical single-component evaluations are reused and counted once.",
+    "Full runtime/policy bindings require fresh v3 receipts; historical meanings remain unchanged.",
+    "Experimental asset kinds gain no new default or persistent activation authority."
+  ],
+  "reviewed_head": "dd76e15b6e5db4ac690bfc252526139c43a47103",
+  "reviewed_tree_equals_merged_tree": true
+}

@@ -1,0 +1,44 @@
+{
+  "ci": {
+    "failure_log": "lemieux-pr122-postmerge-ci-failure.log",
+    "first_attempt": "failure",
+    "first_failing_seed": 952647,
+    "first_failure": "unchanged transport test default socket reuse equality",
+    "latest_attempt": 2,
+    "latest_conclusion": "success",
+    "latest_test_job": 127636975068,
+    "retry_log": "lemieux-pr122-postmerge-ci-retry.log",
+    "run_id": 42138310898,
+    "source_changed_between_attempts": false
+  },
+  "merge_revision": "404737075f022d0384d41742c66cb2eca7832f3a",
+  "workflows": [
+    {
+      "conclusion": "success",
+      "databaseId": 42138310994,
+      "event": "push",
+      "headSha": "404737075f022d0384d41742c66cb2eca7832f3a",
+      "name": "Public readiness",
+      "status": "completed",
+      "url": "https://github.com/houllette/lemieux/actions/runs/42138310994"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 42138310897,
+      "event": "push",
+      "headSha": "404737075f022d0384d41742c66cb2eca7832f3a",
+      "name": "Dependency graph",
+      "status": "completed",
+      "url": "https://github.com/houllette/lemieux/actions/runs/42138310897"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 42138310898,
+      "event": "push",
+      "headSha": "404737075f022d0384d41742c66cb2eca7832f3a",
+      "name": "CI",
+      "status": "completed",
+      "url": "https://github.com/houllette/lemieux/actions/runs/42138310898"
+    }
+  ]
+}

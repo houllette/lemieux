@@ -1,0 +1,12 @@
+{
+  "owned_task_worktree_containers_remaining": 0,
+  "preexisting_unrelated_qualification_container_preserved": {
+    "belongs_to_this_campaign": false,
+    "created": "2026-10-20T17:25:24.080405959Z",
+    "id": "cf0a4bf67204",
+    "state": "created"
+  },
+  "private_ownership_inventory_bytes_sha256": "a8058df34e1e6628c9298d8c940044376623f82714fd9c547d13b7db859f6376",
+  "scope": "Every container on the selected engine was checked by mount ownership; no global cleanup was performed.",
+  "unrelated_containers_preserved": 47
+}

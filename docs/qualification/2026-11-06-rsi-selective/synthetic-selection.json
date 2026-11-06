@@ -1,0 +1,209 @@
+{
+  "calibration_report_bytes_sha256": "dcd38923f26503abf6cc8e4db017fb21ccbac7c18ac916790fa43270fa90f69a",
+  "decisions": [
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "fcbd80ca8a676fca0525d6aa38f2213e5f8b828733639f87da1042c35d2ed27e"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "6ba1f6c4f3457beec6721bf57b52ab59dccb82c5b23a7dce0fa3fe6e94228248"
+        }
+      },
+      "cluster": "graph",
+      "eligible": false,
+      "task_id": "development-graph-1"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "d0446f260b066feb866bc71a8a44679321253e29f901eecec2f6cf14e241e6fc"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "6963de016f46bf71a4cc282abe813257d227b61460e6305493379c1d424c129a"
+        }
+      },
+      "cluster": "journal",
+      "eligible": false,
+      "task_id": "development-journal-1"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": false,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "6b260d47701d7379b01d56ae8ca2fcd554af0af31ac1180f23e37d81a0e2f6ee"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "fb92c74b55fb92e33409577a079a855188ae625ab1a7f54ee7542f0611d43563"
+        }
+      },
+      "cluster": "cache",
+      "eligible": false,
+      "task_id": "development-cache-1"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "f718041516bda585bcde531fb12de988b16c364c7476b34a6ccd9cecb8b9eb1e"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "8ad08e377de500a990ea15ae889d0f49345ecef52a924d7433c68a1ae637967f"
+        }
+      },
+      "cluster": "merge",
+      "eligible": false,
+      "task_id": "development-merge-1"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "3607b7a9a8bd23d007626d56ae6a5871010da0d9b4073c0d69712f4c64de588c"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "e4db647bab5b18ae3426d338b12852c83eb9297c8bd25aad8c137609540a2c3a"
+        }
+      },
+      "cluster": "reconcile",
+      "eligible": false,
+      "task_id": "development-reconcile-1"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "5cb4699a47af55525cd2b0e53b2690d256061e0630daf0e5c8a0218c1749521b"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "75472e2749e6214761f3becb79f327e41090b9f04a178dd71c9f49d52fce3942"
+        }
+      },
+      "cluster": "intervals",
+      "eligible": false,
+      "task_id": "development-intervals-1"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "66bfac3e85e269b655ad9feb80df9ca88472723f8a99c62e79389921a4dd4532"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "e17560267418985868e7a8364cf3d3bde4e93ac4a7b10f99a457bd0c575a9ee1"
+        }
+      },
+      "cluster": "allocation",
+      "eligible": false,
+      "task_id": "development-allocation-1"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "e3dd730f49804ee7be5732d7b5c0c4599d11c3ea2380026f5422c55a78b88092"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "a92ed4b81446c2496c01552b662dc2fe774bd461bd33433418d7757531b5d8a7"
+        }
+      },
+      "cluster": "patch",
+      "eligible": false,
+      "task_id": "development-patch-1"
+    }
+  ],
+  "eligible_streams": [],
+  "kind": "preregistered_calibration_selection/v1",
+  "private_confirmation_used_for_selection": false,
+  "selected_stream": null
+}

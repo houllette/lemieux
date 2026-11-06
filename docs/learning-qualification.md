@@ -8,6 +8,12 @@ Passing scripted mechanics does not satisfy the hosted efficacy requirement.
 The [1.1 qualification packet](qualification/2026-11-05-rsi-v1.1/README.md)
 retains the offline gate and capped hosted skill pilot: complete accounting,
 an unobserved updating skill mechanism, and inconclusive quality and efficiency.
+The [selective follow-up](qualification/2026-11-06-rsi-selective/README.md)
+retains twenty-two completely accounted calibration episodes and a fresh native
+export rehearsal. Its later Pint tasks passed public checks despite a private
+failure, so the registered public-failure rule admitted no mechanism trial.
+Review public feedback and task eligibility before authorizing another campaign;
+new skill use and independent efficacy remain unqualified.
 
 Use `--plan-only` to review the existing runner's registration before authorizing
 requests. It writes `registration.json` and a digest-bound `planning.json`, then
