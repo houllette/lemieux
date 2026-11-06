@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "module": "PortableProcedure",
+  "files": [
+    "mix.exs",
+    "LICENSE",
+    "lib/portable_procedure.ex",
+    "priv/learned/asset.json",
+    "priv/learned/files/SKILL.md",
+    "priv/learned/files/references/rules.json"
+  ],
+  "dependencies": {
+    "mix.exs": [],
+    "LICENSE": [],
+    "lib/portable_procedure.ex": ["priv/learned/asset.json"],
+    "priv/learned/asset.json": ["priv/learned/files/SKILL.md"],
+    "priv/learned/files/SKILL.md": ["priv/learned/files/references/rules.json"],
+    "priv/learned/files/references/rules.json": []
+  },
+  "capabilities": ["workspace_read", "workspace_write"]
+}

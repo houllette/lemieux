@@ -1,0 +1,60 @@
+{
+  "calibration_report_bytes_sha256": "338c3494cd6fa946b9c1d0e95a222e5ed88f1edae2560e38e23fa0b5d0155fc9",
+  "decisions": [
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "3ee86dfc2b969af34e1178d598ce325d4349cf03fa8e39ad18c9324bc8b2ea57"
+        },
+        "reference": {
+          "completed": false,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": false,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "f88bde208b0f71013e48321ee2177914fa9808b08a9563520445d9fb0053285a"
+        }
+      },
+      "cluster": "hgrecco-pint",
+      "eligible": false,
+      "task_id": "hgrecco-pint-920"
+    },
+    {
+      "checks": {
+        "disabled": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "3508a0281d093172ba97e6c49ace6999155b9bb32bc8d202b646644750355ba4"
+        },
+        "reference": {
+          "completed": true,
+          "known_tokens": true,
+          "no_provider_error": true,
+          "public_passed": true,
+          "qualification_complete": true,
+          "safe": true,
+          "source_evidence_bytes_sha256": "79d40849232597ede33733f14b44b6abb5bf76bd6bf73fed5d577385617ca067"
+        }
+      },
+      "cluster": "hgrecco-pint",
+      "eligible": false,
+      "task_id": "hgrecco-pint-948"
+    }
+  ],
+  "eligible_targets": [],
+  "fixed_seed": "hgrecco-pint-652",
+  "kind": "preregistered_calibration_selection/v1",
+  "private_confirmation_used_for_selection": false,
+  "selected_target": null
+}

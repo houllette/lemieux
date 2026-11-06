@@ -1,0 +1,44 @@
+{
+  "acceptance": "Use unchanged v8 endpoints and thresholds, per-kind actual use, full accounting, restoration and explicit negative/inconclusive reporting. No issue closure from mechanics alone.",
+  "authorization": {
+    "scope": "New bounded qualification requested in this turn; prior pilot allowance not reused.",
+    "source": "User requested review and merge of PR 122, then whatever further qualification runs are needed to try to address issues 47,79,80,81."
+  },
+  "calibration": {
+    "fixed_sample": "all eight variant-1 task families, disabled and developer-authored reference, once each",
+    "registration_bytes_sha256": "d00c03178db2ee102143ee7890880cfcdd99e059cf2896f498b032e975b408de",
+    "task_requests": 12
+  },
+  "corpus": "existing developer-exposed synthetic diagnostics; no independent efficacy claim",
+  "kind": "selective_learning_campaign_protocol/v1",
+  "larger_studies": "Require a passed matching v3 hosted mechanism. Freeze a new stage registration before dispatch and remain inside this same shared allowance. No expanded asset kind or independent corpus claim follows from a small development pilot.",
+  "mechanism_selection": {
+    "asset_kinds": [
+      "skill"
+    ],
+    "eligibility": "Completed, safe, accounted disabled original with failing public verification, and completed, safe, accounted reference with passing public verification. Private confirmation grades are excluded from selection.",
+    "executable_helpers": false,
+    "no_replays": "Never replay or remove an incomplete intent; unknown usage closes admission.",
+    "profile_search": false,
+    "require_complete_calibration": true,
+    "rule": "Choose the lexicographically first eligible stream. If none is eligible, stop hosted work and report no eligible mechanism case.",
+    "sample": "one fixed ordinary seed on variant 1 plus variant 2, all six registered arms, two repetitions",
+    "task_requests": 12
+  },
+  "models": {
+    "editor": "openai_codex:gpt-6-sol",
+    "editor_effort": "high",
+    "route": "codex_subscription",
+    "task": "openai_codex:gpt-6-luna",
+    "task_effort": "low"
+  },
+  "registered_at_utc": "2026-11-06T00:40:13.421156+00:00",
+  "revision": "404737075f022d0384d41742c66cb2eca7832f3a",
+  "schema_version": 1,
+  "shared_limits": {
+    "requests": 1200,
+    "time_ms": 7200000,
+    "tokens": 8000000
+  },
+  "stopping": "Stop on shared cap, unknown accounting, unsafe or incomplete evidence, no eligible stream, failed mechanism, or completion of the registered sample."
+}

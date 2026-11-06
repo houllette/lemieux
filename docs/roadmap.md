@@ -67,6 +67,11 @@ research acceptance items below retain their own completion criteria.
   adds provider-free registration review, complete execution binding, actual
   per-kind usage evidence and embedded export dependency checks. These checks
   prepare the remaining work in #79–#81; they do not supply hosted confirmation.
+  The [selective follow-up](qualification/2026-11-06-rsi-selective/README.md)
+  records complete synthetic and Pint calibration, public/private verification
+  disagreement and no eligible mechanism trial. Stronger observable feedback
+  and reviewed case curation (V2) precede the next mechanism campaign; fresh,
+  adequately powered independent confirmation remains V9 work.
   The [hosted pilot](qualification/2026-10-20-default-learning/README.md) records
   stock-path reuse and the unresolved efficacy and recovery work for V2/V9.
   The [staged study](qualification/2026-10-20-learning-study/README.md) adds
@@ -80,8 +85,9 @@ research acceptance items below retain their own completion criteria.
   The [repository qualification](qualification/2026-10-23-repository-learning/README.md)
   adds complete learned-skill export, a fresh native consumer and rollback,
   measured v5 text-skill use, and an interrupted Pint calibration. Its expanded
-  accumulated allowance preserves an unknown charge that still blocks live
-  dispatch. Capability improvement and independent confirmation remain pending.
+  accumulated allowance and interrupted attempts remain historical evidence.
+  The later selective follow-up uses its own bounded allowance. Capability
+  improvement and independent confirmation remain pending.
 
 ## Acceptance and experiments still to run
 

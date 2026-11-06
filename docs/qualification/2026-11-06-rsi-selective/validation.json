@@ -1,0 +1,256 @@
+{
+  "artifact_verifier_development": {
+    "bytes_sha256": "9fc9f134d79cf8bc0a3639808cc52ece179c4f077fa0ffdd0927186afd7b5b61",
+    "correction": "The consumer reports a boolean application-callback flag. Verify false explicitly; the raw export receipt and runtime are unchanged.",
+    "retained_red_log": "lemieux-selective-public-verifier-callback-shape-red.log"
+  },
+  "benchmark": {
+    "apparatus_source_manifest": "../2026-11-05-rsi-v1.1/benchmark-apparatus.json",
+    "docker_context": "desktop-linux",
+    "image_id": "sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059",
+    "labelled_benchmark_containers_remaining": 0,
+    "lock_matches_library": true,
+    "primary_checkout_status_sha256": "17d6e863a5c5fd140ede845400fa14752593793be0ef47c1814c80b89900027c",
+    "scenarios_passed": 8,
+    "source_files_checked": 69,
+    "source_mismatches": 0
+  },
+  "budget_continuity": {
+    "all_139_closed_prior_records_preserved_exactly": true,
+    "positive_and_negative_controls_match_pint_manifest": true,
+    "same_shared_deadline_and_limits": true
+  },
+  "final_gate": {
+    "audit_limitation": "Existing example resolution emitted these notices. The full gate compiles/tests those examples and audits the library/release host; passing does not qualify every example dependency graph as free of advisories. No dependency constraint, lock or runtime implementation was changed by this evidence publication.",
+    "bytes_sha256": "1a0a1853c439952dd06c48aff97a7fced241fb236a8f5c513e6a6203dfdd9066",
+    "command": "ulimit -n 4096; env LMX_CONFIG=none MIX_ENV=test ERL_FLAGS='+S 4:4' mise exec -- mix precommit.full",
+    "coverage": {
+      "floor_percent": 85,
+      "max_cases": 1,
+      "passed": 6078,
+      "percent": 86.72,
+      "seconds": 733.1,
+      "seed": 741771
+    },
+    "dependency_audit_scope": [
+      "library",
+      "standalone release host"
+    ],
+    "dialyzer": {
+      "errors": 0,
+      "seconds": 18.3
+    },
+    "distributed_tests": 25,
+    "example_dependency_resolution_notices": [
+      {
+        "advisory": "EEF-CVE-2026-113440",
+        "package": "hackney",
+        "project": "computer_use",
+        "reported_severity": "MEDIUM",
+        "version": "4.8.5"
+      },
+      {
+        "advisory": "EEF-CVE-2026-117680",
+        "package": "jsv",
+        "project": "computer_use",
+        "reported_severity": "LOW",
+        "version": "0.21.2"
+      },
+      {
+        "advisory": "EEF-CVE-2026-117666",
+        "package": "ssl_verify_fun",
+        "project": "computer_use",
+        "reported_severity": "CRITICAL",
+        "version": "1.1.7"
+      },
+      {
+        "advisory": "EEF-CVE-2026-117680",
+        "package": "jsv",
+        "project": "hello",
+        "reported_severity": "LOW",
+        "version": "0.26.0"
+      },
+      {
+        "advisory": "EEF-CVE-2026-117680",
+        "package": "jsv",
+        "project": "research",
+        "reported_severity": "LOW",
+        "version": "0.26.0"
+      }
+    ],
+    "examples_checked": [
+      "examples/extensions/builder",
+      "examples/extensions/capture",
+      "examples/extensions/computer_use",
+      "examples/extensions/hello",
+      "examples/extensions/learned_skill_witness",
+      "examples/extensions/portable_procedure",
+      "examples/extensions/research",
+      "examples/extensions/review",
+      "examples/extensions/security",
+      "dist/lmx/extensions/systemone_compaction",
+      "examples/extensions/verifier"
+    ],
+    "exit_code": 0,
+    "ordinary": {
+      "doctests": 12,
+      "excluded": 47,
+      "max_cases": 4,
+      "passed": 6078,
+      "seconds": 192.0,
+      "seed": 673676,
+      "skipped": 11,
+      "tests": 6066
+    },
+    "package_consumer": {
+      "resumed_entries": 17,
+      "seed_entries": 9,
+      "tightened_entries": 25
+    },
+    "path": "lemieux-selective-campaign-precommit-full.log",
+    "python_tests": 80,
+    "release_host_tests": 123,
+    "status": "passed"
+  },
+  "hosted_model_roles": {
+    "cost_interpretation": "quota consumption; no measured API dollar billing",
+    "executed_task_model": "openai_codex:gpt-6-luna",
+    "hosted_editor_dispatches": 0,
+    "planned_editor_effort": "high",
+    "planned_editor_model": "openai_codex:gpt-6-sol",
+    "route": "codex_subscription",
+    "task_effort": "low"
+  },
+  "interpretation": "Development difficulty/calibration and offline package mechanics only. No learned-skill mechanism or independent efficacy confirmation in this packet.",
+  "kind": "selective_calibration_validation/v1",
+  "logs": [
+    {
+      "bytes_sha256": "29995a1dbad1cb700680ce6b2f949980a77da22560fdd3a622ba0560f47ffcf2",
+      "path": "lemieux-pr122-review-tests.log"
+    },
+    {
+      "bytes_sha256": "6ee4ff98f3047ffd022836b305b0427fc1aa003e9a9bcd46f419cfa06b6173ba",
+      "path": "lemieux-pr122-postmerge-ci-failure.log"
+    },
+    {
+      "bytes_sha256": "9237c3ffa6549f71c3404a81bd027a965d49bd94683f9ff1445025023102a4bb",
+      "path": "lemieux-pr122-postmerge-ci-retry.log"
+    },
+    {
+      "bytes_sha256": "99ed91bb325fcb1e24bff2697c149fa34f63ed69dd331c8aa66e462d1430fc16",
+      "path": "lemieux-pr122-transport-repro.log"
+    },
+    {
+      "bytes_sha256": "1215c69624deb53fe2df0c47d2fee302101a63e87b25dbbb0bfa43081421cca5",
+      "path": "lemieux-pr122-transport-seeds.log"
+    },
+    {
+      "bytes_sha256": "ed14174969476c3d3348bda4e9882dd5701558a820bb0fa12f6034bb4fdfb427",
+      "path": "lemieux-selective-merge-canaries.log"
+    },
+    {
+      "bytes_sha256": "fcc6a89e424465619ea44a8455a7e02ba5af36bcea297e9f2cf9510be62360f6",
+      "path": "lemieux-selective-calibration-plan.log"
+    },
+    {
+      "bytes_sha256": "1a1ccf9af5197ab6de059f3e63b7e68f36353df4a6de73c0f596e049e6e4d454",
+      "path": "lemieux-selective-calibration-live.log"
+    },
+    {
+      "bytes_sha256": "3dc97458b2c6d772379e64d5db0355a5ec8b869066fb956f3706786959f39bc4",
+      "path": "lemieux-selective-calibration-audit.log"
+    },
+    {
+      "bytes_sha256": "5384f62655d4f4517c9d9396691d9f12998c9b8cc6f859bfc97606d07bac9165",
+      "path": "lemieux-selective-prefix-preservation.log"
+    },
+    {
+      "bytes_sha256": "43d0a478712147120fbde95f3a4e6312f411dd8948f8ac1a014b58f7f1492ce7",
+      "path": "lemieux-selective-pint-controls.log"
+    },
+    {
+      "bytes_sha256": "9a72edd133a5ba5884a4497de9c5ef92de039b25799efdc5c8aa70acd80f17fc",
+      "path": "lemieux-selective-pint-calibration-plan.log"
+    },
+    {
+      "bytes_sha256": "149ae878d192b38312ff34b09551658191899eab885432943ab6eb4bc4fa412c",
+      "path": "lemieux-selective-pint-calibration-live.log"
+    },
+    {
+      "bytes_sha256": "1bbd7c080958645af904d5a23e9b2adc15e7f0a8c38b3bdf42bbad7e08436da0",
+      "path": "lemieux-selective-pint-calibration-audit.log"
+    },
+    {
+      "bytes_sha256": "784d02168dd12915508f920e7cee147439efa1f49b4a341716d0103f7baee018",
+      "path": "lemieux-selective-portable-export.log"
+    },
+    {
+      "bytes_sha256": "8b75d9378bfebf739143a33bd75a34b410331681bc037354e58e990d0c4cac70",
+      "path": "lemieux-selective-power-plan.log"
+    }
+  ],
+  "measured_source_revision": "404737075f022d0384d41742c66cb2eca7832f3a",
+  "publication_changes": "Evidence and documentation only; no runtime implementation change.",
+  "retrospective_public_feedback_diagnostic": {
+    "driver": "public-feedback-driver-v2.ex.txt",
+    "driver_bytes_sha256": "d5cdbbe65a150957784e9d992cb520cd198140fbd69460202b297ea572251841",
+    "expanded_model_artifact_passed": true,
+    "expanded_public_checks": 7,
+    "hosted_requests": 0,
+    "log": "lemieux-selective-public-feedback-v2.log",
+    "log_bytes_sha256": "215ab8b5c9a364c6e7322848674b2bc18ecf2d9026c21ec56088ee036d4f0f94",
+    "model_rerun": false,
+    "original_report_reclassified": false,
+    "private_grader_mounted": false,
+    "reference_control_passed": true,
+    "report": "public-feedback.json",
+    "report_bytes_sha256": "bead21b83286b555343d8435eab23f33909020227256665ff8923d6d93c47193",
+    "result": "Existing public regression expansion did not reveal the historical private failure.",
+    "retained_initial_attempt": {
+      "driver_bytes_sha256": "54e580542e1de0cf23f92a21a57a514b132389d88051385f85b066aae5f72dcb",
+      "log": "lemieux-selective-public-feedback-v1-red.log",
+      "log_bytes_sha256": "a56d2019e836bd89e527fdaf7b1cb590418bf920ff1a653739829de8d612732f",
+      "reason": "The first diagnostic incorrectly asserted the hypothesis before recording the observed passing grade. Version two records the negative hypothesis result explicitly. Same captured artifact and public test inputs; no model rerun."
+    },
+    "untouched_control_passed": false
+  },
+  "schema_version": 1,
+  "shared_limits": {
+    "requests": 1200,
+    "time_ms": 7200000,
+    "tokens": 8000000
+  },
+  "shared_usage": {
+    "active_calls_at_close": 0,
+    "cap_stopped_sample": false,
+    "elapsed_to_last_report_ms": 1279497,
+    "last_report_written_ms": 1793926900405,
+    "learning_requests": 0,
+    "requests": 266,
+    "started_ms": 1793925620908,
+    "tokens": 3497117,
+    "unknown_dispatch_usage": 0
+  },
+  "source_tree_clean_during_hosted_execution": true,
+  "stopping": {
+    "independent_confirmation_dispatched": false,
+    "larger_study_dispatched": false,
+    "mechanism_dispatched": false,
+    "next_stopping_rule": "No eligible target under the preregistered public-failure rule; no outcome-dependent replay or budget increase.",
+    "pint_eligible_targets": [],
+    "synthetic_eligible_streams": []
+  },
+  "transport_observations": {
+    "ci_failed_seed": 952647,
+    "local_same_seed_passed": 2,
+    "local_seeded_passes": 6,
+    "local_seeds": [
+      101,
+      102,
+      103
+    ],
+    "prior_failure_preserved": true,
+    "root_cause": "not established",
+    "same_sha_ci_retry": "passed"
+  }
+}

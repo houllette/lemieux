@@ -18,6 +18,9 @@ API.
 
 ### Release readiness
 
+- Record bounded selective-RSI calibration and portable export checks. Preserve
+  public/private verification disagreement and the lack of an eligible mechanism trial;
+  independent efficacy and new asset-kind defaults remain unqualified.
 - Define the supported 1.x API, automation, transcript and extension compatibility
   promise while keeping experimental namespaces outside the stable public API.
   Align first-use permission and version guidance with the runtime.
