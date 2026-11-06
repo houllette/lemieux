@@ -1245,9 +1245,19 @@ lmx feedback --mine SESSION                                  # a model names opp
 lmx feedback SESSION --text "It never reran the check"       # a person names one
 lmx feedback draft-case FB_ID --source DIR --output eval/drafts \
   --prompt "Fix value.txt and rerun the check." --verifier "sh check.sh" --class mechanical
+lmx corpus review eval/drafts/case_ID --reference REPAIRED_DIR --allow value.txt
 lmx corpus promote eval/drafts/case_ID eval/corpus/local/manifest.json \
-  --cluster value-repair --allow value.txt
+  --cluster value-repair --allow value.txt --reference REPAIRED_DIR
 ```
+
+`corpus review` checks a frozen draft against a repaired reference using the same
+public verifier in fresh copies. Only the exact named source paths may differ.
+It preserves a report even when the controls fail to discriminate; it does not
+approve a case or an improvement. `promote --reference` reruns the controls and
+retains the report in metadata before adding the case. Review the requirement,
+checks and source allowlist yourself. Promotion without a reference remains
+available, with verification explicitly marked unassessed. See
+[corpus review and promotion](cli.md#corpus-promotion) for limits and exit status.
 
 `draft-case` freezes a fixture and a verifier beside the record and records
 your verifiability judgment as a revision; a mined record is not eligible

@@ -88,6 +88,12 @@ research acceptance items below retain their own completion criteria.
 Each item needs new evidence. A previous run or a passing offline test does
 not qualify another model, account, runtime or deployment.
 
+The [public-feedback follow-up](qualification/2026-11-06-rsi-feedback/README.md)
+adds matched failure/repair controls to case curation. Additive public checks
+detect an arithmetic regression in a retained Pint artifact, with a passing
+reviewed reference. This is one exposed development case; V2's consecutive-item
+review and V9's independent confirmation remain open.
+
 | ID | What remains | What counts as done |
 | --- | --- | --- |
 | V1 | Independently confirm a revised recipe for the guided extension builder (`lmx --build-ext`). The current recipe was chosen on development cases and was never confirmed. | Freeze baseline, candidate, runtime, graders, fresh cases and budget before running; report both arms, failures, authoring cost, complete usage and exposure. See [confirmation](agent-extensions.md#confirmation-and-qualified-export). |

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "hosted_requests": 0,
+  "attempts": [
+    {
+      "attempt": "v1",
+      "driver_sha256": "35e96b4d0b63c53f2f132e1ac4179ec6d16690d77e15ba03adb42dfbe8206f98",
+      "log_sha256": "793c720967f39294deb6fea9c343217ea633b37560d11aea976cdab4aa6eaa2e",
+      "meaning": "Refused mismatched historical reference: CHANGES differed outside allowed implementation path."
+    },
+    {
+      "attempt": "v2",
+      "driver_sha256": "772991fe4a1852a328a7a41bbfe643cf53d66475807759912cba7ef6d4e464c2",
+      "log_sha256": "0396119310085c6a230f98e0933144ee3d281e317a646c530a74c4b1ca7b058a",
+      "meaning": "Matched historical reference and retained artifact each fail unchanged arithmetic check."
+    },
+    {
+      "attempt": "v3",
+      "driver_sha256": "2357d7308f6d3dbe785079f6e8693e647064c26a44aa2c5d8fe26f0d42f20c58",
+      "log_sha256": "ef827c84b7fb9f36f1ddfa801bf02e6442ffccbb33a9371980f7dc8e4455e929",
+      "meaning": "Owner reference fails because its AST numeric-node interface is absent from pinned runtime; controls not demonstrated."
+    },
+    {
+      "attempt": "v4",
+      "driver_sha256": "321d09c827c1c96ca1de7a8fa861a79f0da0c79ad710c87277d74a1a76acffef",
+      "log_sha256": "ce9360d9d22e1c2ef678afb43bd481d2169e0951405171c3ce2eb48fe984dd8e",
+      "meaning": "Reference AST compatibility repaired; public checks unchanged. Matched controls pass; retained artifact fails arithmetic."
+    },
+    {
+      "attempt": "final",
+      "driver_sha256": "401e747344232e3c3c94fc6e9ba2f9a66ff7e609e4b90b1ba02ccc760f29d2d7",
+      "log_sha256": "af4b75122369f4064f9d7381aac16cc8ffe68b6db2b14327369b56033d77e08c",
+      "meaning": "Repeated matched diagnostic with source-file and retained-artifact ancestry bindings."
+    },
+    {
+      "attempt": "bound",
+      "driver_sha256": "8371ab0df6283806497cc8a49218f57e2e34cf86e137961f01a157fb3f6546d7",
+      "log_sha256": "273a8acf5ac5463727a70e0f0c35743ea895a8d211e7a7074fa72ca2433ecd6a",
+      "meaning": "Current source-bound controls, declared negative exit status 1, and explicit non-attribution of historical private failure."
+    },
+    {
+      "attempt": "pilot-preflight-v2",
+      "log_sha256": "080e62423792548d9e51ab482f125c62795e1b6f09ffe85d6478a746f519af6a",
+      "controls_sha256": "e4c21969afb53e220a3ce2215947a069f10f5e15a01b124e322d0624c4481d32",
+      "meaning": "No hosted dispatch. Owner reference passed public12/12 but failed old private4/6; freeze script refused it. Later curation makes numeric-error contract public and retains exposure."
+    }
+  ]
+}

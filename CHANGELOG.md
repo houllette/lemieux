@@ -9,6 +9,14 @@ API.
 
 ## Unreleased
 
+### Learning
+
+- Add provider-free `lmx corpus review` and matched public failure/repair controls
+  for `corpus promote --reference`. Bind the controls to frozen draft bytes and
+  exact source changes; reject mismatched checks, stale fixtures and grader
+  writes. Retain unsuccessful controls and distinguish unassessed promotion
+  from development discrimination and independent efficacy.
+
 ### Dependencies
 
 - Update the library and standalone host to ExRatatui 0.18.0 and patched

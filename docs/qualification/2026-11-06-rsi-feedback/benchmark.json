@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "hosted_requests": 0,
+  "receipt": {
+    "image": "python@sha256:2dd78ad5cf13a0b68f5134dc49aa9950203a8cf4b7463431b9f3b398287c5059",
+    "kind": "deterministic_host_contracts",
+    "qualified": true,
+    "scenarios": [
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "verify",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      },
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "completion_check",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      },
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "observations",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      },
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "checkpoints",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      },
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "compaction",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      },
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "delegation",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      },
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "cancellation",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      },
+      {
+        "completed": true,
+        "configured": true,
+        "eligible": true,
+        "feature": "retry",
+        "reason": ":ok",
+        "status": "qualified",
+        "triggered": true
+      }
+    ],
+    "schema_version": 1
+  },
+  "apparatus_files_verified": 69,
+  "helper_files": [
+    {
+      "path": "priv/workspace_snapshot.py",
+      "sha256": "2adb6a1a158bfdfb05413e502c058873d82aa137d92e84535402fac2bfd58898"
+    }
+  ],
+  "library_base_revision": "404737075f022d0384d41742c66cb2eca7832f3a",
+  "library_components": {
+    "lib_tree": "7fceddffe5500712f3cc23d466b6a7b1a2d66cb4",
+    "priv_tree": "2d5fa6db473e7fe6737d141f8ab37694d609c640",
+    "files": {
+      "mix.exs": "2c17ac2d6752c0f4dff1004d2410a4be8d2966bef3468cb132adb6955e4d760c",
+      "mix.lock": "ebf0ba0b0eccd64a226e72f80bcf401dca68fb4bdfc4f4fc3ea4ae257c50a149",
+      ".tool-versions": "6286da51456f864e5f1d8f2280e6de86d6fb1ee4517c40819760ec54d203c846"
+    }
+  },
+  "setup_attempt": {
+    "status": "unavailable_before_scenarios",
+    "reason": "Initial copy omitted required Python helper; completed apparatus has the exact retained helper.",
+    "scenarios_executed": 0,
+    "log_sha256": "a2157b06f1f174b597da2f8c9df40de1d9655849fe73c5a1d1b9680694a49ede"
+  },
+  "completed_log_sha256": "ad85f64c4973d7a9e31d166f68285726c6a0d311c8811894e9c2492c876d281d",
+  "primary_benchmark_writes_by_this_task": 0,
+  "scope": "Retained apparatus; current library code components. Scripted provider retry is intentional; no hosted model is used."
+}
