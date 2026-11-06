@@ -1,4 +1,5 @@
 # Integrity and consistency only; this performs no provider or grader request.
+alias Lemieux.CLI.Learning.Calibration
 alias Lemieux.Contract
 
 directory = Path.dirname(__ENV__.file)
@@ -111,4 +112,127 @@ end
 validation = read.("validation.json")
 "passed" = validation["final_gate"]["status"]
 
-IO.puts("public feedback packet verified; no hosted request or efficacy claim")
+protocol = read.("protocol.json")
+plan = read.("calibration-plan.json")
+calibration = read.("calibration-report.json")
+audit = read.("calibration-audit.json")
+controller = read.("calibration-controller.json")
+authorization = read.("allowance-authorization.json")
+registration = read.("calibration-registration.json")
+mechanism = read.("mechanism-registration.json")
+
+for sealed <- [
+      plan,
+      plan["runtime"],
+      calibration,
+      audit,
+      controller,
+      authorization,
+      registration["template"],
+      mechanism["template"],
+      read.("calibration-planning.json"),
+      read.("mechanism-planning.json"),
+      read.("seed-controls.json"),
+      read.("feedback-workflow.json")
+    ],
+    do: :ok = Contract.verify_digest(sealed, "sha256")
+
+for {file, key} <- [
+      {"calibration-registration.json", "calibration_registration_sha256"},
+      {"mechanism-registration.json", "mechanism_registration_sha256"},
+      {"select_target.py", "selector_sha256"},
+      {"seed-controls.json", "seed_controls_sha256"}
+    ] do
+  true = protocol[key] == Contract.sha256(File.read!(Path.join(directory, file)))
+end
+
+true = protocol["revision"] == plan["runtime"]["revision"]
+true = plan["runtime"]["source_tree_clean"]
+true = protocol["shared_limits"] == authorization["limits"]
+true = protocol["shared_limits"] == plan["runtime"]["study_allowance"]["limits"]
+
+strip_seed_usage = fn record ->
+  record
+  |> Map.delete("sha256")
+  |> Map.update!("runtime", &Map.drop(&1, ~w(sha256 seed_usage)))
+end
+
+true = strip_seed_usage.(plan) == strip_seed_usage.(registration["template"])
+rebuilt = Calibration.report(plan, calibration["rows"])
+true = Map.take(calibration, Map.keys(rebuilt)) == rebuilt
+true = calibration["execution_complete"]
+0 = calibration["unknown_token_rows"]
+"not_tested" = calibration["benefit"]
+
+selection = read.("calibration-selection.json")
+[] = selection["eligible_targets"]
+nil = selection["selected_target"]
+false = selection["private_confirmation_used_for_selection"]
+
+true =
+  selection["calibration_report_bytes_sha256"] ==
+    Contract.sha256(File.read!(Path.join(directory, "calibration-report.json")))
+
+for decision <- selection["decisions"] do
+  false = decision["eligible"]
+
+  for arm <- ~w(disabled reference) do
+    checks = decision["checks"][arm]
+
+    true =
+      Enum.all?(checks, fn {key, value} -> key == "source_evidence_bytes_sha256" or value end)
+  end
+end
+
+27 = controller["accounting"]["requests"]
+395_616 = controller["accounting"]["tokens"]
+0 = controller["accounting"]["learning_requests"]
+0 = controller["accounting"]["learning_tokens"]
+0 = controller["job_budget"]["active"]
+0 = controller["job_budget"]["unmeasured"]
+true = Enum.all?(controller["records"], fn {_id, record} -> record["status"] == "completed" end)
+27 = Enum.sum(Enum.map(calibration["rows"], & &1["requests"]))
+395_616 = Enum.sum(Enum.map(calibration["rows"], & &1["tokens"]))
+true = audit["native_calibration_reconstruction"]
+true = audit["registered_and_executed_plan_match"]
+true = audit["durable_ledger_matches_physical_meter"]
+27 = audit["physical_requests"]
+395_616 = audit["tokens"]
+0 = audit["unknown_dispatch_usage"]
+
+true =
+  audit["durable_controller_bytes_sha256"] ==
+    Contract.sha256(File.read!(Path.join(directory, "calibration-controller.json")))
+
+for episode <- audit["episodes"] do
+  true = episode["row_matches_physical_meter"]
+  true = episode["transcript_verified"]["original"]
+  true = episode["transcript_verified"]["selected"]
+end
+
+study = read.("hosted-study.json")
+"calibration_complete_no_eligible_mechanism_target" = study["status"]
+"not_run" = study["conditional_mechanism"]["status"]
+0 = study["conditional_mechanism"]["seed_episodes"]
+0 = study["conditional_mechanism"]["target_episodes"]
+0 = study["ordinary_use_items_reviewed"]
+false = study["independent_confirmation"]
+2 = length(study["episodes"])
+
+for episode <- study["episodes"] do
+  "completed" = episode["status"]
+  nil = episode["provider_error"]
+  true = episode["public_grade"]["passed"]
+  14 = episode["public_grade"]["correct"]
+  true = episode["confirmation_grade"]["passed"]
+  6 = episode["confirmation_grade"]["correct"]
+end
+
+cleanup = read.("cleanup.json")
+0 = cleanup["task_owned_containers_remaining"]
+true = cleanup["all_admitted_requests_settled"]
+true = cleanup["oauth_loan_removed"]
+true = cleanup["allowance_owner_lock_removed"]
+false = cleanup["conditional_mechanism_output_created"]
+
+IO.puts("public feedback packet verified without provider calls; efficacy remains unproven")

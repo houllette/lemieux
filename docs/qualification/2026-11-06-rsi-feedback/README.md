@@ -81,6 +81,45 @@ is agent review of benchmark feedback, not twenty ordinary-use items or an
 independently qualified improvement. The [driver](exercise_feedback.exs) and
 source ancestry remain available for inspection.
 
+## Capped hosted calibration
+
+The [protocol](protocol.json), both registrations and the public selection rule
+were frozen at clean commit `8f646960f492c66b68ba756c256393d77a4b3e35` before
+dispatch. The new shared allowance was 1,200 requests, 8 million tokens and two
+hours. Tasks use GPT-6 Luna/low; GPT-6 Sol/high was registered for proposing and
+reflection. The route is the Codex subscription. Dollar fields in native records
+are informational model price estimates, not API billing or quota charges.
+
+The [calibration](hosted-study.json) completed both registered episodes:
+
+| Arm | Public checks | Private checks | Requests | Tokens |
+| --- | ---: | ---: | ---: | ---: |
+| Learning disabled | 14/14 | 6/6 | 12 | 144,304 |
+| Fixed generic workflow guidance | 14/14 | 6/6 | 15 | 251,312 |
+
+Both originals completed without provider errors or safety failures. The fixed
+guidance arm receives no repaired-reference code. These two observations from
+one exposed case do not estimate a population success rate or learning benefit.
+The private checks are the unchanged exposed development controls, not an
+independent holdout. Their results never select a target.
+
+The [frozen selector](select_target.py) requires failed public verification in
+the disabled original and a passing reference original. Both passed, so
+[selection](calibration-selection.json) admits no target. Hosted work stopped
+there, before seed acquisition, proposing, reflection or the conditional twelve
+mechanism episodes. The cap did not cause the stop. The unexecuted mechanism
+registration remains recorded; its 3,809-request maximum plus calibration's
+586-request maximum exceeded the shared cap, so even admission would not have
+guaranteed a complete sample. No task-local asset or qualified export resulted.
+
+The [native audit](calibration-audit.json) reconstructs the report, verifies both
+original and selected transcripts, and matches unique physical dispatches to
+the [durable controller](calibration-controller.json): **27 requests and 395,616
+tokens**, with no unknown usage or learning calls. Executed registration bytes
+match the frozen registration. [Cleanup](cleanup.json) confirms no active
+requests, task-owned containers, credential loan or allowance owner lock. The
+original allowance, deadline and consumption remain retained; none were reset.
+
 ## Local validation
 
 All eight [benchmark canaries](benchmark.json) passed with scripted providers.
@@ -108,11 +147,13 @@ intentional regression witnesses; they are not intermittent results of one tree.
 
 These fixtures are already exposed development material from one repository.
 They do not supply independent streams or satisfy roadmap V2's twenty consecutive
-ordinary-use reviews. A subsequent hosted calibration must freeze the additive
-checks, source, images, models, budgets and selection rule before dispatch. Only a
-completed, safe, accounted baseline with failed public verification and a passing
-reference can admit the next mechanism trial. Private grades cannot select it.
-Fresh independent confirmation remains necessary for an efficacy claim.
+ordinary-use reviews. The implemented path and matched controls pass; the hosted
+calibration gives no eligible failure to refine. The next qualification gate is
+to curate ordinary-use feedback into reviewed public cases, retain their exposure
+and find a genuinely failed baseline before admitting a skill mechanism trial.
+Private grades cannot select it. An adequately powered fresh multi-stream corpus
+and independent confirmation remain necessary for efficacy, typed-asset and
+qualified-export claims. Issues #47, #79, #80 and #81 remain open.
 
 The public packet retains check registrations, failed controls, the executable
 reference transform, driver, sealed reports and validation receipts. Integrity

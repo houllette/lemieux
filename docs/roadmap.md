@@ -91,8 +91,11 @@ not qualify another model, account, runtime or deployment.
 The [public-feedback follow-up](qualification/2026-11-06-rsi-feedback/README.md)
 adds matched failure/repair controls to case curation. Additive public checks
 detect an arithmetic regression in a retained Pint artifact, with a passing
-reviewed reference. This is one exposed development case; V2's consecutive-item
-review and V9's independent confirmation remain open.
+reviewed reference. Its capped hosted calibration completed both arms, which
+both passed public verification; the frozen selector admitted no mechanism
+target. This is one exposed development case, with no demonstrated learning
+benefit. V2's consecutive-item review and V9's independent confirmation remain
+open, as do #47, #79, #80 and #81.
 
 | ID | What remains | What counts as done |
 | --- | --- | --- |

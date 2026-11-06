@@ -44,5 +44,6 @@
       "controls_sha256": "e4c21969afb53e220a3ce2215947a069f10f5e15a01b124e322d0624c4481d32",
       "meaning": "No hosted dispatch. Owner reference passed public12/12 but failed old private4/6; freeze script refused it. Later curation makes numeric-error contract public and retains exposure."
     }
-  ]
+  ],
+  "scope": "Offline public regression diagnostics and fixture controls only; hosted calibration is retained separately in hosted-study.json."
 }

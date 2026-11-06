@@ -1,0 +1,107 @@
+{
+  "actual_requests": 27,
+  "actual_tokens": 395616,
+  "benefit": "not_tested",
+  "conditional_mechanism": {
+    "reason": "no_eligible_target",
+    "seed_episodes": 0,
+    "status": "not_run",
+    "target_episodes": 0
+  },
+  "dollar_fields": "Informational model price estimates in native records; not API spend or quota billing.",
+  "editor_effort": "high",
+  "editor_model": "openai_codex:gpt-6-sol",
+  "efficiency": "not_tested",
+  "effort": "low",
+  "episodes": [
+    {
+      "arm": "reference",
+      "confirmation_grade": {
+        "checks": 6,
+        "correct": 6,
+        "exit_zero": true,
+        "minimum_checks": 6,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true
+      },
+      "evidence_bytes_sha256": "494d0c7412bab44b68dcbe6b6410a6999f511a401cfa1b611915257838093bef",
+      "input_tokens": 249890,
+      "output_tokens": 1422,
+      "provider_error": null,
+      "public_grade": {
+        "checks": 14,
+        "correct": 14,
+        "exit_zero": true,
+        "minimum_checks": 14,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "64e607820c52b2e3cd477fc934cb88c4a8cb106ed40fa4c1c74594c134257981"
+      },
+      "requests": 15,
+      "status": "completed",
+      "task_id": "hgrecco-pint-948-public-v3"
+    },
+    {
+      "arm": "disabled",
+      "confirmation_grade": {
+        "checks": 6,
+        "correct": 6,
+        "exit_zero": true,
+        "minimum_checks": 6,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true
+      },
+      "evidence_bytes_sha256": "e02cf4cc8ad390851d02e643f63734ba173f6c15b68f357ec997a52864c5dd61",
+      "input_tokens": 143213,
+      "output_tokens": 1091,
+      "provider_error": null,
+      "public_grade": {
+        "checks": 14,
+        "correct": 14,
+        "exit_zero": true,
+        "minimum_checks": 14,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "01f4007b7038de9ca77b58dd3301bfd33b4eddfc2024f1d076ac47c14422d44f"
+      },
+      "requests": 12,
+      "status": "completed",
+      "task_id": "hgrecco-pint-948-public-v3"
+    }
+  ],
+  "independent_confirmation": false,
+  "kind": "public_feedback_capped_calibration_outcome/v1",
+  "learning_requests": 0,
+  "learning_tokens": 0,
+  "model": "openai_codex:gpt-6-luna",
+  "native_audit": "Exact registration bytes, plan/report seals, native report reconstruction, original and selected transcript verification, unique physical dispatch meters and durable ledger totals match.",
+  "next_qualification_gate": "Collect and review ordinary-use feedback; qualify public cases with matched controls and source exposure recorded. Admit a skill mechanism only on genuinely failed public verification. Freeze an adequate independent multi-stream corpus before efficacy or export claims.",
+  "ordinary_use_items_reviewed": 0,
+  "private_confirmation_used_for_selection": false,
+  "qualified_exports": 0,
+  "raw_private_trajectories_published": false,
+  "result_not_due_to_cap": true,
+  "revision": "8f646960f492c66b68ba756c256393d77a4b3e35",
+  "route": "codex_subscription",
+  "schema_version": 1,
+  "scope": "Exposed development feedback; one repository stream, not independent efficacy.",
+  "selection": "Both completed originals pass public verification. The frozen failed-disabled/passing-reference predicate selects no target.",
+  "shared_limits": {
+    "max_requests": 1200,
+    "max_time_ms": 7200000,
+    "max_tokens": 8000000
+  },
+  "status": "calibration_complete_no_eligible_mechanism_target",
+  "task_local_asset_candidates": 0,
+  "unknown_dispatch_usage": 0
+}

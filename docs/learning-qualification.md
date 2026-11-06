@@ -14,9 +14,13 @@ adds matched verifier controls to `lmx corpus review` and `corpus promote
 --reference`. Its additive public checks detect a regression in a retained Pint
 artifact, while a reviewed reference passes. The historical reference fails a
 control too and remains recorded. Whether the public regression caused the old
-private failure is not established. These are exposed development checks, not
-an independently qualified improvement. Freeze any revised task inputs before
-the next calibration. Never return private grades or answers to an active trial,
+private failure is not established. Its newly frozen hosted calibration completed
+both arms: 27 requests and 395,616 tokens. Both passed public and private checks,
+so the registered public-only selector admitted no mechanism target and hosted
+work stopped. No learning benefit or qualified export was established. These are
+exposed development checks, not an independently qualified improvement. Freeze
+any revised task inputs before another calibration. Never return private grades
+or answers to an active trial,
 or feed independent confirmation into development. If exposed development
 controls inform later curation, create a new case version, make its requirements
 public, record that exposure and retain the original outcomes. Its source cases

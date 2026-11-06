@@ -89,5 +89,27 @@
     "seed": 471463,
     "seconds": 547.7,
     "schedulers": 1
+  },
+  "evidence_append_checks": {
+    "scope": "Only evidence and documentation changed after clean runtime commit 8f646960f492c66b68ba756c256393d77a4b3e35; library, priv, dependency and toolchain bytes are unchanged.",
+    "documentation": "passed with warnings as errors",
+    "public_packet_native_verification": "passed without provider requests",
+    "markdown_links": {
+      "status": "passed",
+      "broken": 0,
+      "warnings": 4,
+      "warning_scope": "Existing release-note links to version v1.0.0; unchanged by this scope."
+    },
+    "links_before_staging": "Refused seven existing-but-untracked new packet links; files were staged and the complete check then passed. No broken destination remained.",
+    "public_wording": "passed",
+    "cached_diff_check": "passed",
+    "public_sensitive_marker_scan": "passed; no home paths, access or refresh token fields, or private key headers",
+    "logs_sha256": {
+      "documentation": "951aa869447a47dc21a934a6c822aee0ce23224399563695bd8d2f10f4e94c5c",
+      "links": "5625837828d4bff33878eab29a0e559dac3a943fafa76e7f366cd5a2878e0c9c",
+      "public_text": "a97f5f3d949aaf65c00376922a1ae1c08c07aa3b50bb3b529d0b2146a209b94b",
+      "packet_verification": "336577de10978d7479ebef934176c8c1937d18c88508b39c999cf98191db32f5",
+      "links_before_staging": "9df9c64d7b236796c82090259ef37ab77e4e4ab1a4c9f68d0c9c8cf1c1b0462d"
+    }
   }
 }

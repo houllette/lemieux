@@ -16,6 +16,9 @@ API.
   exact source changes; reject mismatched checks, stale fixtures and grader
   writes. Retain unsuccessful controls and distinguish unassessed promotion
   from development discrimination and independent efficacy.
+- Record the public-feedback calibration: both arms pass all frozen checks,
+  with 27 requests and 395,616 tokens accounted. The public-only selector admits
+  no mechanism target; learning benefit and qualified exports remain unproven.
 
 ### Dependencies
 
