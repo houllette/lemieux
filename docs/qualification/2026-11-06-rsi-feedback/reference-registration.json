@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "kind": "owner_written_public_reference/v2",
+  "scope": "development_control_not_learned_or_production_qualified",
+  "transform_sha256": "d744343adb7c0fb4bd92a4b1aa65a4d251aa325318ed5d5845b8ddc90ef455d7",
+  "checks_sha256": "dfe7a4824781048cdcff888700c46d63df1cac586994e705e70bfdbbfbb5487f",
+  "reason": "Preserve unchanged arithmetic/security checks. Use the pinned Python runtime numeric AST node interface; prior reference attempt is retained."
+}

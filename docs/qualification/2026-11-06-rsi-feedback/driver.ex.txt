@@ -1,0 +1,74 @@
+alias Lemieux.Benchmark.Corpus.Review
+alias Lemieux.Benchmark.Task
+alias Lemieux.CLI.Learning.Installation
+alias Lemieux.CLI.Learning.Repositories
+alias Lemieux.Contract
+
+prior = System.fetch_env!("LEMIEUX_RSI_PRIOR")
+root = "tmp/public-feedback-audit-bound"
+:ok = File.mkdir(root)
+manifest = Path.join(prior, "tmp/selective-pint-calibration-manifest.json")
+{fixtures, _metadata} = Repositories.materialize(manifest, Path.join(root, "imported"))
+fixture = Enum.find(fixtures, &(&1.id == "hgrecco-pint-948"))
+untouched = fixture.task.cwd
+reference = Path.join(root, "reference")
+artifact = Path.join(root, "captured-artifact")
+{:ok, _} = File.cp_r(untouched, reference)
+{_, 0} = System.cmd("python3", ["-c", "import pathlib,runpy,sys; m=runpy.run_path(sys.argv[1]); p=pathlib.Path(sys.argv[2]); p.write_text(m['transform'](p.read_text()))", "tmp/public-feedback-checks/reference_transform.py", Path.join(reference, "pint/definitions.py")])
+{:ok, _} = File.cp_r(Path.join(prior, "tmp/selective-public-feedback-v2/model-artifact"), artifact)
+registration_bytes = File.read!("tmp/public-feedback-checks/registration.json")
+registration = JSON.decode!(registration_bytes)
+check_bytes = File.read!("tmp/public-feedback-checks/test_definition_contract.py")
+true = Contract.sha256(check_bytes) == registration["checks_sha256"]
+for cwd <- [untouched, reference, artifact],
+  do: :ok = File.write(Path.join(cwd, "test_definition_contract.py"), check_bytes)
+
+ordinary = %{
+  fixture |
+  cases: fixture.probe_cases,
+  public_pytest_args: fixture.public_pytest_args ++ ["test_definition_contract.py"],
+  immutable: Map.put(fixture.immutable, "test_definition_contract.py", check_bytes),
+  minimum_checks: Map.put(fixture.minimum_checks, "public", 12)
+}
+{_container, state} = fixture.environment
+true = state.verification_mounts == []
+grades = Map.new([{"untouched", untouched}, {"reference", reference}, {"captured_artifact", artifact}],
+  fn {role, cwd} -> {role, Repositories.grade(ordinary, cwd, fixture.environment)} end)
+
+IO.puts(JSON.encode!(%{"grades" => grades}))
+owner = "rsi-public-feedback-20261106-bound"
+image = state.image
+bootstrap = "import os,sys; import pytest; sys.path.insert(0,os.getcwd()); raise SystemExit(pytest.main(['-q','-p','no:cacheprovider','-c','qualification_pytest.ini','test_qualification_public.py','test_definition_contract.py']))"
+argv = ["docker", "run", "--rm", "--label", "lemieux.learning.feedback=" <> owner,
+  "--network", "none", "--read-only", "--user", "1000:1000", "--cap-drop", "ALL",
+  "--security-opt", "no-new-privileges", "--memory", "1g", "--cpus", "2", "--pids-limit", "128",
+  "--tmpfs", "/tmp:rw,nosuid,size=128m", "--mount", "type=bind,src={cwd},dst=/app",
+  "--workdir", "/app", "--entrypoint", "python3", image, "-I", "-B", "-c", bootstrap]
+task = %Task{id: "pint-948-public-contract-v1", prompt: "Reject code execution through both definition entry points while preserving documented numeric expressions.",
+  cwd: untouched, grader: %Lemieux.Benchmark.Grader.Command{command: argv, timeout_ms: 180_000}}
+review = try do
+  {:ok, report} = Review.review(task, reference, allowed_changed_paths: ["pint/definitions.py"])
+  report
+after
+  {ids, 0} = System.cmd("docker", ["ps", "-aq", "--filter", "label=lemieux.learning.feedback=" <> owner])
+  for id <- String.split(ids), do: System.cmd("docker", ["rm", "-f", id])
+end
+report = %{
+  "schema_version" => 1, "kind" => "requirements_derived_public_feedback/v1",
+  "source_files_sha256" => Map.new(~w(lib/lemieux/benchmark/corpus/review.ex lib/lemieux/benchmark/corpus/promote.ex lib/lemieux/benchmark/workspace_snapshot.ex lib/lemieux/feedback/case_draft.ex lib/lemieux/cli/corpus.ex), &{&1, Contract.sha256(File.read!(&1))}),
+  "exposure" => "developer_exposed", "hosted_requests" => 0,
+  "private_grader_mounted" => false, "original_report_reclassified" => false,
+  "model_rerun" => false, "independent_confirmation" => false,
+  "registration_bytes_sha256" => Contract.sha256(registration_bytes),
+  "checks_sha256" => Contract.sha256(check_bytes), "image" => image,
+  "grades" => grades, "matched_review" => review,
+  "reference_origin" => "owner_written_numeric_reference_not_learned",
+  "reference_transform_sha256" => Contract.sha256(File.read!("tmp/public-feedback-checks/reference_transform.py")),
+  "captured_artifact_file_sha256" => Contract.sha256(File.read!(Path.join(artifact, "pint/definitions.py"))),
+  "captured_artifact_ancestry" => prior |> Path.join("docs/qualification/2026-11-06-rsi-selective/public-feedback.json") |> File.read!() |> JSON.decode!() |> Map.take(~w(source_evidence_bytes_sha256 snapshot_sha256 snapshot_bytes_sha256 restored_changed_file_sha256)),
+  "detected_public_regression_in_retained_artifact" => not grades["captured_artifact"]["passed"],
+  "same_defect_as_historical_private_failure" => "not_established"
+}
+true = report["captured_artifact_file_sha256"] == report["captured_artifact_ancestry"]["restored_changed_file_sha256"]
+:ok = Installation.write(Path.join(root, "report.json"), Map.put(report, "sha256", Contract.digest(report)))
+IO.puts(JSON.encode!(report))

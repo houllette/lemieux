@@ -103,7 +103,7 @@ defmodule Lemieux.Feedback.CaseDraft do
       %__MODULE__{
         id: id,
         feedback_id: feedback.id,
-        fixture_digest: snapshot_digest(snapshot),
+        fixture_digest: WorkspaceSnapshot.digest(snapshot),
         task: task,
         manifest_fragment: manifest_fragment(task, id),
         provenance: feedback.provenance,
@@ -221,14 +221,5 @@ defmodule Lemieux.Feedback.CaseDraft do
       "review_checklist" => draft.review_checklist,
       "skipped" => Enum.map(draft.skipped_files, &%{"path" => &1, "reason" => "secret"})
     }
-  end
-
-  defp snapshot_digest(snapshot) do
-    bytes =
-      snapshot
-      |> Enum.sort_by(&elem(&1, 0))
-      |> Enum.map(fn {path, digest} -> [path, 0, digest] end)
-
-    :sha256 |> :crypto.hash(bytes) |> Base.encode16(case: :lower)
   end
 end

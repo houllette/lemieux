@@ -8,6 +8,14 @@ defmodule Lemieux.Benchmark.WorkspaceSnapshot do
   @spec capture(root :: Path.t()) :: {:ok, t()} | {:error, term()}
   def capture(root) when is_binary(root), do: walk(root, "", %{})
 
+  @spec digest(snapshot :: t()) :: String.t()
+  def digest(snapshot) when is_map(snapshot) do
+    snapshot
+    |> Enum.sort_by(&elem(&1, 0))
+    |> Enum.map(fn {path, digest} -> [path, 0, digest] end)
+    |> Lemieux.Contract.sha256()
+  end
+
   @spec changed(before :: t(), after_snapshot :: t()) :: [String.t()]
   def changed(before, after_snapshot) when is_map(before) and is_map(after_snapshot) do
     before

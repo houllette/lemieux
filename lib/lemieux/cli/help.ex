@@ -755,6 +755,9 @@ defmodule Lemieux.CLI.Help do
                                    record as an unapproved benchmark case
       lmx corpus promote DRAFT_DIR MANIFEST --cluster ID [--tag T] [--allow PATH]
                                    Promote a reviewed draft into a corpus manifest
+      lmx corpus review DRAFT_DIR --reference DIR --allow SOURCE_PATH
+                                   Check matched public failure/repair controls
+                                   without changing the approved corpus
       lmx harness verify TYPE FILE Verify a harness-learning contract
       lmx harness materialize B A D Materialize bundle B using artifact dir A into D
       lmx harness export CAMPAIGN_DIR CANDIDATE_ID [--to PATH]

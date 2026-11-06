@@ -25,16 +25,21 @@ defmodule Lemieux.Benchmark.Corpus.Promote do
   promote`) to say the reviewer meant it.
   """
 
+  alias Lemieux.Benchmark.Corpus.Review
   alias Lemieux.Benchmark.Grader.Command, as: CommandGrader
   alias Lemieux.Benchmark.Manifest
   alias Lemieux.Benchmark.SecretFiles
   alias Lemieux.Benchmark.Task
+  alias Lemieux.Benchmark.WorkspaceSnapshot
 
   @typedoc """
   Options: `:cluster_id` (required), `:tags`, `:allowed_changed_paths`,
   `:expect` (`:fail` default, or `:pass` for read-only and refusal cases),
-  `:repos_dir`, and `:allow_secret_files` (default false) to accept a fixture
-  that holds secret-shaped files.
+  `:repos_dir`, `:reference_dir` for matched public-verifier review, and
+  `:allow_secret_files` (default false) to accept a fixture that holds
+  secret-shaped files. Reference review requires exact `:allowed_changed_paths`
+  and an unchanged frozen draft. Without a reference, verification remains
+  explicitly unassessed rather than implying a passing repaired control.
   """
   @type opts :: keyword()
 
@@ -63,7 +68,7 @@ defmodule Lemieux.Benchmark.Corpus.Promote do
          # into the path and promote worked only when given an absolute one —
          # which the documented invocation is not.
          {:ok, task} <- Task.from_map(Map.put(task_map, "cwd", "fixture"), draft_dir),
-         :ok <- discriminates(task, Keyword.get(opts, :expect, :fail)),
+         {:ok, review} <- verification_review(task, draft, opts),
          repos_dir =
            Keyword.get(
              opts,
@@ -74,13 +79,66 @@ defmodule Lemieux.Benchmark.Corpus.Promote do
          :ok <- unused(destination),
          :ok <- File.mkdir_p(repos_dir),
          {:ok, _} <- File.cp_r(fixture, destination),
+         :ok <- reviewed_copy(destination, review),
          :ok <-
            write_manifest(
              manifest_path,
              manifest_map,
-             Map.put(task_map, "cwd", relative(destination, manifest_path))
+             task_map
+             |> Map.put("cwd", relative(destination, manifest_path))
+             |> put_in(["metadata", "verification_review"], review)
            ) do
       {:ok, draft["id"]}
+    end
+  end
+
+  @doc "Reviews a frozen draft without changing it or the approved corpus."
+  @spec review(draft_dir :: Path.t(), reference :: Path.t(), opts :: keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def review(draft_dir, reference, opts \\ []) do
+    with {:ok, draft} <- read_draft(draft_dir),
+         {:ok, task} <-
+           Task.from_map(Map.put(draft["manifest_fragment"], "cwd", "fixture"), draft_dir),
+         :ok <- frozen_fixture(task, draft) do
+      Review.review(task, reference, opts)
+    end
+  end
+
+  defp verification_review(task, draft, opts) do
+    case Keyword.fetch(opts, :reference_dir) do
+      :error ->
+        with :ok <- discriminates(task, Keyword.get(opts, :expect, :fail)),
+             do: {:ok, %{"status" => "unassessed", "reason" => "no_reference_control"}}
+
+      {:ok, reference} ->
+        with :ok <- frozen_fixture(task, draft),
+             {:ok, report} <- Review.review(task, reference, opts) do
+          reviewed_report(report)
+        end
+    end
+  end
+
+  defp reviewed_report(%{"status" => "passed"} = report), do: {:ok, report}
+  defp reviewed_report(report), do: {:error, {:verification_not_demonstrated, report}}
+
+  defp reviewed_copy(destination, %{"status" => "passed", "fixture_digest" => expected}) do
+    with {:ok, snapshot} <- WorkspaceSnapshot.capture(destination) do
+      if WorkspaceSnapshot.digest(snapshot) == expected do
+        :ok
+      else
+        File.rm_rf!(destination)
+        {:error, :reviewed_copy_changed}
+      end
+    end
+  end
+
+  defp reviewed_copy(_destination, _unassessed), do: :ok
+
+  defp frozen_fixture(task, draft) do
+    with {:ok, snapshot} <- WorkspaceSnapshot.capture(task.cwd) do
+      if WorkspaceSnapshot.digest(snapshot) == draft["fixture_digest"],
+        do: :ok,
+        else: {:error, :draft_fixture_changed}
     end
   end
 

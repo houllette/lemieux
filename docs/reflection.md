@@ -275,9 +275,18 @@ From the command line the same path is two reviewed steps:
 lmx feedback draft-case FB_ID --source DIR --output eval/drafts \
   --prompt "Fix value.txt and rerun the check." --verifier "sh check.sh" \
   --class mechanical
+lmx corpus review eval/drafts/case_ID --reference REPAIRED_DIR --allow value.txt
 lmx corpus promote eval/drafts/case_ID eval/corpus/local/manifest.json \
-  --cluster value-repair --tag repair --allow value.txt
+  --cluster value-repair --tag repair --allow value.txt --reference REPAIRED_DIR
 ```
+
+Keep the same public checks in the repaired reference and change only the
+implementation paths you name. `corpus review` records matched failure/repair
+controls without publishing the case. Promotion with `--reference` reruns them
+and refuses stale fixtures, unmatched verification files, unexpected exit codes,
+timeouts and grader writes. A failing reference means the case needs more
+curation, rather than qualifying an always-failing check. These are exposed
+development controls; private confirmation answers must not supply their checks.
 
 `draft-case` freezes the fixture at `--source` and the verifier beside the
 record under `--output`. The copy leaves out secret-shaped files by name

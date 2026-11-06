@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "logs": {
+    "initial_gate": {
+      "sha256": "fdf75ccfbbf20c720b2808655edd675e0115887235b283cc3af636512d9f59b7"
+    },
+    "seeded_reproduction": {
+      "sha256": "fe398e837a2860ef5e490872969be7d9bfd9661bdd18704dea937709775d400f"
+    },
+    "targeted_recovery": {
+      "sha256": "56c8f8d5133ec2ccce489d6f99feda803c1cd2f5667c30758f7e4fbb5b8c0f81"
+    },
+    "consumer_seeds": {
+      "sha256": "e3925dc314a000534dd299beeebd677fc51c00af830d9e4717f2ce725daf17e3"
+    },
+    "red_regression_tests": {
+      "sha256": "426306e0224150dabe52c089b9b3d8615fac050ae74a47cec0cdd8babd3ae167"
+    }
+  },
+  "initial_gate": {
+    "status": "failed",
+    "seed": 337167,
+    "passed": 6048,
+    "total": 6088,
+    "failed": 40,
+    "skipped": 11,
+    "excluded": 47,
+    "seconds": 796.5,
+    "limitations": "One corrected experimental-label failure; six timing failures and 33 setup/cleanup invalidations. Host load over 50 was observed on 14 logical CPUs; no general root cause is attributed."
+  },
+  "seeded_reproduction": {
+    "passed": 8,
+    "total": 9,
+    "seconds": 206.8,
+    "seed": 337167,
+    "max_cases": 1,
+    "remaining_failure": "Installed typed consumer exceeded 10-second startup deadline."
+  },
+  "targeted_recovery": {
+    "passed": 77,
+    "seed": 337167,
+    "max_cases": 1,
+    "seconds": 93.2
+  },
+  "consumer_fix": {
+    "commit": "588ce93a4b9fcea6cce5d470298f3731f1311616",
+    "change": "Only the roundtrip test input startup budget changes from 10s to 60s; all identity, loading, artifact and rollback assertions remain.",
+    "seeds": [
+      101,
+      102,
+      103
+    ],
+    "passed": 3,
+    "durations_seconds": [
+      48.8,
+      29.3,
+      50.0
+    ],
+    "temper": "Dirty-tree suspects remain; these observations do not establish a clean-SHA flake."
+  },
+  "final_gate": {
+    "status": "passed",
+    "command": "ulimit -n 4096; env LMX_CONFIG=none MIX_ENV=test ERL_FLAGS='+S 1:1' mise exec -- mix precommit",
+    "log_sha256": "ccd844cfad455b7a0cc3aed6f617862c30a4d2cf64f5bcd0a07a7439626eb4ae",
+    "ordinary_passed": 6089,
+    "ordinary_seed": 471463,
+    "ordinary_seconds": 547.7,
+    "coverage_passed": 6089,
+    "coverage_seed": 110550,
+    "coverage_seconds": 579.0,
+    "coverage_percent": 86.73,
+    "dialyzer_errors": 0,
+    "release_host_passed": 123,
+    "release_host_seconds": 20.9,
+    "root_and_release_dependency_audits": "passed",
+    "coverage_warning": "Coverage reported a reloaded/unloaded LemieuxTest.ListingEnvironment test fixture; overall threshold passed. This is retained in the full log."
+  },
+  "intentional_red_tests": {
+    "failed": 4,
+    "seed": 776534,
+    "reason": "Test-first regression witnesses before the implementation. These dirty-source failures are not clean-SHA intermittent behavior."
+  },
+  "serial_ordinary": {
+    "passed": 6089,
+    "doctests": 12,
+    "tests": 6077,
+    "skipped": 11,
+    "excluded": 47,
+    "seed": 471463,
+    "seconds": 547.7,
+    "schedulers": 1
+  },
+  "evidence_append_checks": {
+    "scope": "Only evidence and documentation changed after clean runtime commit 8f646960f492c66b68ba756c256393d77a4b3e35; library, priv, dependency and toolchain bytes are unchanged.",
+    "documentation": "passed with warnings as errors",
+    "public_packet_native_verification": "passed without provider requests",
+    "markdown_links": {
+      "status": "passed",
+      "broken": 0,
+      "warnings": 4,
+      "warning_scope": "Existing release-note links to version v1.0.0; unchanged by this scope."
+    },
+    "links_before_staging": "Refused seven existing-but-untracked new packet links; files were staged and the complete check then passed. No broken destination remained.",
+    "public_wording": "passed",
+    "cached_diff_check": "passed",
+    "public_sensitive_marker_scan": "passed; no home paths, access or refresh token fields, or private key headers",
+    "logs_sha256": {
+      "documentation": "951aa869447a47dc21a934a6c822aee0ce23224399563695bd8d2f10f4e94c5c",
+      "links": "5625837828d4bff33878eab29a0e559dac3a943fafa76e7f366cd5a2878e0c9c",
+      "public_text": "a97f5f3d949aaf65c00376922a1ae1c08c07aa3b50bb3b529d0b2146a209b94b",
+      "packet_verification": "336577de10978d7479ebef934176c8c1937d18c88508b39c999cf98191db32f5",
+      "links_before_staging": "9df9c64d7b236796c82090259ef37ab77e4e4ab1a4c9f68d0c9c8cf1c1b0462d"
+    }
+  }
+}

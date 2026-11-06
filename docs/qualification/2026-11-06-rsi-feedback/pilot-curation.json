@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "exposed_public_feedback_curation/v3",
+  "hosted_requests_before_registration": 0,
+  "independent_confirmation": false,
+  "exposure": "developer_exposed",
+  "original_checks_preserved": true,
+  "new_checks_derived_after_private_control_audit": true,
+  "private_test_bytes_published": false,
+  "public_error_contract": "Numeric prefix multipliers and offsets reject nonnumeric/unit-bearing expressions with ValueError.",
+  "old_failed_control_sha256": "e4c21969afb53e220a3ce2215947a069f10f5e15a01b124e322d0624c4481d32",
+  "public_checks_sha256": "3d788e9ac203cc5dbe37a40c85cc8c097c135684c62e3f462626fff2638cda91",
+  "reference_transform_sha256": "7c35870ceab81ceb2b0792730ce3dd4febcd77a1519bc100f432e18e7f400b18",
+  "original_task_outcomes_reclassified": false
+}
