@@ -14,7 +14,9 @@ API.
 - Prepare repository fixtures from the exact pinned Git tree. A default commit
   archive adds metadata the strict extractor refuses; tree archives retain the
   source bytes without widening accepted archive types. Add a real-Git regression
-  that advances HEAD and dirties the source before preparation.
+  that advances HEAD and dirties the source before preparation. Resolve the
+  source image's platform explicitly so Docker's architecture warning cannot
+  corrupt the archive stream.
 - Validate mined feedback citations before recording. Reject invented IDs and
   IDs omitted from the model's evidence, bind new records to host-supplied
   transcript entries, and label fallback anchors. Direct experimental

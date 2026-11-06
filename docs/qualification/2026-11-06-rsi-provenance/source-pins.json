@@ -7,11 +7,11 @@
     "eval/corpus/v1/manifest.json": "d4036d5856f86fe97241c32575135d73f7a98bb4da70b2b6e234d5c841620cdd",
     "eval/corpus/v1/repos/case_01M2RNVB9160D5S9D40VPXV5HW/check.sh": "7e0c21fae8fdeb3ecc0f6c9191e45d69dd187da589dd2052ee527e31fbcfbb49",
     "lib/lemieux/cli/feedback.ex": "159718d1cab1c80dee97eb07960c0484dfa9a91859ba36dcf4d3e2add09d9cf4",
-    "lib/lemieux/cli/learning/repository_preparation.ex": "9ab915ba9b3b0cc81c517aeff50bce6cc319003ad051d4c9fc0429c83fdd68bc",
+    "lib/lemieux/cli/learning/repository_preparation.ex": "54b8afa7a067d53382ac79c2633ba81617e1a2eeeafa2bee0c28516b64e68cca",
     "lib/lemieux/reflection/opportunities.ex": "3ee3e1c4e0c40ea8ba6b43663eed66088fa6e3dacef3fabfa45ed6c916234206",
     "mix.exs": "2c17ac2d6752c0f4dff1004d2410a4be8d2966bef3468cb132adb6955e4d760c",
     "mix.lock": "ebf0ba0b0eccd64a226e72f80bcf401dca68fb4bdfc4f4fc3ea4ae257c50a149",
-    "test/lemieux/cli/learning/repository_preparation_test.exs": "45b811cce20a4f030b678f66ae58b9933b5c3a8da52d479d341b6e4f5830b605",
+    "test/lemieux/cli/learning/repository_preparation_test.exs": "39372432903558caee46a21d265e816cc547beff289e7d99f7b82ee27b66a376",
     "test/lemieux/reflection/opportunities_test.exs": "0df7592f27c13584c60fd076fcd21eb7ca15fb2b25bb185c5e9431ae8156532d"
   },
   "schema_version": 1

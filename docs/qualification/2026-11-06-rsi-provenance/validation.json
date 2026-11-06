@@ -51,5 +51,31 @@
   },
   "final_gate": {
     "status": "pending"
+  },
+  "interrupted_gate": {
+    "status": "operator_cancelled",
+    "at_utc": "2026-11-06T06:18:37.447427+00:00",
+    "reason": "Confirmed Docker architecture warning corrupts source archive; stop before changing measured source and rerun the complete gate after repair.",
+    "ordinary_passed": 6097,
+    "ordinary_seed": 697111,
+    "coverage": "in_progress_when_stopped; no passing result claimed",
+    "targeted_processes": 2,
+    "process_exit_status": 0,
+    "status_policy": "Explicit cancellation overrides process exit status; this incomplete attempt is never counted as a passing gate."
+  },
+  "source_platform_red": {
+    "passed": 10,
+    "total": 11,
+    "seed": 277729,
+    "failure": "Cross-architecture warning corrupts the archive supplied by the real-Git boundary double."
+  },
+  "final_targeted": {
+    "passed": 27,
+    "seed": 369437,
+    "seconds": 1.0
+  },
+  "final_credo": {
+    "status": "passed",
+    "seconds": 25.9
   }
 }

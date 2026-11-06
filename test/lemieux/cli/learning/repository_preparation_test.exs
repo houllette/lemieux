@@ -186,6 +186,41 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
   end
 
   @tag :tmp_dir
+  test "malformed source platforms refuse before private output or archive execution", %{
+    tmp_dir: root
+  } do
+    opts = validation_fixture(root)
+
+    runner = fn
+      ["docker", "image", "inspect", _image, "--format", "{{json .}}"], _ ->
+        JSON.encode!(%{
+          "Config" => %{
+            "Env" => [
+              "PYTHONDONTWRITEBYTECODE=1",
+              "PYTEST_ADDOPTS=-p no:cacheprovider"
+            ]
+          }
+        })
+
+      ["docker", "run", "--rm", "--network", "none", "--read-only", "--entrypoint", "sh" | _],
+      _ ->
+        ""
+
+      ["docker", "image", "inspect", _image, "--format", "{{.Os}}/{{.Architecture}}"], _ ->
+        "linux/amd64\n--privileged"
+
+      _argv, _opts ->
+        flunk("an invalid source platform must not execute or create private output")
+    end
+
+    assert_raise ArgumentError, ~r/source image platform/, fn ->
+      Preparation.prepare(opts, runner)
+    end
+
+    refute File.exists?(opts[:output])
+  end
+
+  @tag :tmp_dir
   test "preparation can extract the pinned tree from a real Git archive", %{tmp_dir: root} do
     repo = Path.join(root, "source repository")
     File.mkdir!(repo)
@@ -230,6 +265,9 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
     opts = Keyword.merge(opts, public_check: public, repo: File.cwd!())
 
     runner = fn
+      ["docker", "image", "inspect", _image, "--format", "{{.Os}}/{{.Architecture}}"], _ ->
+        "linux/amd64\n"
+
       ["docker", "image", "inspect" | _], _ ->
         JSON.encode!(%{
           "Config" => %{
@@ -249,6 +287,8 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
         "--read-only",
         "--entrypoint",
         "git",
+        "--platform",
+        "linux/amd64",
         _image,
         "-C",
         "/testbed",
@@ -258,6 +298,27 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
       _ ->
         {archive, 0} = System.cmd("git", ["-C", repo, "archive", ref])
         archive
+
+      [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--entrypoint",
+        "git",
+        _image,
+        "-C",
+        "/testbed",
+        "archive",
+        ref
+      ],
+      _ ->
+        {archive, 0} = System.cmd("git", ["-C", repo, "archive", ref])
+        # Observed on the ARM host with an AMD64 source image. The process
+        # runner merges stderr, so an implicit platform corrupts binary stdout.
+        "WARNING: The requested image's platform does not match the host\n" <> archive
 
       ["docker", "run", "--rm", "--network", "none", "--read-only", "--entrypoint", "sh" | _],
       _ ->
@@ -314,6 +375,9 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
       send(parent, {:preparation, argv, opts})
 
       case argv do
+        ["docker", "image", "inspect", _image, "--format", "{{.Os}}/{{.Architecture}}"] ->
+          "linux/arm64\n"
+
         ["docker", "image", "inspect" | _] ->
           JSON.encode!(%{
             "Config" => %{
@@ -375,7 +439,7 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
     # including which immutable image and Git commit supply the source. A fake
     # accepting any tail would also accept a different image or current HEAD.
     calls =
-      for _ <- 1..4 do
+      for _ <- 1..5 do
         assert_received {:preparation, argv, options}
         {argv, options}
       end
@@ -397,6 +461,14 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
               ], [timeout_ms: 30_000]},
              {[
                 "docker",
+                "image",
+                "inspect",
+                opts[:source_image],
+                "--format",
+                "{{.Os}}/{{.Architecture}}"
+              ], []},
+             {[
+                "docker",
                 "run",
                 "--rm",
                 "--network",
@@ -404,6 +476,8 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparationTest do
                 "--read-only",
                 "--entrypoint",
                 "git",
+                "--platform",
+                "linux/arm64",
                 opts[:source_image],
                 "-C",
                 "/testbed",

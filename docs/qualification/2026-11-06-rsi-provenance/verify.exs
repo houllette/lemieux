@@ -95,6 +95,14 @@ for row <- archives["rows"] do
   0 = row["tree_unknown_members"]
 end
 
+platform = read.("platform-control.json")
+0 = platform["hosted_requests"]
+"invalid_tar_checksum" = platform["implicit_platform"]["tar_validation"]
+"passed" = platform["explicit_platform"]["tar_validation"]
+"passed" = platform["explicit_platform"]["strict_extraction"]
+1761 = platform["source_file_count"]
+true = platform["source_file_bytes_preserved"]
+
 "passed" = read.("validation.json")["final_gate"]["status"]
 
 IO.puts(

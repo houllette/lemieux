@@ -93,6 +93,15 @@ on two actual repository archives preserve every source-file byte, reject both
 original commit archives and accept both tree archives. Accepted member types,
 path checks and no-overwrite rules remain unchanged.
 
+The actual [source-image transport control](platform-control.json) finds a
+second archive problem on the ARM host: Docker emits an architecture warning
+into the bounded runner's merged output. That corrupts the tar checksum. The
+preparer now resolves the immutable source image's platform before execution.
+The same source-image smoke check then produces a valid archive and passes
+strict extraction, with all 1,761 regular files' bytes preserved. Malformed
+platform metadata refuses before private output or archive execution. Other
+unexpected archive output continues to fail closed.
+
 Further efficacy requires cases with pinned pre-effect inputs and runtime,
 public baseline/repair controls, source exposure retained, and a genuinely
 failed public baseline to admit selective refinement. Freeze the complete
