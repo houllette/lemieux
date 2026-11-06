@@ -1,0 +1,24 @@
+{
+  "explicit_platform": {
+    "output_bytes": 33597440,
+    "output_sha256": "93ce27e3af7c6c258ad4c6d52d196027b69e13d3601b56837913187ffbc5a38d",
+    "strict_extraction": "passed",
+    "tar_validation": "passed"
+  },
+  "host_architecture": "arm64",
+  "hosted_requests": 0,
+  "implicit_platform": {
+    "output_bytes": 33597592,
+    "output_sha256": "25c914eb2f0adc0360f2a5b0b73bde767b7f42e06b0e8ef2848565ab3e2f05e0",
+    "tar_validation": "invalid_tar_checksum",
+    "warning_prefix_bytes": 152
+  },
+  "kind": "source_image_archive_transport_control/v1",
+  "schema_version": 1,
+  "scope": "Actual Docker source-image archive transport and strict extraction; no model call or task score. Diagnostic separation of the old warning is only for comparing file bytes, never a permissive extractor change.",
+  "source_file_bytes_preserved": true,
+  "source_file_count": 1761,
+  "source_image": "swebench/sweb.eval.x86_64.sympy_1776_sympy-19040@sha256:2238ea21e03d1548e7f3e5345fb924aba8459c99f8697270f8e04aa3661136b4",
+  "source_platform": "linux/amd64",
+  "tar_metadata_is_not_claimed_reproducible": true
+}

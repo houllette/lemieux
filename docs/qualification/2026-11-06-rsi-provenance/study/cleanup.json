@@ -1,0 +1,14 @@
+{
+  "active_requests": 0,
+  "allowance_owner_lock_removed": true,
+  "allowance_reset": false,
+  "cap_increased": false,
+  "global_cleanup_performed": false,
+  "mechanism_output_created": false,
+  "oauth_loan_removed": true,
+  "observed_at_utc": "2026-11-06T06:46:31.729339+00:00",
+  "owned_pinned_images_retained_for_replay": true,
+  "schema_version": 1,
+  "task_owned_containers_remaining": 0,
+  "unmeasured_requests": 0
+}

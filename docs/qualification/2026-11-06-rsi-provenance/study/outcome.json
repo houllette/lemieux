@@ -1,0 +1,106 @@
+{
+  "benefit": "not_tested",
+  "conditional_mechanism": {
+    "comparison_episodes": 0,
+    "reason": "no_eligible_target",
+    "seed_episodes": 0,
+    "status": "not_run"
+  },
+  "dollar_fields": "Native estimate fields are informational model-price estimates, not API billing or quota charges.",
+  "efficiency": "not_tested",
+  "effort": "low",
+  "episodes": [
+    {
+      "arm": "reference",
+      "confirmation_grade": {
+        "checks": 3,
+        "correct": 3,
+        "exit_zero": true,
+        "minimum_checks": 3,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true
+      },
+      "input_tokens": 130124,
+      "output_tokens": 507,
+      "provider_error": null,
+      "public_grade": {
+        "checks": 4,
+        "correct": 4,
+        "exit_zero": true,
+        "minimum_checks": 4,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "4e8f0ff0c80bb8540676f5cb4fd0b5e952dc21eb38ea92adb766dc39ec90a585"
+      },
+      "requests": 10,
+      "source_evidence_bytes_sha256": "f032535a5eddf050379cf33b35ee9dc86eecc5c2b46b643058fed60ab3c6da44",
+      "status": "completed",
+      "task_id": "psf-requests-5087-public-v1"
+    },
+    {
+      "arm": "disabled",
+      "confirmation_grade": {
+        "checks": 3,
+        "correct": 3,
+        "exit_zero": true,
+        "minimum_checks": 3,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true
+      },
+      "input_tokens": 76373,
+      "output_tokens": 642,
+      "provider_error": null,
+      "public_grade": {
+        "checks": 4,
+        "correct": 4,
+        "exit_zero": true,
+        "minimum_checks": 4,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "4195c9891ef6bdf5d401c7ec6a13db97040586e17f06d418e45fbae8c3b1fed0"
+      },
+      "requests": 11,
+      "source_evidence_bytes_sha256": "4afa04dcb5e632a298b4632a5f590a1d369a598040001bb8e719d679b56870c2",
+      "status": "completed",
+      "task_id": "psf-requests-5087-public-v1"
+    }
+  ],
+  "exposure": "developer_exposed_requests_cases",
+  "independent_clusters": 1,
+  "independent_confirmation": false,
+  "kind": "requests_capped_calibration_outcome/v1",
+  "learning_requests": 0,
+  "model": "openai_codex:gpt-6-luna",
+  "native_audit": "Plan/report seals, report reconstruction, exact frozen/executed registration, original/selected transcripts and unique physical dispatch accounting match the settled durable controller.",
+  "official_swebench_score": false,
+  "ordinary_use_items_added": 0,
+  "qualified_assets": 0,
+  "qualified_exports": 0,
+  "raw_trajectories_or_private_tests_published": false,
+  "registered_editor_effort": "high",
+  "registered_editor_model": "openai_codex:gpt-6-sol",
+  "requests": 21,
+  "revision": "e83d20b36b9a2ae7baa560b7af36597b9cfbda7d",
+  "route": "codex_subscription",
+  "schema_version": 1,
+  "selection": "Both completed originals passed all public checks; the registered predicate selects no target. Private grades did not select it.",
+  "shared_limits": {
+    "max_requests": 800,
+    "max_time_ms": 7200000,
+    "max_tokens": 8000000
+  },
+  "status": "complete_no_eligible_mechanism_target",
+  "stopped_due_to_cap": false,
+  "tokens": 207646,
+  "unknown_dispatch_usage": 0
+}

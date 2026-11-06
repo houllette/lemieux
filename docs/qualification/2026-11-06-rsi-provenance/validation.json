@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "phase": "complete",
+  "targeted": {
+    "reflection_and_flow_and_boundary": {
+      "passed": 43,
+      "seed": 507690,
+      "seconds": 0.4
+    },
+    "feedback_contract_and_cli": {
+      "passed": 19,
+      "seed": 562533,
+      "seconds": 0.1
+    }
+  },
+  "test_first": {
+    "failed": 6,
+    "total": 13,
+    "seed": 115443,
+    "interpretation": "Intentional pre-implementation witnesses. Initial test draft also warned about an undefined store-list helper; its name was corrected before passing validation. The passing tests include the final host-source guard and CLI refusal cases."
+  },
+  "initial_compile_attempt": {
+    "status": "failed",
+    "reason": "A stray if keyword in a with binding caused a syntax error; corrected before the passing focused run."
+  },
+  "native_audit_initial_attempt": {
+    "status": "failed",
+    "reason": "The legacy experiments manifest lacks a version; the current reader refuses it. The completed audit retains that refusal and separately exercises the trusted raw task grader, without importing or qualifying the manifest."
+  },
+  "hosted_requests": 21,
+  "first_full_gate": {
+    "status": "failed",
+    "step": "credo --strict",
+    "finding": "record/4 body nested one level above the configured limit; helper extracted, with no suppression."
+  },
+  "archive_regression_red": {
+    "passed": 10,
+    "total": 11,
+    "seed": 218471,
+    "failure": "Real commit archive rejected by strict extractor."
+  },
+  "targeted_recovery": {
+    "passed": 26,
+    "seed": 515428,
+    "seconds": 0.8,
+    "scope": "Reflection opportunities and repository preparation, including the real Git source-pin regression and unchanged hostile-archive controls."
+  },
+  "credo_recovery": {
+    "status": "passed",
+    "seconds": 23.4
+  },
+  "final_gate": {
+    "status": "passed",
+    "revision": "e83d20b36b9a2ae7baa560b7af36597b9cfbda7d",
+    "command": "ulimit -n 4096; env LMX_CONFIG=none MIX_ENV=test ERL_FLAGS='+S 2:2' mise exec -- mix precommit",
+    "log_sha256": "9bbaf855cc07aa361771763bc4f957b9cf398eb67f2281249908289af6fd11c9",
+    "ordinary_passed": 6098,
+    "ordinary_seed": 230232,
+    "ordinary_seconds": 264.7,
+    "coverage_passed": 6098,
+    "coverage_seed": 442188,
+    "coverage_seconds": 566.1,
+    "coverage_percent": 86.73,
+    "dialyzer_errors": 0,
+    "release_host_passed": 123,
+    "release_host_seed": 115154,
+    "release_host_seconds": 21.7,
+    "root_and_release_audits": "passed",
+    "coverage_warning": "Any fixture reloaded/unloaded warning remains in the retained log; no threshold bypass or exclusion added."
+  },
+  "interrupted_gate": {
+    "status": "operator_cancelled",
+    "at_utc": "2026-11-06T06:18:37.447427+00:00",
+    "reason": "Confirmed Docker architecture warning corrupts source archive; stop before changing measured source and rerun the complete gate after repair.",
+    "ordinary_passed": 6097,
+    "ordinary_seed": 697111,
+    "coverage": "in_progress_when_stopped; no passing result claimed",
+    "targeted_processes": 2,
+    "process_exit_status": 0,
+    "status_policy": "Explicit cancellation overrides process exit status; this incomplete attempt is never counted as a passing gate."
+  },
+  "source_platform_red": {
+    "passed": 10,
+    "total": 11,
+    "seed": 277729,
+    "failure": "Cross-architecture warning corrupts the archive supplied by the real-Git boundary double."
+  },
+  "final_targeted": {
+    "passed": 27,
+    "seed": 369437,
+    "seconds": 1.0
+  },
+  "final_credo": {
+    "status": "passed",
+    "seconds": 25.9
+  },
+  "hosted_study": "study/outcome.json",
+  "historical_feedback_audit_hosted_requests": 0,
+  "evidence_append_checks": {
+    "public_packet": {
+      "status": "passed",
+      "log_sha256": "6f6eec2fa1e6125bf58f556455da45e468ca2451a9c60af4a72605f72d990f50"
+    },
+    "docs": {
+      "status": "passed",
+      "log_sha256": "10094e509de769e90843601ce2dda9bfeb7437d962a68ea7d95e915fe47c0d8e"
+    },
+    "links": {
+      "status": "passed",
+      "log_sha256": "282e4b3ba4ad8250c32611166bd951486f62bf8f079a040597307ebed8f9496e",
+      "broken": 0,
+      "existing_history_ref_warnings": 4
+    },
+    "public_text": {
+      "status": "passed",
+      "log_sha256": "a97f5f3d949aaf65c00376922a1ae1c08c07aa3b50bb3b529d0b2146a209b94b"
+    },
+    "public_study_consistency": {
+      "status": "passed",
+      "log_sha256": "e64b73a6a17048e74e9b7a74b5503ec298b40eca6f2a436ab2f3f1ae07f706d4"
+    },
+    "scope": "Evidence and documentation append only; production source unchanged from the passing full gate.",
+    "hosted_requests": 0
+  },
+  "ci_initial_attempt": {
+    "revision": "bf993c5853ee96854e43ce8dcb1dd486ab164a22",
+    "status": "failed_secret_scan",
+    "run_url": "https://github.com/houllette/lemieux/actions/runs/42177305323",
+    "rule": "generic-api-key",
+    "finding": "A source-file SHA-256 digest under apparatus_files in benchmark.json was mistaken for authentication data because its filename names the authentication implementation.",
+    "verification": "The value exactly matches the digest of the retained owned source bytes. No credential content was published.",
+    "correction": "Separate scanner configuration commit adds only the exact commit/path/rule/line fingerprint to the existing reviewed historical list. New occurrences remain scanned.",
+    "runtime_changed": false,
+    "hosted_requests": 0
+  },
+  "reviewed_history_scan": {
+    "scanner": "gitleaks 8.30.1",
+    "status": "passed",
+    "scope": "All 73 commits reachable from the initial PR head, with the reviewed fingerprint present.",
+    "log_sha256": "18c2be410a41709712c29b7fdb150eafcf531f8091c6da1522630acf93de2358",
+    "remaining_findings": 0
+  }
+}

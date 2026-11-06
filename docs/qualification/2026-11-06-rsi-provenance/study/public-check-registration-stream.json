@@ -1,0 +1,11 @@
+{
+  "basis": "Public error-retention report and baseline response-content/iteration source. In-memory stream double; no external service or network.",
+  "checks": {
+    "5087_private.py": "f740362dd4243955d9060ed6cf268d37b91daf5089fec6db4fac340405f534e2",
+    "5087_public.py": "0fa6f00be1c84edaa873217608bbff8fae0d607ab3aa91e166f400f7fbfb6ddf"
+  },
+  "original_test_patch_inspected": false,
+  "reference_gold_opened": false,
+  "registered_at_utc": "2026-11-06T06:10:02.074086+00:00",
+  "schema_version": 1
+}

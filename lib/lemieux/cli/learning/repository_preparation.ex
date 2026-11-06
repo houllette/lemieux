@@ -20,6 +20,7 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparation do
     instance = instance!(opts)
     image = Keyword.fetch!(opts, :image)
     validate_images!(opts, runner)
+    platform = source_platform!(Keyword.fetch!(opts, :source_image), runner)
     root = opts |> Keyword.fetch!(:output) |> Path.expand()
     File.mkdir_p!(Path.dirname(root))
     File.mkdir!(root)
@@ -38,11 +39,21 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparation do
           "--read-only",
           "--entrypoint",
           "git",
+          # Docker's implicit cross-architecture warning is stderr, which the
+          # bounded process runner merges into stdout. Resolve the immutable
+          # source image's platform explicitly so that warning cannot corrupt
+          # the binary archive. Other unexpected output still fails extraction.
+          "--platform",
+          platform,
           Keyword.fetch!(opts, :source_image),
           "-C",
           "/testbed",
           "archive",
-          instance["base_commit"]
+          # A commit archive adds a global PAX comment that erl_tar reports as
+          # an unknown member. Keep the extractor's strict type checks: archive
+          # this exact commit's tree, which has identical source files without
+          # that metadata. Never substitute HEAD or the image's working tree.
+          instance["base_commit"] <> "^{tree}"
         ],
         []
       )
@@ -89,6 +100,17 @@ defmodule Lemieux.CLI.Learning.RepositoryPreparation do
     )
 
     Path.join(root, "manifest.json")
+  end
+
+  defp source_platform!(image, runner) do
+    platform =
+      ["docker", "image", "inspect", image, "--format", "{{.Os}}/{{.Architecture}}"]
+      |> runner.([])
+      |> String.trim()
+
+    if Regex.match?(~r/\A[a-z0-9][a-z0-9_.-]*\/[a-z0-9][a-z0-9_.-]*\z/, platform),
+      do: platform,
+      else: raise(ArgumentError, "source image platform is unavailable or malformed")
   end
 
   defp instance!(opts) do

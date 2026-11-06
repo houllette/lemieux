@@ -1,0 +1,31 @@
+{
+  "extraction_policy": "Archive the exact base commit tree. Strict member/type/path and no-overwrite checks are unchanged.",
+  "hosted_requests": 0,
+  "rows": [
+    {
+      "base_commit": "0be38a0c37c59c4b66ce908731da15b401655113",
+      "commit_archive_refused": true,
+      "commit_archive_sha256": "aab4601ff63cdb1b14e5bf6701d1d8008dee2d202cae4962aa865ced5491f397",
+      "commit_unknown_members": 1,
+      "regular_files": 132,
+      "source_file_bytes_preserved": true,
+      "tree_archive_accepted": true,
+      "tree_archive_sha256": "98c6405c4db3ddce9b2bd9db7c16bead977401f26335c69dd8decd0c0720857a",
+      "tree_unknown_members": 0,
+      "upstream_id": "psf__requests-2674"
+    },
+    {
+      "base_commit": "2aabb71dc8db434122c2e00c9d1313c6f368ce1c",
+      "commit_archive_refused": true,
+      "commit_archive_sha256": "36190357ded82f7f4fe7f26c8f2b5a4489303493f6842586ca1af7570cf93c0c",
+      "commit_unknown_members": 1,
+      "regular_files": 116,
+      "source_file_bytes_preserved": true,
+      "tree_archive_accepted": true,
+      "tree_archive_sha256": "dc4e02f2fd905cac4b859c847a348b7b0920c4a229dd37d14f3e4d2a2bf3b649",
+      "tree_unknown_members": 0,
+      "upstream_id": "psf__requests-1376"
+    }
+  ],
+  "schema_version": 1
+}

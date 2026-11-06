@@ -2,6 +2,7 @@ defmodule Lemieux.Reflection.OpportunitiesTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.CLI.Feedback, as: FeedbackCLI
+  alias Lemieux.Contract
   alias Lemieux.Entry
   alias Lemieux.Feedback.Store, as: FeedbackStore
   alias Lemieux.Feedback.Store.JSONL, as: FeedbackJSONL
@@ -115,6 +116,141 @@ defmodule Lemieux.Reflection.OpportunitiesTest do
     assert Keyword.fetch!(params, :max_tokens) == 2048
   end
 
+  test "mine refuses invented citations instead of turning them into feedback", %{tmp_dir: dir} do
+    provider = Scripted.new([Scripted.complete(opportunity_answer(["e2", "invented"]))])
+
+    assert {:error, {:invalid_evidence_entry_ids, ["invented"]}} =
+             Opportunities.mine(transcript(),
+               provider: provider,
+               model: "test:model",
+               sessions_dir: Path.join(dir, "sessions"),
+               cwd: dir
+             )
+  end
+
+  test "mining cannot cite a real entry omitted from its bounded evidence", %{tmp_dir: dir} do
+    entries = transcript()
+    evidence = Lemieux.Reflection.gather(entries, max_evidence_bytes: 512)
+    shown = MapSet.new(evidence["events"], & &1["id"])
+    omitted = Enum.find(entries, &(not MapSet.member?(shown, &1.id)))
+    assert omitted != nil
+    id = omitted.id
+    provider = Scripted.new([Scripted.complete(opportunity_answer([id]))])
+
+    assert {:error, {:invalid_evidence_entry_ids, [^id]}} =
+             Opportunities.mine(entries,
+               provider: provider,
+               model: "test:model",
+               sessions_dir: Path.join(dir, "sessions"),
+               cwd: dir,
+               max_evidence_bytes: 512
+             )
+  end
+
+  test "record validates every citation in the batch before writing feedback", %{tmp_dir: dir} do
+    store = FeedbackJSONL.new(Path.join(dir, "feedback"))
+    [valid] = Opportunities.parse(opportunity_answer(["e2"]))
+    [invalid] = Opportunities.parse(opportunity_answer(["e2", "invented"]))
+    provenance = %{"tenant_id" => "local", "project_id" => "proj", "session_id" => "sess"}
+
+    assert {:error, {:invalid_evidence_entry_ids, ["invented"]}} =
+             Opportunities.record([valid, invalid], provenance, store,
+               source_entries: transcript(),
+               fallback_entry_id: "e3"
+             )
+
+    assert {:ok, []} = FeedbackStore.list_feedback(store)
+  end
+
+  test "record requires host source entries and refuses an unknown fallback", %{tmp_dir: dir} do
+    store = FeedbackJSONL.new(Path.join(dir, "feedback"))
+    opportunities = Opportunities.parse(opportunity_answer([]))
+    provenance = %{"tenant_id" => "local", "project_id" => "proj", "session_id" => "sess"}
+
+    assert {:error, :source_entries_required} =
+             Opportunities.record(opportunities, provenance, store, fallback_entry_id: "e3")
+
+    assert {:error, {:invalid_evidence_entry_ids, ["invented"]}} =
+             Opportunities.record(opportunities, provenance, store,
+               source_entries: transcript(),
+               fallback_entry_id: "invented"
+             )
+
+    assert {:ok, []} = FeedbackStore.list_feedback(store)
+  end
+
+  test "interactive reflection harvesting refuses invented anchors", %{tmp_dir: dir} do
+    answer =
+      Entry.new(
+        :assistant,
+        %{"content" => [%{"type" => "text", "text" => opportunity_answer(["invented"])}]},
+        id: "reflection-answer",
+        seq: 4
+      )
+
+    store = FeedbackJSONL.new(Path.join(dir, "feedback"))
+
+    assert {:error, {:invalid_evidence_entry_ids, ["invented"]}} =
+             FeedbackCLI.harvest(
+               %{entries: transcript() ++ [answer], id: "sess", model: "test:model"},
+               feedback_store: store
+             )
+
+    assert {:ok, []} = FeedbackStore.list_feedback(store)
+  end
+
+  test "record refuses empty or ambiguous host source entries", %{tmp_dir: dir} do
+    store = FeedbackJSONL.new(Path.join(dir, "feedback"))
+    opportunities = Opportunities.parse(opportunity_answer(["e2"]))
+    provenance = %{"tenant_id" => "local", "project_id" => "proj", "session_id" => "sess"}
+    entries = transcript()
+
+    for source <- [[], [List.first(entries) | entries]] do
+      assert {:error, :invalid_source_entries} =
+               Opportunities.record(opportunities, provenance, store, source_entries: source)
+    end
+
+    assert {:ok, []} = FeedbackStore.list_feedback(store)
+  end
+
+  test "the CLI refuses invalid mining before creating feedback and preserves the source", %{
+    tmp_dir: dir
+  } do
+    sessions = Path.join(dir, "sessions")
+    store = Lemieux.Store.JSONL.new(sessions)
+    session_id = "01MINE00000000000000000002"
+    :ok = Lemieux.Store.append(store, session_id, transcript())
+    before = File.read!(Path.join(sessions, session_id <> ".jsonl"))
+    provider = Scripted.new([Scripted.complete(opportunity_answer(["invented"]))])
+    feedback = Path.join(dir, "feedback")
+
+    stderr =
+      ExUnit.CaptureIO.capture_io(:stderr, fn ->
+        stdout =
+          ExUnit.CaptureIO.capture_io(fn ->
+            assert {:error, 1} =
+                     FeedbackCLI.run(
+                       [
+                         "--mine",
+                         session_id,
+                         "--sessions-dir",
+                         sessions,
+                         "--feedback-dir",
+                         feedback
+                       ],
+                       provider: provider,
+                       model: "test:model"
+                     )
+          end)
+
+        assert stdout == ""
+      end)
+
+    assert stderr =~ "outside its source evidence"
+    refute File.exists?(feedback)
+    assert File.read!(Path.join(sessions, session_id <> ".jsonl")) == before
+  end
+
   # Found live: a GLM reflection answered with well-formed objects that had no
   # `title`, and every one of them was discarded. The label is how a person
   # recognises a record, not part of the finding.
@@ -146,6 +282,7 @@ defmodule Lemieux.Reflection.OpportunitiesTest do
 
   test "record writes feedback with a model actor and reflection provenance", %{tmp_dir: tmp_dir} do
     store = FeedbackJSONL.new(Path.join(tmp_dir, "feedback"))
+    entries = transcript()
 
     opportunities =
       Opportunities.parse(
@@ -158,7 +295,8 @@ defmodule Lemieux.Reflection.OpportunitiesTest do
     assert {:ok, [id1, id2]} =
              Opportunities.record(opportunities, provenance, store,
                model: "test:model",
-               fallback_entry_id: "e9"
+               fallback_entry_id: "e3",
+               source_entries: entries
              )
 
     assert {:ok, first} = FeedbackStore.latest(store, id1)
@@ -166,11 +304,20 @@ defmodule Lemieux.Reflection.OpportunitiesTest do
     assert first.actor == %{"type" => "model", "id" => "test:model"}
     assert first.provenance["host"] == "reflection"
     assert first.provenance["entry_id"] == "e2"
+    validation = first.provenance["evidence_validation"]
+    assert validation["policy"] == "transcript_entry_membership/v1"
+    assert validation["anchor_kind"] == "citation"
+    assert validation["source_entry_count"] == 3
+
+    assert validation["source_entries_sha256"] ==
+             Contract.sha256(Enum.map(entries, &[Entry.encode!(&1), ?\n]))
+
     assert first.type == :bug
     assert first.verifiability["class"] == "mechanical"
     assert first.status == :captured
     assert {:ok, second} = FeedbackStore.latest(store, id2)
-    assert second.provenance["entry_id"] == "e9"
+    assert second.provenance["entry_id"] == "e3"
+    assert second.provenance["evidence_validation"]["anchor_kind"] == "fallback"
     assert second.type == :unknown
 
     assert {:ok, []} = Opportunities.record([], provenance, store)
@@ -199,7 +346,8 @@ defmodule Lemieux.Reflection.OpportunitiesTest do
     assert {:ok, ids} =
              Opportunities.record(opportunities, provenance, store,
                model: "test:model",
-               fallback_entry_id: "e1"
+               fallback_entry_id: "e1",
+               source_entries: transcript()
              )
 
     recorded =
@@ -288,6 +436,18 @@ defmodule Lemieux.Reflection.OpportunitiesTest do
     assert_received {:request, request}
     assert Keyword.fetch!(request.params, :max_tokens) == 9000
     assert Keyword.get(request.params, :reasoning_effort) == "high"
+  end
+
+  defp opportunity_answer(ids) do
+    JSON.encode!([
+      %{
+        "title" => "Unverified work",
+        "claim" => "The agent did not verify its edit.",
+        "type" => "bug",
+        "verifiability" => "mechanical",
+        "evidence_entry_ids" => ids
+      }
+    ])
   end
 
   defp transcript do

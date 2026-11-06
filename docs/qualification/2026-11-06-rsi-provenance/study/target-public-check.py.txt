@@ -1,0 +1,41 @@
+"""Public stream-error replay contract, reproduced without a network service."""
+import pytest
+import requests
+from urllib3.exceptions import ProtocolError
+
+
+class Raw:
+    def __init__(self, body, fail):
+        self.calls = 0
+        self.iterator = self.chunks(body, fail)
+
+    def chunks(self, body, fail):
+        yield body
+        if fail:
+            raise ProtocolError("incomplete body")
+
+    def stream(self, *args, **kwargs):
+        self.calls += 1
+        return self.iterator
+
+
+@pytest.mark.parametrize("prefix", [b"partial", b""])
+def test_content_failure_does_not_turn_into_success(prefix):
+    response = requests.Response()
+    response.status_code = 200
+    response.raw = Raw(prefix, True)
+    with pytest.raises(requests.exceptions.ChunkedEncodingError):
+        _ = response.content
+    assert response.raw.calls == 1
+    with pytest.raises((requests.exceptions.ChunkedEncodingError, RuntimeError)):
+        _ = response.content
+
+
+@pytest.mark.parametrize("body", [b"complete", b""])
+def test_successful_content_stays_cached(body):
+    response = requests.Response()
+    response.status_code = 200
+    response.raw = Raw(body, False)
+    assert response.content == body
+    assert response.content == body
+    assert response.raw.calls == 1

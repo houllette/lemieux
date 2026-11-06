@@ -26,6 +26,15 @@ controls inform later curation, create a new case version, make its requirements
 public, record that exposure and retain the original outcomes. Its source cases
 remain ineligible for independent confirmation.
 
+The [next qualification round](qualification/2026-11-06-rsi-provenance/README.md)
+reviews twenty consecutive retained feedback records, reproduces and fixes
+missing mined citations, and repairs source archive preparation. No new case
+passes the ordinary-use review. Two new Requests development fixtures pass
+matched controls; their capped hosted calibration uses 21 requests and 207,646
+tokens. Both arms pass all public and private checks, so the frozen selector
+admits no mechanism trial. Independent efficacy, typed-skill qualification and
+qualified exports remain unproven.
+
 Use `--plan-only` to review the existing runner's registration before authorizing
 requests. It writes `registration.json` and a digest-bound `planning.json`, then
 stops before opening an allowance, preparing credentials, starting sessions or

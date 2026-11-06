@@ -18,9 +18,17 @@ defmodule Lemieux.Reflection.Opportunities do
   The model is asked for JSON and read leniently: a reflection that answered
   in prose is not an error, it is zero opportunities with the prose kept for
   the operator.
+
+  Citation syntax is not provenance. A historical mined record named an entry
+  absent from its source session. Mining now checks every citation against the
+  bounded evidence actually shown, and recording requires the host's source
+  entries before it writes anything. A fallback anchor is labelled as such;
+  it is not a citation supplied by the model. Membership establishes where to
+  inspect a claim, not whether that claim is true or experimentally verifiable.
   """
 
   alias Lemieux.Agent.Session, as: AgentSession
+  alias Lemieux.Contract
   alias Lemieux.Entry
   alias Lemieux.Feedback
   alias Lemieux.Feedback.Store, as: FeedbackStore
@@ -106,15 +114,23 @@ defmodule Lemieux.Reflection.Opportunities do
 
       case AgentSession.run(input, agent_options) do
         {:ok, observation} ->
-          {:ok, parse(observation["answer"]), observation}
+          mined(observation, evidence)
 
         {:error, _reason, observation} when is_map(observation) ->
-          {:ok, parse(observation["answer"]), observation}
+          mined(observation, evidence)
 
         {:error, reason} ->
           {:error, reason}
       end
     end
+  end
+
+  defp mined(observation, evidence) do
+    opportunities = parse(observation["answer"])
+    known = MapSet.new(evidence["events"], & &1["id"])
+
+    with :ok <- validate_ids(citations(opportunities), known),
+         do: {:ok, opportunities, observation}
   end
 
   @doc "Parses a model answer leniently into validated opportunities."
@@ -134,7 +150,15 @@ defmodule Lemieux.Reflection.Opportunities do
   Records opportunities as feedback with a model actor and reflection
   provenance. `provenance` must carry `tenant_id`, `project_id` and
   `session_id`; each record anchors on the opportunity's first evidence entry
-  or on `:fallback_entry_id`. Returns the stored feedback ids.
+  or on `:fallback_entry_id`. A nonempty batch requires `:source_entries`,
+  resolved by the host under that session's authority. All citations and any
+  fallback must belong to those entries. Validation happens before the first
+  append; a store failure can still leave a partially persisted batch.
+
+  Records retain the canonical source-entry digest and distinguish a cited
+  anchor from a fallback. Existing historical records are never rewritten.
+  Returns the stored feedback ids. Invalid mining answers remain in their
+  original reflection transcript; refusal makes no repair or provider request.
   """
   @spec record(
           opportunities :: [opportunity()],
@@ -143,15 +167,61 @@ defmodule Lemieux.Reflection.Opportunities do
           opts :: keyword()
         ) :: {:ok, [String.t()]} | {:error, term()}
   def record(opportunities, provenance, store, opts \\ [])
-      when is_list(opportunities) and is_map(provenance) and is_list(opts) do
-    model = Keyword.get(opts, :model, "unknown")
 
+  def record([], provenance, _store, opts) when is_map(provenance) and is_list(opts),
+    do: {:ok, []}
+
+  def record(opportunities, provenance, store, opts)
+      when is_list(opportunities) and is_map(provenance) and is_list(opts) do
+    with {:ok, entries} <- source_entries(opts),
+         known = MapSet.new(entries, & &1.id),
+         fallback = Enum.any?(opportunities, &(&1["evidence_entry_ids"] == [])),
+         :ok <- validate_ids(citations(opportunities), known),
+         :ok <- validate_ids(if(fallback, do: [opts[:fallback_entry_id]], else: []), known) do
+      validation = %{
+        "policy" => "transcript_entry_membership/v1",
+        "source_entry_count" => length(entries),
+        "source_entries_sha256" => Contract.sha256(Enum.map(entries, &[Entry.encode!(&1), ?\n]))
+      }
+
+      model = Keyword.get(opts, :model, "unknown")
+      opts = Keyword.put(opts, :evidence_validation, validation)
+      append_opportunities(opportunities, provenance, store, model, opts)
+    end
+  end
+
+  defp append_opportunities(opportunities, provenance, store, model, opts) do
     Enum.reduce_while(opportunities, {:ok, []}, fn opportunity, {:ok, ids} ->
       case record_one(opportunity, provenance, store, model, opts) do
         {:ok, id} -> {:cont, {:ok, ids ++ [id]}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
+  end
+
+  defp source_entries(opts) do
+    case Keyword.fetch(opts, :source_entries) do
+      {:ok, [_ | _] = entries} ->
+        if Enum.all?(entries, &match?(%Entry{id: id} when is_binary(id) and id != "", &1)) and
+             length(entries) == MapSet.size(MapSet.new(entries, & &1.id)),
+           do: {:ok, entries},
+           else: {:error, :invalid_source_entries}
+
+      {:ok, _invalid} ->
+        {:error, :invalid_source_entries}
+
+      :error ->
+        {:error, :source_entries_required}
+    end
+  end
+
+  defp citations(opportunities), do: Enum.flat_map(opportunities, & &1["evidence_entry_ids"])
+
+  defp validate_ids(ids, known) do
+    case ids |> Enum.reject(&MapSet.member?(known, &1)) |> Enum.uniq() |> Enum.sort() do
+      [] -> :ok
+      invalid -> {:error, {:invalid_evidence_entry_ids, invalid}}
+    end
   end
 
   defp record_one(opportunity, provenance, store, model, opts) do
@@ -169,6 +239,14 @@ defmodule Lemieux.Reflection.Opportunities do
       provenance
       |> Map.merge(%{"host" => "reflection", "entry_id" => anchor})
       |> Map.put("opportunity", Map.drop(opportunity, ["claim", "title"]))
+      |> Map.put(
+        "evidence_validation",
+        Map.put(
+          Keyword.fetch!(opts, :evidence_validation),
+          "anchor_kind",
+          if(opportunity["evidence_entry_ids"] == [], do: "fallback", else: "citation")
+        )
+      )
 
     case Feedback.new(text(opportunity), record_provenance,
            type: feedback_type(opportunity["type"]),

@@ -1,0 +1,29 @@
+"""Public __setitem__ reproduction: case aliases represent one logical header.
+
+Last assignment wins for every spelling, without duplicate effective keys.
+"""
+import pytest
+from requests.structures import CaseInsensitiveDict
+
+
+@pytest.mark.parametrize("writes", [
+    [("spam", "eggs"), ("Spam", "Eggs"), ("sPAM", "eGGS")],
+    [("sPAM", "eGGS"), ("Spam", "Eggs"), ("spam", "eggs")],
+])
+def test_case_alias_assignments_replace_one_logical_header(writes):
+    headers = CaseInsensitiveDict()
+    for key, value in writes:
+        headers[key] = value
+    for key in ["spam", "Spam", "sPAM", "SPAM"]:
+        assert headers[key] == writes[-1][1]
+    assert len(headers) == 1
+    assert len(list(headers.items())) == 1
+
+
+def test_distinct_headers_remain_distinct():
+    headers = CaseInsensitiveDict()
+    headers["first"] = "one"
+    headers["second"] = "two"
+    assert headers["FIRST"] == "one"
+    assert headers["SECOND"] == "two"
+    assert len(headers) == 2

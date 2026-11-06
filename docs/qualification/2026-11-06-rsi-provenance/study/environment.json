@@ -1,0 +1,14 @@
+{
+  "image": "sha256:eb9deba00792f0c909c4e2404b609349a8a0165f3355738728ba1210ba6692b4",
+  "platform": "linux/amd64",
+  "parent_image": "sha256:af752c01c98b245c4089982f2f8ba8dc3b98f999ee5d34d2cc666061df808f4d",
+  "parent_layers_match": true,
+  "dockerfile_sha256": "529ca110bdf765cfd601d46172800d994dbb91166dcd1e9fc95ae6a72784b496",
+  "runtime_dependencies": {
+    "urllib3": "1.22",
+    "chardet": "3.0.4",
+    "idna": "2.6",
+    "certifi": "2017.4.17"
+  },
+  "scope": "Isolated networkless development task environment; no production or security qualification claim."
+}
