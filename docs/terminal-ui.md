@@ -170,6 +170,12 @@ percentage points of that mark, the row shows the remaining distance.
 `"auto_compaction": false` in `~/.lmx/config.json` turns automatic compaction
 and its warning off.
 
+The status line shows the session's average output tokens per second once
+a provider reports output usage. Each measured request also gets its own
+`tok/s` row in the transcript. The rate includes provider latency from
+request start through usage reporting. The session average divides total
+measured output tokens by total measured request time.
+
 For an Ixway subscription route, a later receipt may update the **estimated
 cost** in the status line. `/context` shows its reference provider, source,
 exclusions, or unknown reason. This API equivalent is illustrative at current

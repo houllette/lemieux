@@ -699,7 +699,10 @@ When no `--model`, `LMX_MODEL`, `"model"` or Ixway route names a model,
    Ollama server, or long sessions silently lose their task · --model or
    /model chooses another`. Read [Use a local
    model](providers.md#use-a-local-model) first.
-4. **Nothing usable.** The terminal UI opens its *Choose a model provider*
+4. **A local MTPLX model.** When Ollama has no candidate, `lmx` checks
+   `http://127.0.0.1:8000/v1/models` for models advertised by MTPLX. The TUI
+   model picker also lists those models when another provider is selected.
+5. **Nothing usable.** The terminal UI opens its *Choose a model provider*
    panel with no provider selected, and `lmx run` exits 3 with a sentence
    listing your choices.
 
@@ -776,6 +779,16 @@ otherwise, Ollama can serve as few as 4,096 tokens and silently drops what
 does not fit, your task first. [Use a local
 model](providers.md#use-a-local-model) has the recipe, how `lmx` picks and
 switches to a local model, and what it does with one.
+
+### MTPLX
+
+Start [MTPLX](https://mtplx.ai/docs/quickstart/) with `mtplx serve` on its
+default port 8000. The model picker lists the served models as
+`mtplx:MODEL_ID`. To choose one directly, pass
+`--model mtplx:MODEL_ID` with the ID from `/v1/models`.
+For a different port, pass both the model and
+`--base-url http://127.0.0.1:PORT/v1`. If your daemon requires a token, set
+`MTPLX_API_KEY` or save it under `providers.mtplx.api_key`.
 
 ### Ollama Cloud
 

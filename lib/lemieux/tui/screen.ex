@@ -34,6 +34,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Status
     alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Theme
+    alias Lemieux.TUI.Turn
     alias Lemieux.TUI.Width
     alias Lemieux.TUI.Window
 
@@ -891,6 +892,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             permission: Policy.label(state),
             requests: state.session_view.requests,
             request_cap: state.session_view.request_cap,
+            throughput: Turn.rate(state.session_view.throughput),
             mcp_connecting: MCPStatus.connecting(state)
           ]
       )

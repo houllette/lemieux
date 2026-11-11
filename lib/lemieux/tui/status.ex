@@ -128,6 +128,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         permissions and every tool call runs unasked.
       * `:requests` and `:request_cap` — direct provider requests so far and
         the `max_requests` bounding them; the cap is `nil` when there is none.
+      * `:throughput` — measured session-average output tokens per second, or `nil`.
       * `:mcp_connecting` — the MCP servers still connecting, by name.
     """
     @type t :: %__MODULE__{
@@ -154,6 +155,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
             permission: String.t() | nil,
             requests: non_neg_integer(),
             request_cap: pos_integer() | nil,
+            throughput: String.t() | nil,
             mcp_connecting: [String.t()]
           }
 
@@ -183,6 +185,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
               permission: nil,
               requests: 0,
               request_cap: nil,
+              throughput: nil,
               mcp_connecting: []
 
     @doc """
@@ -310,6 +313,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
           mcp(status),
           permission(status),
           requests(status),
+          status.throughput,
           compaction_warning(status),
           conversation_status(status)
         ],

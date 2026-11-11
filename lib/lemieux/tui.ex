@@ -631,6 +631,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 plan_revision: 0,
                 plan_progress: nil,
                 requests: 0,
+                throughput: {0, 0},
                 request_cap: nil,
                 sandbox: nil,
                 mcp_trust: nil,

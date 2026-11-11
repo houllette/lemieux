@@ -23,7 +23,8 @@ defmodule Lemieux.CLI.Models do
        needs: unless told otherwise Ollama serves 4096 tokens on a machine
        with less than about 23 GiB of GPU memory, and a session that
        outgrows its window loses its task without an error;
-    4. the first row of `recommended/0`, as a placeholder: the terminal UI
+    4. a chat model the local MTPLX daemon advertises at its default endpoint;
+    5. the first row of `recommended/0`, as a placeholder: the terminal UI
        opens its provider panel (`first_run/2`) with no row selected, and
        `lmx run` stops with `missing_key_message/2`, which names no single
        vendor.
@@ -44,7 +45,7 @@ defmodule Lemieux.CLI.Models do
   ## Chosen, and merely used
 
   Only a model a person chose is remembered as the one to start on next
-  time (`remember/2`). A model this module picked — steps 2 to 4 — is
+  time (`remember/2`). A model this module picked — steps 2 to 5 — is
   recorded as used and nothing more (`Lemieux.CLI.State`): one session on an
   auto-selected local model used to make every later start ignore a key set
   in between, and fail with `connection refused` once Ollama was stopped. A
@@ -64,11 +65,12 @@ defmodule Lemieux.CLI.Models do
   remembered model and no guessing from ambient credentials or a local
   daemon, so a script or a test gets the documented default and the same
   answer on every machine. A default config file that could not be created
-  is not that (`Lemieux.CLI.Config.personal?/1`): steps 2 to 4 still apply,
+  is not that (`Lemieux.CLI.Config.personal?/1`): steps 2 to 5 still apply,
   and only step 1, whose memory has nowhere to live, is skipped.
   """
 
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.Mtplx
   alias Lemieux.CLI.Ollama
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.State
@@ -90,7 +92,7 @@ defmodule Lemieux.CLI.Models do
 
   # What chose a model when this module did rather than a person; see
   # "Chosen, and merely used".
-  @guessed [:fallback, :credential, :ollama]
+  @guessed [:fallback, :credential, :ollama, :mtplx]
 
   # Unless told otherwise, Ollama serves a window sized by GPU memory — 4096
   # tokens under about 23 GiB, 32768 under about 47 GiB (Ollama's thresholds
@@ -152,7 +154,7 @@ defmodule Lemieux.CLI.Models do
   end
 
   @doc """
-  The steps of the module documentation that ask the local Ollama daemon,
+  The steps that ask the local Ollama and MTPLX daemons,
   applied after `resolve/2`.
 
   A `:fallback` model whose provider has no key moves onto the tag
@@ -163,6 +165,9 @@ defmodule Lemieux.CLI.Models do
   way `host.local_model` records what discovery read about the local model
   started on, its trained context length among it, and a move is said in a
   startup notice (`Lemieux.CLI.Config.warn/2`, which the hosts print).
+
+  If Ollama has no candidate, the default loopback MTPLX endpoint is checked.
+  `opts[:mtplx][:get]` can substitute its HTTP call in tests.
 
   Asking is an HTTP request, bounded as `Lemieux.CLI.Ollama` says, and a
   person who named a model gets that model or an error, not a substitute.
@@ -187,17 +192,54 @@ defmodule Lemieux.CLI.Models do
           "task · --model or /model chooses another"
       )
     else
-      _hermetic_keyed_or_nothing_served -> options
+      {:error, _reason} -> local_mtplx(options, opts)
+      _hermetic_or_keyed -> options
     end
   end
 
   def local(%Options{host: %{model_source: :last_used}} = options, opts) do
-    if ModelSpec.provider(options.model) == "ollama",
-      do: remembered_local(options, opts),
-      else: options
+    case ModelSpec.provider(options.model) do
+      "ollama" -> remembered_local(options, opts)
+      "mtplx" -> remembered_mtplx(options, opts)
+      _provider -> options
+    end
   end
 
   def local(%Options{} = options, _opts), do: options
+
+  defp local_mtplx(options, opts) do
+    case Mtplx.models(options, Keyword.get(opts, :mtplx, [])) do
+      [model | _other_models] ->
+        options
+        |> Map.put(:model, model)
+        |> source(:mtplx)
+        |> warn("Using #{model} from the local MTPLX server; --model or /model chooses another")
+
+      [] ->
+        options
+    end
+  end
+
+  defp remembered_mtplx(%Options{base_url: nil, ixway: nil, host: %{route: nil}} = options, opts) do
+    if options.model in Mtplx.models(options, Keyword.get(opts, :mtplx, [])) do
+      options
+    else
+      placeholder = source(%{options | model: Options.default_model()}, :fallback)
+
+      replacement =
+        case first_available(options.config, opts) do
+          nil -> local(placeholder, opts)
+          recommendation -> source(%{placeholder | model: recommendation.model}, :credential)
+        end
+
+      warn(
+        replacement,
+        "#{options.model} is no longer served by MTPLX; start MTPLX or choose another model"
+      )
+    end
+  end
+
+  defp remembered_mtplx(options, _opts), do: options
 
   defp remembered_local(options, opts) do
     case Ollama.serving(options, options.model, Keyword.get(opts, :ollama, [])) do
@@ -216,7 +258,7 @@ defmodule Lemieux.CLI.Models do
     instead =
       case {first_available(options.config, opts), reason} do
         {nil, :unreachable} ->
-          placeholder
+          local_mtplx(placeholder, opts)
 
         {nil, :none} ->
           local(placeholder, opts)
@@ -284,6 +326,7 @@ defmodule Lemieux.CLI.Models do
           credential()
   def credential(provider, config, opts \\ [])
   def credential(nil, _config, _opts), do: :unknown
+  def credential("mtplx", _config, _opts), do: :not_required
 
   def credential(provider, config, opts) when is_binary(provider) do
     # Transport aliases use the same credential identity as the provider path.
