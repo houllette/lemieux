@@ -256,6 +256,9 @@ defmodule Lemieux.Providers.ReqLLM do
       may pin `:wire_protocol` to `"openai_chat"` or `"openai_responses"` so
       catalog changes cannot select a different endpoint or encoding. The
       pin retains catalog capabilities; unknown models remain unqualified.
+      A route with a `:model_provider` atom accepts IDs outside the catalog
+      under that logical identity. `:default_api_key` supplies a route-specific
+      fallback value for a transport that requires one on a keyless server.
     * `:response_metadata` — host-only keyword options: `headers: []` selects
       response headers to disclose, and `model_header: nil` optionally names
       the gateway's resolved-model header. The adapter emits an ephemeral
@@ -375,7 +378,7 @@ defmodule Lemieux.Providers.ReqLLM do
   def validate_model(provider_state, spec, tools) do
     state = normalize_state(provider_state)
 
-    with {:ok, model} <- model(spec),
+    with {:ok, model} <- model(spec, state.options),
          {:ok, options} <- options_for_model(state, model),
          :ok <- check_key(model, options),
          :ok <- check_route_key(model, options) do
@@ -421,7 +424,7 @@ defmodule Lemieux.Providers.ReqLLM do
   def run(provider_state, %Request{} = request, emit) do
     state = normalize_state(provider_state)
 
-    with {:ok, model} <- model(request.model),
+    with {:ok, model} <- model(request.model, state.options),
          {:ok, options} <- options_for_model(state, model),
          :ok <- check_key(model, options),
          :ok <- check_route_key(model, options),
@@ -506,12 +509,18 @@ defmodule Lemieux.Providers.ReqLLM do
 
   defp request_target(spec, model_id, route, options) when is_list(route) do
     with target_provider when is_binary(target_provider) <- Keyword.get(route, :provider),
-         {:ok, logical_model} <- model(spec),
+         {:ok, logical_model} <- routed_model(spec, model_id, route),
          {:ok, key} <- route_api_key(logical_model, route, options),
          {:ok, target} <- transport_target(target_provider, model_id, route) do
       routed_options =
         route
-        |> Keyword.drop([:provider, :credential_provider, :wire_protocol, :default_api_key])
+        |> Keyword.drop([
+          :provider,
+          :credential_provider,
+          :wire_protocol,
+          :default_api_key,
+          :model_provider
+        ])
         |> Keyword.merge(options)
         |> Keyword.put(:api_key, key)
 
@@ -564,7 +573,7 @@ defmodule Lemieux.Providers.ReqLLM do
       |> Keyword.merge(request.params)
       |> fast_options(request.model)
 
-    with {:ok, model} <- model(request.model),
+    with {:ok, model} <- model(request.model, options),
          output when is_integer(output) and output >= 0 <- output_reservation(request, model) do
       {input, cached} = input_estimate(request)
 
@@ -1409,8 +1418,25 @@ defmodule Lemieux.Providers.ReqLLM do
     ArgumentError -> nil
   end
 
-  defp model(spec) do
-    case Lemieux.ModelCatalog.resolve(spec) do
+  @doc false
+  @spec resolve_model(String.t(), keyword()) :: {:ok, LLMDB.Model.t()} | {:error, term()}
+  def resolve_model(spec, options) do
+    routes = Keyword.get(options, :transport_routes, %{})
+    route = Map.get(routes, ModelSpec.provider(spec), [])
+    routed_model(spec, ModelSpec.model_id(spec), route)
+  end
+
+  defp routed_model(spec, model_id, route) when is_binary(model_id) and is_list(route) do
+    case Keyword.get(route, :model_provider) do
+      nil -> ReqLLM.model(spec)
+      provider -> ReqLLM.model(%{provider: provider, id: model_id})
+    end
+  end
+
+  defp routed_model(spec, _model_id, _route), do: ReqLLM.model(spec)
+
+  defp model(spec, options \\ []) do
+    case resolve_model(spec, options) do
       {:ok, model} -> {:ok, model}
       {:error, error} -> {:error, {:unknown_model, spec, error}}
     end

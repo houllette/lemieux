@@ -15,12 +15,15 @@ defmodule Lemieux.ModelCatalog do
   providers and fallbacks are advertised.
   """
 
+  alias Lemieux.Providers.ReqLLM, as: Adapter
+
   @fallbacks []
 
   @mtplx_url "http://127.0.0.1:8000/v1"
 
   @transport_routes %{
     "mtplx" => [
+      model_provider: :mtplx,
       provider: "openai",
       base_url: @mtplx_url,
       wire_protocol: "openai_chat",
@@ -49,8 +52,7 @@ defmodule Lemieux.ModelCatalog do
 
   @doc "Resolves catalog models and IDs advertised by MTPLX."
   @spec resolve(String.t()) :: {:ok, LLMDB.Model.t()} | {:error, term()}
-  def resolve("mtplx:" <> id) when id != "", do: ReqLLM.model(%{provider: :mtplx, id: id})
-  def resolve(spec), do: ReqLLM.model(spec)
+  def resolve(spec), do: Adapter.resolve_model(spec, provider_options())
 
   @doc "Returns the complete ReqLLM options required by the verified additions."
   @spec provider_options() :: keyword()
