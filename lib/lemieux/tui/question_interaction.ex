@@ -7,9 +7,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Editor
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.QuestionFlow
+    alias Lemieux.TUI.QuestionPanel
+    alias Lemieux.TUI.Screen
 
     @doc false
     @spec key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
+    def key(%ExRatatui.Event.Key{code: code}, state, _ctx)
+        when code in ["page_up", "page_down"] do
+      by = if code == "page_up", do: -3, else: 3
+      flow = QuestionPanel.scroll(state.tools.question_flow, Screen.panes(state), by)
+      {:noreply, put_in(state.tools.question_flow, flow)}
+    end
+
     def key(
           %ExRatatui.Event.Key{code: code},
           %{tools: %{question_flow: %{note_option: nil}}} = state,

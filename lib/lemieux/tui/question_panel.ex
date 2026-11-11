@@ -13,6 +13,8 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     alias Lemieux.TUI.QuestionFlow
     alias Lemieux.TUI.Takeover
     alias Lemieux.TUI.Theme
+    alias Lemieux.TUI.Width
+    alias Lemieux.TUI.Window
 
     @doc """
     Widgets for the question panel over the transcript and input.
@@ -61,7 +63,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         Takeover.frame(area, title(flow)) ++
           [
             {tabs, tab_area},
-            {%Paragraph{text: lines}, body},
+            {%Paragraph{text: lines, scroll: {body_scroll(flow, lines, body.height), 0}}, body},
             {footer(flow, editor), input_area}
           ]
 
@@ -108,6 +110,19 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       Takeover.area(panes, height)
     end
 
+    @doc "Scrolls the question body, clamping repeated paging at either end."
+    @spec scroll(flow :: map(), panes :: map(), by :: integer()) :: map()
+    def scroll(flow, panes, by) do
+      width = max(panes.input.width - 4, 1)
+      side? = has_visual?(flow) and width >= 58
+      width = if side?, do: div(width - 2, 2), else: width
+      lines = body_lines(flow, %{accent: :white, answer: %Style{}}, width, side?)
+      height = max(area(flow, panes).height - 8, 1)
+      base = body_scroll(Map.put(flow, :body_scroll, 0), lines, height)
+      offset = min(max(body_scroll(flow, lines, height) + by, 0), max(length(lines) - height, 0))
+      Map.put(flow, :body_scroll, offset - base)
+    end
+
     defp has_visual?(flow), do: Enum.any?(flow.questions, &(visual_rows(&1) > 0))
 
     defp visual_rows(question) do
@@ -134,7 +149,10 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       else
         other = if question.allow_other?, do: 1, else: 0
         extra = 1
-        prompt + length(question.options) + other + extra + inline_diagram
+
+        prompt +
+          Enum.sum(Enum.map(question.options, &length(wrapped_option(&1, width, "  [ ] ")))) +
+          other + extra + inline_diagram
       end
     end
 
@@ -283,8 +301,8 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
             else: ""
 
         if note == "" or flow.selected != index,
-          do: [row],
-          else: [row, line(trim("      ↳ #{note}", width), look.answer)]
+          do: row,
+          else: row ++ [line(trim("      ↳ #{note}", width), look.answer)]
       end)
     end
 
@@ -302,12 +320,30 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
 
       checked = option_marker(flow, question, option)
 
-      detail = if option.description, do: " — #{option.description}", else: ""
+      option
+      |> wrapped_option(width, "#{marker} #{checked} ")
+      |> Enum.map(&line(&1, selected_style(selected?, look)))
+    end
 
-      line(
-        trim("#{marker} #{checked} #{option.label}#{detail}", width),
-        selected_style(selected?, look)
-      )
+    # Render and measure the same rows. Keep every continuation under the
+    # label, including when a preview halves the available column width.
+    defp wrapped_option(option, width, prefix) do
+      detail = if option.description, do: " — #{option.description}", else: ""
+      padding = String.duplicate(" ", min(Width.of(prefix), max(width - 1, 0)))
+      prefix = if Width.of(prefix) < width, do: prefix, else: ""
+      padding = if prefix == "", do: "", else: padding
+      [first | rest] = Window.wrap(option.label <> detail, max(width - Width.of(prefix), 1))
+      [prefix <> first | Enum.map(rest, &(padding <> &1))]
+    end
+
+    defp body_scroll(flow, lines, height) do
+      selected =
+        Enum.find_index(lines, fn row ->
+          Enum.any?(row.spans, &String.starts_with?(&1.content, "›"))
+        end) || 0
+
+      max_scroll = max(length(lines) - height, 0)
+      min(max(max(selected - div(height, 2), 0) + Map.get(flow, :body_scroll, 0), 0), max_scroll)
     end
 
     defp option_marker(flow, %{type: "ranking"} = question, option) do
@@ -371,7 +407,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
           _choice -> "Enter selects"
         end
 
-      "↑↓ choose · #{action} · n adds note · ←→ questions · #{length(questions)} total · Esc cancels"
+      "↑↓ choose · #{action} · PgUp/PgDn scroll · n adds note · ←→ questions · #{length(questions)} total · Esc cancels"
     end
 
     defp trim(text, width), do: String.slice(text, 0, max(width, 1))

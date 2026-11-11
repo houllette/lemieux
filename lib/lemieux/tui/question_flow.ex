@@ -25,6 +25,7 @@ defmodule Lemieux.TUI.QuestionFlow do
       questions: questions,
       index: 0,
       selected: 0,
+      body_scroll: 0,
       selections: %{},
       answers: %{},
       rankings: %{},
@@ -53,13 +54,13 @@ defmodule Lemieux.TUI.QuestionFlow do
   def move(flow, by) do
     question = current(flow)
     count = max(length(question.options) + if(question.allow_other?, do: 1, else: 0), 1)
-    %{flow | selected: Integer.mod(flow.selected + by, count)}
+    %{flow | selected: Integer.mod(flow.selected + by, count)} |> Map.put(:body_scroll, 0)
   end
 
   @doc "Moves to a question tab or the review tab."
   @spec tab(flow :: t(), by :: integer()) :: t()
   def tab(flow, by) do
-    flow = remember_selection(flow)
+    flow = flow |> remember_selection() |> Map.put(:body_scroll, 0)
     index = Integer.mod(tab_index(flow) + by, length(flow.questions) + 1)
 
     case Enum.at(flow.questions, index) do
@@ -76,6 +77,7 @@ defmodule Lemieux.TUI.QuestionFlow do
       | index: index,
         review?: false,
         selected: selected,
+        body_scroll: 0,
         other?:
           question.type in ~w(text number) or
             (question.allow_other? and selected == length(question.options)),
