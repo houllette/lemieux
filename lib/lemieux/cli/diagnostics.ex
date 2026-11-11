@@ -196,6 +196,8 @@ defmodule Lemieux.CLI.Diagnostics do
   defp connection({ProviderMux, _state} = provider, model), do: ProviderMux.child(provider, model)
   defp connection(provider, _model), do: provider
 
+  defp provider_credentials(_options, "mtplx"), do: %{"status" => "not_required"}
+
   defp provider_credentials(options, name) do
     # Transport aliases use the same credential identity as the provider path.
     credential_name = if name == "ollama_cloud", do: "ollama", else: name

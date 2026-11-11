@@ -15,6 +15,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     alias Lemieux.TUI.CatalogState
     alias Lemieux.TUI.ToolText
     alias Lemieux.TUI.TranscriptPresentation
+    alias Lemieux.TUI.Turn
 
     @doc "Projects session details into a TUI state without session calls or timers."
     @spec hydrate(state :: map(), details :: map(), opts :: map()) :: map()
@@ -78,8 +79,16 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
               :systemone,
               restore_systemone(snapshot.entries, opts.empty_tools.systemone)
             ),
+          session_view: Map.put(state.session_view, :throughput, throughput(snapshot.entries)),
           turn: opts.idle_turn
       }
+    end
+
+    defp throughput(entries) do
+      Enum.reduce(entries, {0, 0}, fn
+        %{type: :assistant, usage: usage}, total -> Turn.add_sample(total, usage)
+        _entry, total -> total
+      end)
     end
 
     defp restore_systemone(_entries, nil), do: nil

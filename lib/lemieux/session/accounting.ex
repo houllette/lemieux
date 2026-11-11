@@ -168,7 +168,7 @@ defmodule Lemieux.Session.Accounting do
       result =
         Lemieux.Execution.run_provider(provider, request, fn event ->
           if match?({:error, _reason}, event), do: send(self(), {terminal_ref, event})
-          emit.(event)
+          emit.(timed_usage(event, started_at, metadata))
         end)
 
       outcome = terminal_error(terminal_ref) || result
@@ -186,6 +186,20 @@ defmodule Lemieux.Session.Accounting do
         :erlang.raise(kind, reason, __STACKTRACE__)
     end
   end
+
+  defp timed_usage({:usage, usage}, started_at, %{kind: :turn}) when is_map(usage) do
+    case Map.get(usage, :output_tokens) || Map.get(usage, "output_tokens") do
+      count when is_integer(count) and count >= 0 ->
+        duration = System.monotonic_time() - started_at
+        micros = System.convert_time_unit(duration, :native, :microsecond)
+        {:usage, Map.put(usage, "request_duration_us", micros)}
+
+      _unmeasured ->
+        {:usage, usage}
+    end
+  end
+
+  defp timed_usage(event, _started_at, _metadata), do: event
 
   defp provider_outcome(:ok), do: %{outcome: :ok}
 

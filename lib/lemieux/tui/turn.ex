@@ -149,6 +149,43 @@ if Code.ensure_loaded?(ExRatatui.App) do
       }
     end
 
+    @doc false
+    @spec rate_sample(map() | nil) :: {non_neg_integer(), non_neg_integer()}
+    def rate_sample(%{"output_tokens" => tokens, "request_duration_us" => duration} = usage)
+        when is_integer(tokens) and tokens >= 0 and is_integer(duration) and duration > 0 do
+      case usage["usage_reported"] do
+        false -> {0, 0}
+        %{"output" => false} -> {0, 0}
+        _reported -> {tokens, duration}
+      end
+    end
+
+    def rate_sample(_usage), do: {0, 0}
+
+    @doc false
+    @spec add_sample({non_neg_integer(), non_neg_integer()}, map() | nil) ::
+            {non_neg_integer(), non_neg_integer()}
+    def add_sample({tokens, duration}, usage) do
+      {next_tokens, next_duration} = rate_sample(usage)
+      {tokens + next_tokens, duration + next_duration}
+    end
+
+    @doc false
+    @spec rate({non_neg_integer(), non_neg_integer()}) :: String.t() | nil
+    def rate({_tokens, 0}), do: nil
+
+    def rate({tokens, duration}),
+      do: :erlang.float_to_binary(tokens * 1_000_000 / duration, decimals: 1) <> " tok/s"
+
+    @doc false
+    @spec request_rows(map() | nil) :: [{:summary, String.t()}]
+    def request_rows(usage) do
+      case usage |> rate_sample() |> rate() do
+        nil -> []
+        measured -> [{:summary, "Request · #{measured}"}]
+      end
+    end
+
     defp usage_count(usage, key) do
       case usage_value(usage, key) do
         value when is_integer(value) and value >= 0 -> value

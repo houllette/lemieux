@@ -32,3 +32,6 @@ ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemie
 ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemieux-pg-v4-compare-sources.json:generic-api-key:1
 ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemieux-pg-v4-evolve-1024-sources.json:generic-api-key:1
 ea228dd9ae5567210ba845e28ed6488dd056d7dc:eval/procedural_graphs_v4/results/lemieux-pg-v4-evolve-sources.json:generic-api-key:1
+
+# SHA-256 of a benchmark apparatus source file in the qualification manifest.
+77b51d89e67edbc7c570e12f644e9806020e21e5:docs/qualification/2026-11-06-rsi-provenance/benchmark.json:generic-api-key:9

@@ -273,6 +273,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             plan_progress: {:model_art, term(), String.t()} | nil,
             requests: non_neg_integer(),
             request_cap: pos_integer() | nil,
+            throughput: {non_neg_integer(), non_neg_integer()},
             sandbox: map() | nil,
             mcp_trust: map() | nil,
             first_run: map() | nil,

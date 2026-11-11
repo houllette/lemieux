@@ -354,7 +354,7 @@ defmodule Lemieux.CLI.Run do
          ModelSpec.provider(options.model) == "ixway" or Runtime.route?(opts, options.model) do
       :ok
     else
-      case ReqLLM.model(options.model) do
+      case Lemieux.ModelCatalog.resolve(options.model) do
         {:ok, _model} ->
           :ok
 
