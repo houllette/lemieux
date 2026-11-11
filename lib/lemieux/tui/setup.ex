@@ -178,6 +178,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           plan: nil,
           plan_progress: nil,
           requests: 0,
+          throughput: {0, 0},
           request_cap: Keyword.get(opts, :request_cap),
           sandbox: Keyword.get(opts, :sandbox),
           mcp_trust: Keyword.get(opts, :mcp_trust),

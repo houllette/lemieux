@@ -144,7 +144,8 @@ defmodule Lemieux.CLI.Options do
             | :fallback
             | :last_used
             | :credential
-            | :ollama,
+            | :ollama
+            | :mtplx,
           local_model: map() | nil,
           continue: boolean(),
           project_mcp_trusted: boolean(),

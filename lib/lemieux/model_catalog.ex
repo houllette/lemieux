@@ -17,7 +17,16 @@ defmodule Lemieux.ModelCatalog do
 
   @fallbacks []
 
+  @mtplx_url "http://127.0.0.1:8000/v1"
+
   @transport_routes %{
+    "mtplx" => [
+      provider: "openai",
+      base_url: @mtplx_url,
+      wire_protocol: "openai_chat",
+      # ReqLLM requires a bearer value even on a keyless OpenAI-compatible server.
+      default_api_key: "mtplx"
+    ],
     # llm_db publishes Ollama Cloud's models and metadata before ReqLLM has a provider
     # module for them. The service exposes an OpenAI-compatible `/v1` surface while
     # its documented credential remains `OLLAMA_API_KEY`. Keeping `ollama_cloud`
@@ -33,6 +42,15 @@ defmodule Lemieux.ModelCatalog do
   @doc "Returns model specifications verified but absent from the bundled catalog."
   @spec fallbacks() :: [String.t()]
   def fallbacks, do: @fallbacks
+
+  @doc "Returns the default MTPLX OpenAI-compatible API URL."
+  @spec mtplx_url() :: String.t()
+  def mtplx_url, do: @mtplx_url
+
+  @doc "Resolves catalog models and IDs advertised by MTPLX."
+  @spec resolve(String.t()) :: {:ok, LLMDB.Model.t()} | {:error, term()}
+  def resolve("mtplx:" <> id) when id != "", do: ReqLLM.model(%{provider: :mtplx, id: id})
+  def resolve(spec), do: ReqLLM.model(spec)
 
   @doc "Returns the complete ReqLLM options required by the verified additions."
   @spec provider_options() :: keyword()

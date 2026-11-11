@@ -506,12 +506,12 @@ defmodule Lemieux.Providers.ReqLLM do
 
   defp request_target(spec, model_id, route, options) when is_list(route) do
     with target_provider when is_binary(target_provider) <- Keyword.get(route, :provider),
-         {:ok, logical_model} <- ReqLLM.model(spec),
+         {:ok, logical_model} <- model(spec),
          {:ok, key} <- route_api_key(logical_model, route, options),
          {:ok, target} <- transport_target(target_provider, model_id, route) do
       routed_options =
         route
-        |> Keyword.drop([:provider, :credential_provider, :wire_protocol])
+        |> Keyword.drop([:provider, :credential_provider, :wire_protocol, :default_api_key])
         |> Keyword.merge(options)
         |> Keyword.put(:api_key, key)
 
@@ -1410,7 +1410,7 @@ defmodule Lemieux.Providers.ReqLLM do
   end
 
   defp model(spec) do
-    case ReqLLM.model(spec) do
+    case Lemieux.ModelCatalog.resolve(spec) do
       {:ok, model} -> {:ok, model}
       {:error, error} -> {:error, {:unknown_model, spec, error}}
     end
@@ -1749,11 +1749,24 @@ defmodule Lemieux.Providers.ReqLLM do
     logical_provider = logical_provider(logical_provider_or_model)
 
     with {:ok, credential_provider} <- credential_provider(logical_provider_or_model, route),
-         {:ok, key, _source} <- ReqLLM.Keys.get(credential_provider, options) do
+         {:ok, key, _source} <- transport_key(credential_provider, route, options) do
       {:ok, key}
     else
       {:error, {:invalid_transport_route, _spec}} = error -> error
       {:error, hint} -> {:error, {:missing_api_key, logical_provider, hint}}
+    end
+  end
+
+  defp transport_key(provider, route, options) do
+    case ReqLLM.Keys.get(provider, options) do
+      {:error, _reason} = missing ->
+        case Keyword.fetch(route, :default_api_key) do
+          {:ok, key} -> {:ok, key, :option}
+          :error -> missing
+        end
+
+      found ->
+        found
     end
   end
 

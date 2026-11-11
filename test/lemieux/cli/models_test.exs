@@ -47,6 +47,7 @@ defmodule Lemieux.CLI.ModelsTest do
 
   defp no_daemon do
     [
+      mtplx: [get: fn _url, _opts -> {:error, :econnrefused} end],
       ollama: [
         get: fn _url, _opts -> {:error, %Req.TransportError{reason: :econnrefused}} end,
         post: fn _url, _opts -> flunk("nothing answered /api/tags, so nothing is described") end
@@ -138,6 +139,49 @@ defmodule Lemieux.CLI.ModelsTest do
                  unwritable,
                  [env: %{}] ++ ollama([tag("qwen3:8b", nil, ["completion", "tools"])])
                )
+    end
+  end
+
+  describe "MTPLX discovery" do
+    test "chooses an advertised MTPLX model after Ollama and ignores unrelated servers",
+         %{tmp_dir: dir} do
+      data = [
+        %{"id" => "unrelated", "owned_by" => "openai"},
+        %{"id" => "", "owned_by" => "mtplx"},
+        %{"id" => "custom:9b", "owned_by" => "mtplx"}
+      ]
+
+      get = fn url, opts ->
+        assert url == "http://127.0.0.1:8000/v1/models"
+        assert opts[:retry] == false
+        assert opts[:redirect] == false
+        {:ok, %Req.Response{status: 200, body: %{"data" => data}}}
+      end
+
+      opts = Keyword.merge(no_daemon(), env: %{}, mtplx: [get: get])
+      options = fallback(dir)
+
+      assert %{model: "mtplx:custom:9b", host: %{model_source: :mtplx}} =
+               Models.local(options, opts)
+
+      assert Lemieux.CLI.TUI.discovered_models(options, opts) == ["mtplx:custom:9b"]
+
+      assert %{model: "ollama:qwen3:8b"} =
+               Models.local(
+                 options,
+                 Keyword.merge(opts, ollama([tag("qwen3:8b", nil, ["completion", "tools"])]))
+               )
+    end
+
+    test "the MTPLX transport keeps the model ID and explicitly uses local OpenAI Chat" do
+      spec = "mtplx:custom:9b"
+      options = Lemieux.ModelCatalog.provider_options()
+
+      assert {:ok, {%{provider: :openai, id: "custom:9b", extra: extra}, request_opts}} =
+               Lemieux.Providers.ReqLLM.request_target(spec, options)
+
+      assert extra.wire.protocol == "openai_chat"
+      assert request_opts[:base_url] == "http://127.0.0.1:8000/v1"
     end
   end
 
