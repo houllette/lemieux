@@ -46,7 +46,7 @@ defmodule Lemieux.CLI.HelpTextsTest do
 
       assert sandbox =~ "wherever this run keeps its config, state, sessions and MCP tokens"
       assert sandbox =~ "--config, LMX_HOME, --sessions-dir, --credentials"
-      assert sandbox =~ "Hidden from commands and file tools alike, if they exist"
+      assert sandbox =~ "Access denied to commands and file tools alike, if they exist"
       assert sandbox =~ "The eval node, MCP servers, hooks and web tools run outside it"
     end
 

@@ -285,8 +285,35 @@ defmodule Lemieux.Environment.Sandbox do
   @impl Environment
   def run(%__MODULE__{} = sandbox, command, opts) do
     cwd = Keyword.fetch!(opts, :cwd)
-    Environment.run(sandbox.inner, wrap(sandbox, command, cwd), opts)
+
+    with {:ok, events} <- Environment.run(sandbox.inner, wrap(sandbox, command, cwd), opts) do
+      {:ok, Stream.transform(events, {false, ""}, &denial_hint/2)}
+    end
   end
+
+  # A shell can print EPERM for many reasons. Describe the active boundary
+  # without claiming to know which syscall failed or parsing shell syntax.
+  defp denial_hint({:data, bytes} = event, {denied?, tail}) do
+    text = tail <> bytes
+    denied? = denied? or String.contains?(text, ["Operation not permitted", "Permission denied"])
+    {[event], {denied?, String.slice(text, -64, 64)}}
+  end
+
+  defp denial_hint({:exit_status, status} = event, {true, _tail} = state) when status != 0 do
+    hint =
+      "\nOS sandbox is active and may have denied this access. Permission modes do not override it. For protected config or credential paths, use your own terminal; see lmx help sandbox.\n"
+
+    {[{:data, hint}, event], state}
+  end
+
+  defp denial_hint(event, state), do: {[event], state}
+
+  @doc "Whether a file path belongs to this environment's protected sandbox locations."
+  @spec protected?(environment :: Environment.t(), cwd :: Path.t(), path :: Path.t()) :: boolean()
+  def protected?({__MODULE__, sandbox}, cwd, path),
+    do: visible(sandbox, cwd, path) == {:error, :eacces}
+
+  def protected?(_environment, _cwd, _path), do: false
 
   @impl Environment
   def read_file(%__MODULE__{inner: inner} = sandbox, cwd, path) do

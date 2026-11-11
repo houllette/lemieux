@@ -127,11 +127,20 @@ defmodule Lemieux.Tools.Edit do
 
   defp read(environment, cwd, path) do
     case Environment.read_file(environment, cwd, path) do
-      {:ok, contents} -> {:ok, contents}
-      {:error, :outside_worktree} -> {:error, "#{path}: is outside the working directory"}
-      {:error, :enoent} -> {:error, "#{path}: no such file"}
-      {:error, :eisdir} -> {:error, "#{path}: is a directory, not a file"}
-      {:error, reason} -> {:error, "#{path}: #{:file.format_error(reason)}"}
+      {:ok, contents} ->
+        {:ok, contents}
+
+      {:error, :outside_worktree} ->
+        {:error, "#{path}: is outside the working directory"}
+
+      {:error, :enoent} ->
+        {:error, "#{path}: no such file"}
+
+      {:error, :eisdir} ->
+        {:error, "#{path}: is a directory, not a file"}
+
+      {:error, reason} ->
+        {:error, "#{path}: #{Environment.file_error(reason, environment, cwd, path)}"}
     end
   end
 
@@ -190,9 +199,14 @@ defmodule Lemieux.Tools.Edit do
 
   defp write(environment, cwd, path, contents) do
     case Environment.write_file(environment, cwd, path, contents) do
-      {:ok, _disposition} -> :ok
-      {:error, :outside_worktree} -> {:error, "#{path}: is outside the working directory"}
-      {:error, reason} -> {:error, "#{path}: #{:file.format_error(reason)}"}
+      {:ok, _disposition} ->
+        :ok
+
+      {:error, :outside_worktree} ->
+        {:error, "#{path}: is outside the working directory"}
+
+      {:error, reason} ->
+        {:error, "#{path}: #{Environment.file_error(reason, environment, cwd, path)}"}
     end
   end
 
