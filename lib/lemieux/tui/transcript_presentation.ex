@@ -12,6 +12,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     alias Lemieux.TUI.Blocks
     alias Lemieux.TUI.ToolText
     alias Lemieux.TUI.TranscriptSpacing
+    alias Lemieux.TUI.Turn
     alias Lemieux.Usage
 
     # The tag a shipped stop hook puts first so the model can tell which rule
@@ -127,7 +128,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     # An attempt the stream broke off: its words dimmed and marked, never the
     # answer. The live screen marks it the same way when it happens.
     defp transcript_entry(
-           %{type: :assistant, payload: %{"partial" => true} = payload},
+           %{type: :assistant, payload: %{"partial" => true} = payload} = entry,
            {lines, calls},
            _view
          ) do
@@ -142,13 +143,13 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
       {lines ++
          text ++
-         [{:interrupted, "interrupted · this partial answer was kept, and is not sent back"}],
-       calls}
+         [{:interrupted, "interrupted · this partial answer was kept, and is not sent back"}] ++
+         Turn.request_rows(Map.get(entry, :usage)), calls}
     end
 
     # The same block recognition the live screen does, over the finished
     # text, so a resumed answer draws the fences and tables it drew live.
-    defp transcript_entry(%{type: :assistant, payload: payload}, {lines, calls}, view) do
+    defp transcript_entry(%{type: :assistant, payload: payload} = entry, {lines, calls}, view) do
       text =
         payload
         |> Map.get("content", [])
@@ -157,7 +158,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
           _other -> []
         end)
 
-      lines = lines ++ text
+      lines = lines ++ text ++ Turn.request_rows(Map.get(entry, :usage))
 
       Enum.reduce(Map.get(payload, "tool_calls", []), {lines, calls}, fn call, {lines, calls} ->
         id = call["id"] || "tool"

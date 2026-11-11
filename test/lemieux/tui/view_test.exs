@@ -623,6 +623,36 @@ defmodule Lemieux.TUI.ViewTest do
       assert is_nil(state.turn.started_at)
     end
 
+    test "shows per-request throughput and the duration-weighted session rate on resume" do
+      payload = %{"content" => [%{"type" => "text", "text" => "Done"}]}
+      first = %{"output_tokens" => 100, "request_duration_us" => 1_000_000}
+      second = %{"output_tokens" => 100, "request_duration_us" => 3_000_000}
+
+      unknown = %{
+        "output_tokens" => 0,
+        "request_duration_us" => 10_000_000,
+        "usage_reported" => %{"output" => false}
+      }
+
+      entries = Enum.map([first, second, unknown], &Entry.new(:assistant, payload, usage: &1))
+      session = fake_session(snapshot("01THROUGHPUT", entries))
+
+      assert {:ok, resumed} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
+      assert resumed.session_view.throughput == {200, 4_000_000}
+      assert {:summary, "Request · 100.0 tok/s"} in resumed.lines
+      assert {:summary, "Request · 33.3 tok/s"} in resumed.lines
+      refute {:summary, "Request · 0.0 tok/s"} in resumed.lines
+      assert screen(sized(resumed)) =~ "50.0 tok/s"
+
+      live =
+        tui()
+        |> info({:usage, first})
+        |> info({:entry, hd(entries)})
+
+      assert {:summary, "Request · 100.0 tok/s"} in live.lines
+      assert screen(sized(live)) =~ "100.0 tok/s"
+    end
+
     test "per-prompt summary includes delegated work while cost stays in the status line" do
       busy = %{Lemieux.Conversation.new() | busy?: true}
 

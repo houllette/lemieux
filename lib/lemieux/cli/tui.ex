@@ -22,6 +22,7 @@ defmodule Lemieux.CLI.TUI do
   alias Lemieux.CLI.Errors
   alias Lemieux.CLI.ExtensionExperience
   alias Lemieux.CLI.Models
+  alias Lemieux.CLI.Mtplx
   alias Lemieux.CLI.Ollama
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
@@ -80,7 +81,7 @@ defmodule Lemieux.CLI.TUI do
          ModelSpec.provider(options.model) == "ixway" or Runtime.route?(opts, options.model) do
       :ok
     else
-      case ReqLLM.model(options.model) do
+      case Lemieux.ModelCatalog.resolve(options.model) do
         {:ok, _model} ->
           :ok
 
@@ -1041,6 +1042,11 @@ defmodule Lemieux.CLI.TUI do
     ollama = Keyword.put(ollama, :served, served)
     offered = Ollama.models(options, ollama)
 
+    discovered_ollama(options, served, offered, ollama) ++
+      Mtplx.models(options, Keyword.get(opts, :mtplx, []))
+  end
+
+  defp discovered_ollama(options, served, offered, ollama) do
     case served do
       {:ok, tags} ->
         without_tools =
