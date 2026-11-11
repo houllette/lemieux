@@ -19,6 +19,7 @@ defmodule Lemieux.CLI.TUI do
 
   alias Lemieux.CLI
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.ConfigReload
   alias Lemieux.CLI.Errors
   alias Lemieux.CLI.ExtensionExperience
   alias Lemieux.CLI.Models
@@ -656,6 +657,7 @@ defmodule Lemieux.CLI.TUI do
              boot_step(app, :session, "Start session", fn ->
                started(Runtime.start(prepared, subscriber: subscribers(app, opts)))
              end) do
+        ConfigReload.start(session, app, options, opts)
         Models.remember(options, prepared.model)
         options = %{options | model: prepared.model}
         first_run = first_run(options, opts)
@@ -709,7 +711,8 @@ defmodule Lemieux.CLI.TUI do
         |> Keyword.put(:provider, prepared.options[:provider])
         |> Keyword.put(:subscriber, subscribers(subscriber, opts))
 
-      resumed |> Runtime.start_session(resume_opts) |> started()
+      result = resumed |> Runtime.start_session(resume_opts) |> started()
+      watch_config(result, subscriber, resumed, resume_opts)
     end
   end
 
@@ -728,9 +731,18 @@ defmodule Lemieux.CLI.TUI do
         |> Keyword.put(:provider, prepared.options[:provider])
         |> Keyword.put(:subscriber, subscribers(subscriber, opts))
 
-      %{options | resume: nil} |> Runtime.start_session(new_opts) |> started()
+      options = %{options | resume: nil}
+      result = options |> Runtime.start_session(new_opts) |> started()
+      watch_config(result, subscriber, options, new_opts)
     end
   end
+
+  defp watch_config({:ok, session} = result, app, options, opts) do
+    ConfigReload.start(session, app, options, opts)
+    result
+  end
+
+  defp watch_config(result, _app, _options, _opts), do: result
 
   # A transcript another `lmx` holds is refused by the session with the
   # holder's details; the screen gets the sentence saying whose it is.
@@ -784,6 +796,7 @@ defmodule Lemieux.CLI.TUI do
       permissions: Keyword.get(opts, :permissions),
       request_cap: request_cap(options),
       config_path: Config.path(options.config),
+      before_prompt: &ConfigReload.before_prompt/1,
       history_file: options.host.state_dir && Path.join(options.host.state_dir, "history.jsonl"),
       notifications: Config.get(options.config, "notifications", true),
       discover: rediscovery(options, opts)

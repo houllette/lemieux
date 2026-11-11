@@ -138,6 +138,7 @@ defmodule Lemieux.CLI.Runtime do
   loaded because a transcript names them.
   """
 
+  alias Lemieux.CLI.CodexProvider
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.Extensions, as: LoadedExtensions
   alias Lemieux.CLI.Limits
@@ -1971,5 +1972,10 @@ defmodule Lemieux.CLI.Runtime do
         [receive_timeout: :infinity, stream_idle_timeout: :timer.minutes(5)]
     )
     |> ReqLLMProvider.new()
+    |> then(fn provider ->
+      if Config.personal?(options.config),
+        do: CodexProvider.wrap(provider),
+        else: provider
+    end)
   end
 end

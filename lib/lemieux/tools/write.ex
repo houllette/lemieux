@@ -159,7 +159,7 @@ defmodule Lemieux.Tools.Write do
         {:error, "#{path}: is outside the working directory"}
 
       {:error, reason} ->
-        {:error, "#{path}: #{:file.format_error(reason)}"}
+        {:error, "#{path}: #{Environment.file_error(reason, environment, context.cwd, path)}"}
     end
   end
 

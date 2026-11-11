@@ -84,10 +84,14 @@ defmodule Lemieux.Environment.SandboxFilesTest do
   test "the file tools say permission denied", ctx do
     tool = %{cwd: ctx.work, session_id: "s1", call_id: "c1", environment: ctx.sandbox}
 
-    assert {:error, "lmx.json: permission denied"} = Read.run(%{"path" => "lmx.json"}, tool)
+    assert {:error, message} = Read.run(%{"path" => "lmx.json"}, tool)
+    assert message =~ "denied by the OS sandbox"
+    assert message =~ "lmx help sandbox"
 
-    assert {:error, "lmx.json: permission denied"} =
+    assert {:error, message} =
              Write.run(%{"path" => "lmx.json", "content" => "{}"}, tool)
+
+    assert message =~ "denied by the OS sandbox"
   end
 
   test "a sandbox hiding nothing passes every path through", ctx do
@@ -95,6 +99,25 @@ defmodule Lemieux.Environment.SandboxFilesTest do
 
     assert {:ok, contents} = Environment.read_file(open, ctx.work, "lmx.json")
     assert contents =~ "sk-x"
+  end
+
+  defmodule DeniedCommand do
+    def run(_state, _command, _opts) do
+      {:ok, [{:data, "Operation not "}, {:data, "permitted"}, {:exit_status, 1}]}
+    end
+  end
+
+  test "command denials carry a sandbox hint even across output chunks", ctx do
+    {Sandbox, sandbox} = ctx.sandbox
+    sandbox = %{sandbox | inner: DeniedCommand}
+    assert {:ok, events} = Sandbox.run(sandbox, "cat secrets", cwd: ctx.work)
+    events = Enum.to_list(events)
+    assert List.last(events) == {:exit_status, 1}
+
+    assert Enum.any?(events, fn
+             {:data, text} -> String.contains?(text, "lmx help sandbox")
+             _ -> false
+           end)
   end
 
   test "within?/2 holds for a path and what is under it, and the root holds everything" do

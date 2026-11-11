@@ -14,6 +14,7 @@ defmodule Lemieux.TUI.QuestionFlowTest do
   alias Lemieux.Store.JSONL
   alias Lemieux.Tools.AskUser
   alias Lemieux.TUI
+  alias Lemieux.TUI.Width
 
   @frame %Frame{width: 80, height: 24}
   @moduletag :tmp_dir
@@ -49,6 +50,62 @@ defmodule Lemieux.TUI.QuestionFlowTest do
         }
       ]
     }
+  end
+
+  defp screen_at(state, frame) do
+    session = CellSession.new(frame.width, frame.height)
+
+    try do
+      :ok = CellSession.draw(session, TUI.render(state, frame))
+      session |> CellSession.take_cells() |> Map.fetch!(:cells) |> Enum.map_join(& &1.symbol)
+    after
+      CellSession.close(session)
+    end
+  end
+
+  test "long labels and descriptions wrap completely and remain scrollable" do
+    label = "Choose the existing database with all its historical records preserved"
+
+    description =
+      String.duplicate("Consider the migration consequences carefully. ", 12) <> "TAIL_SENTINEL"
+
+    payload = %{
+      call_id: "long",
+      ask_user: true,
+      question: "Choose?",
+      options: [%{label: label, description: description}, %{label: "Second choice"}]
+    }
+
+    state = tui() |> info({:question, payload})
+    frame = %Frame{width: 44, height: 24}
+
+    assert {:noreply, state} =
+             TUI.handle_event(%ExRatatui.Event.Resize{width: 44, height: 24}, state)
+
+    widgets = TUI.render(state, frame)
+
+    {body, _} =
+      Enum.find(widgets, fn
+        {%Paragraph{text: rows}, _} when is_list(rows) ->
+          Enum.any?(rows, fn row ->
+            Enum.any?(row.spans, &String.starts_with?(&1.content, "›"))
+          end)
+
+        _ ->
+          false
+      end)
+
+    rows = Enum.map(body.text, fn row -> Enum.map_join(row.spans, & &1.content) end)
+    assert Enum.any?(rows, &String.contains?(&1, "TAIL_SENTINEL"))
+    assert Enum.all?(rows, &(Width.of(&1) <= 40))
+    assert length(rows) > 20
+    state = Enum.reduce(1..30, state, fn _, state -> press(state, "page_down") end)
+    assert screen_at(state, frame) =~ "TAIL_SENTINEL"
+    scrolled_back = press(state, "page_up")
+    assert scrolled_back.tools.question_flow.body_scroll < state.tools.question_flow.body_scroll
+    state = press(state, "down")
+    assert screen_at(state, frame) =~ "Second choice"
+    assert state.tools.question_flow.selected == 1
   end
 
   test "single question takes over the input and waits for explicit review submission" do

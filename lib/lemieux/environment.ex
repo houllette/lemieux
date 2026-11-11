@@ -65,6 +65,7 @@ defmodule Lemieux.Environment do
   """
 
   alias Lemieux.Environment.Credentials
+  alias Lemieux.Environment.Sandbox
 
   @typedoc "An environment module, or a module paired with host-owned state."
   @type t :: module() | {module(), term()}
@@ -82,6 +83,21 @@ defmodule Lemieux.Environment do
           name: String.t(),
           type: :file | :directory | :symlink | :other
         }
+
+  @doc "Formats a file failure with an actionable hint for protected sandbox paths."
+  @spec file_error(reason :: term(), environment :: t(), cwd :: Path.t(), path :: Path.t()) ::
+          String.t()
+  def file_error(reason, environment, cwd, path) do
+    message = :file.format_error(reason) |> IO.iodata_to_binary()
+
+    if reason in [:eacces, :eperm] and
+         Sandbox.protected?(environment, cwd, path) do
+      message <>
+        "; denied by the OS sandbox. Edit this file from your own terminal; see lmx help sandbox. Permission modes do not override the sandbox."
+    else
+      message
+    end
+  end
 
   @callback read_file(state :: term(), cwd :: Path.t(), path :: Path.t()) ::
               {:ok, binary()} | {:error, term()}

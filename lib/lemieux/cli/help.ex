@@ -344,6 +344,9 @@ defmodule Lemieux.CLI.Help do
     "allow", "deny" and "ask" take Claude Code-style rules: "Bash(npm test:*)",
     "Edit(src/**)", "Read", "mcp__server__tool". Deny always wins. "Always
     allow" answers are remembered per repository under ~/.lmx/permissions.
+    The OS sandbox denies access to ~/.lmx and known credential locations
+    regardless of permission mode, including full_auto. Edit protected config
+    from your own terminal; see lmx help sandbox.
     In lmx run nobody can answer, so a call that would ask is refused
     ("non_interactive": "allow" changes that). In the terminal UI, Shift-Tab
     steps through the modes once permissions are on.
@@ -359,7 +362,7 @@ defmodule Lemieux.CLI.Help do
 
     Runs commands inside macOS Seatbelt or Linux bubblewrap: writes only to
     the working directory, temporary directories and tool caches, and no
-    network beyond loopback. Hidden from commands and file tools alike,
+    network beyond loopback. Access denied to commands and file tools alike,
     if they exist when the sandbox starts:
 
     #{hidden_paths()}
@@ -371,7 +374,9 @@ defmodule Lemieux.CLI.Help do
     Keys: backend (auto|seatbelt|bubblewrap), network, localhost, writable,
     hidden. A sandbox that was asked for and cannot start stops lmx rather
     than running without it. The eval node, MCP servers, hooks and web
-    tools run outside it.
+    tools run outside it. Denials may appear as Operation not permitted
+    (EPERM) or permission denied. This list protects known credential and
+    harness locations; it does not cover every secret on the machine.
     """
   end
 

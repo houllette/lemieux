@@ -56,6 +56,20 @@ defmodule Lemieux.CLI.Learning.CodexAuth do
     end
   end
 
+  @doc "Reads a usable access credential without copying or refreshing it."
+  @spec credential(opts :: keyword()) :: {:ok, map()} | {:error, term()}
+  def credential(opts \\ []) do
+    source = Keyword.get_lazy(opts, :source, &default_source/0)
+    now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
+
+    with {:ok, credential} <- read(source),
+         :ok <- check_validity(credential.expires_at, now, 0) do
+      if DateTime.compare(credential.expires_at, now) == :gt,
+        do: {:ok, credential},
+        else: {:error, :expired}
+    end
+  end
+
   @doc "Removes the derived file and `req_llm`'s pointer to it."
   @spec cleanup(path :: Path.t()) :: :ok
   def cleanup(path) do
@@ -78,12 +92,13 @@ defmodule Lemieux.CLI.Learning.CodexAuth do
          {:ok, payload} <- JSON.decode(body),
          %{"tokens" => %{"access_token" => access} = tokens} when is_binary(access) <- payload,
          {:ok, claims} <- claims(access),
-         exp when is_integer(exp) <- claims["exp"] do
+         exp when is_integer(exp) <- claims["exp"],
+         {:ok, expires_at} <- DateTime.from_unix(exp) do
       {:ok,
        %{
          access: access,
          account_id: tokens["account_id"] || get_in(claims, [auth_claim(), "chatgpt_account_id"]),
-         expires_at: DateTime.from_unix!(exp)
+         expires_at: expires_at
        }}
     else
       {:error, :enoent} -> {:error, {:codex_not_signed_in, source}}
@@ -100,7 +115,7 @@ defmodule Lemieux.CLI.Learning.CodexAuth do
   defp claims(token) do
     with [_header, payload, _signature] <- String.split(token, "."),
          {:ok, json} <- Base.url_decode64(payload, padding: false),
-         {:ok, claims} <- JSON.decode(json) do
+         {:ok, claims} when is_map(claims) <- JSON.decode(json) do
       {:ok, claims}
     else
       _malformed -> {:error, :access_token_not_a_jwt}

@@ -205,6 +205,33 @@ defmodule Lemieux.TUI.FirstRunTest do
     end
   end
 
+  @tag :tmp_dir
+  test "Codex selection remembers only its model and Skip leaves the current selection", %{
+    tmp_dir: dir
+  } do
+    path = Path.join(dir, "config.json")
+    File.write!(path, JSON.encode!(%{"version" => 1}))
+    File.chmod!(path, 0o600)
+
+    codex = %{
+      id: "openai_codex",
+      label: "Codex",
+      model: "openai_codex:gpt-6-sol",
+      env: nil,
+      key?: false,
+      remember?: true
+    }
+
+    state = opened(%{providers: [codex], config_path: path})
+    skipped = press(state, "esc")
+    assert skipped.conversation.model == state.conversation.model
+    refute Map.has_key?(JSON.decode!(File.read!(path)), "model")
+    chosen = state |> press("down") |> press("enter")
+    assert chosen.modal == nil
+    assert_receive {:first_run_saved, ^codex, {:ok, true}}
+    assert JSON.decode!(File.read!(path)) == %{"version" => 1, "model" => codex.model}
+  end
+
   describe "a local row" do
     test "needs no key: choosing it switches the session and says what the window needs" do
       local = local_row()

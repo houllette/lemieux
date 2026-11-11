@@ -165,8 +165,10 @@ defmodule Lemieux.Tools.Read do
   defp unreadable(:enoent, _args, path, _context), do: {:error, "#{path}: no such file"}
   defp unreadable(:eisdir, args, path, context), do: list_directory(args, context, path)
 
-  defp unreadable(reason, _args, path, _context),
-    do: {:error, "#{path}: #{:file.format_error(reason)}"}
+  defp unreadable(reason, _args, path, context),
+    do:
+      {:error,
+       "#{path}: #{Environment.file_error(reason, Environment.from_context(context), context.cwd, path)}"}
 
   defp read_as(nil, chunks, args, path, context), do: {:ok, read(chunks, args, path, context)}
 
@@ -469,10 +471,18 @@ defmodule Lemieux.Tools.Read do
     environment = Environment.from_context(context)
 
     case Environment.list_dir(environment, context.cwd, path) do
-      {:ok, entries} -> {:ok, render_directory(entries, args, path)}
-      {:error, :unsupported} -> {:error, "#{path}: directory listing is not supported here"}
-      {:error, :outside_worktree} -> {:error, "#{path}: is outside the working directory"}
-      {:error, reason} -> {:error, "#{path}: #{:file.format_error(reason)}"}
+      {:ok, entries} ->
+        {:ok, render_directory(entries, args, path)}
+
+      {:error, :unsupported} ->
+        {:error, "#{path}: directory listing is not supported here"}
+
+      {:error, :outside_worktree} ->
+        {:error, "#{path}: is outside the working directory"}
+
+      {:error, reason} ->
+        {:error,
+         "#{path}: #{Environment.file_error(reason, Environment.from_context(context), context.cwd, path)}"}
     end
   end
 
