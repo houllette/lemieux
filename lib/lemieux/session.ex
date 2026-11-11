@@ -848,6 +848,20 @@ defmodule Lemieux.Session do
   @spec available_models(session :: session()) :: [String.t()]
   def available_models(session), do: GenServer.call(session, :available_models)
 
+  @doc "Returns trusted host request hooks, without serializing their executable state."
+  @spec request_hooks(session :: session()) :: [function()]
+  def request_hooks(session), do: GenServer.call(session, :request_hooks)
+
+  @doc """
+  Replaces trusted host request hooks while idle. An active prompt and all
+  its tool followups retain their original hooks. Other hook stages, session
+  documents, transcript and accounting are preserved. Hosts must reattach
+  executable hooks when resuming; they are never loaded from transcript data.
+  """
+  @spec set_request_hooks(session :: session(), hooks :: [function()]) ::
+          :ok | {:error, :busy | :invalid_hooks}
+  def set_request_hooks(session, hooks), do: GenServer.call(session, {:set_request_hooks, hooks})
+
   @doc "Lists compatible models belonging to one provider."
   @spec available_models(session :: session(), provider :: String.t()) :: [String.t()]
   def available_models(session, provider) when is_binary(provider),

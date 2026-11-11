@@ -51,6 +51,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           # The person's own settings file, where `/mcp add` saves a server
           # they keep for themselves. See `Lemieux.TUI.MCPInteraction`.
           config_path: Keyword.get(opts, :config_path),
+          before_prompt: Keyword.get(opts, :before_prompt),
           skill_load: nil
         },
         conversation:

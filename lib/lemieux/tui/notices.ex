@@ -67,6 +67,35 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
+    @doc "Replaces a host's current notices, clearing them when texts is empty."
+    @spec replace(state :: TUI.t(), key :: term(), kind :: kind(), texts :: [String.t()]) ::
+            TUI.t()
+    def replace(state, key, kind, texts) do
+      notices = state.terminal.notices
+
+      items =
+        Enum.reject(notices.items, &(Map.get(&1, :key) == key)) ++
+          Enum.map(texts, &%{key: key, kind: kind, text: &1})
+
+      cond do
+        items == notices.items ->
+          state
+
+        items == [] ->
+          cancel_timer(notices.timer)
+          state |> remove_box(notices.id) |> put_in([Access.key!(:terminal), :notices], new())
+
+        true ->
+          updated = %{
+            notices
+            | items: Enum.take(items, -@max_items),
+              id: notices.id || make_ref()
+          }
+
+          state |> publish(updated) |> restart_clock(updated)
+      end
+    end
+
     @doc "Adds each text as `say/3` does."
     @spec say_all(state :: TUI.t(), kind :: kind(), texts :: [String.t()] | nil) :: TUI.t()
     def say_all(state, kind, texts) when is_list(texts),

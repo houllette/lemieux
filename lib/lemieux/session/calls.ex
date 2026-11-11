@@ -111,6 +111,26 @@ defmodule Lemieux.Session.Calls do
       else: Catalog.change_fast_mode(state, mode)
   end
 
+  def call(:request_hooks, _from, state),
+    do: {:reply, Keyword.get_values(state.hooks, :prepare_next_turn), state}
+
+  def call({:set_request_hooks, hooks}, _from, state) do
+    cond do
+      Core.busy?(state) ->
+        {:reply, {:error, :busy}, state}
+
+      not is_list(hooks) or not Enum.all?(hooks, &is_function(&1, 2)) ->
+        {:reply, {:error, :invalid_hooks}, state}
+
+      true ->
+        updated =
+          Keyword.delete(state.hooks, :prepare_next_turn) ++
+            Enum.map(hooks, &{:prepare_next_turn, &1})
+
+        {:reply, :ok, %{state | hooks: updated}}
+    end
+  end
+
   def call(:reasoning_efforts, _from, state),
     do: {:reply, Provider.reasoning_efforts(state.provider, state.model), state}
 

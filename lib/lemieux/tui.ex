@@ -428,6 +428,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               index: %{files: [String.t()], at: integer()} | :loading | nil,
               fuzzy: %{query: String.t(), matches: [String.t()]} | nil,
               config_path: Path.t() | nil,
+              before_prompt: (pid() -> :ok) | nil,
               skill_load: %{task: Task.t(), session: Session.session()} | nil
             },
             status: %{
@@ -567,6 +568,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 index: nil,
                 fuzzy: nil,
                 config_path: nil,
+                before_prompt: nil,
                 skill_load: nil
               },
               # The things a host can replace in what the screen does on its
@@ -1013,6 +1015,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
         do: {:noreply, DiffPanel.answer(state, message)}
 
     def handle_info({:activity_tick, token}, state), do: Turn.tick(state, token)
+
+    def handle_info({:config_reload_notice, session, kind, texts}, %{session: session} = state),
+      do: {:noreply, Notices.replace(state, :config_reload, kind, texts)}
 
     def handle_info(_message, state), do: {:noreply, state}
 

@@ -199,6 +199,21 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # come back from the dispatcher untouched, which is right: they are a
     # terminal reprinting its prompt, and a screen redrawn after every message
     # has nothing to do with either.
+    defp perform(%{references: %{before_prompt: prepare}} = state, {:prompt, text})
+         when is_function(prepare, 1) do
+      app = self()
+      session = state.session
+
+      work = fn ->
+        :ok = prepare.(session)
+        :ok = Session.prompt(session, text)
+        {:prompt_dispatched, session}
+      end
+
+      :ok = start_work(state, answering(app, session, work))
+      react(state, :turn_started)
+    end
+
     defp perform(state, effect), do: Dispatch.perform(state, host(state), effect)
 
     # What this screen is to the shared dispatcher. Built per effect rather

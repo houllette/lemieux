@@ -1795,3 +1795,15 @@ Other frontmatter fields are reported as ignored; rule `@imports` are not
 expanded. Repository rules cannot read external or credential files. Explicit
 portable instructions and trusted host configuration remain available for
 features another client's runtime implements differently.
+
+## Changes during a terminal session
+
+The terminal UI checks the active config file once per second and again before
+sending a prompt. Atomic saves are supported. System One compaction settings
+and provider definitions reload together while the session is idle. Existing
+compaction decisions and budget history remain in place. A running turn keeps
+its original settings through all tool calls.
+
+Other settings require a restart; a notice names the pending fields. Reverting
+those edits clears the notice. Invalid, unreadable or unsupported-version files
+leave the last working settings active. `--config none` disables monitoring.

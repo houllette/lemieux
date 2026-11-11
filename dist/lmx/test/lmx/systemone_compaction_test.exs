@@ -20,6 +20,55 @@ defmodule Lmx.SystemOneCompactionTest do
     end)
   end
 
+  test "config reload enables, changes and disables the bundled step without losing its document",
+       %{tmp_dir: dir} do
+    runtime = :"live_compaction_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: runtime})
+    path = write_config(dir, %{"version" => 1, "systemone_compaction" => %{"mode" => "off"}})
+    {:ok, config} = Config.load(path)
+
+    {:ok, session} =
+      Lemieux.start_session(
+        supervisor: runtime,
+        provider: Scripted.new([]),
+        model: "test:model",
+        store: JSONL.new(Path.join(dir, "sessions"))
+      )
+
+    {:ok, _} =
+      Lemieux.Session.put_document(session, "systemone_compaction", 0, %{"spent_usd" => 3})
+
+    {:ok, watcher} = Lemieux.CLI.ConfigReload.start(session, self(), %Options{config: config})
+    assert Lemieux.Session.request_hooks(session) == []
+
+    settings = %{
+      "version" => 1,
+      "systemone_compaction" => %{"mode" => "shadow", "provider" => "local"},
+      "systemone_providers" => %{
+        "local" => %{
+          "base_url" => "http://127.0.0.1:11434",
+          "model" => "nimble",
+          "type" => "endpoint"
+        }
+      }
+    }
+
+    write_config(dir, settings)
+    assert :ok = Lemieux.CLI.ConfigReload.before_prompt(session)
+    assert [shadow] = Lemieux.Session.request_hooks(session)
+    assert :erlang.fun_info(shadow, :module) == {:module, LemieuxSystemOneCompaction}
+    write_config(dir, put_in(settings, ["systemone_compaction", "mode"], "apply"))
+    assert :ok = Lemieux.CLI.ConfigReload.poll(watcher)
+    assert [applied] = Lemieux.Session.request_hooks(session)
+    refute shadow == applied
+    write_config(dir, put_in(settings, ["systemone_compaction", "mode"], "off"))
+    assert :ok = Lemieux.CLI.ConfigReload.poll(watcher)
+    assert Lemieux.Session.request_hooks(session) == []
+
+    assert {:ok, %{value: %{"spent_usd" => 3}}} =
+             Lemieux.Session.document(session, "systemone_compaction")
+  end
+
   test "a hosted TypeSafe key enables compaction with no configuration" do
     System.put_env("JEV_API_KEY", "hosted-test-key")
 
