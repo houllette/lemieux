@@ -809,7 +809,18 @@ To use a cloud model through a locally signed-in daemon instead, run
 `ollama signin`, pull the `:cloud` tag and select its exact local tag as an
 `ollama:` model; the daemon handles authentication then.
 
-### API gateways
+### Local Codex sign-in
+
+On first-run setup, a usable local Codex sign-in is offered alongside other
+providers, including when Ollama is available. Choosing Codex remembers an
+`openai_codex:` model; skipping keeps the existing selection. Lemieux reads
+`$CODEX_HOME/auth.json` or `~/.codex/auth.json` before each subscription request.
+It borrows only the access token and leaves refresh ownership with Codex.
+Credentials are never saved in the Lemieux config or transcript. If the sign-in
+expires, run `codex login` in your own terminal and retry. Explicit ReqLLM OAuth
+credentials retain precedence. `--config none` does not discover local sign-ins.
+
+## API gateways
 
 ```sh
 lmx --base-url https://llm-gateway.example --model anthropic:MODEL

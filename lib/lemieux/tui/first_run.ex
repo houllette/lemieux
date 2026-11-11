@@ -21,7 +21,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     machine — needs no key, and neither does one whose `credential` is
     `:present` (the host found its key already set, which happens when the
     person named another provider's model, or under `--config none`):
-    choosing either switches the session at once, saving nothing. Esc skips
+    choosing either switches the session at once. A subscription row marked
+    `remember?: true` saves only the model choice, never credentials. Other
+    keyless rows save nothing. Esc skips
     it, saying that no key was saved and how to add one, naming the
     `/provider` switch to each row that needs no key, and leaving the host's
     hint in the transcript.
@@ -191,7 +193,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
       app = self()
 
       Task.start(fn ->
-        send(app, {:first_run_saved, provider, unsaved(provider, session)})
+        send(
+          app,
+          {:first_run_saved, provider,
+           unsaved(provider, session, state.session_view.first_run[:config_path])}
+        )
       end)
 
       Modal.close(state)
@@ -288,8 +294,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # local model as the one new sessions start with would outrank a key
     # the person sets tomorrow, and the host finds a served model, or the
     # provider whose key is set, again on the next start.
-    defp unsaved(provider, session) do
-      with {:ok, _model} <- set_model(session, provider.model), do: {:ok, false}
+    defp unsaved(provider, session, config_path) do
+      with {:ok, _model} <- set_model(session, provider.model) do
+        saved? =
+          provider[:remember?] == true and is_binary(config_path) and
+            host_save(Lemieux.CLI.Config, :put_model, [config_path, provider.model])
+
+        {:ok, saved?}
+      end
     end
 
     defp host_save(module, function, args) do
@@ -407,6 +419,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp variable(provider), do: provider[:env] || "the provider's key variable"
 
+    defp key_set(%{id: "openai_codex", credential: :present}), do: " · signed in"
     defp key_set(%{credential: :present}), do: " · key set"
     defp key_set(_provider), do: ""
 

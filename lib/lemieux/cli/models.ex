@@ -70,6 +70,7 @@ defmodule Lemieux.CLI.Models do
   """
 
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.Learning.CodexAuth
   alias Lemieux.CLI.Mtplx
   alias Lemieux.CLI.Ollama
   alias Lemieux.CLI.Options
@@ -328,6 +329,10 @@ defmodule Lemieux.CLI.Models do
   def credential(nil, _config, _opts), do: :unknown
   def credential("mtplx", _config, _opts), do: :not_required
 
+  def credential("openai_codex", _config, opts) do
+    if codex_available?(opts), do: :present, else: :missing
+  end
+
   def credential(provider, config, opts) when is_binary(provider) do
     # Transport aliases use the same credential identity as the provider path.
     name = if provider == "ollama_cloud", do: "ollama", else: provider
@@ -446,7 +451,10 @@ defmodule Lemieux.CLI.Models do
   def first_run(%Options{} = options, opts \\ []) do
     provider = ModelSpec.provider(options.model)
 
-    if credential(provider, options.config, opts) == :missing do
+    codex? = choosing?(options) and codex_available?(opts)
+    offer_codex? = codex? and not person_chose?(options)
+
+    if credential(provider, options.config, opts) == :missing or offer_codex? do
       {local, hint} = local_offer(options, opts)
 
       rows =
@@ -465,12 +473,55 @@ defmodule Lemieux.CLI.Models do
         model: options.model,
         provider: provider,
         selected: selected,
-        intro: intro(options, selected),
+        intro: setup_intro(options, offer_codex?, selected),
         hint: hint,
-        providers: rows ++ local
+        providers: codex_offer(codex?) ++ rows ++ local
       }
     end
   end
+
+  defp setup_intro(_options, true, _selected),
+    do:
+      "Lemieux detected an active local Codex sign-in. Use your ChatGPT plan for Lemieux? Choose Codex, another provider, or Esc to keep the current selection."
+
+  defp setup_intro(%Options{model: "openai_codex:" <> _}, false, _selected),
+    do:
+      "Local Codex sign-in is missing, unreadable or expired. Run codex login in your own terminal, then retry, or choose another provider."
+
+  defp setup_intro(options, false, selected), do: intro(options, selected)
+
+  defp codex_available?(opts) do
+    # Supplying an environment map makes model resolution hermetic in tests.
+    source = Keyword.get(opts, :codex_source)
+
+    cond do
+      is_binary(source) ->
+        match?({:ok, _}, CodexAuth.credential(source: source))
+
+      Keyword.has_key?(opts, :env) ->
+        false
+
+      true ->
+        match?({:ok, _}, CodexAuth.credential())
+    end
+  end
+
+  defp codex_offer(false), do: []
+
+  defp codex_offer(true),
+    do: [
+      %{
+        id: "openai_codex",
+        provider: "openai_codex",
+        label: "Codex (ChatGPT plan)",
+        model: "openai_codex:gpt-6-sol",
+        env: nil,
+        key?: false,
+        remember?: true,
+        credential: :present,
+        note: "uses your local Codex sign-in; renew it with codex login"
+      }
+    ]
 
   # The row for a model the person chose carries that model, marked `own?`,
   # so pasting its key saves the key and nothing else

@@ -102,12 +102,20 @@ defmodule Lemieux.CLI.Runtime.SecretPaths do
 
     [
       file(config, rules, :existing),
+      file(codex_auth_path(), rules, :existing),
       file(credentials, rules, :create),
       state(state, rules),
       directory(sessions, rules)
     ]
     |> List.flatten()
     |> Enum.uniq()
+  end
+
+  defp codex_auth_path do
+    case System.get_env("CODEX_HOME") do
+      nil -> nil
+      home -> Path.expand(Path.join(home, "auth.json"))
+    end
   end
 
   defp expand(nil), do: nil

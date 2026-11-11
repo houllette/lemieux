@@ -898,7 +898,7 @@ defmodule Lemieux.CLI.ConfigTest do
     assert options.model == "openai:gpt-5"
     refute Keyword.has_key?(options.given, :model)
     refute inspect(options) =~ "private-key"
-    assert {_, state} = Runtime.provider(options)
+    assert {Lemieux.CLI.CodexProvider, {{_, state}, []}} = Runtime.provider(options)
     assert state.api_key_defaults == %{"openai" => "private-key"}
     refute inspect(state) =~ "private-key"
   end
