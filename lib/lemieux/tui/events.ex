@@ -77,13 +77,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
       |> Choices.put_tool_statuses(Session.tool_status(state.session))
     end
 
-    defp sync_event(state, {:usage, usage}) when is_map(usage) do
-      state = update_in(state.session_view.throughput, &Turn.add_sample(&1, usage))
+    defp sync_event(%TUI{turn: %{started_at: started}} = state, {:usage, usage})
+         when is_integer(started) and is_map(usage),
+         do: put_in(state.turn.usage, Turn.add_usage(state.turn.usage, usage))
 
-      if is_integer(state.turn.started_at),
-        do: put_in(state.turn.usage, Turn.add_usage(state.turn.usage, usage)),
-        else: state
-    end
+    defp sync_event(state, {:entry, %{type: :assistant, usage: usage}}),
+      do: update_in(state.session_view.throughput, &Turn.add_sample(&1, usage))
 
     defp sync_event(
            %TUI{turn: %{started_at: started}} = state,

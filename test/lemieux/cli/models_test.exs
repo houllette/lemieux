@@ -5,6 +5,9 @@ defmodule Lemieux.CLI.ModelsTest do
   alias Lemieux.CLI.Models
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.State
+  alias Lemieux.CLI.TUI
+  alias Lemieux.ModelCatalog
+  alias Lemieux.Providers.ReqLLM, as: Adapter
 
   @moduletag :tmp_dir
 
@@ -164,7 +167,7 @@ defmodule Lemieux.CLI.ModelsTest do
       assert %{model: "mtplx:custom:9b", host: %{model_source: :mtplx}} =
                Models.local(options, opts)
 
-      assert Lemieux.CLI.TUI.discovered_models(options, opts) == ["mtplx:custom:9b"]
+      assert TUI.discovered_models(options, opts) == ["mtplx:custom:9b"]
 
       assert %{model: "ollama:qwen3:8b"} =
                Models.local(
@@ -175,10 +178,10 @@ defmodule Lemieux.CLI.ModelsTest do
 
     test "the MTPLX transport keeps the model ID and explicitly uses local OpenAI Chat" do
       spec = "mtplx:custom:9b"
-      options = Lemieux.ModelCatalog.provider_options()
+      options = ModelCatalog.provider_options()
 
       assert {:ok, {%{provider: :openai, id: "custom:9b", extra: extra}, request_opts}} =
-               Lemieux.Providers.ReqLLM.request_target(spec, options)
+               Adapter.request_target(spec, options)
 
       assert extra.wire.protocol == "openai_chat"
       assert request_opts[:base_url] == "http://127.0.0.1:8000/v1"
