@@ -1047,7 +1047,7 @@ discovered models.
 The host must depend on the optional `ex_ratatui` itself:
 
 ```elixir
-{:ex_ratatui, "~> 0.17"}
+{:ex_ratatui, "~> 0.20"}
 ```
 
 Lemieux compiles its terminal UI only when `ex_ratatui` is present at compile

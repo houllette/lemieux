@@ -1225,7 +1225,7 @@ defmodule Lemieux.CLI.TUI do
     default because it is a Rust NIF and not something to impose on a project
     that only wanted the library. Add it:
 
-        {:ex_ratatui, "~> 0.17"}
+        {:ex_ratatui, "~> 0.20"}
 
     then `mix deps.get`. A path dependency on lemieux was compiled without
     it, so compile it again: `mix deps.compile lemieux --force`.
