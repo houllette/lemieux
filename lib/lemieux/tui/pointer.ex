@@ -7,6 +7,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     alias Lemieux.TUI
     alias Lemieux.TUI.Composer
+    alias Lemieux.TUI.Editor
     alias Lemieux.TUI.Flash
     alias Lemieux.TUI.Links
     alias Lemieux.TUI.Notices
@@ -61,6 +62,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # of is a bad trade however good the scrolling is.
     def mouse(%ExRatatui.Event.Mouse{kind: "down", button: "left"} = event, state) do
       cond do
+        input_at?(state, event) ->
+          pane = Screen.panes(state).input
+
+          :ok =
+            Editor.place_cursor(
+              state.input,
+              pane.width - 2,
+              pane.height - 2,
+              event.x - pane.x - 1,
+              event.y - pane.y - 1
+            )
+
+          {:noreply, Composer.reveal_cursor(%{state | selection: nil})}
+
         TaskPanel.badge_at?(state, event) ->
           {:noreply, TaskPanel.open(state)}
 
@@ -155,6 +170,15 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do: {:noreply, Flash.show(state, open_error(reason))}
 
     def open_link_result(state, _result), do: {:noreply, state}
+
+    defp input_at?(%{modal: nil, tools: %{question_flow: nil, mcp_flow: nil}} = state, event) do
+      pane = Screen.panes(state).input
+
+      event.x > pane.x and event.x < pane.x + pane.width - 1 and
+        event.y > pane.y and event.y < pane.y + pane.height - 1
+    end
+
+    defp input_at?(_state, _event), do: false
 
     defp defer_scroll(state, by) do
       pending =
