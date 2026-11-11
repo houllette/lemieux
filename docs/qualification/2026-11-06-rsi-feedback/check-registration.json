@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "public_feedback_check_registration/v1",
+  "scope": "developer_exposed_requirements_derived",
+  "hosted_requests": 0,
+  "private_tests_used_as_check_source": false,
+  "checks_sha256": "dfe7a4824781048cdcff888700c46d63df1cac586994e705e70bfdbbfbb5487f",
+  "sources": {
+    "docs/defining.rst": "779e5247a1a354ce58fd50ab2f5ea3b27541c70b014d6321e3e83a8c0576389f",
+    "docs/nonmult.rst": "e8cc8eb3cfc8e5691c4ce57b0baf7e5c72131c10094c55d8bef4b4d0e98bbc82",
+    "pint/testsuite/test_definitions.py": "01634e5bbec41a7e3bd169db817efbf112c7bfcef3d7925d57265a18af9672fb",
+    "pint/definitions.py": "28ef4b6e37ef0093dcd34d0fbcaf9b6fb3f3fd8a37f105f7045f594eae1dd139"
+  },
+  "selection": "Record untouched, reference and captured artifact outcomes without replacing original campaign grades."
+}

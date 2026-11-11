@@ -4,8 +4,10 @@ defmodule Lemieux.Benchmark.CorpusPromoteTest do
   import ExUnit.CaptureIO
 
   alias Lemieux.Benchmark.Corpus.Promote
+  alias Lemieux.Benchmark.Corpus.Review
   alias Lemieux.Benchmark.Manifest
   alias Lemieux.CLI.Corpus, as: CorpusCLI
+  alias Lemieux.Contract
   alias Lemieux.Feedback
   alias Lemieux.Feedback.CaseDraft
   alias Lemieux.Feedback.Store, as: FeedbackStore
@@ -62,6 +64,7 @@ defmodule Lemieux.Benchmark.CorpusPromoteTest do
       manifest: manifest,
       manifest_dir: manifest_dir,
       source: source,
+      draft: draft,
       feedback: feedback
     }
   end
@@ -88,6 +91,175 @@ defmodule Lemieux.Benchmark.CorpusPromoteTest do
 
     assert {:error, {:case_exists, ^id}} =
              Promote.promote(ctx.draft_dir, ctx.manifest, cluster_id: "value-repair")
+  end
+
+  test "reference review retains matched failing and passing controls before promotion", ctx do
+    reference = reference(ctx)
+
+    assert {:ok, _id} =
+             Promote.promote(ctx.draft_dir, ctx.manifest,
+               cluster_id: "value-repair",
+               allowed_changed_paths: ["value.txt"],
+               reference_dir: reference
+             )
+
+    assert {:ok, manifest} = Manifest.read(ctx.manifest)
+    review = List.last(manifest.tasks).metadata["verification_review"]
+    assert review["status"] == "passed"
+    assert review["exposure"] == "developer_exposed"
+    assert review["changed_paths"] == ["value.txt"]
+    assert review["controls"]["untouched"]["exit_status"] == 1
+    assert review["controls"]["reference"]["exit_status"] == 0
+    assert :ok = Contract.verify_digest(review, "sha256")
+  end
+
+  test "a verifier that fails on its reference cannot enter the reviewed corpus", ctx do
+    reference = reference(ctx, "still broken\n")
+
+    assert {:error, {:verification_not_demonstrated, review}} =
+             Promote.promote(ctx.draft_dir, ctx.manifest,
+               cluster_id: "value-repair",
+               allowed_changed_paths: ["value.txt"],
+               reference_dir: reference
+             )
+
+    assert review["controls"]["reference"]["exit_status"] == 1
+    refute File.exists?(Path.join(ctx.manifest_dir, "repos"))
+    assert {:ok, manifest} = Manifest.read(ctx.manifest)
+    assert length(manifest.tasks) == 1
+  end
+
+  test "reference controls cannot change verifier bytes outside the reviewed source paths", ctx do
+    reference = reference(ctx)
+    File.write!(Path.join(reference, "check.sh"), "exit 0\n")
+
+    assert {:error, {:reference_changed_unapproved_paths, ["check.sh"]}} =
+             Promote.promote(ctx.draft_dir, ctx.manifest,
+               cluster_id: "value-repair",
+               allowed_changed_paths: ["value.txt"],
+               reference_dir: reference
+             )
+
+    refute File.exists?(Path.join(ctx.manifest_dir, "repos"))
+  end
+
+  test "review refuses a draft changed after feedback was frozen", ctx do
+    File.write!(Path.join([ctx.draft_dir, "fixture", "value.txt"]), "a different failure\n")
+
+    assert {:error, :draft_fixture_changed} =
+             Promote.promote(ctx.draft_dir, ctx.manifest,
+               cluster_id: "value-repair",
+               allowed_changed_paths: ["value.txt"],
+               reference_dir: reference(ctx)
+             )
+  end
+
+  test "the CLI can review without promotion and reruns controls when promoting", ctx do
+    reference = reference(ctx)
+    options = ["--reference", reference, "--allow", "value.txt"]
+
+    output =
+      capture_io(fn -> assert :ok = CorpusCLI.run(["review", ctx.draft_dir] ++ options, []) end)
+
+    review = JSON.decode!(output)
+    assert review["status"] == "passed"
+    assert :ok = Contract.verify_digest(review, "sha256")
+    refute File.exists?(Path.join(ctx.manifest_dir, "repos"))
+
+    File.write!(Path.join(reference, "value.txt"), "regressed\n")
+
+    stderr =
+      capture_io(:stderr, fn ->
+        stdout =
+          capture_io(fn ->
+            assert {:error, 1} =
+                     CorpusCLI.run(
+                       ["promote", ctx.draft_dir, ctx.manifest, "--cluster", "repair"] ++ options,
+                       []
+                     )
+          end)
+
+        assert JSON.decode!(stdout)["status"] == "not_demonstrated"
+      end)
+
+    assert stderr =~ "corpus was not changed"
+    refute File.exists?(Path.join(ctx.manifest_dir, "repos"))
+  end
+
+  test "collection errors and grader writes do not qualify as negative controls", ctx do
+    reference = reference(ctx)
+
+    for command <- [["sh", "-c", "exit 2"], ["sh", "-c", "touch altered; sh check.sh"]] do
+      task = %{ctx.draft.task | grader: %{ctx.draft.task.grader | command: command}}
+
+      assert {:ok, review} =
+               Review.review(task, reference, allowed_changed_paths: ["value.txt"])
+
+      assert review["status"] == "not_demonstrated"
+    end
+
+    refute File.exists?(Path.join(reference, "altered"))
+    refute File.exists?(Path.join(ctx.draft.task.cwd, "altered"))
+  end
+
+  test "reference review requires exact implementation paths", ctx do
+    reference = reference(ctx)
+
+    for allowed <- [[], ["*"], ["../value.txt"], ["value.txt", "value.txt"]] do
+      assert {:error, :review_requires_exact_source_paths} =
+               Review.review(ctx.draft.task, reference, allowed_changed_paths: allowed)
+    end
+  end
+
+  test "another verifier's failure code must be selected explicitly and bound to its receipt",
+       ctx do
+    task = %{
+      ctx.draft.task
+      | grader: %{ctx.draft.task.grader | command: ["sh", "-c", "sh check.sh || exit 2"]}
+    }
+
+    reference = reference(ctx)
+    opts = [allowed_changed_paths: ["value.txt"]]
+    assert {:ok, rejected} = Review.review(task, reference, opts)
+    assert rejected["status"] == "not_demonstrated"
+
+    assert {:ok, accepted} = Review.review(task, reference, opts ++ [failure_exit_status: 2])
+    assert accepted["status"] == "passed"
+    assert accepted["expected_failure_exit_status"] == 2
+
+    assert {:error, :invalid_failure_exit_status} =
+             Review.review(task, reference, opts ++ [failure_exit_status: 0])
+  end
+
+  test "a linked verifier input cannot substitute for frozen file bytes", ctx do
+    reference = reference(ctx)
+    external = Path.join(ctx.tmp_dir, "external.txt")
+    File.write!(external, "mutable outside the reviewed copy\n")
+
+    for root <- [ctx.draft.task.cwd, reference],
+        do: File.ln_s!(external, Path.join(root, "linked.txt"))
+
+    assert {:error, {:review_requires_regular_files, ["linked.txt"]}} =
+             Review.review(ctx.draft.task, reference, allowed_changed_paths: ["value.txt"])
+  end
+
+  test "missing verifier executables are unavailable rather than negative evidence", ctx do
+    task = %{
+      ctx.draft.task
+      | grader: %{ctx.draft.task.grader | command: ["lemieux-nonexistent-review-verifier"]}
+    }
+
+    assert {:error, {:review_control_unavailable, "untouched", {:executable_not_found, _name}}} =
+             Review.review(task, reference(ctx), allowed_changed_paths: ["value.txt"])
+  end
+
+  test "editing an original input while its scratch controls run invalidates review", ctx do
+    original = LemieuxTest.Shell.quoted(Path.join(ctx.draft.task.cwd, "value.txt"))
+    command = ["sh", "-c", "printf changed > #{original}; sh check.sh"]
+    task = %{ctx.draft.task | grader: %{ctx.draft.task.grader | command: command}}
+
+    assert {:error, :review_inputs_changed} =
+             Review.review(task, reference(ctx), allowed_changed_paths: ["value.txt"])
   end
 
   # Every other test here hands `promote/3` a `tmp_dir` path, which is
@@ -255,5 +427,12 @@ defmodule Lemieux.Benchmark.CorpusPromoteTest do
     assert promoted =~ "promoted case"
     assert {:ok, manifest} = Manifest.read(ctx.manifest)
     assert Enum.any?(manifest.tasks, &(&1.metadata["tags"] == ["promoted", "mined"]))
+  end
+
+  defp reference(ctx, value \\ "fixed\n") do
+    reference = Path.join(ctx.tmp_dir, "reference")
+    File.cp_r!(Path.join(ctx.draft_dir, "fixture"), reference)
+    File.write!(Path.join(reference, "value.txt"), value)
+    reference
   end
 end

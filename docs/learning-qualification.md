@@ -9,6 +9,23 @@ The [1.1 qualification packet](qualification/2026-11-05-rsi-v1.1/README.md)
 retains the offline gate and capped hosted skill pilot: complete accounting,
 an unobserved updating skill mechanism, and inconclusive quality and efficiency.
 
+The [public-feedback follow-up](qualification/2026-11-06-rsi-feedback/README.md)
+adds matched verifier controls to `lmx corpus review` and `corpus promote
+--reference`. Its additive public checks detect a regression in a retained Pint
+artifact, while a reviewed reference passes. The historical reference fails a
+control too and remains recorded. Whether the public regression caused the old
+private failure is not established. Its newly frozen hosted calibration completed
+both arms: 27 requests and 395,616 tokens. Both passed public and private checks,
+so the registered public-only selector admitted no mechanism target and hosted
+work stopped. No learning benefit or qualified export was established. These are
+exposed development checks, not an independently qualified improvement. Freeze
+any revised task inputs before another calibration. Never return private grades
+or answers to an active trial,
+or feed independent confirmation into development. If exposed development
+controls inform later curation, create a new case version, make its requirements
+public, record that exposure and retain the original outcomes. Its source cases
+remain ineligible for independent confirmation.
+
 Use `--plan-only` to review the existing runner's registration before authorizing
 requests. It writes `registration.json` and a digest-bound `planning.json`, then
 stops before opening an allowance, preparing credentials, starting sessions or

@@ -1265,16 +1265,39 @@ into the fixture; the draft lists them for review.
 ### Corpus promotion
 
 ```sh
+lmx corpus review DRAFT_DIR --reference REPAIRED_DIR --allow SOURCE_PATH
 lmx corpus promote DRAFT_DIR MANIFEST --cluster ID [--tag T]... \
-  [--allow PATH]... [--expect pass] [--repos-dir D] [--allow-secret-files]
+  [--allow PATH]... [--expect pass] [--repos-dir D] [--allow-secret-files] \
+  [--reference REPAIRED_DIR]
 ```
+
+`review` runs the same public verifier on separate scratch copies of the
+frozen draft and a repaired reference. Supply exact implementation paths with
+repeated `--allow`; wildcards are refused for this review. Every other captured
+file must match, including public tests. The draft must be unchanged since it
+was created. Exit 1 on the untouched copy and exit 0 on the reference, without
+timeouts or verifier writes, produce a passing review. The command prints a
+sealed JSON report and exits nonzero when discrimination is not demonstrated.
+It changes neither the draft nor the corpus and makes no model request.
+Other verifier protocols can explicitly choose `--failure-exit-status N`, such
+as 2 for ExUnit. This choice is bound to the receipt; it requires reviewing the
+verifier's exit-code meaning. Pytest collection errors (2) fail the default gate.
+
+Pass `--reference` to `promote` to rerun these controls before copying anything
+and retain their report in task metadata. Review the checks against the actual
+requirement and keep their inputs public; a control receipt supplies no activation
+authority or independent efficacy evidence. Command graders run owner-supplied
+code with the host's authority. Container-backed commands can provide isolation;
+Git metadata, editor state, build output and installed dependencies remain
+outside the benchmark snapshot's identity.
 
 Promotion adds a reviewed draft to a corpus manifest. It first proves the
 grader fails on the untouched fixture, and refuses a case whose grader passes
 there unless `--expect pass` says that is intended (read-only and refusal
 cases). A fixture holding a secret-shaped file is refused, naming the files,
 unless `--allow-secret-files` says you put them there on purpose. Nothing here
-runs a model.
+runs a model. Promotion without a reference retains its existing untouched check
+and explicitly records verification as `unassessed`.
 
 ### Harness-learning inspection
 

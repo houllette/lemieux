@@ -1,0 +1,14 @@
+{
+  "active_requests": 0,
+  "all_admitted_requests_settled": true,
+  "allowance_owner_lock_removed": true,
+  "allowance_policy": "Settled original durable allowance retained; no reset or cap increase. Unused authorization does not admit extra trials after the registered stopping rule.",
+  "conditional_mechanism_output_created": false,
+  "global_docker_cleanup_performed": false,
+  "oauth_loan_removed": true,
+  "observed_at_utc": "2026-11-06T04:14:49.733889+00:00",
+  "schema_version": 1,
+  "task_owned_containers_remaining": 0,
+  "unmeasured_requests": 0,
+  "unrelated_prior_containers_preserved": true
+}

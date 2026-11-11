@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "kind": "exposed_development_case_lineage/v1",
+  "cluster": "hgrecco-pint",
+  "current_case_id": "hgrecco-pint-948-public-v3",
+  "parent_case_ids": [
+    "hgrecco-pint-948",
+    "hgrecco-pint-948-public-v2"
+  ],
+  "original_source_sha256": "07cc049792360c85b52fd11cc337cc7badf5eb5d0810b147bf57e0bd36bd0fbb",
+  "current_source_sha256": "70e286a731ae4932fe021e46ca4955a49adfaa32922aa8b54ccbe01d557d6cdc",
+  "private_tests_sha256": "072b99fc698ab37ce58965425f5ab023953cbda5605a7cd89bfc01b96b5adcec",
+  "controls_bytes_sha256": "ed96383118a3f11c0b5dee3e130ca786ae494cc5c45581859e0326cb6daf301c",
+  "exposure": "developer_exposed",
+  "independent_confirmation": false,
+  "independent_streams": 1,
+  "curation_informed_by_exposed_private_control": true
+}
