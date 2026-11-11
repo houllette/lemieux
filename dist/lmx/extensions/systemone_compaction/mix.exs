@@ -13,11 +13,13 @@ defmodule LemieuxSystemOneCompaction.MixProject do
         {:lemieux, path: System.get_env("LEMIEUX_EXTENSION_BASE", "../../../..")},
         {:system_one_sdk, "~> 0.6.0"},
         {:pristine, "~> 0.4.0"},
-        # Sinter 0.3.2 pins vulnerable jsv ~> 0.21.2. Keep the existing
-        # validator patched until Sinter relaxes that constraint; the dependency
-        # security tests cover both the bypass and Sinter's schema API.
-        {:jsv, "~> 0.26.2", override: true},
-        {:req_llm, "~> 1.28"},
+        # Pristine 0.4 and Sinter 0.3 pin older Finch, NimbleOptions and JSV.
+        # ReqLLM 1.30 needs the current versions; the compatibility tests exercise
+        # the SDK transport and schema validation with these shared resolutions.
+        {:finch, "~> 0.24.0", override: true},
+        {:nimble_options, "~> 1.2.0", override: true},
+        {:jsv, "~> 0.27.0", override: true},
+        {:req_llm, "~> 1.30"},
         {:dotenvy, "~> 1.2"}
       ],
       aliases: [

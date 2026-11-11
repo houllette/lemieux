@@ -10,9 +10,13 @@ defmodule LemieuxComputerUse.MixProject do
         {:lemieux, path: System.get_env("LEMIEUX_EXTENSION_BASE", "../../..")},
         {:wallaby, "~> 0.31.0", runtime: false},
         {:req, "~> 0.7"},
-        {:req_llm, "~> 1.28"},
+        {:req_llm, "~> 1.30"},
         {:pristine, "~> 0.4.0"},
         {:system_one_sdk, "~> 0.6.0"},
+        # Keep Pristine and Sinter compatible with ReqLLM's current dependencies.
+        {:finch, "~> 0.24.0", override: true},
+        {:nimble_options, "~> 1.2.0", override: true},
+        {:jsv, "~> 0.27.0", override: true},
         {:dotenvy, "~> 1.2"}
       ],
       aliases: [

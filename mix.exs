@@ -148,7 +148,7 @@ defmodule Lemieux.MixProject do
       # through req_llm; hand-rolled provider adapters are out of scope by
       # decision, so "add a provider" is an upstream concern rather than a
       # module in this tree.
-      {:req_llm, "~> 1.29"},
+      {:req_llm, "~> 1.30"},
       # Already in the tree through req_llm, and declared here because the MCP
       # client's HTTP transport calls it directly. Depending on a transitive
       # dependency works right up until the package that brought it swaps it
@@ -179,7 +179,7 @@ defmodule Lemieux.MixProject do
       # `Lemieux.TUI` is the only module that references it, nothing in the
       # core references `Lemieux.TUI`. The standalone host under `dist/lmx`
       # packages its NIF in a real release `priv` directory.
-      {:ex_ratatui, "~> 0.17", optional: true},
+      {:ex_ratatui, "~> 0.20", optional: true},
       {:ascii, "~> 0.4.1", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
@@ -596,13 +596,9 @@ defmodule Lemieux.MixProject do
         "cmd python3 -m unittest discover -s test -p 'test_*.py'"
       ],
       # The release host is a separate Mix project with its own lock, so a
-      # bump here never reaches the binary on its own. Drift is refused unless
-      # reviewed: the bundled System One compaction extension's SDK pulls
-      # in pristine 0.4.0, which pins finch ~> 0.23.0. The library resolves
-      # finch 0.24.0. Drop this exception when its upstream constraint relaxes;
-      # the check says when that happens.
-      "deps.drift":
-        "cmd elixir scripts/check_lock_drift.exs --allow finch mix.lock dist/lmx/mix.lock",
+      # bump here never reaches the binary on its own. Shared dependencies must
+      # resolve identically so the release ships the versions the library tests.
+      "deps.drift": "cmd elixir scripts/check_lock_drift.exs mix.lock dist/lmx/mix.lock",
       "test.distributed": [
         "cmd epmd -daemon",
         "test --only distributed --warnings-as-errors"
