@@ -1,6 +1,7 @@
 defmodule Lemieux.Session.ToolWave do
   @moduledoc false
 
+  alias Lemieux.Diagnostic
   alias Lemieux.Hooks
   alias Lemieux.Input
   alias Lemieux.Messages
@@ -98,7 +99,7 @@ defmodule Lemieux.Session.ToolWave do
     # stopped. Going idle here would leave those words in the queue until somebody
     # prompted again, which reads as having been ignored. The bound still applies: a
     # steer cannot buy more turns than the prompt was allowed.
-    if is_nil(state.aside) and state.reversed_steers != [] and
+    if is_nil(state.aside) and (state.reversed_steers != [] or state.deferred_answers != []) and
          state.turns_taken < state.max_turns do
       Compacting.continue(state)
     else
@@ -416,13 +417,24 @@ defmodule Lemieux.Session.ToolWave do
   # the tool crashed or that its outcome is unknown, from what the tool
   # declared and what it recorded before it was lost.
   defp result(state, call, {:crashed, reason}, descriptor, receipt) do
-    Receipt.lost(
-      call,
-      descriptor,
-      receipt,
-      :crashed,
-      Messages.render(state.messages, :tool_crashed, [call, reason])
-    )
+    result =
+      Receipt.lost(
+        call,
+        descriptor,
+        receipt,
+        :crashed,
+        Messages.render(state.messages, :tool_crashed, [call, reason])
+      )
+
+    if Diagnostic.internal_crash?(reason) do
+      Map.put(
+        result,
+        :diagnostic,
+        Diagnostic.new("tool", "The #{call.name} tool failed inside Lemieux.", reason)
+      )
+    else
+      result
+    end
   end
 
   defp result(state, call, {:timeout, timeout_ms}, descriptor, receipt) do
@@ -578,6 +590,7 @@ defmodule Lemieux.Session.ToolWave do
       {:attachments, "attachments"},
       {:cost, "cost"},
       {:metadata, "metadata"},
+      {:diagnostic, "diagnostic"},
       {:receipt, "receipt"},
       {:hook_rewritten?, "hook_rewritten"}
     ]

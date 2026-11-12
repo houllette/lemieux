@@ -17,6 +17,13 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     @impl Lemieux.TUI.Renderer
     def result(
           _call,
+          %{payload: %{"structured_content" => %{"mode" => "deferred", "status" => "pending"}}},
+          _theme
+        ),
+        do: {:output, "Optional question; work can continue while you decide."}
+
+    def result(
+          _call,
           %{payload: %{"structured_content" => %{"answers" => answers, "status" => "answered"}}},
           _theme
         )

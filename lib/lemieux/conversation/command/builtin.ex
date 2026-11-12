@@ -39,6 +39,7 @@ defmodule Lemieux.Conversation.Command.Builtin do
       Command.Resume,
       Command.Compact,
       Command.Context,
+      Command.Usage,
       Command.Cancel,
       Command.Unsteer,
       Command.Retry,

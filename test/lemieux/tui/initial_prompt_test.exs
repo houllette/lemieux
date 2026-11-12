@@ -32,17 +32,21 @@ defmodule Lemieux.TUI.InitialPromptTest do
   end
 
   defp up(%{app: app, task: task, session: session}) do
-    send(task, :go)
-
     try do
-      :ok = LemieuxTest.Sync.state(app, &(&1.user_state.id == "02FIRSTPROMPT"))
+      # Register the observer before releasing startup. Releasing first made
+      # :sys.install race hydration/rendering on a loaded floor runner, so the
+      # observer could time out before it had even begun watching the transition.
+      :ok =
+        LemieuxTest.Sync.state(app, &(&1.user_state.id == "02FIRSTPROMPT"), fn ->
+          send(task, :go)
+        end)
     rescue
       error in ExUnit.AssertionError ->
         # Preserve the failing wait while retaining the blocked startup phase
         # and stand-in requests; CI alone has observed this under Linux load.
         details =
-          {Process.info(task, :current_stacktrace), Process.info(session, :messages),
-           :sys.get_state(app).user_state.id}
+          {Process.info(app, :current_stacktrace), Process.info(task, :current_stacktrace),
+           Process.info(session, :messages)}
 
         reraise %{error | message: error.message <> "\nStartup diagnostics: #{inspect(details)}"},
                 __STACKTRACE__

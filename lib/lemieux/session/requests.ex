@@ -15,6 +15,7 @@ defmodule Lemieux.Session.Requests do
   alias Lemieux.Session.Core
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.Prompts
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Window
   alias Lemieux.Supervisor, as: Sup
@@ -58,7 +59,7 @@ defmodule Lemieux.Session.Requests do
     # place a request is built: whatever was said while the model was working
     # is in the conversation it is about to be given, and in the transcript in
     # the order it was said.
-    state = Recovery.drain_steers(state)
+    state = state |> Recovery.drain_steers() |> Questions.drain()
 
     entries = Core.behavior_entries(state)
 

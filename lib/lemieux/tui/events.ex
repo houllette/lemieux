@@ -6,6 +6,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @moduledoc "Applies a session's `{:lemieux, id, event}` messages to a `Lemieux.TUI`."
 
     alias Lemieux.Conversation
+    alias Lemieux.Diagnostic
     alias Lemieux.Session
     alias Lemieux.TUI
     alias Lemieux.TUI.Choices
@@ -39,12 +40,31 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {conversation, effects} = Conversation.event(state.conversation, event)
       state = sync_event(%{state | conversation: conversation}, event)
       {state, effects} = present_event(state, event, effects)
+      state = diagnostic_hint(state, event)
       state = resolved_question_flow(state, event)
 
       state
       |> Effects.run(effects)
       |> finish_event(event)
     end
+
+    defp diagnostic_hint(state, {:entry, %{payload: payload}}) do
+      case Diagnostic.from_payload(payload) do
+        nil ->
+          state
+
+        diagnostic ->
+          row = {:bug_hint, diagnostic["id"], Diagnostic.hint()}
+          if row in state.lines, do: state, else: Transcript.append_rows(state, [row])
+      end
+    end
+
+    defp diagnostic_hint(state, _event), do: state
+
+    defp error_summary(id, %{"namespace" => "lemieux.errors", "value" => %{"count" => count}})
+         when is_integer(count) and count > 0, do: [{:bug_summary, id, Diagnostic.summary(count)}]
+
+    defp error_summary(_id, _payload), do: []
 
     @doc false
     @spec phase(TUI.t(), atom(), term()) :: TUI.t()
@@ -280,6 +300,29 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # attaches mid-turn is sent the pending call and then the live one — and
     # for `ask_user` a second announcement is a second copy of the question,
     # which is what the duplicate-question bug looked like from the outside.
+    defp present_event(
+           state,
+           {:entry,
+            %{
+              id: id,
+              type: :extension_state,
+              payload: %{"namespace" => "lemieux.errors"} = payload
+            }},
+           effects
+         ),
+         do:
+           {Transcript.append_rows(
+              state,
+              Enum.reject(error_summary(id, payload), &(&1 in state.lines))
+            ), effects}
+
+    defp present_event(
+           state,
+           {:entry, %{type: :error, payload: %{"diagnostic" => diagnostic}}},
+           effects
+         ),
+         do: {Transcript.say(state, :lmx, "error: " <> Diagnostic.message(diagnostic)), effects}
+
     defp present_event(%{turn: %{compacting: %{}}} = state, {:compacted, _data}, effects) do
       report =
         Enum.find_value(effects, fn
@@ -378,6 +421,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       {state, without(effects, :say)}
     end
+
+    defp present_event(
+           state,
+           {:entry, %{type: :user, payload: %{"source" => "question_answer"} = payload}},
+           effects
+         ),
+         do:
+           {Transcript.say(state, :lmx, TranscriptPresentation.question_answer(payload)), effects}
 
     defp present_event(state, {:question, question}, effects) do
       id = Map.get(question, :call_id) || Map.get(question, "call_id") || "question"
@@ -798,11 +849,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
               payload: %{"kind" => "question", "call_id" => id, "status" => status}
             }}
          )
-         when status in ~w(answered timed_out),
+         when status in ~w(answered timed_out cancelled),
          do: clear_question_flow(state, id)
 
     defp resolved_question_flow(state, {:finished, _reason}) do
       case state.tools.question_flow do
+        %{deferred?: true} -> state
         %{call_id: id} -> clear_question_flow(state, id)
         nil -> state
       end

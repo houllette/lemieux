@@ -3,6 +3,8 @@ defmodule Lemieux.Session.Core do
 
   alias Lemieux.Compaction
   alias Lemieux.Entry
+  alias Lemieux.Session.Diagnostics
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.Subscribers
   alias Lemieux.Store
   alias Lemieux.Transcript.Dedup
@@ -12,9 +14,10 @@ defmodule Lemieux.Session.Core do
   @compaction_backoff [2, 4, 8, 16, 32]
 
   def pending(state) do
-    Enum.map(state.parked, fn {call_id, waiting} ->
-      %{call_id: call_id, kind: waiting.kind, payload: waiting.payload}
-    end)
+    Questions.pending(state) ++
+      Enum.map(state.parked, fn {call_id, waiting} ->
+        %{call_id: call_id, kind: waiting.kind, payload: waiting.payload}
+      end)
   end
 
   def busy?(state), do: status(state) == :busy
@@ -147,6 +150,7 @@ defmodule Lemieux.Session.Core do
             next_seq: state.next_seq + 1,
             request_count: state.request_count + if(type == :request, do: 1, else: 0)
         }
+        |> Diagnostics.observe(entry)
         |> emit({:entry, entry})
 
       {:error, reason} ->

@@ -4,9 +4,32 @@ defmodule Lemieux.TUI.ToolTextTest do
   alias ExRatatui.CodeBlock
   alias ExRatatui.Style
   alias ExRatatui.Text.Span
+  alias Lemieux.Entry
+  alias Lemieux.Subagent.Error, as: SubagentError
+  alias Lemieux.Tool.Result
+  alias Lemieux.Tools.AskUser
   alias Lemieux.TUI.Renderer
   alias Lemieux.TUI.Theme
   alias Lemieux.TUI.ToolText
+  alias Lemieux.TUI.TranscriptPresentation
+
+  test "subagent errors use structured explanations and safely handle old printed maps" do
+    result = SubagentError.result(%{reason: :tree_budget})
+    payload = Map.merge(Result.to_map(result), %{"output" => "raw", "error" => true})
+    call = %{id: "child", name: "subagents", arguments: %{}}
+    assert {:output, text} = ToolText.result(call, payload, Theme.default())
+    assert text =~ "available unknown"
+
+    assert {:output, fallback} =
+             ToolText.result(
+               call,
+               %{"output" => "%{reason: :old}", "error" => true},
+               Theme.default()
+             )
+
+    assert fallback =~ "saved tool result"
+    refute fallback =~ "%{"
+  end
 
   test "long output keeps two head and two tail rows around one marker" do
     rows = ToolText.output_rows("call", Enum.join(1..10, "\n"), 80)
@@ -45,6 +68,31 @@ defmodule Lemieux.TUI.ToolTextTest do
       })
 
     assert rows == [{:tool_heading, "question", :ordinary, "Asked user", ""}]
+  end
+
+  test "a deferred question receipt exposes no protocol JSON or fake human answer" do
+    {:ok, result} = AskUser.pending_result("private-question-id")
+    payload = Map.merge(Result.to_map(result), %{"error" => false, "output" => result.model_text})
+    call = %{id: "call", name: "ask_user", arguments: %{}}
+    assert {:output, text} = ToolText.result(call, payload, Theme.default())
+    assert text =~ "work can continue"
+    refute text =~ "private-question-id"
+    refute text =~ "{"
+
+    payload = %{
+      "source" => "question_answer",
+      "text" => "private protocol JSON",
+      "question_answer" => %{"answer" => %{"status" => "timed_out"}}
+    }
+
+    entry = Entry.new(:user, payload)
+
+    assert [{:lmx, "Optional question timed out."}] =
+             TranscriptPresentation.lines([entry], %{
+               theme: Theme.default(),
+               renderers: Renderer.builtin(),
+               width: 80
+             })
   end
 
   test "a failed call carries its tone onto every output row" do

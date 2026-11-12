@@ -1,6 +1,6 @@
 defmodule Lemieux.Tools.AskUser do
   @moduledoc """
-  Asks whoever is watching a question, and waits for the answer.
+  Asks whoever is watching a question, blocking by default.
 
   The tool that makes "I do not know which of these you meant" a thing an
   agent can say in the middle of its work, rather than a guess it commits to
@@ -30,11 +30,16 @@ defmodule Lemieux.Tools.AskUser do
   the answer arrives through `Lemieux.Session.answer/3`. The turn resumes with
   the answer as this call's result, which is the ordinary tool-result path and
   needs nothing special from the model.
+
+  `mode: "deferred"` opts an optional question into a pending receipt. The
+  same session continues independent work, and later human input is delivered
+  once at a request boundary. Required decisions keep the blocking default.
   """
 
   @behaviour Lemieux.Tool
 
   alias Lemieux.Session
+  alias Lemieux.Tool.Result
   alias Lemieux.Tools.AskUser.Diagram
   alias Lemieux.Tools.AskUser.Questionnaire
 
@@ -73,6 +78,14 @@ defmodule Lemieux.Tools.AskUser do
 
     Nobody may be attached, in which case you will be told so and should carry \
     on as best you can.
+
+    Set `mode` to `deferred` only for an optional question whose answer is not \
+    needed for independent work. You receive a pending question id immediately; \
+    the human answer arrives as a separate identified input at a safe boundary. \
+    Do not poll. Use the default `blocking` mode before dependent work or \
+    required decisions. An unanswered question never grants approval. At most \
+    one question batch can await an answer. If independent work ends first, \
+    finish honestly; an idle answer waits for an explicit next prompt.
     """
   end
 
@@ -81,6 +94,12 @@ defmodule Lemieux.Tools.AskUser do
     %{
       "type" => "object",
       "properties" => %{
+        "mode" => %{
+          "type" => "string",
+          "enum" => ["blocking", "deferred"],
+          "description" =>
+            "Default blocking. Deferred allows independent work while an optional answer is pending; never use it to bypass a required decision."
+        },
         "questions" =>
           Map.put(
             Questionnaire.schema(),
@@ -149,7 +168,17 @@ defmodule Lemieux.Tools.AskUser do
   end
 
   @impl Lemieux.Tool
-  def run(%{"questions" => questions} = args, context) do
+  def run(args, context) do
+    case Map.get(args, "mode", "blocking") do
+      mode when mode in ["blocking", "deferred"] ->
+        run_question(args, Map.put(context, :deferred_question?, mode == "deferred"))
+
+      _invalid ->
+        {:error, "ask_user mode must be blocking or deferred"}
+    end
+  end
+
+  defp run_question(%{"questions" => questions} = args, context) do
     cond do
       Map.has_key?(args, "question") ->
         {:error, "ask_user accepts question or questions, not both"}
@@ -165,8 +194,9 @@ defmodule Lemieux.Tools.AskUser do
     end
   end
 
-  def run(%{"question" => question, "type" => type} = args, context)
-      when is_binary(question) and question != "" and type in ~w(multi_select ranking text number) do
+  defp run_question(%{"question" => question, "type" => type} = args, context)
+       when is_binary(question) and question != "" and
+              type in ~w(multi_select ranking text number) do
     options =
       case Map.get(args, "options", []) do
         options when is_list(options) ->
@@ -195,28 +225,47 @@ defmodule Lemieux.Tools.AskUser do
     )
   end
 
-  def run(%{"question" => question, "options" => raw_options} = args, context)
-      when is_binary(question) and question != "" do
+  defp run_question(%{"question" => question, "options" => raw_options} = args, context)
+       when is_binary(question) and question != "" do
     with true <- Map.get(args, "type", "single_choice") == "single_choice",
          {:ok, options} <- options(raw_options),
          {:ok, diagram} <- Diagram.normalize(Map.get(args, "diagram")) do
-      Session.park(context.session, context.call_id, :question, %{
-        call_id: context.call_id,
-        question: question,
-        diagram: diagram,
-        options: options,
-        ask_user: true
-      })
+      response =
+        Session.park(
+          context.session,
+          context.call_id,
+          :question,
+          %{
+            call_id: context.call_id,
+            question: question,
+            diagram: diagram,
+            options: options,
+            ask_user: true
+          },
+          deferred: context.deferred_question?
+        )
+
+      case response do
+        {:deferred, id} -> pending_result(id)
+        answer -> answer
+      end
     else
       false -> {:error, "invalid ask_user question type"}
       error -> error
     end
   end
 
-  def run(_args, _context),
+  defp run_question(_args, _context),
     do:
       {:error,
        "ask_user needs a question and two to six suggested answers, or a valid text/number type"}
+
+  @doc false
+  @spec pending_result(question_id :: String.t()) :: {:ok, Lemieux.Tool.Result.t()}
+  def pending_result(id) do
+    data = %{"status" => "pending", "question_id" => id, "mode" => "deferred"}
+    {:ok, Result.new(JSON.encode!(data), structured_content: data)}
+  end
 
   defp options(options) when is_list(options) and length(options) in 2..@max_options do
     options

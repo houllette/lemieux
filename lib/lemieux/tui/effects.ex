@@ -248,6 +248,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         preferred_efforts: state.catalog.preferred_efforts,
         feedback: Feedback,
         feedback_opts: state.feedback_opts,
+        account_usage: Map.get(state.catalog, :account_usage),
         commands: state.conversation.commands,
         # The session's own environment, so `!command`, `/diff` and `/undo`
         # run under the sandbox and credential policy its tools do.

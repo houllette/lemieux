@@ -2,6 +2,7 @@ defmodule Lemieux.Session.Mailbox do
   @moduledoc false
 
   alias Lemieux.Clock
+  alias Lemieux.Diagnostic
   alias Lemieux.Input
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Session.Accounting
@@ -12,6 +13,7 @@ defmodule Lemieux.Session.Mailbox do
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.MCPServers
   alias Lemieux.Session.Prompts
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Requests
   alias Lemieux.Session.Subscribers
@@ -42,6 +44,8 @@ defmodule Lemieux.Session.Mailbox do
     do: Approvals.expire(state, call_id, request_id)
 
   def message({:park_timeout, call_id}, state) do
+    state = Questions.expire(state, call_id)
+
     case Map.pop(state.parked, call_id) do
       {nil, _parked} ->
         {:noreply, state}
@@ -219,6 +223,19 @@ defmodule Lemieux.Session.Mailbox do
   # A provider task that died is a crash, unless what killed it was the
   # provider's own error event raised inside `req_llm` (#32).
   def message({:DOWN, ref, :process, _pid, reason}, %{task: %Task{ref: ref}} = state) do
+    state =
+      if Diagnostic.internal_crash?(reason) do
+        diagnostic =
+          Diagnostic.new("runtime", "A Lemieux provider worker failed unexpectedly.", reason)
+
+        Core.append(
+          state,
+          {:error, %{"reason" => diagnostic["message"], "diagnostic" => diagnostic}, nil}
+        )
+      else
+        state
+      end
+
     {:noreply,
      Recovery.close(%{state | task: nil}, {:error, ProviderError.recognize_crash(reason)})}
   end

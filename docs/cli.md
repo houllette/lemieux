@@ -379,6 +379,7 @@ links to the docs, issues and questions at the end.
 | `/resume [SESSION \| all]` | List this directory's sessions, most recently active first, or switch to one; `all` lists every directory's |
 | `/compact` | Summarize the earlier conversation now |
 | `/context` | Draw what is filling the context window |
+| `/usage [refresh]` | Fetch provider account spend or subscription quota; reuse a report for up to one minute |
 | `/cancel` | Stop the running turn (Ctrl-C does the same) |
 | `/unsteer` | Take back the steer waiting for the next model request |
 | `/retry` | Send the request that failed again, keeping everything before it |
@@ -409,6 +410,8 @@ links to the docs, issues and questions at the end.
 | `/reflect` | Review the session and suggest prompt, skill, extension or harness improvements (experimental) |
 | `/reflect opportunities` | The same review, as records written to the feedback ledger |
 | `/feedback [TEXT]` | Record what should have gone differently, anchored to a moment in this session |
+| `/feedback bug [TEXT]` | Prepare a sanitized report of the latest turn's internal errors for review |
+| `/feedback bug submit` | Explicitly submit the reviewed draft to the repository; edits require a new preview |
 
 With the Elixir extension (`--elixir`, or in an Elixir project) there are
 three more: `/elixir` toggles the Elixir-only tool profile, `/attach [NODE]`
@@ -448,6 +451,16 @@ extension parked it, the card also shows the mode, why it asked and numbered
 `/deny` answer by call id when several wait. The screen waits as long as it
 takes, and the call's own deadline is paused meanwhile. An `ask_user`
 question opens a panel with suggestions, an Other answer and a review step.
+
+`ask_user` blocks by default. The agent may opt an optional question into
+`mode: "deferred"` and continue independent work while the panel remains
+answerable. A pending receipt completes the tool call; the later answer is
+identified and delivered once at the next request boundary. Required decisions
+keep blocking, and an unanswered question grants no approval. Only one batch
+can await an answer. If independent work ends first, answering starts no model
+request: an explicit next prompt delivers the answer. Timeouts and cancellation
+remain explicit outcomes. Pending attention survives resume until its original
+deadline, while forks inherit neither pending questions nor undelivered answers.
 
 **`/resume`** skips sessions that were opened and left without a prompt. A
 session already open in another `lmx` cannot be resumed; the message names
@@ -545,6 +558,47 @@ the conversation, so only the newest three prompts that carried attachments
 keep them; older ones carry a note naming the file, and the model reads it
 again with `read` if it still needs it. `/context` draws what is filling the
 window; see [Terminal UI](terminal-ui.md#context-draws-the-window).
+
+### Provider account usage
+
+`/usage` fetches account reports without calling a model, including while the
+agent is working. `/context` shows this session's context and token accounting;
+run spending caps are local policy. Neither is a provider account balance.
+Reports show their scope, units, reporting window and fetch time. Missing
+amounts and reset times stay `unknown`. A failed refresh affects that account
+only; prior successful data may remain visible with a `STALE` label. Results
+are cached for up to one minute; `/usage refresh` fetches again. There is no
+background polling.
+
+- OpenRouter reports spend for the configured API key's daily, weekly and
+  monthly windows, plus its reported remaining key allowance. Other keys in
+  the account are outside that scope.
+- OpenAI and Anthropic organization cost reports require an already-authorized
+  admin reporting key. Point `providers.openai.usage_api_key_env` or
+  `providers.anthropic.usage_api_key_env` at its environment variable; the
+  defaults are `OPENAI_ADMIN_KEY` and `ANTHROPIC_ADMIN_KEY`. A private
+  `usage_api_key` value is also supported. OpenAI's optional `usage_project_id`
+  narrows the report to one project. Reports cover month to date in UTC;
+  Anthropic's endpoint excludes Priority Tier costs. Missing authorization or
+  incomplete reports are explained rather than replaced with session estimates.
+- Codex subscription quotas use the installed Codex app-server's read-only
+  account methods. The helper uses an isolated temporary home and only the
+  existing access token from the configured Codex sign-in. It never starts a
+  model turn, opens a browser, consumes a quota reset, takes refresh ownership
+  or rewrites the original sign-in. Every reported quota window is shown with
+  its actual duration and reset time. An unavailable or older incompatible
+  app-server leaves the quota unknown.
+- Other providers, registered routes and custom inference endpoints are
+  listed as unsupported until they have an account-reporting capability.
+  Credentials are never sent to an inferred reporting URL or an unconfigured
+  provider. Embedded hosts can supply an `account_usage:` reporting callback
+  to their dispatcher/TUI, keeping reporting policy outside the library loop.
+
+The reporting contracts are documented by
+[OpenRouter](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key),
+[OpenAI organization costs](https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage/methods/costs),
+[Anthropic](https://platform.claude.com/docs/en/manage-claude/usage-cost-api), and
+[Codex account RPC](https://learn.chatgpt.com/docs/app-server).
 
 ## One-shot command
 
@@ -1373,6 +1427,27 @@ answered with a number, a word or a blank line for the default. It writes to
 the same ledger as `lmx feedback`, in the same shape, and never touches the
 transcript. While it is open, every typed line is an answer; `/cancel`
 discards it. It is refused mid-turn, when a typed line is a steer.
+
+Unexpected failures inside Lemieux show a muted reporting hint immediately
+after the error, and a red error count when the turn ends, including after
+successful recovery. Command exit codes, project test failures, provider
+errors, budget refusals and cancellations do not by themselves count as bugs.
+
+`/feedback bug [TEXT]` prepares the latest errored turn as a private Markdown
+draft under `~/.lmx/bug-reports` (beside a relocated sessions directory).
+`/feedback bug turn SEQ [TEXT]` selects an older error-summary entry by its
+transcript sequence. The report uses the same anchored feedback ledger, with
+type `bug`. It includes the version and bounded internal stack locations;
+the full diagnostic remains in the local transcript. No conversation, tool
+input/output or exception message is attached by default.
+
+Read the preview and edit the exported file to add reproduction steps and
+remove anything private. `/feedback bug submit` uses an already-authenticated
+GitHub CLI to submit to `houllette/lemieux`. If the file changed, the command
+sanitizes it and shows another preview; submit again after reviewing it.
+Preparation never publishes or calls a model. Without GitHub authentication,
+the file remains available to copy into an issue yourself. Failed submission
+preserves the draft; check the repository before retrying an ambiguous result.
 
 ## Validated final JSON
 

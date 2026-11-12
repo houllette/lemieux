@@ -9,6 +9,7 @@ defmodule Lemieux.CLI.Feedback do
   it about.
   """
 
+  alias Lemieux.CLI.BugReport
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
   alias Lemieux.Feedback, as: FeedbackRecord
@@ -34,6 +35,16 @@ defmodule Lemieux.CLI.Feedback do
     max_tokens: :integer,
     reasoning_effort: :string
   ]
+
+  @doc "Prepares a private sanitized report using the existing feedback ledger."
+  @spec prepare_bug_report(snapshot :: map(), text :: String.t(), opts :: keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def prepare_bug_report(snapshot, text, opts), do: BugReport.prepare(snapshot, text, opts)
+
+  @doc "Submits a previously previewed report, or previews any changed bytes first."
+  @spec submit_bug_report(report :: map(), opts :: keyword()) ::
+          {:ok, String.t()} | {:preview, map()} | {:error, term()}
+  def submit_bug_report(report, opts), do: BugReport.submit(report, opts)
   @scopes %{"task" => :task, "project" => :project, "tenant" => :tenant, "global" => :global}
 
   @doc """

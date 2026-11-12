@@ -9,6 +9,7 @@ defmodule Lemieux.Session.Approvals do
   alias Lemieux.Messages
   alias Lemieux.Session.Core
   alias Lemieux.Session.Prompts
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.ToolWave
 
   def announcement(:approval), do: :tool_approval
@@ -57,6 +58,19 @@ defmodule Lemieux.Session.Approvals do
           opts :: keyword()
         ) :: tuple()
   def park(state, from, call_id, kind, payload, opts) do
+    cond do
+      kind == :question and Keyword.get(opts, :deferred, false) ->
+        Questions.defer(state, call_id, payload)
+
+      kind == :question and Questions.occupied?(state) ->
+        {:reply, {:error, "another question is still awaiting an answer"}, state}
+
+      true ->
+        do_park(state, from, call_id, kind, payload, opts)
+    end
+  end
+
+  defp do_park(state, from, call_id, kind, payload, opts) do
     case challenge(state, from, call_id, kind, opts) do
       {:ok, request, timer} ->
         clock_call_id = owner_call_id(state, elem(from, 0)) || call_id
@@ -136,6 +150,15 @@ defmodule Lemieux.Session.Approvals do
 
   @spec resolve_legacy(state :: map(), call_id :: String.t(), resolution :: term()) :: tuple()
   def resolve_legacy(state, call_id, resolution) do
+    if match?(%{id: ^call_id}, state.deferred_question) and match?({:answer, _}, resolution) do
+      {:answer, answer} = resolution
+      Questions.answer(state, call_id, answer)
+    else
+      resolve_parked(state, call_id, resolution)
+    end
+  end
+
+  defp resolve_parked(state, call_id, resolution) do
     case state.parked[call_id] do
       nil ->
         {:reply, {:error, :unknown_call}, state}

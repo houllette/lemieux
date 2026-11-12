@@ -101,6 +101,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           repaint: 0
         },
         catalog: %{
+          account_usage: Keyword.get(opts, :account_usage),
           providers: Keyword.get(opts, :providers, []),
           models: Keyword.get(opts, :models, []),
           model_choices: [],

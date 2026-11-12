@@ -229,6 +229,9 @@ defmodule Lemieux.Conversation do
           | :mine_opportunities
           | :feedback
           | {:feedback, Dialogue.submission()}
+          | {:bug_report, String.t(), non_neg_integer() | nil}
+          | {:bug_submit, map()}
+          | {:account_usage, String.t(), map() | nil}
           | :new
           | :refresh
           | :provider_status
@@ -305,6 +308,9 @@ defmodule Lemieux.Conversation do
           commands: [module()],
           reflecting: :assessment | :opportunities | nil,
           feedback: Dialogue.t() | {:pending, String.t()} | nil,
+          bug_report: map() | nil,
+          account_usage: map() | nil,
+          usage_request_id: String.t() | nil,
           noted_window?: boolean(),
           pending_context: [String.t()]
         }
@@ -369,7 +375,10 @@ defmodule Lemieux.Conversation do
             # What the next prompt or steer carries ahead of what is typed:
             # a `!command`'s output, a note that `/undo` put files back.
             # Newest first; see "A person's own commands".
-            pending_context: []
+            pending_context: [],
+            bug_report: nil,
+            account_usage: nil,
+            usage_request_id: nil
 
   @doc """
   A conversation with nothing said yet.
@@ -781,7 +790,7 @@ defmodule Lemieux.Conversation do
         {:entry,
          %{type: :approval, payload: %{"kind" => "question", "call_id" => id, "status" => status}}}
       )
-      when status in ~w(answered timed_out),
+      when status in ~w(answered timed_out cancelled),
       do: {%{conversation | asking: nil, question: nil}, []}
 
   # What `Lemieux.Session.resolve_tool/3` said. The entry above clears the
@@ -944,6 +953,21 @@ defmodule Lemieux.Conversation do
 
   def event(conversation, {:feedback_anchors, _anchors}), do: {conversation, []}
 
+  def event(conversation, {:bug_report_result, {:ok, report}}),
+    do: bug_preview(conversation, report)
+
+  def event(conversation, {:bug_submit_result, {:preview, report}}),
+    do: bug_preview(conversation, report)
+
+  def event(conversation, {:bug_submit_result, {:ok, url}}),
+    do: {%{conversation | bug_report: nil}, [{:say, "bug report submitted: " <> url}]}
+
+  def event(conversation, {kind, {:error, reason}})
+      when kind in [:bug_report_result, :bug_submit_result],
+      do:
+        {%{conversation | bug_report: report_failed(conversation.bug_report)},
+         [{:say, "could not report bug: " <> describe(reason)}]}
+
   def event(conversation, {:feedback_result, {:ok, id}}),
     do:
       {conversation, [{:say, "feedback #{id} captured · not part of this conversation"}, :ready]}
@@ -1077,6 +1101,20 @@ defmodule Lemieux.Conversation do
 
   def event(conversation, {:export_result, {:error, reason}}),
     do: ready_unless_busy(conversation, [{:say, "could not export: #{describe(reason)}"}])
+
+  def event(
+        %{usage_request_id: id} = conversation,
+        {:account_usage_result, id, {:ok, report, text}}
+      ),
+      do: {%{conversation | account_usage: report, usage_request_id: nil}, [{:say, text}]}
+
+  def event(
+        %{usage_request_id: id} = conversation,
+        {:account_usage_result, id, {:error, message}}
+      ),
+      do: {%{conversation | usage_request_id: nil}, [{:say, message}]}
+
+  def event(conversation, {:account_usage_result, _stale_id, _result}), do: {conversation, []}
 
   def event(conversation, {:extension_result, report}) when is_binary(report),
     do: ready_unless_busy(conversation, [{:say, report}])
@@ -1234,8 +1272,19 @@ defmodule Lemieux.Conversation do
   end
 
   defp finished(conversation, said, stop_reason) do
-    {%{conversation | busy?: false, asking: nil, question: nil, approvals: [], reflecting: nil},
-     said ++ cut_off(stop_reason) ++ announce(conversation.context) ++ [:ready, :idle]}
+    {asking, question} =
+      if match?(%{deferred: true}, conversation.question),
+        do: {conversation.asking, conversation.question},
+        else: {nil, nil}
+
+    {%{
+       conversation
+       | busy?: false,
+         asking: asking,
+         question: question,
+         approvals: [],
+         reflecting: nil
+     }, said ++ cut_off(stop_reason) ++ announce(conversation.context) ++ [:ready, :idle]}
   end
 
   # A turn the output cap ended stops mid-answer, and it used to stop without
@@ -1981,6 +2030,18 @@ defmodule Lemieux.Conversation do
   # capture clears the field before the write is asked for, so a front end
   # that fails to write cannot leave a dialogue half-open waiting on lines
   # nobody is going to type.
+  defp bug_preview(conversation, report) do
+    {%{conversation | bug_report: Map.put(report, :phase, :reviewed)},
+     [
+       {:say, "Sanitized bug report preview (nothing submitted):\n\n" <> report.body},
+       {:say,
+        "Draft: #{report.path}\nReview/edit that file. /feedback bug submit explicitly submits the reviewed bytes to houllette/lemieux. Changes require another preview before submission. Keep the file to export without GitHub authentication."}
+     ]}
+  end
+
+  defp report_failed(%{phase: :submitting} = report), do: %{report | phase: :reviewed}
+  defp report_failed(_report), do: nil
+
   defp capture(conversation, {:ask, dialogue}),
     do: {%{conversation | feedback: dialogue}, [{:say, Dialogue.question(dialogue)}, :ready]}
 

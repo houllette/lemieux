@@ -5,6 +5,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
   defmodule Lemieux.TUI.TranscriptPresentation do
     @moduledoc "Projects saved events into rows and formats delegation rows."
 
+    alias Lemieux.Diagnostic
     alias Lemieux.Extensions.Verify
     alias Lemieux.ID.Shorthand
     alias Lemieux.Transcript
@@ -209,7 +210,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
             before ++ rows ++ Enum.drop_while(rest, &(ToolText.call_id(&1) == id))
         end
 
-      {lines, Map.delete(calls, id)}
+      {lines ++ diagnostic_hint(payload), Map.delete(calls, id)}
     end
 
     # A spawn and its result are two entries about one child, so the second updates
@@ -265,6 +266,9 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     defp entry_lines(%{type: :user, payload: %{"source" => "notification"}}), do: []
 
+    defp entry_lines(%{type: :user, payload: %{"source" => "question_answer"} = payload}),
+      do: [{:lmx, question_answer(payload)}]
+
     defp entry_lines(%{type: :user, payload: %{"text" => text}} = entry) do
       case harness_lines(entry) do
         [] -> split_lines(:you, text)
@@ -272,8 +276,23 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       end
     end
 
-    defp entry_lines(%{type: :error, payload: payload}),
-      do: [{:lmx, "error: #{payload["reason"] || inspect(payload)}"}]
+    defp entry_lines(%{type: :error, payload: payload}) do
+      message =
+        case Diagnostic.from_payload(payload) do
+          nil -> payload["reason"] || inspect(payload)
+          diagnostic -> Diagnostic.message(diagnostic)
+        end
+
+      [{:lmx, "error: #{message}"}] ++ diagnostic_hint(payload)
+    end
+
+    defp entry_lines(%{
+           id: id,
+           type: :extension_state,
+           payload: %{"namespace" => "lemieux.errors", "value" => %{"count" => count}}
+         })
+         when is_integer(count) and count > 0,
+         do: [{:bug_summary, id, Diagnostic.summary(count)}]
 
     defp entry_lines(%{type: :cancelled}), do: [{:lmx, "— cancelled —"}]
 
@@ -286,6 +305,23 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       do: [{:subagent_summary, payload["status"] || "finished", group_summary(payload)}]
 
     defp entry_lines(_entry), do: []
+
+    @doc "A deferred-answer receipt, keeping correlation data in the saved entry."
+    @spec question_answer(payload :: map()) :: String.t()
+    def question_answer(payload) do
+      case get_in(payload, ["question_answer", "answer"]) do
+        %{"status" => "timed_out"} -> "Optional question timed out."
+        %{"status" => "cancelled"} -> "Optional question cancelled."
+        _answer -> "Optional answer received."
+      end
+    end
+
+    defp diagnostic_hint(payload) do
+      case Diagnostic.from_payload(payload) do
+        nil -> []
+        diagnostic -> [{:bug_hint, diagnostic["id"], Diagnostic.hint()}]
+      end
+    end
 
     defp spawned_child(payload) do
       %{

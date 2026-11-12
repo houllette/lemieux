@@ -1089,6 +1089,14 @@ defmodule Lemieux.Session do
   `kind` is `:approval` or `:question`; `payload` is what the waiting party is
   shown. `:timeout_reply` optionally supplies a typed timeout result to the
   parked tool. No result is interpreted as user authorization by this seam.
+
+  For questions, `deferred: true` returns `{:deferred, question_id}` immediately
+  and keeps one optional question answerable while the agent works. The answer
+  is recorded as separate identified human input at the next request boundary.
+  An idle answer starts no model request; the next explicit prompt delivers it.
+  Pending questions survive resume of the same session until their original
+  deadline, but forks do not inherit the source session's attention. Cancellation
+  closes outstanding questions; late and duplicate answers are refused.
   """
   @spec park(session :: session(), call_id :: String.t(), kind :: atom(), payload :: term()) ::
           term()

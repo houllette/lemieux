@@ -2,9 +2,18 @@ defmodule LemieuxTest.Sync do
   @moduledoc false
   import ExUnit.Assertions
 
-  @doc "Waits for an OTP state transition; predicates must be pure and never call the server."
+  @doc """
+  Waits for an OTP state transition; predicates must be pure and never call the server.
+  An optional trigger runs after observer registration and the initial snapshot,
+  so releasing an expensive transition cannot block installation of its observer.
+  """
   @spec state(server :: GenServer.server(), predicate :: (term() -> boolean())) :: :ok
-  def state(server, predicate) do
+  @spec state(
+          server :: GenServer.server(),
+          predicate :: (term() -> boolean()),
+          trigger :: (-> term())
+        ) :: :ok
+  def state(server, predicate, trigger \\ fn -> :ok end) do
     owner = self()
     ref = make_ref()
 
@@ -21,7 +30,10 @@ defmodule LemieuxTest.Sync do
       # either in the snapshot or in our mailbox, so it cannot be missed. The
       # wait is the suite's default (test/test_helper.exs), like every wait for
       # an event: a shorter one of its own is what fails first under load.
-      unless predicate.(:sys.get_state(server)) do
+      current = :sys.get_state(server)
+      trigger.()
+
+      unless predicate.(current) do
         assert_receive {:state_reached, ^ref}
       end
 

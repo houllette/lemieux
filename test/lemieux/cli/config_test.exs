@@ -1011,6 +1011,38 @@ defmodule Lemieux.CLI.ConfigTest do
     refute message =~ "private-key"
   end
 
+  test "reporting credentials are validated and require private config permissions", %{
+    tmp_dir: dir
+  } do
+    path =
+      write_config(dir, %{
+        "providers" => %{
+          "openai" => %{
+            "usage_api_key_env" => "OPENAI_ADMIN_KEY",
+            "usage_project_id" => "proj-test"
+          }
+        }
+      })
+
+    assert {:ok, _config} = Config.load(path)
+
+    path =
+      write_config(dir, %{"providers" => %{"openai" => %{"usage_api_key" => "private-admin"}}})
+
+    File.chmod!(path, 0o644)
+    assert {:error, message} = Config.load(path)
+    assert message =~ "600"
+    refute message =~ "private-admin"
+
+    path =
+      write_config(dir, %{
+        "providers" => %{"anthropic" => %{"usage_project_id" => "ignored-project"}}
+      })
+
+    assert {:error, message} = Config.load(path)
+    assert message =~ "only for OpenAI"
+  end
+
   test "resume preserves the recorded model and system while credentials stay out of transcripts",
        %{tmp_dir: dir} do
     path =

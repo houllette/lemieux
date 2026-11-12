@@ -18,6 +18,7 @@ defmodule Lemieux.CLI.TUI do
   """
 
   alias Lemieux.CLI
+  alias Lemieux.CLI.AccountUsage
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.ConfigReload
   alias Lemieux.CLI.Errors
@@ -953,6 +954,10 @@ defmodule Lemieux.CLI.TUI do
       [
         welcome: Keyword.get(opts, :welcome),
         updates: Keyword.get(opts, :updates),
+        account_usage:
+          Keyword.get_lazy(opts, :account_usage, fn ->
+            fn -> AccountUsage.fetch(options, opts) end
+          end),
         command_policy: Keyword.get(opts, :command_policy),
         # The CLI captures by default for wheel scrolling, link clicks and
         # drag selection; --no-mouse returns selection to the terminal.

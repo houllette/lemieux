@@ -26,6 +26,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     alias ExRatatui.CodeBlock
     alias ExRatatui.Text.Span
+    alias Lemieux.Subagent.Error, as: SubagentError
     alias Lemieux.TUI.Diff
     alias Lemieux.TUI.Renderer
     alias Lemieux.TUI.Theme
@@ -180,6 +181,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         when is_map(call) and is_map(payload) and is_map(renderers) do
       call = normalised(call, payload)
       output = printable(payload["output"])
+      output = subagent_error(call.name, payload, output)
 
       if payload["error"] == true do
         output =
@@ -198,6 +200,24 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         end
       end
     end
+
+    # Historical results only have printed Elixir data. Never evaluate it to
+    # recover structure; the pager still has the original bytes. New results
+    # carry the exact diagnostic beside their human projection.
+    defp subagent_error(name, %{"error" => true} = payload, output)
+         when name in ["delegate", "subagents"] do
+      case get_in(payload, ["structured_content", "subagent_error"]) do
+        nil ->
+          if String.starts_with?(output, ["%{", "{:"]),
+            do: SubagentError.message(%{}),
+            else: output
+
+        reason ->
+          SubagentError.message(reason)
+      end
+    end
+
+    defp subagent_error(_name, _payload, output), do: output
 
     # A renderer that says nothing about results gets the generic one. Loaded
     # first, because `function_exported?/3` is false for a module that has
