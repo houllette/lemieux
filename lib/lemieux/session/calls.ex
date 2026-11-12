@@ -511,6 +511,9 @@ defmodule Lemieux.Session.Calls do
     {:reply, :ok, %{state | subagent_groups: Map.delete(state.subagent_groups, group_id)}}
   end
 
+  def call({:inspect_mcp, name}, _from, state),
+    do: {:reply, MCPServers.inspect_server(state, name), state}
+
   def call(:mcp_clients, _from, state),
     do: {:reply, MCPServers.connected_clients(state), state}
 

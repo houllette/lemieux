@@ -53,6 +53,11 @@ API.
 
 ### Features
 
+- Inspect MCP tools from `/mcp`: Enter opens a server's cached tools and a
+  tool's description, names, availability and scrollable input schema. Esc
+  preserves navigation selections. `Session.inspect_mcp/2` exposes the same
+  cached, read-only view without invoking tools or connecting. (#139)
+
 - Continue interactive MCP add through OAuth and tool discovery in the TUI
   and normal terminal. Background startup and piped/`--non-interactive` adds
   never open a browser. `Session.add_mcp_servers/3` adds an optional

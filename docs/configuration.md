@@ -1383,7 +1383,13 @@ or pass `--mcp-config` to use it there. `lmx mcp import codex` copies the
 servers in `~/.codex/config.toml`. Servers already in your file keep what you
 wrote.
 
-In the terminal UI, `/mcp` opens a server panel. `a` adds a server through a
+In the terminal UI, `/mcp` opens a server panel. Enter opens the selected
+server's cached tool list; Enter on a tool shows its original and model-facing
+names, description, input schema and availability. Arrow keys and PgUp/PgDn
+scroll details; Esc returns through tools to servers while keeping selection.
+Connection states and discovery exclusions explain unavailable tools. Inspecting
+reads the session's catalog without invoking tools or refreshing discovery;
+`r` explicitly reconnects. `a` adds a server through a
 short questionnaire, saved to your `"mcp_servers"` by default or to the
 repository's `.mcp.json`; a header or environment value that looks secret is
 saved as a `${NAME}` reference, never as written. Saving continues into

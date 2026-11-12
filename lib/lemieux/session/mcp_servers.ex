@@ -10,6 +10,7 @@ defmodule Lemieux.Session.MCPServers do
   alias Lemieux.Session.Requests
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Tool
+  alias Lemieux.Tool.Profile
 
   # The explicit operations — adding, re-enabling, reconnecting — still connect
   # before they answer, because a host that asked for a server is waiting to
@@ -216,7 +217,7 @@ defmodule Lemieux.Session.MCPServers do
       Enum.any?(state.mcp_pending, fn {_ref, {pending, _task}} -> pending == name end) ->
         :connecting
 
-      clients != [] ->
+      Enum.any?(clients, &Process.alive?/1) ->
         :connected
 
       Map.has_key?(state.mcp_needs_auth, name) ->
@@ -302,6 +303,53 @@ defmodule Lemieux.Session.MCPServers do
           do: {name, client}
 
     Enum.sort_by(clients, &elem(&1, 0))
+  end
+
+  def inspect_server(state, name) do
+    case Enum.find(state.mcp_servers, &(&1["name"] == name)) do
+      nil ->
+        {:error, :unknown_server}
+
+      config ->
+        status = mcp_server_status(state, config)
+        enabled_names = MapSet.new(state.tools, &Tool.name/1)
+
+        tools =
+          for %Lemieux.MCP.RemoteTool{server: ^name} = tool <- Catalog.remote_tools(state) do
+            inspect_tool(state, status, enabled_names, tool)
+          end
+
+        {:ok, %{server: status, tools: tools, notices: Map.get(state.mcp_notices, name, [])}}
+    end
+  end
+
+  defp inspect_tool(state, status, enabled_names, tool) do
+    reason =
+      cond do
+        status.status != :connected ->
+          "server is #{status.status}"
+
+        MapSet.member?(state.disabled_tools, Tool.name(tool)) ->
+          "disabled for this session"
+
+        not Profile.allowed?(state.tool_profile, tool) ->
+          "excluded by the host tool profile"
+
+        not MapSet.member?(enabled_names, Tool.name(tool)) ->
+          "excluded from the executable catalog"
+
+        true ->
+          nil
+      end
+
+    %{
+      name: tool.name,
+      model_name: Tool.name(tool),
+      description: Tool.description(tool),
+      input_schema: Tool.schema(tool),
+      enabled?: is_nil(reason),
+      reason: reason
+    }
   end
 
   def mcp_statuses(state) do

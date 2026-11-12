@@ -781,6 +781,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp route_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tools}} = state),
       do: ToolsPanel.mouse(event, state)
 
+    defp route_event(
+           %ExRatatui.Event.Mouse{} = event,
+           %{tools: %{mcp_flow: %{mode: mode}}} = state
+         )
+         when mode in [:tools, :tool], do: MCPInteraction.mouse(event, state)
+
     defp route_event(%ExRatatui.Event.Mouse{} = event, state), do: Pointer.mouse(event, state)
 
     # Pasted text goes in whole. Re-dispatched as keystrokes it would be
@@ -975,6 +981,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def handle_info({:mcp_result, _action, _result, _statuses} = message, state),
       do: {:noreply, Effects.answer(state, message)}
+
+    def handle_info({:mcp_inspection, session, name, result}, state),
+      do: MCPInteraction.inspection_result(state, session, name, result)
 
     def handle_info({:mcp_authorize, url}, %{tools: %{mcp_flow: flow}} = state)
         when not is_nil(flow),

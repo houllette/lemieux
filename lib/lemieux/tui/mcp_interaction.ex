@@ -11,7 +11,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Editor
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.MCPForm
+    alias Lemieux.TUI.MCPPanel
     alias Lemieux.TUI.QuestionFlow
+    alias Lemieux.TUI.Screen
 
     @doc false
     @spec key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
@@ -27,6 +29,42 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def key(event, %{tools: %{mcp_flow: %{mode: :add}}} = state, ctx),
       do: mcp_add_key(event, state, ctx)
+
+    def key(event, %{tools: %{mcp_flow: %{mode: mode}}} = state, _ctx)
+        when mode in [:tools, :tool], do: inspect_key(event, state)
+
+    def key(%ExRatatui.Event.Key{code: "enter"}, state, _ctx) do
+      case Enum.at(state.tools.mcp_flow.statuses, state.tools.mcp_flow.selected) do
+        nil ->
+          {:noreply, state}
+
+        server ->
+          app = self()
+          session = state.session
+
+          Task.start(fn ->
+            result =
+              try do
+                Session.inspect_mcp(session, server.name)
+              catch
+                :exit, _reason -> {:error, :session_unavailable}
+              end
+
+            send(app, {:mcp_inspection, session, server.name, result})
+          end)
+
+          flow =
+            Map.merge(state.tools.mcp_flow, %{
+              mode: :tools,
+              inspection: nil,
+              inspection_name: server.name,
+              tool_selected: 0,
+              detail_scroll: 0
+            })
+
+          {:noreply, put_in(state.tools.mcp_flow, flow)}
+      end
+    end
 
     def key(%ExRatatui.Event.Key{code: "esc"}, state, ctx),
       do: ctx.continue.(put_in(state.tools.mcp_flow, nil))
@@ -135,6 +173,79 @@ if Code.ensure_loaded?(ExRatatui.App) do
         do: ctx.interrupt.(state),
         else: {:noreply, state}
     end
+
+    @doc false
+    @spec mouse(ExRatatui.Event.Mouse.t(), map()) :: tuple()
+    def mouse(%ExRatatui.Event.Mouse{kind: kind}, state)
+        when kind in ["scroll_up", "scroll_down"],
+        do:
+          inspect_key(
+            %ExRatatui.Event.Key{code: if(kind == "scroll_up", do: "up", else: "down")},
+            state
+          )
+
+    def mouse(_event, state), do: {:noreply, state}
+
+    defp inspect_key(%ExRatatui.Event.Key{code: "esc"}, state) do
+      mode = if state.tools.mcp_flow.mode == :tool, do: :tools, else: :list
+      {:noreply, put_in(state.tools.mcp_flow.mode, mode)}
+    end
+
+    defp inspect_key(%ExRatatui.Event.Key{code: "enter"}, state) do
+      flow = state.tools.mcp_flow
+
+      if flow.mode == :tools and is_map(flow.inspection) and flow.inspection.tools != [],
+        do: {:noreply, put_in(state.tools.mcp_flow.mode, :tool)},
+        else: {:noreply, state}
+    end
+
+    defp inspect_key(%ExRatatui.Event.Key{code: code}, state)
+         when code in ["up", "down", "page_up", "page_down"] do
+      flow = state.tools.mcp_flow
+      by = if code in ["up", "page_up"], do: -1, else: 1
+
+      if flow.mode == :tool do
+        by = by * if(code in ["page_up", "page_down"], do: 8, else: 1)
+        next = MCPPanel.scroll(flow, Screen.panes(state), by)
+        {:noreply, put_in(state.tools.mcp_flow, next)}
+      else
+        count = if is_map(flow.inspection), do: length(flow.inspection.tools), else: 0
+        selected = min(max(flow.tool_selected + by, 0), max(count - 1, 0))
+
+        {:noreply,
+         put_in(state.tools.mcp_flow, %{flow | tool_selected: selected, detail_scroll: 0})}
+      end
+    end
+
+    defp inspect_key(_event, state), do: {:noreply, state}
+
+    @doc false
+    @spec inspection_result(map(), pid(), String.t(), term()) :: {:noreply, map()}
+    def inspection_result(
+          %{session: session, tools: %{mcp_flow: %{inspection_name: name} = flow}} = state,
+          session,
+          name,
+          result
+        ) do
+      inspection =
+        case result do
+          {:ok, inspection} ->
+            Map.update!(inspection, :tools, fn tools ->
+              Enum.map(tools, &Map.put(&1, :detail_text, MCPPanel.describe_tool(&1)))
+            end)
+
+          {:error, reason} ->
+            %{
+              server: %{status: :failed, error: "Inspection unavailable: #{reason}"},
+              tools: [],
+              notices: []
+            }
+        end
+
+      {:noreply, put_in(state.tools.mcp_flow, Map.put(flow, :inspection, inspection))}
+    end
+
+    def inspection_result(state, _session, _name, _result), do: {:noreply, state}
 
     defp mcp_delete_key(state, ctx) do
       case Enum.at(state.tools.mcp_flow.statuses, state.tools.mcp_flow.selected) do

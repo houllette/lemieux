@@ -1958,6 +1958,59 @@ defmodule Lemieux.TUI.InputTest do
       assert press(shown, "esc").tools.mcp_flow == nil
     end
 
+    test "MCP inspection preserves both selections and scrolls nested schemas" do
+      schema = %{
+        "type" => "object",
+        "required" => ["path"],
+        "properties" =>
+          Map.new(
+            1..50,
+            &{"field#{&1}",
+             %{"type" => "object", "properties" => %{"path" => %{"type" => "string"}}}}
+          )
+      }
+
+      tools =
+        for name <- ["read", "write"],
+            do: %{
+              name: name,
+              model_name: "two__#{name}",
+              description: String.duplicate("Long description. ", 30),
+              input_schema: schema,
+              reason: nil,
+              enabled?: true
+            }
+
+      statuses =
+        for name <- ["one", "two"],
+            do: %{name: name, transport: "http", tool_count: 2, enabled?: true, error: nil}
+
+      session =
+        fake_session(snapshot("01INSPECT"),
+          mcp_statuses: statuses,
+          mcp_inspections: %{
+            "two" =>
+              {:ok, %{server: %{name: "two", status: :connected}, tools: tools, notices: []}}
+          }
+        )
+
+      state = tui(session: session) |> command("/mcp") |> press("down") |> press("enter")
+      assert state.tools.mcp_flow.mode == :tools
+      assert_receive {:mcp_inspection, ^session, "two", _} = result
+      assert {:noreply, state} = TUI.handle_info(result, state)
+      assert screen(state) =~ "read"
+      state = state |> press("down") |> press("enter")
+      assert screen(state) =~ "Model name: two__write"
+      state = Enum.reduce(1..10, state, fn _, acc -> press(acc, "page_down") end)
+      assert state.tools.mcp_flow.detail_scroll > 0
+      assert screen(state) =~ "field"
+      state = press(state, "esc")
+      assert state.tools.mcp_flow.tool_selected == 1
+      state = press(state, "esc")
+      assert state.tools.mcp_flow.mode == :list
+      assert state.tools.mcp_flow.selected == 1
+    end
+
     test "/mcp takeover keeps connection errors visible while reconnecting" do
       session =
         fake_session(snapshot("01SESSION"),

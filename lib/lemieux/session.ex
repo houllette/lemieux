@@ -1471,6 +1471,18 @@ defmodule Lemieux.Session do
     :exit, _reason -> :gone
   end
 
+  @doc """
+  Inspects one server's cached discovery catalog without connecting or invoking it.
+
+  Returns the connection status, discovery notices and tools, including tools
+  disabled by the session or excluded by its profile. Each tool has its MCP
+  name, model-facing name, description, input schema and availability reason.
+  A connecting server answers immediately with its current state.
+  """
+  @spec inspect_mcp(session :: session(), name :: String.t()) ::
+          {:ok, map()} | {:error, :unknown_server}
+  def inspect_mcp(session, name), do: GenServer.call(session, {:inspect_mcp, name})
+
   @doc "Enables or disables a configured MCP server for this session only."
   @spec set_mcp_enabled(session :: session(), name :: String.t(), enabled? :: boolean()) ::
           :ok | {:error, :busy | :unknown_server}
