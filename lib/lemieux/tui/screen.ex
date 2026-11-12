@@ -555,8 +555,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
     and `printable/1` for what happens to a control character in it.
     """
     @spec place(state :: TUI.t()) :: String.t() | nil
-    def place(%TUI{references: %{cwd: cwd}}) when is_binary(cwd) and cwd != "" do
-      home = System.user_home()
+    def place(%TUI{references: %{cwd: cwd} = references}) when is_binary(cwd) and cwd != "" do
+      # System.user_home/0 synchronizes with the VM's shared :init process.
+      # Asking on every frame stalled rendering under CI load; setup reads it
+      # once, and hydration preserves that screen-local value.
+      home = Map.get(references, :home)
       directory(printable(cwd), home && printable(home), @place_columns)
     end
 

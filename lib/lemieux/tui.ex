@@ -218,6 +218,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     explicitly still wins, which is what lets a test pin one thing without
     building a harness around it.
 
+    `:home` optionally supplies the home directory used to abbreviate the
+    header's working directory. It defaults to the local home at setup, then
+    stays cached so rendering never makes a synchronous VM lookup for it.
+
     On the local terminal the screen also adapts to the terminal it is on.
     With no theme chosen it asks the terminal whether its background is
     light, before taking it over, and starts in the light palette if so
@@ -422,6 +426,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             tools: in_flight(),
             references: %{
               cwd: Path.t() | nil,
+              home: Path.t() | nil,
               mcp_config: Path.t() | nil,
               environment: Environment.t() | nil,
               directory: String.t() | nil,
@@ -560,6 +565,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               # `render/2` runs at frame rate and must not touch a filesystem.
               references: %{
                 cwd: nil,
+                home: nil,
                 mcp_config: nil,
                 environment: nil,
                 directory: nil,

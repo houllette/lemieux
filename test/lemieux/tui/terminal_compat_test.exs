@@ -171,6 +171,12 @@ defmodule Lemieux.TUI.TerminalCompatTest do
       assert screen(state) =~ "#{app_label()} · ~/code/project · "
     end
 
+    test "the header uses the home directory supplied when the screen was prepared" do
+      state = TUI.new(test_mode: {80, 24}, cwd: "/host/home/code/project", home: "/host/home")
+      assert Screen.place(state) == "~/code/project"
+      assert screen(state) =~ "#{app_label()} · ~/code/project · "
+    end
+
     test "a screen with no working directory yet leaves it out" do
       assert screen(tui()) =~ "#{app_label()} · #{Screen.name(tui())} · "
     end
