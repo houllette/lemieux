@@ -124,7 +124,7 @@ An extension small enough for one file needs no Mix project and no rebuild
 after an upgrade. `lmx extension new NAME` writes a directory with an
 `extension.json` and one `.exs` file, which the running `lmx` compiles when it
 loads it. Its manifest names only the Lemieux it was written for, as a version
-(`"0.9.0"`, meaning that release line) or a requirement:
+(`"1.1.0"`, meaning that release line) or a requirement:
 
 ```json
 {"schema_version": 1, "name": "planning", "module": "LemieuxPlanningExample",

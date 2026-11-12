@@ -32,7 +32,7 @@ harness-learning commands) and `desktop` (`lmx desktop`).
 | `lmx fork SESSION [CUT]` | Copy a conversation so you can branch from it |
 | `lmx request SESSION ID` | Print the canonical request behind one recorded model call |
 | `lmx explain` | Print, as JSON, what a new session would start with, without calling a model |
-| `lmx mcp list\|trust\|untrust\|import` | Manage MCP servers ([plugins, extensions and MCP](#plugins-extensions-and-mcp-servers)) |
+| `lmx mcp add\|list\|trust\|untrust\|import` | Manage MCP servers ([plugins, extensions and MCP](#plugins-extensions-and-mcp-servers)) |
 | `lmx plugin install\|list\|remove` | Save or forget Claude Code-compatible plugins |
 | `lmx extension new\|list` | Write or list your own Elixir extensions |
 | `lmx skills` | List the Agent Skills a session finds, where each came from, and whether it is enabled |
@@ -1220,6 +1220,7 @@ recovery work, but the result may not be a conversation a provider accepts.
 | `lmx plugin list` / `remove NAME\|PATH` | Lists or forgets saved plugins; cloned files stay |
 | `lmx extension new NAME [--dir D]` | Writes a one-file script extension under `~/.lmx/extensions/NAME` |
 | `lmx extension list` | Says, for each installed extension, whether this `lmx` would load it |
+| `lmx mcp add --local\|--global [NAME]` | Add an HTTP or stdio server with explicit scope; [MCP setup](mcp.md#add-a-server-to-lmx) covers descriptors, secrets and interactive OAuth |
 | `lmx mcp list` | Your servers, and whether the repository's `.mcp.json` is trusted |
 | `lmx mcp trust [--yes]` / `untrust` | Shows what the repository's servers would run; records trust only with `--yes` |
 | `lmx mcp import claude\|codex` | Copies servers into `"mcp_servers"`: from Claude Code, the user-scope servers in `~/.claude.json`; from Codex, `~/.codex/config.toml`. Servers you already have keep what you wrote |
