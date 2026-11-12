@@ -452,6 +452,16 @@ extension parked it, the card also shows the mode, why it asked and numbered
 takes, and the call's own deadline is paused meanwhile. An `ask_user`
 question opens a panel with suggestions, an Other answer and a review step.
 
+`ask_user` blocks by default. The agent may opt an optional question into
+`mode: "deferred"` and continue independent work while the panel remains
+answerable. A pending receipt completes the tool call; the later answer is
+identified and delivered once at the next request boundary. Required decisions
+keep blocking, and an unanswered question grants no approval. Only one batch
+can await an answer. If independent work ends first, answering starts no model
+request: an explicit next prompt delivers the answer. Timeouts and cancellation
+remain explicit outcomes. Pending attention survives resume until its original
+deadline, while forks inherit neither pending questions nor undelivered answers.
+
 **`/resume`** skips sessions that were opened and left without a prompt. A
 session already open in another `lmx` cannot be resumed; the message names
 that process and the lock file to delete if it is gone.

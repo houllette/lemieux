@@ -40,12 +40,15 @@ defmodule Lemieux.Session.Questions do
         Enum.any?(state.parked, fn {_, w} -> w.kind == :question end)
 
   def answer(%{deferred_question: %{id: id} = question} = state, id, answer) do
-    if byte_size(JSON.encode!(answer)) > 32_768 do
-      {:reply, {:error, :invalid_answer}, state}
-    else
-      accept_answer(state, id, question, answer)
+    cond do
+      expired?(question.expires_at) -> {:reply, {:error, :unknown_call}, expire(state, id)}
+      byte_size(JSON.encode!(answer)) > 32_768 -> {:reply, {:error, :invalid_answer}, state}
+      true -> accept_answer(state, id, question, answer)
     end
   end
+
+  defp expired?(expires) when is_integer(expires), do: expires <= System.system_time(:millisecond)
+  defp expired?(_infinite), do: false
 
   defp accept_answer(state, id, question, answer) do
     Approvals.cancel_timer(state, question.timer)
@@ -64,12 +67,7 @@ defmodule Lemieux.Session.Questions do
     {:reply, :ok, state}
   end
 
-  def expire(%{deferred_question: %{id: id}} = state, id) do
-    %{state | deferred_question: nil}
-    |> Core.append(
-      {:approval, %{"call_id" => id, "kind" => "question", "status" => "timed_out"}, nil}
-    )
-  end
+  def expire(%{deferred_question: %{id: id}} = state, id), do: close(state, id, "timed_out")
 
   def expire(state, _stale), do: state
 
@@ -82,15 +80,28 @@ defmodule Lemieux.Session.Questions do
         %{id: id, timer: timer} ->
           Approvals.cancel_timer(state, timer)
 
-          Core.append(
-            state,
-            {:approval, %{"call_id" => id, "kind" => "question", "status" => "cancelled"}, nil}
-          )
+          close(state, id, "cancelled")
       end
 
     # Already accepted answers stay durable, but cancellation must not queue
     # an automatic continuation. They are read only on an explicit next run.
     %{state | deferred_question: nil}
+  end
+
+  defp close(state, id, status) do
+    payload = %{
+      "call_id" => id,
+      "kind" => "question",
+      "status" => status,
+      "detail" => %{
+        "answer" => %{"status" => status},
+        "deferred" => true,
+        "session_id" => state.id
+      }
+    }
+
+    %{state | deferred_question: nil, deferred_answers: state.deferred_answers ++ [payload]}
+    |> Core.append({:approval, payload, nil})
   end
 
   def pending(%{deferred_question: nil}), do: []
@@ -139,12 +150,12 @@ defmodule Lemieux.Session.Questions do
           payload:
             %{
               "kind" => "question",
-              "status" => "answered",
+              "status" => status,
               "detail" => %{"deferred" => true, "session_id" => owner}
             } = p
         },
         {_q, answers}
-        when owner == state.id ->
+        when owner == state.id and status in ~w(answered timed_out cancelled) ->
           {nil, answers ++ [p]}
 
         %{type: :approval, payload: %{"kind" => "question", "status" => status}}, {_q, answers}
@@ -177,7 +188,13 @@ defmodule Lemieux.Session.Questions do
     # Only the known presentation keys become atoms; never external atom creation.
     payload = atom_keys(pending["presentation"])
     timer = Approvals.park_timer(state, remaining, id)
-    %{state | deferred_question: %{id: id, payload: payload, expires_at: expires, timer: timer}}
+
+    state = %{
+      state
+      | deferred_question: %{id: id, payload: payload, expires_at: expires, timer: timer}
+    }
+
+    if remaining == 0, do: expire(state, id), else: state
   end
 
   defp atom_keys(map) when is_map(map) do

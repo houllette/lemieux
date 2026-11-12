@@ -178,6 +178,31 @@ defmodule Lemieux.Tools.DeferredQuestionTest do
     assert length(Scripted.requests(provider)) == 2
   end
 
+  test "a reply after the durable deadline is refused even before its timeout message runs",
+       ctx do
+    {session, _provider, id} =
+      start(ctx, [
+        [{:tool_call, question()}, {:done, :tool_calls}],
+        Scripted.complete("Done"),
+        Scripted.complete("Continued")
+      ])
+
+    assert_receive {:lemieux, ^id, {:question, %{call_id: qid}}}
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+
+    :sys.replace_state(session, fn state ->
+      put_in(state.deferred_question.expires_at, System.system_time(:millisecond) - 1)
+    end)
+
+    assert {:error, :unknown_call} = Session.answer(session, qid, "too late")
+    assert Session.snapshot(session).pending == []
+    :ok = Session.prompt(session, "Continue")
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert [answer] = Enum.filter(entries(session), &(&1.payload["source"] == "question_answer"))
+    assert answer.payload["text"] =~ "timed_out"
+    refute answer.payload["text"] =~ "too late"
+  end
+
   test "a queued idle answer is restored, while a fork inherits no pending attention", ctx do
     {session, _provider, id} =
       start(ctx, [[{:tool_call, question()}, {:done, :tool_calls}], Scripted.complete("Done")])
