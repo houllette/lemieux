@@ -152,6 +152,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.Pointer
     alias Lemieux.TUI.QuestionInteraction
+    alias Lemieux.TUI.QuestionSelection
     alias Lemieux.TUI.Renderer
     alias Lemieux.TUI.Replies
     alias Lemieux.TUI.Screen
@@ -774,6 +775,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # has to know which key it was.
     defp route_event(%ExRatatui.Event.Key{code: code} = event, state) when is_binary(code),
       do: Composer.key(event, state)
+
+    defp route_event(%ExRatatui.Event.Mouse{} = event, %{tools: %{question_flow: flow}} = state)
+         when not is_nil(flow), do: QuestionSelection.mouse(event, state)
 
     defp route_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tasks}} = state),
       do: TaskPanel.mouse(event, state)

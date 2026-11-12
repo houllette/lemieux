@@ -14,6 +14,8 @@ defmodule Lemieux.TUI.QuestionFlowTest do
   alias Lemieux.Store.JSONL
   alias Lemieux.Tools.AskUser
   alias Lemieux.TUI
+  alias Lemieux.TUI.QuestionPanel
+  alias Lemieux.TUI.Screen
   alias Lemieux.TUI.Width
 
   @frame %Frame{width: 80, height: 24}
@@ -106,6 +108,166 @@ defmodule Lemieux.TUI.QuestionFlowTest do
     state = press(state, "down")
     assert screen_at(state, frame) =~ "Second choice"
     assert state.tools.question_flow.selected == 1
+  end
+
+  defp question_view(state, region \\ :body),
+    do:
+      QuestionPanel.selection_views(
+        state.tools.question_flow,
+        Screen.panes(state)
+      )[region]
+
+  defp mouse(state, kind, x, y) do
+    assert {:noreply, next} =
+             TUI.handle_event(
+               %ExRatatui.Event.Mouse{kind: kind, button: "left", x: x, y: y},
+               state
+             )
+
+    next
+  end
+
+  test "question text copies across soft wraps without changing the answer or draft" do
+    test = self()
+    value = "https://example.test/" <> String.duplicate("abcdef", 12)
+
+    state =
+      tui(
+        clipboard: fn text ->
+          send(test, {:copied, text})
+          :ok
+        end
+      )
+      |> info({:question, %{single() | question: value}})
+
+    assert {:noreply, state} =
+             TUI.handle_event(%ExRatatui.Event.Resize{width: 44, height: 24}, state)
+
+    before = state.tools.question_flow
+    view = question_view(state)
+    rows = Enum.take_while(view.meta, &(&1.text != ""))
+    state = mouse(state, "down", view.area.x, view.area.y - view.scroll)
+
+    state =
+      mouse(
+        state,
+        "drag",
+        view.area.x + view.area.width - 1,
+        view.area.y + length(rows) - 1 - view.scroll
+      )
+
+    state = mouse(state, "up", view.area.x, view.area.y)
+    assert_receive {:copied, ^value}
+    assert Map.drop(state.tools.question_flow, [:selection]) == before
+    assert typed(state) == ""
+    assert screen_at(state, %Frame{width: 44, height: 24}) =~ "https://example.test/"
+  end
+
+  test "a scrolled option description copies without markers and preserves a note draft" do
+    test = self()
+    description = String.duplicate("examine the consequences carefully ", 10) |> String.trim()
+
+    payload = %{
+      single()
+      | options: [%{label: "First", description: description}, %{label: "Second"}]
+    }
+
+    state =
+      tui(
+        clipboard: fn text ->
+          send(test, {:copied, text})
+          :ok
+        end
+      )
+      |> info({:question, payload})
+
+    state = state |> press("n") |> type("keep this note")
+    before = state.tools.question_flow
+    view = question_view(state)
+    index = Enum.find_index(view.meta, &String.contains?(&1.text, "First"))
+    # Start on the option, then scroll while dragging to the final continuation.
+    state = mouse(state, "down", view.area.x, view.area.y + index - view.scroll)
+    state = Enum.reduce(1..30, state, fn _, acc -> press(acc, "page_down") end)
+    view = question_view(state)
+    last = Enum.find_index(view.meta, &String.contains?(&1.text, "Second")) - 1
+
+    state =
+      mouse(state, "drag", view.area.x + view.area.width - 1, view.area.y + last - view.scroll)
+
+    state = mouse(state, "up", view.area.x, view.area.y)
+    assert_receive {:copied, copied}
+    assert copied == "First — " <> description
+    assert typed(state) == "keep this note"
+    assert state.tools.question_flow.selected == before.selected
+    assert state.tools.question_flow.note_option == before.note_option
+    refute copied =~ "›"
+    refute copied =~ "[ ]"
+  end
+
+  test "preview mouse selection respects the side panel borders and wide characters" do
+    test = self()
+    payload = %{single() | options: [%{label: "First", preview: "界界 sample"}]}
+
+    state =
+      tui(
+        clipboard: fn text ->
+          send(test, {:copied, text})
+          :ok
+        end
+      )
+      |> info({:question, payload})
+
+    view = question_view(state, :visual)
+    row = Enum.find_index(view.meta, &String.contains?(&1.text, "sample"))
+    state = mouse(state, "down", view.area.x, view.area.y + row - view.scroll)
+    state = mouse(state, "drag", view.area.x + 12, view.area.y + row - view.scroll)
+    state = mouse(state, "up", view.area.x, view.area.y)
+    assert_receive {:copied, "界界 sample"}
+    assert state.tools.question_flow.selected == 0
+  end
+
+  test "transcript selection remains available above an open question" do
+    test = self()
+
+    state =
+      tui(
+        lines: [{:lmx, "transcript value"}],
+        clipboard: fn text ->
+          send(test, {:copied, text})
+          :ok
+        end
+      )
+      |> info({:question, single()})
+
+    pane = Screen.transcript_pane(state)
+    state = mouse(state, "down", pane.x + 1, pane.y + 1)
+    state = mouse(state, "drag", pane.x + 30, pane.y + 1)
+    state = mouse(state, "up", pane.x + 30, pane.y + 1)
+    assert_receive {:copied, text}
+    assert text =~ "transcript value"
+    assert state.tools.question_flow.call_id == "ask-1"
+  end
+
+  test "keyboard copy includes previews and preserves an open question" do
+    test = self()
+    payload = %{single() | options: [%{label: "First", preview: "sample value"}]}
+
+    state =
+      tui(
+        clipboard: fn text ->
+          send(test, {:copied, text})
+          :ok
+        end
+      )
+      |> info({:question, payload})
+
+    flow = state.tools.question_flow
+    state = press(state, "c", ["ctrl", "shift"])
+    assert_receive {:copied, copied}
+    assert copied =~ "Which database?"
+    assert copied =~ "sample value"
+    assert state.tools.question_flow == flow
+    assert typed(state) == ""
   end
 
   test "single question takes over the input and waits for explicit review submission" do

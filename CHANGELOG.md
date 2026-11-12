@@ -30,6 +30,11 @@ API.
 
 ### Fixes
 
+- Allow selection and copying in the `ask_user` panel, including wrapped and
+  scrolled question text, options and previews. Copying omits answer markers
+  and preserves staged answers and drafts; Ctrl+Shift+C also copies without
+  a mouse. Long questions and narrow previews remain fully readable. (#138)
+
 - Drain default stdio MCP stderr through a separate, bounded diagnostic pipe.
   Sanitized, server-attributed debug logs replace inherited terminal output;
   host launchers continue to own their diagnostic policy. The default launcher

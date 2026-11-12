@@ -11,6 +11,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     alias ExRatatui.Widgets.Tabs
     alias ExRatatui.Widgets.Textarea
     alias Lemieux.TUI.QuestionFlow
+    alias Lemieux.TUI.QuestionSelection
     alias Lemieux.TUI.Takeover
     alias Lemieux.TUI.Theme
     alias Lemieux.TUI.Width
@@ -39,7 +40,8 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       side? = has_visual?(flow) and inner_width >= 58
       left_width = if side?, do: div(inner_width - 2, 2), else: inner_width
       look = %{accent: accent, answer: answer_style(theme, accent)}
-      lines = body_lines(flow, look, left_width, side?)
+      views = selection_views(flow, panes, look)
+      lines = QuestionSelection.highlight(flow, views.body)
       area = area(flow, panes)
       tab_area = %Rect{x: area.x + 2, y: area.y + 1, width: inner_width, height: 1}
 
@@ -63,7 +65,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         Takeover.frame(area, title(flow)) ++
           [
             {tabs, tab_area},
-            {%Paragraph{text: lines, scroll: {body_scroll(flow, lines, body.height), 0}}, body},
+            {%Paragraph{text: lines, scroll: {views.body.scroll, 0}}, body},
             {footer(flow, editor), input_area}
           ]
 
@@ -78,13 +80,172 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         base ++
           [
             {%Paragraph{
-               text: visual.lines,
+               text: QuestionSelection.highlight(flow, views.visual),
+               scroll: {views.visual.scroll, 0},
                block: %Block{title: visual.title, borders: [:all], border_type: :rounded}
              }, side}
           ]
       else
         base
       end
+    end
+
+    @doc false
+    @spec selection_views(flow :: map(), panes :: map(), look :: map()) :: map()
+    def selection_views(flow, panes, look \\ %{accent: :white, answer: %Style{}}) do
+      area = area(flow, panes)
+      inner_width = max(panes.input.width - 4, 1)
+      side? = has_visual?(flow) and inner_width >= 58
+      width = if side?, do: div(inner_width - 2, 2), else: inner_width
+
+      body_area = %Rect{
+        x: area.x + 2,
+        y: area.y + 3,
+        width: width,
+        height: max(area.height - 8, 1)
+      }
+
+      rows = body_lines(flow, look, width, side?)
+
+      body = %{
+        region: :body,
+        area: body_area,
+        rows: rows,
+        meta: body_meta(flow, rows, look, width, side?),
+        scroll: body_scroll(flow, rows, body_area.height),
+        signature: {width, flow.index, flow.review?, flow.selected}
+      }
+
+      visual = visual(flow)
+
+      side =
+        if side? and visual do
+          visual_area = %Rect{
+            x: body_area.x + width + 3,
+            y: body_area.y + 1,
+            width: max(inner_width - width - 4, 1),
+            height: max(body_area.height - 2, 1)
+          }
+
+          meta = Enum.flat_map(visual.lines, &glyph_rows(plain(&1), visual_area.width))
+
+          %{
+            region: :visual,
+            area: visual_area,
+            rows: Enum.map(meta, &line(&1.text)),
+            meta: meta,
+            scroll:
+              min(Map.get(flow, :visual_scroll, 0), max(length(meta) - visual_area.height, 0)),
+            signature: {visual_area.width, flow.index, flow.review?, flow.selected}
+          }
+        end
+
+      %{body: body, visual: side}
+    end
+
+    defp body_meta(%{review?: true}, rows, _look, _width, _side?), do: default_meta(rows)
+
+    defp body_meta(flow, rows, look, width, side?) do
+      question = QuestionFlow.current(flow)
+      prompt = glyph_rows(question.text, width)
+      meta = replace_meta(default_meta(rows), 0, prompt)
+
+      {meta, start} =
+        if not side? and visual(flow) do
+          visual_meta = Enum.flat_map(visual(flow).lines, &glyph_rows(plain(&1), width))
+          {replace_meta(meta, length(prompt), visual_meta), length(prompt) + length(visual_meta)}
+        else
+          {meta, length(prompt)}
+        end
+
+      if question.type in ~w(text number),
+        do: meta,
+        else: choice_meta(flow, question, rows, meta, start, look, width)
+    end
+
+    defp choice_meta(flow, question, rows, meta, start, look, width) do
+      texts = Enum.map(rows, &plain/1)
+
+      {meta, _next} =
+        question.options
+        |> Enum.with_index()
+        |> Enum.reduce({meta, start}, fn {option, index}, {meta, start} ->
+          raw = option_line(flow, question, option, index, look, width) |> Enum.map(&plain/1)
+
+          offset =
+            Enum.find(
+              start..max(length(rows) - 1, start),
+              start,
+              &(Enum.slice(texts, &1, length(raw)) == raw)
+            )
+
+          parts = option_meta(option, raw)
+          {replace_meta(meta, offset, parts), offset + length(parts)}
+        end)
+
+      meta
+    end
+
+    defp option_meta(option, raw) do
+      prefix =
+        String.length(hd(raw)) -
+          String.length(
+            hd(raw)
+            |> String.replace(~r/^[› ] (?:\[[^]]*\]|✓| ) /u, "")
+            |> String.trim_leading()
+          )
+
+      source =
+        (option.label <> if(option.description, do: " — #{option.description}", else: ""))
+        |> String.replace(~r/\s+/u, " ")
+        |> String.trim()
+
+      {parts, _remaining} =
+        raw
+        |> Enum.with_index()
+        |> Enum.map_reduce(source, fn {text, row}, source ->
+          content = text |> String.slice(prefix..-1//1) |> String.trim_leading()
+
+          remaining =
+            source |> String.trim_leading() |> String.slice(String.length(content)..-1//1)
+
+          {%{text: text, prefix: prefix, join: source_join(row, source)}, remaining}
+        end)
+
+      parts
+    end
+
+    defp source_join(0, _source), do: "\n"
+    defp source_join(_row, " " <> _rest), do: " "
+    defp source_join(_row, _source), do: ""
+
+    defp default_meta(rows),
+      do:
+        Enum.map(rows, fn row ->
+          text = plain(row)
+          %{text: text, prefix: if(String.starts_with?(text, "› "), do: 2, else: 0), join: "\n"}
+        end)
+
+    defp replace_meta(rows, offset, replacements),
+      do:
+        Enum.take(rows, offset) ++ replacements ++ Enum.drop(rows, offset + length(replacements))
+
+    defp plain(row), do: Enum.map_join(row.spans, & &1.content)
+
+    @doc false
+    @spec copy_text(flow :: map()) :: String.t()
+    def copy_text(flow) do
+      question = QuestionFlow.current(flow)
+
+      [
+        question.text,
+        question.diagram
+        | Enum.flat_map(question.options, fn option ->
+            [option.label, option.description, option.diagram, option.preview]
+          end)
+      ]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join("\n")
     end
 
     @doc "The stationary takeover rect used to reserve transcript viewport space."
@@ -237,7 +398,12 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       question = QuestionFlow.current(flow)
 
       inline_diagram =
-        if side?, do: [], else: diagram_lines(question.diagram || selected_diagram(flow))
+        if side? or is_nil(visual(flow)),
+          do: [],
+          else:
+            Enum.flat_map(visual(flow).lines, fn row ->
+              row |> plain() |> glyph_rows(width) |> Enum.map(&line(&1.text))
+            end)
 
       prompt_lines(question.text, width) ++
         inline_diagram ++
@@ -269,25 +435,33 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       end
     end
 
-    defp selected_diagram(flow) do
-      option = Enum.at(QuestionFlow.current(flow).options, flow.selected)
-      option && option.diagram
+    defp prompt_lines(text, width),
+      do: Enum.map(glyph_rows(text, width), &line(&1.text, bold()))
+
+    defp glyph_rows(text, width) do
+      text
+      |> String.split("\n")
+      |> Enum.flat_map(fn logical ->
+        logical
+        |> chunks(width)
+        |> Enum.with_index()
+        |> Enum.map(fn {text, index} ->
+          %{text: text, prefix: 0, join: if(index == 0, do: "\n", else: "")}
+        end)
+      end)
     end
 
-    defp prompt_lines(text, width) do
-      text
-      |> String.replace(~r/\s+/, " ")
-      |> String.slice(0, width * 2)
-      |> String.graphemes()
-      |> Enum.chunk_every(max(width, 1))
-      |> Enum.take(2)
-      |> Enum.map(&line(Enum.join(&1), bold()))
+    defp chunks("", _width), do: [""]
+
+    defp chunks(text, width) do
+      {head, tail} = Width.split(text, max(width, 1))
+      if tail == "", do: [head], else: [head | chunks(tail, width)]
     end
 
     defp diagram_lines(nil), do: []
     defp diagram_lines(diagram), do: diagram |> String.split("\n") |> Enum.map(&line/1)
     defp preview_lines(nil), do: []
-    defp preview_lines(preview), do: [line(""), line(preview)]
+    defp preview_lines(preview), do: [line("")] ++ Enum.map(String.split(preview, "\n"), &line/1)
 
     defp option_lines(flow, question, look, width) do
       question.options
@@ -407,7 +581,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
           _choice -> "Enter selects"
         end
 
-      "↑↓ choose · #{action} · PgUp/PgDn scroll · n adds note · ←→ questions · #{length(questions)} total · Esc cancels"
+      "Ctrl+Shift+C copy · ↑↓ choose · #{action} · PgUp/PgDn scroll · n adds note · ←→ questions · #{length(questions)} total · Esc cancels"
     end
 
     defp trim(text, width), do: String.slice(text, 0, max(width, 1))

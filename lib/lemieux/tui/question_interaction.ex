@@ -8,23 +8,40 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.QuestionFlow
     alias Lemieux.TUI.QuestionPanel
+    alias Lemieux.TUI.QuestionSelection
     alias Lemieux.TUI.Screen
 
     @doc false
     @spec key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
-    def key(%ExRatatui.Event.Key{code: code}, state, _ctx)
-        when code in ["page_up", "page_down"] do
+    def key(%ExRatatui.Event.Key{code: code, modifiers: modifiers} = event, state, ctx) do
+      cond do
+        code in ["c", "C"] and "ctrl" in modifiers and "shift" in modifiers ->
+          QuestionSelection.keyboard_copy(state)
+
+        code in ["page_up", "page_down"] ->
+          question_key(event, state, ctx)
+
+        true ->
+          flow = Map.delete(state.tools.question_flow, :selection)
+          question_key(event, put_in(state.tools.question_flow, flow), ctx)
+      end
+    end
+
+    @doc false
+    @spec question_key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
+    defp question_key(%ExRatatui.Event.Key{code: code}, state, _ctx)
+         when code in ["page_up", "page_down"] do
       by = if code == "page_up", do: -3, else: 3
       flow = QuestionPanel.scroll(state.tools.question_flow, Screen.panes(state), by)
       {:noreply, put_in(state.tools.question_flow, flow)}
     end
 
-    def key(
-          %ExRatatui.Event.Key{code: code},
-          %{tools: %{question_flow: %{note_option: nil}}} = state,
-          _ctx
-        )
-        when code in ["up", "down"] do
+    defp question_key(
+           %ExRatatui.Event.Key{code: code},
+           %{tools: %{question_flow: %{note_option: nil}}} = state,
+           _ctx
+         )
+         when code in ["up", "down"] do
       by = if code == "up", do: -1, else: 1
 
       flow =
@@ -38,8 +55,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    def key(%ExRatatui.Event.Key{code: code}, state, _ctx)
-        when code in ["left", "right"] do
+    defp question_key(%ExRatatui.Event.Key{code: code}, state, _ctx)
+         when code in ["left", "right"] do
       by = if code == "left", do: -1, else: 1
 
       flow =
@@ -50,8 +67,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {:noreply, question_update(state, flow)}
     end
 
-    def key(%ExRatatui.Event.Key{code: code, modifiers: modifiers}, state, _ctx)
-        when code in ["tab", "back_tab"] do
+    defp question_key(%ExRatatui.Event.Key{code: code, modifiers: modifiers}, state, _ctx)
+         when code in ["tab", "back_tab"] do
       by = if code == "back_tab" or "shift" in modifiers, do: -1, else: 1
 
       flow =
@@ -62,12 +79,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {:noreply, question_update(state, flow)}
     end
 
-    def key(
-          %ExRatatui.Event.Key{code: "esc"},
-          %{tools: %{question_flow: %{note_option: note}}} = state,
-          _ctx
-        )
-        when not is_nil(note) do
+    defp question_key(
+           %ExRatatui.Event.Key{code: "esc"},
+           %{tools: %{question_flow: %{note_option: note}}} = state,
+           _ctx
+         )
+         when not is_nil(note) do
       flow =
         state.tools.question_flow
         |> QuestionFlow.stash_editor(ExRatatui.textarea_get_value(state.input))
@@ -76,65 +93,65 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {:noreply, question_update(state, flow)}
     end
 
-    def key(%ExRatatui.Event.Key{code: "esc"}, state, _ctx), do: cancel_questions(state)
+    defp question_key(%ExRatatui.Event.Key{code: "esc"}, state, _ctx), do: cancel_questions(state)
 
-    def key(
-          %ExRatatui.Event.Key{code: " ", modifiers: []},
-          %{tools: %{question_flow: %{other?: false, note_option: nil}}} = state,
-          _ctx
-        ) do
+    defp question_key(
+           %ExRatatui.Event.Key{code: " ", modifiers: []},
+           %{tools: %{question_flow: %{other?: false, note_option: nil}}} = state,
+           _ctx
+         ) do
       {:noreply, question_update(state, QuestionFlow.toggle(state.tools.question_flow))}
     end
 
-    def key(%ExRatatui.Event.Key{} = event, state, ctx)
-        when event.code in ["c", "C"] do
+    defp question_key(%ExRatatui.Event.Key{} = event, state, ctx)
+         when event.code in ["c", "C"] do
       if Keys.action(state.status.keys, event) == :interrupt,
         do: cancel_questions(state),
         else: question_edit_or_ignore(event, state, ctx)
     end
 
-    def key(
-          %ExRatatui.Event.Key{code: "n", modifiers: []},
-          %{tools: %{question_flow: %{other?: false, note_option: nil, review?: false}}} = state,
-          _ctx
-        ) do
+    defp question_key(
+           %ExRatatui.Event.Key{code: "n", modifiers: []},
+           %{tools: %{question_flow: %{other?: false, note_option: nil, review?: false}}} = state,
+           _ctx
+         ) do
       flow = QuestionFlow.edit_note(state.tools.question_flow)
       {:noreply, question_update(state, flow)}
     end
 
-    def key(
-          %ExRatatui.Event.Key{code: digit, modifiers: []},
-          %{tools: %{question_flow: %{other?: false, note_option: nil, review?: false}}} = state,
-          _ctx
-        )
-        when digit in ~w(1 2 3 4 5 6) do
+    defp question_key(
+           %ExRatatui.Event.Key{code: digit, modifiers: []},
+           %{tools: %{question_flow: %{other?: false, note_option: nil, review?: false}}} = state,
+           _ctx
+         )
+         when digit in ~w(1 2 3 4 5 6) do
       flow = QuestionFlow.rank(state.tools.question_flow, String.to_integer(digit))
       {:noreply, question_update(state, flow)}
     end
 
-    def key(
-          %ExRatatui.Event.Key{code: "enter", modifiers: modifiers} = event,
-          %{tools: %{question_flow: %{note_option: id}}} = state,
-          ctx
-        )
-        when not is_nil(id) do
+    defp question_key(
+           %ExRatatui.Event.Key{code: "enter", modifiers: modifiers} = event,
+           %{tools: %{question_flow: %{note_option: id}}} = state,
+           ctx
+         )
+         when not is_nil(id) do
       if "shift" in modifiers, do: ctx.edit.(event, state), else: save_note_answer(state)
     end
 
-    def key(
-          %ExRatatui.Event.Key{code: "enter", modifiers: modifiers} = event,
-          %{tools: %{question_flow: %{other?: true}}} = state,
-          ctx
-        ) do
+    defp question_key(
+           %ExRatatui.Event.Key{code: "enter", modifiers: modifiers} = event,
+           %{tools: %{question_flow: %{other?: true}}} = state,
+           ctx
+         ) do
       if "shift" in modifiers,
         do: ctx.edit.(event, state),
         else: save_other_answer(state)
     end
 
-    def key(%ExRatatui.Event.Key{code: "enter"}, state, ctx),
+    defp question_key(%ExRatatui.Event.Key{code: "enter"}, state, ctx),
       do: choose_question_answer(state, QuestionFlow.choose(state.tools.question_flow), ctx)
 
-    def key(event, state, ctx), do: question_edit_or_ignore(event, state, ctx)
+    defp question_key(event, state, ctx), do: question_edit_or_ignore(event, state, ctx)
 
     defp save_other_answer(state) do
       case QuestionFlow.custom(
