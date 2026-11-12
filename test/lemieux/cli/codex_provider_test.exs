@@ -5,10 +5,18 @@ defmodule Lemieux.CLI.CodexProviderTest do
   @moduletag :tmp_dir
 
   defmodule Capture do
+    def available_models(_pid, _query),
+      do: ["openai_codex:bundled-only", "openai:gpt-6-sol"]
+
     def run(pid, request, _emit) do
       send(pid, {:request, request})
       :ok
     end
+  end
+
+  test "bundled metadata cannot advertise Codex account entitlements" do
+    provider = CodexProvider.wrap({Capture, self()})
+    assert Provider.available_models(provider) == ["openai:gpt-6-sol"]
   end
 
   defp source(dir, seconds) do

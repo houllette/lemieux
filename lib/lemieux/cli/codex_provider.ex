@@ -74,8 +74,14 @@ defmodule Lemieux.CLI.CodexProvider do
   defp put_account(options, account), do: Keyword.put(options, :chatgpt_account_id, account)
 
   @impl true
-  def available_models({provider, _opts}, query),
-    do: Provider.available_models(provider, query)
+  def available_models({provider, _opts}, query) do
+    # Bundled metadata can enrich a Codex choice, but cannot establish account
+    # entitlement. The host's background catalog supplies those choices, and
+    # Session.Catalog separately retains the validated current model.
+    provider
+    |> Provider.available_models(query)
+    |> Enum.reject(&String.starts_with?(&1, "openai_codex:"))
+  end
 
   @impl true
   def model_metadata({provider, _opts}), do: Provider.model_metadata(provider)
