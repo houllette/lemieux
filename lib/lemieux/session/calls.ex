@@ -35,7 +35,7 @@ defmodule Lemieux.Session.Calls do
   # stays responsive while it waits.
   def call(request, from, %{mcp_pending: pending} = state)
       when map_size(pending) > 0 and
-             (request in [:mcp_status, :tool_status, :tool_catalog] or
+             (request in [:mcp_status, :tool_status, :tool_catalog, :mcp_operation_complete] or
                 (is_tuple(request) and elem(request, 0) == :set_tool_access)),
       do: {:noreply, %{state | mcp_waiters: [{request, from} | state.mcp_waiters]}}
 
@@ -532,25 +532,29 @@ defmodule Lemieux.Session.Calls do
     end
   end
 
-  def call({:add_mcp_servers, servers}, _from, state) do
+  def call(:mcp_operation_complete, _from, state), do: {:reply, :ok, state}
+
+  def call({:add_mcp_servers, servers}, from, state),
+    do: call({:add_mcp_servers, servers, []}, from, state)
+
+  def call({:add_mcp_servers, servers, opts}, from, state) do
     if Core.busy?(state) do
       {:reply, {:error, :busy}, state}
     else
       configs = servers |> Enum.map(&MCP.config/1) |> Setup.merge_mcp_servers([])
       names = MapSet.new(configs, &Map.fetch!(&1, "name"))
       state = MCPServers.forget_mcp_connecting(state, MapSet.to_list(names))
-      {state, connections, errors} = MCPServers.connect_mcp_servers(state, configs)
 
       state =
         state
         |> MCPServers.disconnect_mcp_connections(names)
-        |> Map.update!(:mcp_connections, &Map.merge(&1, connections))
-        |> Map.update!(:mcp_errors, &(&1 |> Map.drop(MapSet.to_list(names)) |> Map.merge(errors)))
+        |> Map.update!(:mcp_errors, &Map.drop(&1, MapSet.to_list(names)))
         |> Map.put(:mcp_servers, Setup.merge_mcp_servers(configs, state.mcp_servers))
         |> MCPServers.refresh_mcp_tools()
         |> Setup.record_config()
+        |> MCPServers.start_mcp_connections(configs, opts)
 
-      {:reply, :ok, state}
+      await_mcp_change(state, from)
     end
   end
 
@@ -577,7 +581,7 @@ defmodule Lemieux.Session.Calls do
     end
   end
 
-  def call({:reconnect_mcp, name}, _from, state) when is_binary(name) do
+  def call({:reconnect_mcp, name}, from, state) when is_binary(name) do
     config = Enum.find(state.mcp_servers, &(Map.fetch!(&1, "name") == name))
 
     cond do
@@ -593,38 +597,32 @@ defmodule Lemieux.Session.Calls do
       true ->
         state = MCPServers.forget_mcp_connecting(state, [name])
 
-        {state, connections, errors} =
-          MCPServers.connect_mcp_servers(state, [config], interactive_auth: true)
-
         state =
           state
           |> MCPServers.disconnect_mcp_connections(MapSet.new([name]))
-          |> Map.update!(:mcp_connections, &Map.merge(&1, connections))
-          |> Map.update!(:mcp_errors, &(&1 |> Map.delete(name) |> Map.merge(errors)))
+          |> Map.update!(:mcp_errors, &Map.delete(&1, name))
           |> MCPServers.refresh_mcp_tools()
+          |> MCPServers.start_mcp_connections([config], interactive_auth: true)
 
-        {:reply, :ok, state}
+        await_mcp_change(state, from)
     end
   end
 
-  def call({:reconnect_mcp, :all}, _from, state) do
+  def call({:reconnect_mcp, :all}, from, state) do
     if Core.busy?(state) do
       {:reply, {:error, :busy}, state}
     else
       names = MapSet.new(state.mcp_servers, &Map.fetch!(&1, "name"))
       state = MCPServers.forget_mcp_connecting(state, MapSet.to_list(names))
 
-      {state, connections, errors} =
-        MCPServers.connect_mcp_servers(state, state.mcp_servers, interactive_auth: true)
-
       state =
         state
         |> MCPServers.disconnect_mcp_connections(names)
-        |> Map.put(:mcp_connections, connections)
-        |> Map.put(:mcp_errors, errors)
+        |> Map.put(:mcp_errors, %{})
         |> MCPServers.refresh_mcp_tools()
+        |> MCPServers.start_mcp_connections(state.mcp_servers, interactive_auth: true)
 
-      {:reply, :ok, state}
+      await_mcp_change(state, from)
     end
   end
 
@@ -794,4 +792,9 @@ defmodule Lemieux.Session.Calls do
 
   defp continue_restored(state, []), do: Compacting.continue(state)
   defp continue_restored(state, calls), do: ToolWave.apply_effect(state, {:run_tools, calls})
+
+  defp await_mcp_change(%{mcp_pending: pending} = state, from) when map_size(pending) > 0,
+    do: {:noreply, %{state | mcp_waiters: [{:mcp_operation_complete, from} | state.mcp_waiters]}}
+
+  defp await_mcp_change(state, _from), do: {:reply, :ok, state}
 end

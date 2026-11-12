@@ -441,6 +441,147 @@ defmodule Lemieux.MCP.AuthTest do
       assert Client.info(client).ready?
     end
 
+    test "explicit add signs in continuously while session reads stay responsive", context do
+      serve("oauth", context.port)
+      test = self()
+      visit = browser()
+
+      redirect = fn url, uri ->
+        send(test, {:signing_in, self()})
+
+        receive do
+          :continue -> visit.(url, uri)
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect),
+          mcp_connect_opts: [interactive_auth: false]
+        )
+
+      capture_log(fn ->
+        task =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:signing_in, client}
+        assert Session.info(session).mcp |> Enum.any?(&(&1.status == :connecting))
+        send(client, :continue)
+        assert Task.await(task) == :ok
+        assert [%{tool_count: count, error: nil}] = Session.mcp_status(session)
+        assert count > 0
+        assert :ok = Session.reconnect_mcp(session, "fixture")
+        refute_receive {:signing_in, _}, 50
+        assert Process.alive?(session)
+      end)
+    end
+
+    test "cancelled add leaves the session usable and retry reuses its descriptor", context do
+      serve("oauth", context.port)
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: fn _, _ -> {:error, "authorization cancelled"} end),
+          mcp_connect_opts: [interactive_auth: false]
+        )
+
+      capture_log(fn ->
+        assert :ok =
+                 Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+
+        assert [%{name: "fixture", error: error}] = Session.mcp_status(session)
+        assert error =~ "cancelled"
+        assert Process.alive?(session)
+        assert :ok = Session.reconnect_mcp(session, "fixture")
+        assert [%{name: "fixture"}] = Session.mcp_status(session)
+      end)
+    end
+
+    test "removing a server during consent closes the pending client", context do
+      serve("oauth", context.port)
+      test = self()
+
+      redirect = fn _url, _uri ->
+        send(test, {:waiting_for_consent, self()})
+
+        receive do
+          :never -> {:error, "cancelled"}
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect)
+        )
+
+      capture_log(fn ->
+        task =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:waiting_for_consent, client}
+        ref = Process.monitor(client)
+        assert :ok = Session.remove_mcp_server(session, "fixture")
+        assert_receive {:DOWN, ^ref, :process, ^client, :killed}
+        assert Task.await(task) == :ok
+        assert [] = Session.mcp_status(session)
+        assert Process.alive?(session)
+      end)
+    end
+
+    test "terminal interactive add completes OAuth and retains saved global config", context do
+      serve("oauth", context.port)
+      config = Path.join(context.tmp_dir, "config.json")
+      File.write!(config, ~s({"version":1}))
+      File.chmod!(config, 0o600)
+
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          capture_log(fn ->
+            assert :ok =
+                     Lemieux.CLI.run(
+                       [
+                         "mcp",
+                         "add",
+                         "--global",
+                         "--config",
+                         config,
+                         "fixture",
+                         http_config(context)["url"]
+                       ],
+                       cwd: context.tmp_dir,
+                       supervisor: context.runtime,
+                       interactive?: true,
+                       mcp_auth: auth(context)
+                     )
+          end)
+        end)
+
+      assert output =~ "connected and ready"
+      assert_received {:visited, _url}
+
+      assert JSON.decode!(File.read!(config))["mcp_servers"]["fixture"]["url"] ==
+               http_config(context)["url"]
+    end
+
     test "a token already stored is still used", context do
       serve("oauth", context.port)
       auth = auth(context)

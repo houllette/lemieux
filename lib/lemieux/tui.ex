@@ -976,6 +976,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def handle_info({:mcp_result, _action, _result, _statuses} = message, state),
       do: {:noreply, Effects.answer(state, message)}
 
+    def handle_info({:mcp_authorize, url}, %{tools: %{mcp_flow: flow}} = state)
+        when not is_nil(flow),
+        do:
+          {:noreply,
+           put_in(state.tools.mcp_flow.notice, "Finish sign-in in your browser: " <> url)}
+
+    def handle_info({:mcp_authorize, _url}, state), do: {:noreply, state}
+
     def handle_info({:mcp_ui_result, action, result, statuses}, state),
       do: MCPInteraction.ui_result(state, action, result, statuses)
 

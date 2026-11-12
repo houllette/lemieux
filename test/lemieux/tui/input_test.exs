@@ -2023,6 +2023,7 @@ defmodule Lemieux.TUI.InputTest do
       state = press(state, "enter")
       assert state.tools.mcp_flow.busy?
       assert_receive {:added_mcp, [%{"name" => "manual", "transport" => "http"}]}
+      assert_receive {:mcp_add_options, [interactive_auth: true]}
       assert_receive {:mcp_ui_result, _, :ok, statuses} = result
       assert {:noreply, finished} = TUI.handle_info(result, state)
       assert %{mode: :list, busy?: false} = finished.tools.mcp_flow

@@ -245,6 +245,7 @@ defmodule Lemieux.MCP do
   defp client_opts(config, opts) do
     [
       owner: Keyword.get(opts, :owner),
+      startup_owner: self(),
       timeout: budget(config, "timeout"),
       startup_timeout: budget(config, "startup_timeout"),
       tool_timeout: budget(config, "tool_timeout") || budget(config, "timeout")
@@ -263,7 +264,9 @@ defmodule Lemieux.MCP do
   defp finish_client_start(client, name, supervisor, opts) do
     case Client.list_tools(client) do
       {:ok, tools} ->
-        keep_client(client, name, supervisor, tools, Client.info(client))
+        info = Client.info(client)
+        :ok = Client.finish_startup(client)
+        keep_client(client, name, supervisor, tools, info)
 
       {:error, reason} ->
         info = Client.info(client)

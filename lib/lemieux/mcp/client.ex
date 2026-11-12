@@ -203,6 +203,10 @@ defmodule Lemieux.MCP.Client do
   @spec info(client :: client()) :: map()
   def info(client), do: GenServer.call(client, :info, :infinity)
 
+  @doc false
+  @spec finish_startup(client :: client()) :: :ok
+  def finish_startup(client), do: GenServer.call(client, :finish_startup, :infinity)
+
   @impl GenServer
   def init(opts) do
     # Stdio transports own a linked port, and its OS process may disappear with an
@@ -233,6 +237,7 @@ defmodule Lemieux.MCP.Client do
       failure: nil,
       needs_auth: nil,
       owner_ref: owner && Process.monitor(owner),
+      startup_guard: startup_guard(Keyword.get(opts, :startup_owner)),
       notify: Keyword.get(opts, :notify, owner),
       pending: %{},
       monitors: %{},
@@ -247,6 +252,28 @@ defmodule Lemieux.MCP.Client do
       # the session it belongs to should keep working without its tools.
       {:error, reason} -> {:ok, fail(state, reason)}
     end
+  end
+
+  # Startup can block inside a browser callback. A monitor handled in this
+  # GenServer's mailbox cannot stop that wait when its connection task is
+  # cancelled. This short-lived guard follows both processes independently;
+  # until discovery hands ownership back, cancellation kills the client and
+  # closes its sockets/Ports. Transport pipe managers also monitor the client.
+  defp startup_guard(nil), do: nil
+
+  defp startup_guard(owner) do
+    client = self()
+
+    spawn(fn ->
+      owner_ref = Process.monitor(owner)
+      client_ref = Process.monitor(client)
+
+      receive do
+        {:startup_finished, ^client} -> :ok
+        {:DOWN, ^client_ref, :process, ^client, _reason} -> :ok
+        {:DOWN, ^owner_ref, :process, ^owner, _reason} -> Process.exit(client, :kill)
+      end
+    end)
   end
 
   @impl GenServer
@@ -378,6 +405,11 @@ defmodule Lemieux.MCP.Client do
     }
 
     {:reply, info, state}
+  end
+
+  def handle_call(:finish_startup, _from, state) do
+    if state.startup_guard, do: send(state.startup_guard, {:startup_finished, self()})
+    {:reply, :ok, %{state | startup_guard: nil}}
   end
 
   def handle_call(_request, _from, %{failure: failure} = state) when is_binary(failure),

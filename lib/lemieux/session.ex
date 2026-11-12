@@ -1481,11 +1481,20 @@ defmodule Lemieux.Session do
   Adds or replaces MCP server configurations, matching them by server name.
 
   The session must be idle so its tool set cannot change underneath work that
-  is already in flight.
+  is already in flight. Connection runs outside the session process, so info
+  and cancellation remain responsive while this call waits for discovery.
+  Pass `interactive_auth: true` for an explicit interactive setup; otherwise
+  the host's connection options apply, including its background auth policy.
   """
-  @spec add_mcp_servers(session :: session(), servers :: [map()]) :: :ok | {:error, :busy}
-  def add_mcp_servers(session, servers) when is_list(servers),
-    do: GenServer.call(session, {:add_mcp_servers, servers}, :infinity)
+  @spec add_mcp_servers(session :: session(), servers :: [map()], opts :: keyword()) ::
+          :ok | {:error, :busy}
+  def add_mcp_servers(session, servers, opts \\ []) when is_list(servers),
+    do:
+      GenServer.call(
+        session,
+        {:add_mcp_servers, servers, Keyword.take(opts, [:interactive_auth])},
+        :infinity
+      )
 
   @doc """
   Removes one configured MCP server by name while the session is idle.

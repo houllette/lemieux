@@ -47,6 +47,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def key(%ExRatatui.Event.Key{code: "a"}, state, _ctx) do
+      draft = ExRatatui.textarea_get_value(state.input)
       :ok = Editor.replace(state.input, "")
 
       flow =
@@ -54,6 +55,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> Map.merge(%{
           mode: :add,
           questionnaire: MCPForm.new(),
+          saved_draft: draft,
           notice: nil,
           path: mcp_config_path(state)
         })
@@ -166,6 +168,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp mcp_add_key(%ExRatatui.Event.Key{code: "esc"}, state, _ctx) do
       :ok = Editor.replace(state.input, "")
+      :ok = Editor.replace(state.input, Map.get(state.tools.mcp_flow, :saved_draft, ""))
       {:noreply, put_in(state.tools.mcp_flow.mode, :list)}
     end
 
@@ -281,7 +284,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         {:mcp_add, path, server["name"]},
         fn ->
           with :ok <- save.(server) do
-            Session.add_mcp_servers(state.session, [server])
+            Session.add_mcp_servers(state.session, [server], interactive_auth: true)
           end
         end,
         ctx
@@ -398,7 +401,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
         }
 
         updated = Map.delete(updated, :withheld)
-        :ok = Editor.replace(state.input, "")
+
+        if flow.mode == :add,
+          do: Editor.replace(state.input, Map.get(flow, :saved_draft, ""))
+
         {:noreply, put_in(state.tools.mcp_flow, updated)}
       end
     end

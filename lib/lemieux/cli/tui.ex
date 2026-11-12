@@ -608,6 +608,12 @@ defmodule Lemieux.CLI.TUI do
 
   defp prepare_session(options, opts, app, tasks) do
     opts = Keyword.put_new(opts, :a2ui, true)
+
+    opts =
+      Keyword.put_new_lazy(opts, :mcp_auth, fn ->
+        Runtime.auth(options, announce: fn url -> send(app, {:mcp_authorize, url}) end)
+      end)
+
     store = Runtime.store(options, opts)
     list_sessions = fn -> SessionIndex.recent(store) end
     cwd = Keyword.get_lazy(opts, :cwd, &File.cwd!/0)

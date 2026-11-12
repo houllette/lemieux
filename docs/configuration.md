@@ -1367,8 +1367,11 @@ from a subdirectory. Neither scope changes the other. Existing names require
 stdio before `--`; everything after `--` belongs to the server, including
 flags and arguments with spaces. Secret-looking values become `${NAME}`
 references; export the named variables before connecting. Output names the
-scope and file without printing values. Saving does not start the server;
-open `/mcp`, select it and press `r` to connect or sign in. Repository trust
+scope and file without printing values. Interactive add connects and, when
+needed, continues directly into browser sign-in and tool discovery. Piped
+invocations and `--non-interactive` only save: they open no browser and start
+no server. Failed or cancelled sign-in keeps the saved configuration; open
+`/mcp`, select it and press `r` to retry. Repository trust
 still applies, and personal names override repository names. `lmx mcp list`
 accepts `--local` or `--global` to show one scope.
 
@@ -1383,7 +1386,11 @@ wrote.
 In the terminal UI, `/mcp` opens a server panel. `a` adds a server through a
 short questionnaire, saved to your `"mcp_servers"` by default or to the
 repository's `.mcp.json`; a header or environment value that looks secret is
-saved as a `${NAME}` reference, never as written. `r` reconnects the selected
+saved as a `${NAME}` reference, never as written. Saving continues into
+connection, browser authorization when required, and tool discovery without
+a separate reconnect. Existing credentials are reused. The screen remains
+responsive during sign-in, and failed sign-in keeps the saved configuration.
+Background startup never opens a browser. `r` reconnects the selected
 server, `o` turns it on or off for the session, `d` twice removes it from the
 session, and Shift-D twice deletes it from its file.
 

@@ -554,7 +554,8 @@ defmodule Lemieux.TUI.TestSupport do
         GenServer.reply(from, :ok)
         fake_session_loop(%{state | mcp_statuses: statuses})
 
-      {:"$gen_call", from, {:add_mcp_servers, servers}} ->
+      {:"$gen_call", from, {:add_mcp_servers, servers, options}} ->
+        send(state.owner, {:mcp_add_options, options})
         send(state.owner, {:added_mcp, servers})
 
         statuses =

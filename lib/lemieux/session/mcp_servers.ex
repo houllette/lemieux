@@ -92,8 +92,8 @@ defmodule Lemieux.Session.MCPServers do
     )
   end
 
-  def start_mcp_connections(state, configs) do
-    opts = mcp_connect_options(state)
+  def start_mcp_connections(state, configs, overrides \\ []) do
+    opts = Keyword.merge(mcp_connect_options(state), overrides)
 
     configs
     |> Enum.reject(&MapSet.member?(state.mcp_disabled, Map.fetch!(&1, "name")))

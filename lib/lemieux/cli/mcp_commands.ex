@@ -53,7 +53,9 @@ defmodule Lemieux.CLI.MCPCommands do
     transport: :string,
     header: :keep,
     env: :keep,
-    non_interactive: :boolean
+    non_interactive: :boolean,
+    credentials: :string,
+    oauth_callback_port: :integer
   ]
 
   @doc "Runs an `mcp` subcommand, printing what it did."
@@ -62,7 +64,13 @@ defmodule Lemieux.CLI.MCPCommands do
     {head, tail} = Enum.split_while(argv, &(&1 != "--"))
     {parsed, rest, invalid} = OptionParser.parse(head, strict: @switches)
     rest = if tail == [], do: rest, else: rest ++ tail
-    config_argv = if parsed[:config], do: ["--config", parsed[:config]], else: []
+
+    config_argv =
+      for key <- [:config, :credentials, :oauth_callback_port],
+          value = parsed[key],
+          not is_nil(value),
+          part <- ["--" <> String.replace(Atom.to_string(key), "_", "-"), to_string(value)],
+          do: part
 
     with [] <- invalid,
          :ok <- scope_flags(parsed),

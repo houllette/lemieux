@@ -53,6 +53,13 @@ API.
 
 ### Features
 
+- Continue interactive MCP add through OAuth and tool discovery in the TUI
+  and normal terminal. Background startup and piped/`--non-interactive` adds
+  never open a browser. `Session.add_mcp_servers/3` adds an optional
+  `interactive_auth` override; existing `/2` calls retain their host policy.
+  Connection tasks keep session reads responsive and close cancelled startup
+  clients, while failed login retains the saved configuration. (#143)
+
 - Add terminal-native `lmx mcp add --local|--global`, with HTTP and stdio
   descriptors, explicit replacement and secret references. Scope is required;
   personal names retain precedence over repository names. (#140)

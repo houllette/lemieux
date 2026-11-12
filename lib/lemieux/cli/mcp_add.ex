@@ -5,14 +5,22 @@ defmodule Lemieux.CLI.MCPAdd do
   and the existing atomic config writers. A replacement is always explicit.
   """
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.Runtime
   alias Lemieux.CLI.Sanitize
   alias Lemieux.Extensions.Workspace.Discovery
+  alias Lemieux.MCP
   alias Lemieux.MCP.Config, as: MCPConfig
   alias Lemieux.TUI.MCPForm
 
   @doc false
-  @spec run(list(), keyword(), struct(), Path.t(), keyword()) :: :ok | {:error, 1}
-  def run(args, parsed, options, cwd, _opts) do
+  @spec run(
+          args :: list(),
+          parsed :: keyword(),
+          options :: struct(),
+          cwd :: Path.t(),
+          opts :: keyword()
+        ) :: :ok | {:error, 1}
+  def run(args, parsed, options, cwd, opts) do
     with {:ok, scope} <- scope(parsed),
          {:ok, server} <- descriptor(args, parsed),
          {:ok, path} <- destination(scope, options, cwd),
@@ -28,20 +36,75 @@ defmodule Lemieux.CLI.MCPAdd do
               Enum.map_join(secrets, ", ", &elem(&1, 0)) <> " before connecting."
           )
 
-      IO.puts("Open /mcp in the TUI, select #{server["name"]}, and press r to connect/sign in.")
-
       if scope == "local",
         do:
           IO.puts(
             "Repository servers follow the existing trust prompt; personal servers of the same name take precedence."
           )
 
-      :ok
+      finish_setup(server, parsed, options, cwd, opts, secrets)
     else
       {:error, message} ->
         IO.puts(:stderr, "lmx: #{shown(message)}")
         {:error, 1}
     end
+  end
+
+  defp finish_setup(server, parsed, options, cwd, opts, secrets) do
+    if parsed[:non_interactive] || not Sanitize.terminal?(:stdio, opts[:interactive?]) do
+      IO.puts(
+        "Configuration saved; connection not attempted. Open /mcp in the TUI, select #{server["name"]}, and press r to connect/sign in."
+      )
+
+      :ok
+    else
+      interactive_setup(server, options, cwd, opts, secrets)
+    end
+  end
+
+  defp interactive_setup(server, options, cwd, opts, secrets) do
+    with {:ok, runtime} <- Runtime.mount(opts) do
+      connect_opts = [
+        supervisor: runtime,
+        owner: self(),
+        cwd: cwd,
+        auth: Keyword.get_lazy(opts, :mcp_auth, fn -> Runtime.auth(options) end),
+        interactive_auth: true,
+        credentials: {:scrub, []}
+      ]
+
+      result =
+        MCP.connect_server(
+          server,
+          Keyword.merge(connect_opts, Keyword.get(opts, :mcp_connect_opts, []))
+        )
+
+      setup_result(result, server, runtime, secrets)
+    end
+  end
+
+  defp setup_result({:ok, %{tools: tools, client: client}}, server, runtime, _secrets) do
+    MCP.disconnect([client], runtime)
+    IO.puts("#{server["name"]} connected and ready with #{length(tools)} tools.")
+    :ok
+  end
+
+  defp setup_result({:error, %{reason: reason}}, server, _runtime, secrets) do
+    # The saved configuration survives cancelled/failed sign-in. Never repeat
+    # values supplied as credentials in a setup error.
+    message = if is_binary(reason), do: reason, else: "sign-in required"
+
+    message =
+      Enum.reduce(secrets, message, fn {_key, value}, text ->
+        String.replace(text, value, "[withheld]")
+      end)
+
+    IO.puts(
+      :stderr,
+      "lmx: Configuration saved; #{server["name"]} connection failed: #{shown(message)}. Retry with /mcp, select #{server["name"]}, press r."
+    )
+
+    {:error, 1}
   end
 
   defp scope(parsed) do

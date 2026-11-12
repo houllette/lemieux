@@ -392,8 +392,10 @@ defmodule Lemieux.CLI.Help do
     root's .mcp.json. --replace permits replacing an existing name. Headers
     and environment entries use repeated --header NAME=VALUE and --env NAME=VALUE
     before --. Secret values are saved as ${NAME} references. Saving starts
-    no server; /mcp, select the server and r connects and signs in. --non-interactive
-    keeps setup suitable for scripts. list accepts --local or --global too.
+    no server when piped or with --non-interactive. Interactive add connects,
+    signs in through the browser when needed, and reports the discovered tools.
+    Failed sign-in keeps the configuration; /mcp, select it and r retries.
+    list accepts --local or --global too.
 
     Example: lmx mcp add --global --transport http linear https://mcp.linear.app/mcp
 
