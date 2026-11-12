@@ -18,6 +18,7 @@ defmodule Lemieux.Subagent.ErrorTest do
     assert result.model_text =~ "requested $9.00, available $8.66"
     assert result.model_text =~ "spent $0.34, reserved $0.00"
     assert result.model_text =~ "not the provider account balance"
+    assert Enum.all?(String.split(result.model_text, "\n"), &(String.length(&1) <= 76))
     evidence = result |> Result.to_map() |> JSON.encode!() |> JSON.decode!()
     diagnostic = evidence["structured_content"]["subagent_error"]
     assert diagnostic["micros"]["spent"] == 337_745

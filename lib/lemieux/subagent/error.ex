@@ -38,10 +38,10 @@ defmodule Lemieux.Subagent.Error do
       if Enum.all?([cap, spent, reserved], &(is_integer(&1) and &1 >= 0)),
         do: max(cap - spent - reserved, 0)
 
-    "Subagent launch exceeds this run's tree budget: requested #{dollars(amounts["requested"])}, " <>
-      "available #{dollars(remaining)} (cap #{dollars(cap)}, spent #{dollars(spent)}, " <>
-      "reserved #{dollars(reserved)}). Request a smaller subagent budget, or explicitly " <>
-      "adjust the configured tree limit. This is not the provider account balance."
+    "Subagent launch exceeds this run's tree budget.\n" <>
+      "requested #{dollars(amounts["requested"])}, available #{dollars(remaining)}, cap #{dollars(cap)}.\n" <>
+      "spent #{dollars(spent)}, reserved #{dollars(reserved)}; not the provider account balance.\n" <>
+      "Request a smaller child budget, or explicitly adjust the tree limit."
   end
 
   def message(["root_limit", limit]) when is_integer(limit),
