@@ -51,6 +51,43 @@ defmodule Lemieux.MCP.InspectionTest do
     def close(_state), do: :ok
   end
 
+  test "transport closure is visible without discarding cached tool details", %{tmp_dir: dir} do
+    rt = :"mcp_closed_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: rt})
+    fixture = Path.expand("../../fixtures/mcp_server.py", __DIR__)
+
+    capture_log(fn ->
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: rt,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(dir),
+          subscriber: self(),
+          mcp_servers: [
+            %{"name" => "stdio", "command" => "python3", "args" => [fixture, "modern"]}
+          ]
+        )
+
+      Session.mcp_status(session, :infinity)
+      [%{client: client}] = Session.mcp_clients(session)
+      transport = :sys.get_state(client).transport
+      capture = transport.diagnostics
+      Port.close(transport.port)
+      assert_receive {:lemieux, _, {:mcp_server, %{name: "stdio", status: :failed}}}
+
+      assert {:ok, %{server: %{status: :failed, tool_count: 0}, tools: [tool | _]}} =
+               Session.inspect_mcp(session, "stdio")
+
+      refute tool.enabled?
+      assert tool.reason == "server is failed"
+      assert map_size(tool.input_schema) > 0
+      assert [] = Session.catalog(session)
+      refute Process.alive?(capture)
+    end)
+  end
+
   test "inspection isolates servers, names tools exactly and includes disabled schemas", %{
     tmp_dir: dir
   } do

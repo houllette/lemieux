@@ -509,6 +509,50 @@ defmodule Lemieux.MCP.AuthTest do
       end)
     end
 
+    test "a close notification arriving before discovery settles cannot become connected",
+         context do
+      serve("oauth", context.port)
+      test = self()
+      visit = browser()
+
+      redirect = fn url, uri ->
+        send(test, {:consent_client, self()})
+
+        receive do
+          :continue -> visit.(url, uri)
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect)
+        )
+
+      capture_log(fn ->
+        task =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:consent_client, client}
+        send(session, {:mcp_connection_closed, %{server: "fixture", client: client}})
+        assert [%{status: :connecting}] = Session.info(session).mcp
+        send(client, :continue)
+        assert Task.await(task) == :ok
+
+        assert [%{tool_count: 0, error: "connection closed; reconnect to retry"}] =
+                 Session.mcp_status(session)
+
+        assert [] = Session.catalog(session)
+        refute Process.alive?(client)
+      end)
+    end
+
     test "removing a server during consent closes the pending client", context do
       serve("oauth", context.port)
       test = self()
@@ -580,6 +624,36 @@ defmodule Lemieux.MCP.AuthTest do
 
       assert JSON.decode!(File.read!(config))["mcp_servers"]["fixture"]["url"] ==
                http_config(context)["url"]
+    end
+
+    test "background session discovery remains needs-auth without opening a browser", context do
+      serve("oauth", context.port)
+      test = self()
+
+      capture_log(fn ->
+        {:ok, session} =
+          Lemieux.start_session(
+            supervisor: context.runtime,
+            provider: Scripted.new([]),
+            model: "test:model",
+            tools: [],
+            store: JSONL.new(context.tmp_dir),
+            mcp_servers: [http_config(context)],
+            mcp_connect_opts: [interactive_auth: false],
+            mcp_auth:
+              auth(context,
+                redirect: fn _, _ ->
+                  send(test, :unexpected_browser)
+                  {:error, "no"}
+                end
+              )
+          )
+
+        assert [%{tool_count: 0}] = Session.mcp_status(session, :infinity)
+        assert [%{status: :needs_auth}] = Session.info(session).mcp
+        assert [] = Session.mcp_clients(session)
+        refute_receive :unexpected_browser, 50
+      end)
     end
 
     test "a token already stored is still used", context do

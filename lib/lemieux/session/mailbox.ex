@@ -271,6 +271,9 @@ defmodule Lemieux.Session.Mailbox do
     end
   end
 
+  def message({:mcp_connection_closed, %{server: name, client: client}}, state),
+    do: {:noreply, MCPServers.connection_closed(state, name, client)}
+
   # Prompts and resources are not in the catalog; a host offering them as
   # commands or references hears that they changed and asks the server again.
   def message({:mcp_list_changed, %{server: name, kind: kind}}, state),

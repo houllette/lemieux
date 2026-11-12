@@ -63,6 +63,11 @@ defmodule Lemieux.MCP.Client do
 
       {:mcp_list_changed, %{server: name, client: pid, kind: :prompts | :resources}}
 
+  A closed duplex transport also sends
+  `{:mcp_connection_closed, %{server: name, client: pid}}` to `:notify`.
+  This contains no transport error payload; sessions retain cached descriptors
+  for inspection while removing that connection's tools from future requests.
+
   A `ping` is answered; any other request a server sends gets "method not
   found", because lemieux declares no capability a server may call back into,
   and a server waiting on an answer that never comes is a server that hangs.
@@ -204,7 +209,7 @@ defmodule Lemieux.MCP.Client do
   def info(client), do: GenServer.call(client, :info, :infinity)
 
   @doc false
-  @spec finish_startup(client :: client()) :: :ok
+  @spec finish_startup(client :: client()) :: :ok | {:error, String.t()}
   def finish_startup(client), do: GenServer.call(client, :finish_startup, :infinity)
 
   @impl GenServer
@@ -269,7 +274,7 @@ defmodule Lemieux.MCP.Client do
       client_ref = Process.monitor(client)
 
       receive do
-        {:startup_finished, ^client} -> :ok
+        {:startup_finished, ^client, ref} -> send(client, {:startup_released, ref})
         {:DOWN, ^client_ref, :process, ^client, _reason} -> :ok
         {:DOWN, ^owner_ref, :process, ^owner, _reason} -> Process.exit(client, :kill)
       end
@@ -288,6 +293,22 @@ defmodule Lemieux.MCP.Client do
         else: state
 
     {:noreply, state}
+  end
+
+  defp release_startup_guard(nil), do: :ok
+
+  defp release_startup_guard(guard) do
+    ref = Process.monitor(guard)
+    send(guard, {:startup_finished, self(), ref})
+
+    receive do
+      {:startup_released, ^ref} ->
+        Process.demonitor(ref, [:flush])
+        :ok
+
+      {:DOWN, ^ref, :process, ^guard, _reason} ->
+        exit(:startup_guard_stopped)
+    end
   end
 
   # Anything a transport says other than the three modes is read as serial,
@@ -408,8 +429,9 @@ defmodule Lemieux.MCP.Client do
   end
 
   def handle_call(:finish_startup, _from, state) do
-    if state.startup_guard, do: send(state.startup_guard, {:startup_finished, self()})
-    {:reply, :ok, %{state | startup_guard: nil}}
+    release_startup_guard(state.startup_guard)
+    result = if state.failure, do: {:error, state.failure}, else: :ok
+    {:reply, result, %{state | startup_guard: nil}}
   end
 
   def handle_call(_request, _from, %{failure: failure} = state) when is_binary(failure),
@@ -923,6 +945,9 @@ defmodule Lemieux.MCP.Client do
   # The server has gone. Everything in flight fails with the reason, and
   # everything after it answers the same.
   defp closed(state, reason) do
+    if is_nil(state.failure) and state.notify,
+      do: send(state.notify, {:mcp_connection_closed, %{server: state.server, client: self()}})
+
     state = fail(state, reason)
 
     state.pending

@@ -45,7 +45,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           Task.start(fn ->
             result =
               try do
-                Session.inspect_mcp(session, server.name)
+                session |> Session.inspect_mcp(server.name) |> prepare_inspection()
               catch
                 :exit, _reason -> {:error, :session_unavailable}
               end
@@ -230,9 +230,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       inspection =
         case result do
           {:ok, inspection} ->
-            Map.update!(inspection, :tools, fn tools ->
-              Enum.map(tools, &Map.put(&1, :detail_text, MCPPanel.describe_tool(&1)))
-            end)
+            inspection
 
           {:error, reason} ->
             %{
@@ -246,6 +244,15 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def inspection_result(state, _session, _name, _result), do: {:noreply, state}
+
+    defp prepare_inspection({:ok, inspection}) do
+      {:ok,
+       Map.update!(inspection, :tools, fn tools ->
+         Enum.map(tools, &Map.put(&1, :detail_text, MCPPanel.describe_tool(&1)))
+       end)}
+    end
+
+    defp prepare_inspection(error), do: error
 
     defp mcp_delete_key(state, ctx) do
       case Enum.at(state.tools.mcp_flow.statuses, state.tools.mcp_flow.selected) do

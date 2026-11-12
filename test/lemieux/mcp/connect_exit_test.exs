@@ -4,6 +4,7 @@ defmodule Lemieux.MCP.ConnectExitTest do
   import ExUnit.CaptureLog
 
   alias Lemieux.MCP
+  alias Lemieux.MCP.Client
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store.JSONL
@@ -46,6 +47,35 @@ defmodule Lemieux.MCP.ConnectExitTest do
     runtime = :"connect_exit_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
     %{runtime: runtime}
+  end
+
+  test "startup handoff waits for the guard to release before its task can finish" do
+    client =
+      start_supervised!(
+        {Client, server: "fixture", transport: {Exiting, %{}}, startup_owner: self()}
+      )
+
+    assert {:ok, [_]} = Client.list_tools(client)
+    guard = :sys.get_state(client).startup_guard
+    :erlang.suspend_process(guard)
+    parent = self()
+
+    task =
+      Task.async(fn ->
+        result = Client.finish_startup(client)
+        send(parent, {:startup_finished, result})
+        result
+      end)
+
+    try do
+      refute_receive {:startup_finished, _}, 100
+    after
+      :erlang.resume_process(guard)
+    end
+
+    assert_receive {:startup_finished, :ok}
+    assert Task.await(task) == :ok
+    assert Client.info(client).ready?
   end
 
   for phase <- ["during", "after"], reason <- [:normal, :shutdown] do

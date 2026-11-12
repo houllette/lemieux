@@ -265,8 +265,15 @@ defmodule Lemieux.MCP do
     case Client.list_tools(client) do
       {:ok, tools} ->
         info = Client.info(client)
-        :ok = Client.finish_startup(client)
-        keep_client(client, name, supervisor, tools, info)
+
+        case Client.finish_startup(client) do
+          :ok ->
+            keep_client(client, name, supervisor, tools, info)
+
+          {:error, reason} ->
+            stop_client(client, supervisor)
+            failed(name, reason, info.needs_auth, Keyword.get(opts, :interactive_auth, true))
+        end
 
       {:error, reason} ->
         info = Client.info(client)
