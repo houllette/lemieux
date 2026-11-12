@@ -5,6 +5,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
   defmodule Lemieux.TUI.TranscriptPresentation do
     @moduledoc "Projects saved events into rows and formats delegation rows."
 
+    alias Lemieux.Diagnostic
     alias Lemieux.Extensions.Verify
     alias Lemieux.ID.Shorthand
     alias Lemieux.Transcript
@@ -209,7 +210,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
             before ++ rows ++ Enum.drop_while(rest, &(ToolText.call_id(&1) == id))
         end
 
-      {lines, Map.delete(calls, id)}
+      {lines ++ diagnostic_hint(payload), Map.delete(calls, id)}
     end
 
     # A spawn and its result are two entries about one child, so the second updates
@@ -272,8 +273,16 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       end
     end
 
-    defp entry_lines(%{type: :error, payload: payload}),
-      do: [{:lmx, "error: #{payload["reason"] || inspect(payload)}"}]
+    defp entry_lines(%{type: :error, payload: payload}) do
+      [{:lmx, "error: #{payload["reason"] || inspect(payload)}"}] ++ diagnostic_hint(payload)
+    end
+
+    defp entry_lines(%{
+           type: :extension_state,
+           payload: %{"namespace" => "lemieux.errors", "value" => %{"count" => count}}
+         })
+         when is_integer(count) and count > 0,
+         do: [{:bug_summary, Diagnostic.summary(count)}]
 
     defp entry_lines(%{type: :cancelled}), do: [{:lmx, "— cancelled —"}]
 
@@ -286,6 +295,13 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       do: [{:subagent_summary, payload["status"] || "finished", group_summary(payload)}]
 
     defp entry_lines(_entry), do: []
+
+    defp diagnostic_hint(payload) do
+      case Diagnostic.from_payload(payload) do
+        nil -> []
+        _diagnostic -> [{:bug_hint, Diagnostic.hint()}]
+      end
+    end
 
     defp spawned_child(payload) do
       %{

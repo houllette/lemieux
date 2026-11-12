@@ -5,10 +5,10 @@ defmodule Lemieux.TUI.ToolTextTest do
   alias ExRatatui.Style
   alias ExRatatui.Text.Span
   alias Lemieux.Subagent.Error, as: SubagentError
+  alias Lemieux.Tool.Result
   alias Lemieux.TUI.Renderer
   alias Lemieux.TUI.Theme
   alias Lemieux.TUI.ToolText
-  alias Lemieux.Tool.Result
 
   test "subagent errors use structured explanations and safely handle old printed maps" do
     result = SubagentError.result(%{reason: :tree_budget})

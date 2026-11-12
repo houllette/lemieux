@@ -5,6 +5,7 @@ defmodule Lemieux.Session.Prompts do
 
   alias Lemieux.Attribution
   alias Lemieux.Clock
+  alias Lemieux.Diagnostic
   alias Lemieux.Hooks
   alias Lemieux.Ingress
   alias Lemieux.Input
@@ -18,6 +19,7 @@ defmodule Lemieux.Session.Prompts do
   alias Lemieux.Session.Audit
   alias Lemieux.Session.Compacting
   alias Lemieux.Session.Core
+  alias Lemieux.Session.Diagnostics
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.MCPServers
@@ -139,7 +141,8 @@ defmodule Lemieux.Session.Prompts do
 
     %{
       state
-      | evidence: %{
+      | internal_errors: %{},
+        evidence: %{
           state.evidence
           | current_run: %{
               id: run_id,
@@ -379,13 +382,31 @@ defmodule Lemieux.Session.Prompts do
     |> Core.put_compaction(:forecast, nil)
     |> Map.merge(%{stop_hook_active: false, retry_note: nil, retry_failure: nil})
     |> Instrumentation.finish_prompt_telemetry(stop_reason)
+    |> Diagnostics.finish()
     |> Audit.finalize_run(stop_reason)
     |> Core.emit({:context, Compacting.context(state)})
     |> Core.emit({:finished, stop_reason})
     |> Recovery.maybe_follow_up()
   end
 
-  def hook_crashed(state, {:refresh, from}, reason) do
+  def hook_crashed(state, action, reason) do
+    state =
+      if Diagnostic.internal_crash?(reason) do
+        diagnostic =
+          Diagnostic.new("hook", "A Lemieux lifecycle hook failed unexpectedly.", reason)
+
+        Core.append(
+          state,
+          {:error, %{"reason" => diagnostic["message"], "diagnostic" => diagnostic}, nil}
+        )
+      else
+        state
+      end
+
+    finish_crashed_hook(state, action, reason)
+  end
+
+  defp finish_crashed_hook(state, {:refresh, from}, reason) do
     Logger.warning("lemieux: refreshing attachments failed: #{Exception.format_exit(reason)}")
     GenServer.reply(from, {:error, {:refresh_failed, reason}})
 
@@ -394,7 +415,7 @@ defmodule Lemieux.Session.Prompts do
 
   # A prompt whose references could not be read is still a prompt. Losing it
   # would be a worse answer than sending it without the files.
-  def hook_crashed(state, {:expand, resume, text}, reason) do
+  defp finish_crashed_hook(state, {:expand, resume, text}, reason) do
     Logger.warning(
       "lemieux: expanding prompt references failed: #{Exception.format_exit(reason)}"
     )
@@ -402,12 +423,12 @@ defmodule Lemieux.Session.Prompts do
     resume(state, resume, text, [])
   end
 
-  def hook_crashed(state, {:prompt, from, _text}, reason) do
+  defp finish_crashed_hook(state, {:prompt, from, _text}, reason) do
     GenServer.reply(from, {:error, {:hook_failed, reason}})
     Input.clear(%{state | aside: nil})
   end
 
-  def hook_crashed(state, {:follow_up, _text}, reason) do
+  defp finish_crashed_hook(state, {:follow_up, _text}, reason) do
     Logger.warning("lemieux: follow-up hook failed: #{Exception.format_exit(reason)}")
 
     state
@@ -416,14 +437,14 @@ defmodule Lemieux.Session.Prompts do
     |> Recovery.maybe_follow_up()
   end
 
-  def hook_crashed(state, {:notification, _id, _text, _turns}, reason),
-    do: hook_crashed(state, {:follow_up, ""}, reason)
+  defp finish_crashed_hook(state, {:notification, _id, _text, _turns}, reason),
+    do: finish_crashed_hook(state, {:follow_up, ""}, reason)
 
-  def hook_crashed(state, {:prepare_next_turn, _request}, reason) do
+  defp finish_crashed_hook(state, {:prepare_next_turn, _request}, reason) do
     Requests.request_hook_failed(state, {:crashed, reason})
   end
 
-  def hook_crashed(state, {:stop, stop_reason}, reason) do
+  defp finish_crashed_hook(state, {:stop, stop_reason}, reason) do
     Logger.warning("lemieux: stop hook failed: #{Exception.format_exit(reason)}")
     finish_stop(state, stop_reason)
   end
@@ -651,6 +672,7 @@ defmodule Lemieux.Session.Prompts do
     }
     |> Audit.ensure_harness_snapshot()
     |> Core.append({:cancelled, %{"reason" => Atom.to_string(reason)}, nil})
+    |> Diagnostics.finish()
     |> Audit.finalize_run(:cancelled)
     # Every other way a prompt ends publishes the position; this one did not,
     # so a cancelled turn's own spend never reached a status line. The

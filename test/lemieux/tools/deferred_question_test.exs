@@ -5,9 +5,9 @@ defmodule Lemieux.Tools.DeferredQuestionTest do
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store.JSONL
-  alias Lemieux.TUI.QuestionFlow
   alias Lemieux.Tools.AskUser
   alias Lemieux.Transcript
+  alias Lemieux.TUI.QuestionFlow
 
   @moduletag :tmp_dir
 

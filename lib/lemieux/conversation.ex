@@ -305,6 +305,7 @@ defmodule Lemieux.Conversation do
           commands: [module()],
           reflecting: :assessment | :opportunities | nil,
           feedback: Dialogue.t() | {:pending, String.t()} | nil,
+          bug_report: map() | nil,
           noted_window?: boolean(),
           pending_context: [String.t()]
         }
@@ -369,7 +370,8 @@ defmodule Lemieux.Conversation do
             # What the next prompt or steer carries ahead of what is typed:
             # a `!command`'s output, a note that `/undo` put files back.
             # Newest first; see "A person's own commands".
-            pending_context: []
+            pending_context: [],
+            bug_report: nil
 
   @doc """
   A conversation with nothing said yet.
@@ -943,6 +945,19 @@ defmodule Lemieux.Conversation do
   end
 
   def event(conversation, {:feedback_anchors, _anchors}), do: {conversation, []}
+
+  def event(conversation, {:bug_report_result, {:ok, report}}),
+    do: bug_preview(conversation, report)
+
+  def event(conversation, {:bug_submit_result, {:preview, report}}),
+    do: bug_preview(conversation, report)
+
+  def event(conversation, {:bug_submit_result, {:ok, url}}),
+    do: {%{conversation | bug_report: nil}, [{:say, "bug report submitted: " <> url}]}
+
+  def event(conversation, {kind, {:error, reason}})
+      when kind in [:bug_report_result, :bug_submit_result],
+      do: {conversation, [{:say, "could not report bug: " <> describe(reason)}]}
 
   def event(conversation, {:feedback_result, {:ok, id}}),
     do:
@@ -1992,6 +2007,15 @@ defmodule Lemieux.Conversation do
   # capture clears the field before the write is asked for, so a front end
   # that fails to write cannot leave a dialogue half-open waiting on lines
   # nobody is going to type.
+  defp bug_preview(conversation, report) do
+    {%{conversation | bug_report: report},
+     [
+       {:say, "Sanitized bug report preview (nothing submitted):\n\n" <> report.body},
+       {:say,
+        "Draft: #{report.path}\nReview/edit that file. /feedback bug submit explicitly submits the reviewed bytes to houllette/lemieux. Changes require another preview before submission. Keep the file to export without GitHub authentication."}
+     ]}
+  end
+
   defp capture(conversation, {:ask, dialogue}),
     do: {%{conversation | feedback: dialogue}, [{:say, Dialogue.question(dialogue)}, :ready]}
 

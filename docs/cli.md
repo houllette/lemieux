@@ -409,6 +409,8 @@ links to the docs, issues and questions at the end.
 | `/reflect` | Review the session and suggest prompt, skill, extension or harness improvements (experimental) |
 | `/reflect opportunities` | The same review, as records written to the feedback ledger |
 | `/feedback [TEXT]` | Record what should have gone differently, anchored to a moment in this session |
+| `/feedback bug [TEXT]` | Prepare a sanitized report of the latest turn's internal errors for review |
+| `/feedback bug submit` | Explicitly submit the reviewed draft to the repository; edits require a new preview |
 
 With the Elixir extension (`--elixir`, or in an Elixir project) there are
 three more: `/elixir` toggles the Elixir-only tool profile, `/attach [NODE]`
@@ -1373,6 +1375,27 @@ answered with a number, a word or a blank line for the default. It writes to
 the same ledger as `lmx feedback`, in the same shape, and never touches the
 transcript. While it is open, every typed line is an answer; `/cancel`
 discards it. It is refused mid-turn, when a typed line is a steer.
+
+Unexpected failures inside Lemieux show a muted reporting hint immediately
+after the error, and a red error count when the turn ends, including after
+successful recovery. Command exit codes, project test failures, provider
+errors, budget refusals and cancellations do not by themselves count as bugs.
+
+`/feedback bug [TEXT]` prepares the latest errored turn as a private Markdown
+draft under `~/.lmx/bug-reports` (beside a relocated sessions directory).
+`/feedback bug turn SEQ [TEXT]` selects an older error-summary entry by its
+transcript sequence. The report uses the same anchored feedback ledger, with
+type `bug`. It includes the version and bounded internal stack locations;
+the full diagnostic remains in the local transcript. No conversation, tool
+input/output or exception message is attached by default.
+
+Read the preview and edit the exported file to add reproduction steps and
+remove anything private. `/feedback bug submit` uses an already-authenticated
+GitHub CLI to submit to `houllette/lemieux`. If the file changed, the command
+sanitizes it and shows another preview; submit again after reviewing it.
+Preparation never publishes or calls a model. Without GitHub authentication,
+the file remains available to copy into an issue yourself. Failed submission
+preserves the draft; check the repository before retrying an ambiguous result.
 
 ## Validated final JSON
 

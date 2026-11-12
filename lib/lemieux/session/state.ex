@@ -235,6 +235,7 @@ defmodule Lemieux.Session.State do
     parked: %{},
     deferred_question: nil,
     deferred_answers: [],
+    internal_errors: %{},
     approval_timeout: nil,
     approval: nil,
     reversed_steers: [],

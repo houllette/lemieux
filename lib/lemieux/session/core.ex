@@ -3,6 +3,7 @@ defmodule Lemieux.Session.Core do
 
   alias Lemieux.Compaction
   alias Lemieux.Entry
+  alias Lemieux.Session.Diagnostics
   alias Lemieux.Session.Questions
   alias Lemieux.Session.Subscribers
   alias Lemieux.Store
@@ -149,6 +150,7 @@ defmodule Lemieux.Session.Core do
             next_seq: state.next_seq + 1,
             request_count: state.request_count + if(type == :request, do: 1, else: 0)
         }
+        |> Diagnostics.observe(entry)
         |> emit({:entry, entry})
 
       {:error, reason} ->

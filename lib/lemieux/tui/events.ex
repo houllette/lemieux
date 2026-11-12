@@ -6,6 +6,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @moduledoc "Applies a session's `{:lemieux, id, event}` messages to a `Lemieux.TUI`."
 
     alias Lemieux.Conversation
+    alias Lemieux.Diagnostic
     alias Lemieux.Session
     alias Lemieux.TUI
     alias Lemieux.TUI.Choices
@@ -39,12 +40,27 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {conversation, effects} = Conversation.event(state.conversation, event)
       state = sync_event(%{state | conversation: conversation}, event)
       {state, effects} = present_event(state, event, effects)
+      state = diagnostic_hint(state, event)
       state = resolved_question_flow(state, event)
 
       state
       |> Effects.run(effects)
       |> finish_event(event)
     end
+
+    defp diagnostic_hint(state, {:entry, %{payload: payload}}) do
+      case Diagnostic.from_payload(payload) do
+        nil -> state
+        _diagnostic -> Transcript.append_rows(state, [{:bug_hint, Diagnostic.hint()}])
+      end
+    end
+
+    defp diagnostic_hint(state, _event), do: state
+
+    defp error_summary(%{"namespace" => "lemieux.errors", "value" => %{"count" => count}})
+         when is_integer(count) and count > 0, do: [{:bug_summary, Diagnostic.summary(count)}]
+
+    defp error_summary(_payload), do: []
 
     @doc false
     @spec phase(TUI.t(), atom(), term()) :: TUI.t()
@@ -280,6 +296,21 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # attaches mid-turn is sent the pending call and then the live one — and
     # for `ask_user` a second announcement is a second copy of the question,
     # which is what the duplicate-question bug looked like from the outside.
+    defp present_event(
+           state,
+           {:entry,
+            %{type: :extension_state, payload: %{"namespace" => "lemieux.errors"} = payload}},
+           effects
+         ),
+         do: {Transcript.append_rows(state, error_summary(payload)), effects}
+
+    defp present_event(
+           state,
+           {:entry, %{type: :error, payload: %{"diagnostic" => diagnostic}}},
+           effects
+         ),
+         do: {Transcript.say(state, :lmx, "error: " <> diagnostic["message"]), effects}
+
     defp present_event(%{turn: %{compacting: %{}}} = state, {:compacted, _data}, effects) do
       report =
         Enum.find_value(effects, fn
