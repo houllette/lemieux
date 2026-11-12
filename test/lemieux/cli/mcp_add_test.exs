@@ -118,7 +118,11 @@ defmodule Lemieux.CLI.MCPAddTest do
                      ctx.config,
                      "piped",
                      "http://127.0.0.1:1/mcp"
-                   ], cwd: ctx.cwd, interactive?: true, stdin_terminal?: false)
+                   ],
+                   cwd: ctx.cwd,
+                   interactive?: true,
+                   stdin_terminal?: false
+                 )
       end)
 
     assert output =~ "connection not attempted"
