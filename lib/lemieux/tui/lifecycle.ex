@@ -193,7 +193,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       # Preparation can finish after a resize, version notice, or local-model
       # discovery. Keep those while installing the resolved harness and session.
       previous_lines = state.lines
-      opts = Setup.with_harness(ready_opts)
+      opts = ready_opts |> Setup.with_harness() |> Keyword.put_new(:home, state.references.home)
 
       ready =
         opts

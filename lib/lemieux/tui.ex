@@ -139,6 +139,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Appearance
     alias Lemieux.TUI.Background
     alias Lemieux.TUI.Boot
+    alias Lemieux.TUI.CatalogState
     alias Lemieux.TUI.Choices
     alias Lemieux.TUI.Composer
     alias Lemieux.TUI.DiffPanel
@@ -216,6 +217,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     which skills exist or whose status line is drawn. An option given
     explicitly still wins, which is what lets a test pin one thing without
     building a harness around it.
+
+    `:home` optionally supplies the home directory used to abbreviate the
+    header's working directory. It defaults to the local home at setup, then
+    stays cached so rendering never makes a synchronous VM lookup for it.
 
     On the local terminal the screen also adapts to the terminal it is on.
     With no theme chosen it asks the terminal whether its background is
@@ -421,6 +426,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             tools: in_flight(),
             references: %{
               cwd: Path.t() | nil,
+              home: Path.t() | nil,
               mcp_config: Path.t() | nil,
               environment: Environment.t() | nil,
               directory: String.t() | nil,
@@ -559,6 +565,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               # `render/2` runs at frame rate and must not touch a filesystem.
               references: %{
                 cwd: nil,
+                home: nil,
                 mcp_config: nil,
                 environment: nil,
                 directory: nil,
@@ -1011,6 +1018,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def handle_info({:models_discovered, models}, state) when is_list(models),
       do: {:noreply, Choices.discovered(state, models)}
+
+    def handle_info({:model_catalog, provider, models, notice}, state) when is_list(models) do
+      catalog =
+        CatalogState.replace(
+          state.catalog,
+          provider,
+          models,
+          state.conversation.model
+        )
+
+      state = %{state | catalog: catalog}
+      texts = if is_binary(notice), do: [notice], else: []
+      {:noreply, Notices.replace(state, {:model_catalog, provider}, :warning, texts)}
+    end
 
     def handle_info({:resume_result, _reference, {:ok, details, sessions}}, state),
       do: {:noreply, Lifecycle.switched(state, details, sessions, "resumed")}

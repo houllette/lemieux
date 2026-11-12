@@ -67,7 +67,7 @@ defmodule Lemieux.TUI.InitialPromptTest do
   end
 
   test "is staged while the session starts, and sent, echoed, once it is up" do
-    screen = starting([], prompt: "fix the failing test")
+    screen = starting([], prompt: "fix the failing test", home: "/host/home")
 
     assert screen.loading.history.queued == ["fix the failing test"]
     refute_receive {:prompted, _text}, 100
@@ -78,6 +78,7 @@ defmodule Lemieux.TUI.InitialPromptTest do
     state = :sys.get_state(screen.app).user_state
     assert state.history.queued == []
     assert ready.id == "02FIRSTPROMPT"
+    assert ready.references.home == "/host/home"
     # The Go Habs Go banner is still playing out over the ready screen
     # (`Lemieux.TUI.Lifecycle.start_habs/1`); the echo is underneath it.
     assert screen(%{state | overlay: nil}) =~ "fix the failing test"

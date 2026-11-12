@@ -19,6 +19,7 @@ defmodule Lemieux.CLI.TUI do
 
   alias Lemieux.CLI
   alias Lemieux.CLI.AccountUsage
+  alias Lemieux.CLI.CodexModels.Watcher
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.ConfigReload
   alias Lemieux.CLI.Errors
@@ -256,6 +257,7 @@ defmodule Lemieux.CLI.TUI do
   defp left(pid, options, opts, exit_token) do
     announce_update(pid, options)
     discover_models(pid, options, opts)
+    Watcher.start(pid, options, opts)
     outcome = leaving_on_sigterm(pid, fn -> await(pid) end)
     # terminate/2 sends this before DOWN. Failed mounts have no receipt.
     receipt =

@@ -262,6 +262,19 @@ With the pinned provider library, supported direct OpenAI and Codex models
 expose service tiers; Anthropic and gateways without a declared transport
 contract do not.
 
+**Codex account models.** The Codex subscription picker fetches visible models
+for the same account and access credential used by the existing ReqLLM Codex
+transport. Discovery runs in the background, caches successful results for five
+minutes, and checks for changed sign-ins every 30 seconds. Explicit ReqLLM OAuth
+file overrides take precedence over native Codex borrowing. Discovery reads no
+refresh tokens and never refreshes credentials or runs inference. `--config none`
+skips native sign-in discovery. Custom inference endpoints are not guessed.
+Failures show a notice and preserve the selected model, recent choices, and
+provider-scoped model/effort preferences; newly returned IDs remain selectable
+even before bundled metadata knows about them. Account changes discard the
+previous catalog. This uses the existing Codex backend route, whose token and
+endpoint contract differs from the public [Sign in with ChatGPT catalog](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference).
+
 ### Keys
 
 | Key | What it does |

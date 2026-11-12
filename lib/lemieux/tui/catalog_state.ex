@@ -86,6 +86,34 @@ defmodule Lemieux.TUI.CatalogState do
     merge(catalog, provider, catalog.providers, catalog.models)
   end
 
+  @doc "Replaces one account's discovered choices while retaining the current model and personal preferences."
+  @spec replace(
+          catalog :: map(),
+          name :: String.t(),
+          models :: [String.t()],
+          current :: String.t()
+        ) :: map()
+  def replace(catalog, name, models, current) do
+    other = fn spec -> ModelSpec.provider(spec) != name end
+    found = Enum.filter(models, &(ModelSpec.provider(&1) == name))
+    current_models = if ModelSpec.provider(current) == name, do: [current], else: []
+    selected_provider = ModelSpec.provider(current)
+
+    catalog = %{
+      catalog
+      | discovered: Enum.filter(catalog.discovered, other) ++ found,
+        models: Enum.filter(catalog.models, other) ++ current_models,
+        providers: List.delete(catalog.providers, name)
+    }
+
+    merge(
+      catalog,
+      selected_provider,
+      Enum.uniq(catalog.providers ++ Enum.map(current_models, &ModelSpec.provider/1)),
+      catalog.models
+    )
+  end
+
   @doc "Restores the model and MCP catalog when attaching to a session."
   @spec hydrate(
           catalog :: map(),

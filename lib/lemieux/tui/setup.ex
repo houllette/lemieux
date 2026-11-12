@@ -41,6 +41,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         id: Keyword.get(opts, :id),
         references: %{
           cwd: Keyword.get(opts, :cwd),
+          home: Keyword.get_lazy(opts, :home, &System.user_home/0),
           mcp_config: Keyword.get(opts, :mcp_config),
           environment: Keyword.get(opts, :environment),
           directory: nil,
