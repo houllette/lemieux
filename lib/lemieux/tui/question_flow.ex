@@ -21,6 +21,7 @@ defmodule Lemieux.TUI.QuestionFlow do
 
     %{
       call_id: field(payload, :call_id),
+      deferred?: field(payload, :deferred) == true,
       batch?: field(payload, :questionnaire) == true,
       questions: questions,
       index: 0,

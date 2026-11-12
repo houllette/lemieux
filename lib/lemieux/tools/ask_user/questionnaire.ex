@@ -14,6 +14,7 @@ defmodule Lemieux.Tools.AskUser.Questionnaire do
 
   alias Lemieux.Session
   alias Lemieux.Tool.Result
+  alias Lemieux.Tools.AskUser
   alias Lemieux.Tools.AskUser.Diagram
 
   @doc "The bounded batch input schema."
@@ -75,19 +76,27 @@ defmodule Lemieux.Tools.AskUser.Questionnaire do
           context.call_id,
           :question,
           presentation(questions, context.call_id),
-          timeout_reply: {:ok, %{"status" => "timed_out"}}
+          timeout_reply: {:ok, %{"status" => "timed_out"}},
+          deferred: Map.get(context, :deferred_question?, false)
         )
 
-      answers = normalize_batch(response, questions)
-
-      status =
-        if Enum.all?(answers, &(&1["status"] == "answered")), do: "answered", else: "incomplete"
-
-      data = %{"version" => 1, "status" => status, "answers" => answers}
-      {:ok, Result.new(JSON.encode!(data), structured_content: data)}
+      finish(response, questions)
     else
       {:error, validation_error(questions)}
     end
+  end
+
+  defp finish({:deferred, id}, _questions), do: AskUser.pending_result(id)
+  defp finish({:error, reason}, _questions), do: {:error, reason}
+
+  defp finish(response, questions) do
+    answers = normalize_batch(response, questions)
+
+    status =
+      if Enum.all?(answers, &(&1["status"] == "answered")), do: "answered", else: "incomplete"
+
+    data = %{"version" => 1, "status" => status, "answers" => answers}
+    {:ok, Result.new(JSON.encode!(data), structured_content: data)}
   end
 
   defp normalize_ids(questions) when is_list(questions) do

@@ -98,7 +98,7 @@ defmodule Lemieux.Session.ToolWave do
     # stopped. Going idle here would leave those words in the queue until somebody
     # prompted again, which reads as having been ignored. The bound still applies: a
     # steer cannot buy more turns than the prompt was allowed.
-    if is_nil(state.aside) and state.reversed_steers != [] and
+    if is_nil(state.aside) and (state.reversed_steers != [] or state.deferred_answers != []) and
          state.turns_taken < state.max_turns do
       Compacting.continue(state)
     else

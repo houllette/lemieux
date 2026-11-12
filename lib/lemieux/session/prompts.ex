@@ -21,6 +21,7 @@ defmodule Lemieux.Session.Prompts do
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.MCPServers
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Requests
   alias Lemieux.Session.State
@@ -566,7 +567,7 @@ defmodule Lemieux.Session.Prompts do
   end
 
   def do_cancel(state, reason) do
-    state = DocumentRequest.cancel(state, :cancelled)
+    state = state |> DocumentRequest.cancel(:cancelled) |> Questions.cancel()
 
     Telemetry.event(
       [:session, :cancel],

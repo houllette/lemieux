@@ -781,7 +781,7 @@ defmodule Lemieux.Conversation do
         {:entry,
          %{type: :approval, payload: %{"kind" => "question", "call_id" => id, "status" => status}}}
       )
-      when status in ~w(answered timed_out),
+      when status in ~w(answered timed_out cancelled),
       do: {%{conversation | asking: nil, question: nil}, []}
 
   # What `Lemieux.Session.resolve_tool/3` said. The entry above clears the
@@ -1234,8 +1234,19 @@ defmodule Lemieux.Conversation do
   end
 
   defp finished(conversation, said, stop_reason) do
-    {%{conversation | busy?: false, asking: nil, question: nil, approvals: [], reflecting: nil},
-     said ++ cut_off(stop_reason) ++ announce(conversation.context) ++ [:ready, :idle]}
+    {asking, question} =
+      if match?(%{deferred: true}, conversation.question),
+        do: {conversation.asking, conversation.question},
+        else: {nil, nil}
+
+    {%{
+       conversation
+       | busy?: false,
+         asking: asking,
+         question: question,
+         approvals: [],
+         reflecting: nil
+     }, said ++ cut_off(stop_reason) ++ announce(conversation.context) ++ [:ready, :idle]}
   end
 
   # A turn the output cap ended stops mid-answer, and it used to stop without

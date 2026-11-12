@@ -12,6 +12,7 @@ defmodule Lemieux.Session.Mailbox do
   alias Lemieux.Session.DocumentRequest
   alias Lemieux.Session.MCPServers
   alias Lemieux.Session.Prompts
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Requests
   alias Lemieux.Session.Subscribers
@@ -42,6 +43,8 @@ defmodule Lemieux.Session.Mailbox do
     do: Approvals.expire(state, call_id, request_id)
 
   def message({:park_timeout, call_id}, state) do
+    state = Questions.expire(state, call_id)
+
     case Map.pop(state.parked, call_id) do
       {nil, _parked} ->
         {:noreply, state}

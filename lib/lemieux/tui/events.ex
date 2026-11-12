@@ -798,11 +798,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
               payload: %{"kind" => "question", "call_id" => id, "status" => status}
             }}
          )
-         when status in ~w(answered timed_out),
+         when status in ~w(answered timed_out cancelled),
          do: clear_question_flow(state, id)
 
     defp resolved_question_flow(state, {:finished, _reason}) do
       case state.tools.question_flow do
+        %{deferred?: true} -> state
         %{call_id: id} -> clear_question_flow(state, id)
         nil -> state
       end

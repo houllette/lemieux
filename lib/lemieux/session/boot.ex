@@ -16,6 +16,7 @@ defmodule Lemieux.Session.Boot do
   alias Lemieux.Session.Catalog
   alias Lemieux.Session.MCPServers
   alias Lemieux.Session.Prompts
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Setup
   alias Lemieux.Session.State
@@ -358,7 +359,11 @@ defmodule Lemieux.Session.Boot do
   # No window notice here: one sent at start reaches nobody who would show it.
   # `Lemieux.Session.Window` sends it before the first request instead.
   def continue_with(:record_config, state) do
-    state = state |> Setup.answer_lost_calls() |> Setup.record_config()
+    state =
+      state
+      |> Setup.answer_lost_calls()
+      |> Setup.record_config()
+      |> Questions.restore()
 
     source = if state.next_seq == 1, do: :startup, else: :resume
     hooks = state.hooks

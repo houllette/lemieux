@@ -21,6 +21,7 @@ defmodule Lemieux.Session.Calls do
   alias Lemieux.Session.MCPServers
   alias Lemieux.Session.Notification
   alias Lemieux.Session.Prompts
+  alias Lemieux.Session.Questions
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Setup
   alias Lemieux.Session.Subscribers
@@ -752,7 +753,7 @@ defmodule Lemieux.Session.Calls do
   def call({:cancel, reason}, _from, state) do
     if Core.busy?(state),
       do: {:reply, :ok, Prompts.do_cancel(state, reason)},
-      else: {:reply, :ok, state}
+      else: {:reply, :ok, Questions.cancel(state)}
   end
 
   def call(:retry, _from, state) do

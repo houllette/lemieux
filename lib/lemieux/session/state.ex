@@ -233,6 +233,8 @@ defmodule Lemieux.Session.State do
     turns_taken: 0,
     wave: %Wave{},
     parked: %{},
+    deferred_question: nil,
+    deferred_answers: [],
     approval_timeout: nil,
     approval: nil,
     reversed_steers: [],
