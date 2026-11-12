@@ -379,6 +379,7 @@ links to the docs, issues and questions at the end.
 | `/resume [SESSION \| all]` | List this directory's sessions, most recently active first, or switch to one; `all` lists every directory's |
 | `/compact` | Summarize the earlier conversation now |
 | `/context` | Draw what is filling the context window |
+| `/usage [refresh]` | Fetch provider account spend or subscription quota; reuse a report for up to one minute |
 | `/cancel` | Stop the running turn (Ctrl-C does the same) |
 | `/unsteer` | Take back the steer waiting for the next model request |
 | `/retry` | Send the request that failed again, keeping everything before it |
@@ -547,6 +548,47 @@ the conversation, so only the newest three prompts that carried attachments
 keep them; older ones carry a note naming the file, and the model reads it
 again with `read` if it still needs it. `/context` draws what is filling the
 window; see [Terminal UI](terminal-ui.md#context-draws-the-window).
+
+### Provider account usage
+
+`/usage` fetches account reports without calling a model, including while the
+agent is working. `/context` shows this session's context and token accounting;
+run spending caps are local policy. Neither is a provider account balance.
+Reports show their scope, units, reporting window and fetch time. Missing
+amounts and reset times stay `unknown`. A failed refresh affects that account
+only; prior successful data may remain visible with a `STALE` label. Results
+are cached for up to one minute; `/usage refresh` fetches again. There is no
+background polling.
+
+- OpenRouter reports spend for the configured API key's daily, weekly and
+  monthly windows, plus its reported remaining key allowance. Other keys in
+  the account are outside that scope.
+- OpenAI and Anthropic organization cost reports require an already-authorized
+  admin reporting key. Point `providers.openai.usage_api_key_env` or
+  `providers.anthropic.usage_api_key_env` at its environment variable; the
+  defaults are `OPENAI_ADMIN_KEY` and `ANTHROPIC_ADMIN_KEY`. A private
+  `usage_api_key` value is also supported. OpenAI's optional `usage_project_id`
+  narrows the report to one project. Reports cover month to date in UTC;
+  Anthropic's endpoint excludes Priority Tier costs. Missing authorization or
+  incomplete reports are explained rather than replaced with session estimates.
+- Codex subscription quotas use the installed Codex app-server's read-only
+  account methods. The helper uses an isolated temporary home and only the
+  existing access token from the configured Codex sign-in. It never starts a
+  model turn, opens a browser, consumes a quota reset, takes refresh ownership
+  or rewrites the original sign-in. Every reported quota window is shown with
+  its actual duration and reset time. An unavailable or older incompatible
+  app-server leaves the quota unknown.
+- Other providers, registered routes and custom inference endpoints are
+  listed as unsupported until they have an account-reporting capability.
+  Credentials are never sent to an inferred reporting URL or an unconfigured
+  provider. Embedded hosts can supply an `account_usage:` reporting callback
+  to their dispatcher/TUI, keeping reporting policy outside the library loop.
+
+The reporting contracts are documented by
+[OpenRouter](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key),
+[OpenAI organization costs](https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage/methods/costs),
+[Anthropic](https://platform.claude.com/docs/en/manage-claude/usage-cost-api), and
+[Codex account RPC](https://learn.chatgpt.com/docs/app-server).
 
 ## One-shot command
 

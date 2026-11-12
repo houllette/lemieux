@@ -164,7 +164,7 @@ defmodule Lemieux.CLI.Config do
   @modalities %{"text" => :text, "image" => :image, "pdf" => :pdf}
   @price_fields ~w(up_to input_per_million output_per_million cached_input_per_million)
   @ixway_fields ~w(enabled endpoint api_key model effort headers)
-  @provider_fields ~w(api_key model effort)
+  @provider_fields ~w(api_key model effort usage_api_key usage_api_key_env usage_project_id)
   @systemone_fields ~w(mode provider max_evaluations max_cost_usd reservation_per_call_usd)
   @systemone_builtin ~w(typesafe ixway)
   @systemone_provider_fields ~w(type base_url api_key api_key_env api_key_header headers model
@@ -732,9 +732,11 @@ defmodule Lemieux.CLI.Config do
       {section, providers}
       when section in ~w(providers web_search_providers systemone_providers) and
              is_map(providers) ->
-        for {name, %{"api_key" => key}} <- providers,
+        for {name, fields} <- providers,
+            key_name <- ["api_key", "usage_api_key"],
+            is_map(fields) and Map.has_key?(fields, key_name),
             not (section == "systemone_providers" and name == "ixway"),
-            do: {[section, name, "api_key"], key}
+            do: {[section, name, key_name], fields[key_name]}
 
       _other ->
         []
@@ -1215,6 +1217,26 @@ defmodule Lemieux.CLI.Config do
 
   defp provider_field(_provider, "api_key", key), do: expect(key_text?(key), @key_expectation)
 
+  defp provider_field(_provider, "usage_api_key", key),
+    do: expect(key_text?(key), @key_expectation)
+
+  defp provider_field(_provider, "usage_api_key_env", name),
+    do:
+      expect(
+        is_binary(name) and Regex.match?(~r/^[A-Za-z_][A-Za-z0-9_]*$/, name),
+        "It must name an environment variable holding an authorized reporting key."
+      )
+
+  defp provider_field("openai", "usage_project_id", id),
+    do:
+      expect(
+        is_binary(id) and Regex.match?(~r/^[A-Za-z0-9_-]{1,128}$/, id),
+        "It must be a reporting project identifier."
+      )
+
+  defp provider_field(_provider, "usage_project_id", _id),
+    do: {:error, "Project-scoped usage reporting is currently supported only for OpenAI."}
+
   defp provider_field(provider, "model", model),
     do:
       expect(
@@ -1573,7 +1595,7 @@ defmodule Lemieux.CLI.Config do
 
   defp section_has_keys?(settings, section) do
     Enum.any?(Map.get(settings, section, %{}), fn {_name, fields} ->
-      Map.has_key?(fields, "api_key")
+      Map.has_key?(fields, "api_key") or Map.has_key?(fields, "usage_api_key")
     end)
   end
 

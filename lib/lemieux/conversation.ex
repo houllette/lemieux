@@ -158,6 +158,7 @@ defmodule Lemieux.Conversation do
 
   alias Lemieux.Provider.Error, as: ProviderError
 
+  alias Lemieux.AccountUsage
   alias Lemieux.CLI.Errors
   alias Lemieux.CLI.Models
   alias Lemieux.Context
@@ -306,6 +307,7 @@ defmodule Lemieux.Conversation do
           reflecting: :assessment | :opportunities | nil,
           feedback: Dialogue.t() | {:pending, String.t()} | nil,
           bug_report: map() | nil,
+          account_usage: map() | nil,
           noted_window?: boolean(),
           pending_context: [String.t()]
         }
@@ -371,7 +373,8 @@ defmodule Lemieux.Conversation do
             # a `!command`'s output, a note that `/undo` put files back.
             # Newest first; see "A person's own commands".
             pending_context: [],
-            bug_report: nil
+            bug_report: nil,
+            account_usage: nil
 
   @doc """
   A conversation with nothing said yet.
@@ -1092,6 +1095,9 @@ defmodule Lemieux.Conversation do
 
   def event(conversation, {:export_result, {:error, reason}}),
     do: ready_unless_busy(conversation, [{:say, "could not export: #{describe(reason)}"}])
+
+  def event(conversation, {:account_usage_result, report}),
+    do: {%{conversation | account_usage: report}, [{:say, AccountUsage.format(report)}]}
 
   def event(conversation, {:extension_result, report}) when is_binary(report),
     do: ready_unless_busy(conversation, [{:say, report}])

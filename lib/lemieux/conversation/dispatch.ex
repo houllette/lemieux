@@ -190,6 +190,7 @@ defmodule Lemieux.Conversation.Dispatch do
           preferred_efforts: %{optional(String.t()) => String.t()},
           feedback: module() | nil,
           feedback_opts: keyword(),
+          account_usage: (-> map()) | nil,
           commands: [module()],
           environment: Lemieux.Environment.t() | nil,
           cwd: Path.t() | nil,
@@ -214,6 +215,7 @@ defmodule Lemieux.Conversation.Dispatch do
             preferred_efforts: %{},
             feedback: nil,
             feedback_opts: [],
+            account_usage: nil,
             # Filled in by `new/1`: the built-in list is a function call, and a
             # call in a struct default is a compile-time call this build
             # fails on.
