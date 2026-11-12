@@ -139,6 +139,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Appearance
     alias Lemieux.TUI.Background
     alias Lemieux.TUI.Boot
+    alias Lemieux.TUI.CatalogState
     alias Lemieux.TUI.Choices
     alias Lemieux.TUI.Composer
     alias Lemieux.TUI.DiffPanel
@@ -1011,6 +1012,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def handle_info({:models_discovered, models}, state) when is_list(models),
       do: {:noreply, Choices.discovered(state, models)}
+
+    def handle_info({:model_catalog, provider, models, notice}, state) when is_list(models) do
+      catalog =
+        CatalogState.replace(
+          state.catalog,
+          provider,
+          models,
+          state.conversation.model
+        )
+
+      state = %{state | catalog: catalog}
+      texts = if is_binary(notice), do: [notice], else: []
+      {:noreply, Notices.replace(state, {:model_catalog, provider}, :warning, texts)}
+    end
 
     def handle_info({:resume_result, _reference, {:ok, details, sessions}}, state),
       do: {:noreply, Lifecycle.switched(state, details, sessions, "resumed")}

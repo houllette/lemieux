@@ -44,7 +44,10 @@ defmodule Lemieux.CLI.CodexProvider do
   end
 
   defp explicit_auth?(params) do
-    nested = Keyword.get(params, :provider_options, [])
+    all = Keyword.get(params, :provider_options, [])
+
+    nested =
+      Keyword.merge(Keyword.delete(all, :openai_codex), Keyword.get(all, :openai_codex, []))
 
     Enum.any?(
       [:access_token, :oauth_file, :auth_file],
@@ -52,7 +55,8 @@ defmodule Lemieux.CLI.CodexProvider do
     ) or
       Application.get_env(:req_llm, :oauth_file) != nil or
       Application.get_env(:req_llm, :auth_file) != nil or
-      System.get_env("REQ_LLM_OAUTH_FILE") != nil
+      System.get_env("REQ_LLM_OAUTH_FILE") != nil or
+      System.get_env("REQ_LLM_AUTH_FILE") != nil
   end
 
   @doc false
@@ -70,14 +74,8 @@ defmodule Lemieux.CLI.CodexProvider do
   defp put_account(options, account), do: Keyword.put(options, :chatgpt_account_id, account)
 
   @impl true
-  def available_models({provider, opts}, query) do
-    models = Provider.available_models(provider, query)
-
-    if Keyword.get(query, :scope, :all) in [:all, :openai_codex] and
-         match?({:ok, _}, CodexAuth.credential(opts)),
-       do: Enum.uniq(models ++ ["openai_codex:gpt-6-sol"]),
-       else: models
-  end
+  def available_models({provider, _opts}, query),
+    do: Provider.available_models(provider, query)
 
   @impl true
   def model_metadata({provider, _opts}), do: Provider.model_metadata(provider)
