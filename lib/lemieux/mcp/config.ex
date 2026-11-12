@@ -270,8 +270,8 @@ defmodule Lemieux.MCP.Config do
   defp write_document(path, contents) do
     temporary = "#{path}.#{System.unique_integer([:positive])}.tmp"
 
-    with :ok <- File.write(temporary, contents, [:exclusive]),
-         :ok <- preserve_mode(path, temporary),
+    with {:ok, device} <- File.open(temporary, [:write, :exclusive, :binary]),
+         :ok <- write_contents(device, path, temporary, contents),
          :ok <- File.rename(temporary, path) do
       :ok
     else
@@ -279,6 +279,15 @@ defmodule Lemieux.MCP.Config do
         File.rm(temporary)
         {:error, "could not write #{path}: #{:file.format_error(reason)}"}
     end
+  end
+
+  # Make the empty temporary file private before giving it configuration
+  # contents. chmod after File.write briefly exposed existing credentials at
+  # the caller's umask, even though the final rename was atomic.
+  defp write_contents(device, path, temporary, contents) do
+    result = with :ok <- preserve_mode(path, temporary), do: IO.binwrite(device, contents)
+    closed = File.close(device)
+    if result == :ok, do: closed, else: result
   end
 
   defp preserve_mode(path, temporary) do

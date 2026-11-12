@@ -71,7 +71,13 @@ defmodule Lemieux.TUI.MCPForm do
     do: json_answer(value, [], &valid_args?/1, "JSON array of strings")
 
   def text_answer(id, value) when id in ["headers", "env"],
-    do: json_answer(value, %{}, &valid_object?/1, "JSON object with string values")
+    do:
+      json_answer(
+        value,
+        %{},
+        &valid_object?(&1, id),
+        "JSON object with valid names and string values"
+      )
 
   @doc "Builds the JSON-shaped server configuration from reviewed answers."
   @spec server(flow :: map()) :: map()
@@ -221,10 +227,20 @@ defmodule Lemieux.TUI.MCPForm do
   defp valid_args?(args) when is_list(args), do: Enum.all?(args, &is_binary/1)
   defp valid_args?(_value), do: false
 
-  defp valid_object?(object) when is_map(object),
-    do: Enum.all?(object, fn {_key, value} -> is_binary(value) end)
+  defp valid_object?(object, kind) when is_map(object),
+    do: Enum.all?(object, fn {key, value} -> valid_pair?(key, value, kind) end)
 
-  defp valid_object?(_value), do: false
+  defp valid_object?(_value, _kind), do: false
+
+  defp valid_pair?(key, value, "env") when is_binary(value),
+    do: Regex.match?(~r/\A[A-Za-z_][A-Za-z0-9_]*\z/, key) and not String.contains?(value, <<0>>)
+
+  defp valid_pair?(key, value, "headers") when is_binary(value),
+    do:
+      Regex.match?(~r/\A[!#$%&'*+.^_`|~0-9A-Za-z-]+\z/, key) and
+        not Regex.match?(~r/[\x00-\x1F\x7F]/, value)
+
+  defp valid_pair?(_key, _value, _kind), do: false
 
   defp initial_questions do
     [

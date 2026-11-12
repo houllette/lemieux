@@ -105,6 +105,26 @@ defmodule Lemieux.CLI.MCPAddTest do
              "https://two.test/mcp"
   end
 
+  test "piped stdin never connects even when stdout is a terminal", ctx do
+    output =
+      capture_io(fn ->
+        assert :ok =
+                 CLI.run(
+                   [
+                     "mcp",
+                     "add",
+                     "--global",
+                     "--config",
+                     ctx.config,
+                     "piped",
+                     "http://127.0.0.1:1/mcp"
+                   ], cwd: ctx.cwd, interactive?: true, stdin_terminal?: false)
+      end)
+
+    assert output =~ "connection not attempted"
+    assert JSON.decode!(File.read!(ctx.config))["mcp_servers"]["piped"]
+  end
+
   test "invalid descriptors and scope conflicts write nothing and never echo values", ctx do
     before = File.read!(ctx.config)
 
@@ -113,7 +133,9 @@ defmodule Lemieux.CLI.MCPAddTest do
           ["x", "https://x.test"],
           ["--global", "x", "not-a-url-private-value"],
           ["--local", "--transport", "bogus", "x", "private-value"],
-          ["--local", "--env", "private-value", "x", "--", "cat"]
+          ["--local", "--env", "private-value", "x", "--", "cat"],
+          ["--local", "--env", "bad name=private-value", "x", "--", "cat"],
+          ["--global", "--header", "X-Test=private-value\r\ninjected", "x", "https://x.test"]
         ] do
       output = capture_io(:stderr, fn -> assert {:error, 1} = run(ctx, args) end)
       refute output =~ "private-value"

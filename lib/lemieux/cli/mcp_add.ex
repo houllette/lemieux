@@ -51,7 +51,7 @@ defmodule Lemieux.CLI.MCPAdd do
   end
 
   defp finish_setup(server, parsed, options, cwd, opts, secrets) do
-    if parsed[:non_interactive] || not Sanitize.terminal?(:stdio, opts[:interactive?]) do
+    if parsed[:non_interactive] || not interactive?(opts) do
       IO.puts(
         "Configuration saved; connection not attempted. Open /mcp in the TUI, select #{server["name"]}, and press r to connect/sign in."
       )
@@ -59,6 +59,22 @@ defmodule Lemieux.CLI.MCPAdd do
       :ok
     else
       interactive_setup(server, options, cwd, opts, secrets)
+    end
+  end
+
+  defp interactive?(opts) do
+    input? =
+      Keyword.get_lazy(opts, :stdin_terminal?, fn ->
+        Keyword.get_lazy(opts, :interactive?, &stdin_terminal?/0)
+      end)
+
+    input? == true and Sanitize.terminal?(:stdio, opts[:interactive?])
+  end
+
+  defp stdin_terminal? do
+    case :io.getopts(:standard_io) do
+      options when is_list(options) -> Keyword.get(options, :stdin, false) == true
+      _unknown -> false
     end
   end
 
@@ -152,12 +168,19 @@ defmodule Lemieux.CLI.MCPAdd do
        "use --transport http NAME URL [--header NAME=VALUE], or NAME [--env NAME=VALUE] -- COMMAND [ARGS]"}
 
   defp pairs(parsed, key) do
-    Enum.reduce_while(Keyword.get_values(parsed, key), {:ok, %{}}, fn pair, {:ok, values} ->
-      case String.split(pair, "=", parts: 2) do
-        [name, value] when name != "" -> {:cont, {:ok, Map.put(values, name, value)}}
-        _invalid -> {:halt, {:error, "--#{key} expects NAME=VALUE"}}
-      end
-    end)
+    result =
+      Enum.reduce_while(Keyword.get_values(parsed, key), {:ok, %{}}, fn pair, {:ok, values} ->
+        case String.split(pair, "=", parts: 2) do
+          [name, value] when name != "" -> {:cont, {:ok, Map.put(values, name, value)}}
+          _invalid -> {:halt, {:error, "--#{key} expects NAME=VALUE"}}
+        end
+      end)
+
+    field = if key == :env, do: "env", else: "headers"
+
+    with {:ok, values} <- result,
+         {:ok, _json} <- MCPForm.text_answer(field, JSON.encode!(values)),
+         do: {:ok, values}
   end
 
   defp destination("local", _options, cwd), do: {:ok, Discovery.project_mcp_path(cwd)}
