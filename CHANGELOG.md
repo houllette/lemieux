@@ -30,6 +30,11 @@ API.
 
 ### Fixes
 
+- Drain default stdio MCP stderr through a separate, bounded diagnostic pipe.
+  Sanitized, server-attributed debug logs replace inherited terminal output;
+  host launchers continue to own their diagnostic policy. The default launcher
+  uses Bash (Git Bash on Windows) for the separate pipe. (#142)
+
 - Keep MCP sessions alive when a client exits during discovery, and ignore
   successful browser-helper exits after OAuth sign-in. Reconnect remains
   retryable and reuses stored credentials. (#141)

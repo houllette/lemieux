@@ -58,8 +58,10 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
   ## Host-owned launch
 
-  The default launcher opens a local Port and leaves stderr attached to
-  lemieux's own. An embedding host passes `:mcp_stdio_launcher` to the session
+  The default launcher opens a local Port with separately drained, bounded
+  stderr (`Lemieux.MCP.StderrCapture`). It uses Bash (Git Bash on Windows),
+  without startup files or inherited shell options, and logs sanitized lines
+  at debug level with the server name. Stderr never inherits the terminal. An embedding host passes `:mcp_stdio_launcher` to the session
   to own the process boundary instead. The launcher receives the unmodified
   command, arguments, expanded environment map and effective working directory,
   and returns `{:ok, port}`, `{:ok, managed_endpoint}` or
@@ -78,6 +80,7 @@ defmodule Lemieux.MCP.Transport.Stdio do
   alias Lemieux.Environment.Inherited
   alias Lemieux.MCP
   alias Lemieux.MCP.ManagedStdio
+  alias Lemieux.MCP.StderrCapture
   alias Lemieux.MCP.StdioLifecycle
   alias Lemieux.MCP.StdioLimits
 
@@ -111,6 +114,7 @@ defmodule Lemieux.MCP.Transport.Stdio do
       {:ok,
        %{
          command: command,
+         server: Map.get(config, "name", command),
          args: args,
          env: project_dir(env, Keyword.get(opts, :cwd)),
          cwd: Map.get(config, "cwd") || Keyword.get(opts, :cwd),
@@ -142,7 +146,9 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
     launcher =
       Map.get(config, :launcher) ||
-        fn command, args, env, cwd -> launch_local(command, args, env, cwd, credentials) end
+        fn command, args, env, cwd ->
+          launch_local(command, args, env, cwd, credentials, Map.get(config, :server, command))
+        end
 
     with {:ok, limits} <- StdioLimits.new(Map.to_list(Map.get(config, :limits, %{}))),
          {:ok, process} <- invoke_launcher(launcher, command, args, environment, cwd),
@@ -157,7 +163,8 @@ defmodule Lemieux.MCP.Transport.Stdio do
          total_bytes: 0,
          diagnostic_bytes: 0,
          observer: Map.get(config, :observer),
-         managed: if(match?(%ManagedStdio{}, process), do: process)
+         managed: if(match?(%ManagedStdio{}, process), do: process),
+         diagnostics: if(is_map(process), do: Map.get(process, :diagnostics))
        }}
     else
       {:error, reason} ->
@@ -250,22 +257,40 @@ defmodule Lemieux.MCP.Transport.Stdio do
   # component first uses it — owner-only, as a plugin keeps tokens there;
   # one that cannot be made is the server's to report when it tries to
   # write there.
-  defp launch_local(command, args, environment, cwd, credentials) do
+  defp launch_local(command, args, environment, cwd, credentials, server) do
     case Map.get(environment, "CLAUDE_PLUGIN_DATA") do
       data when is_binary(data) and data != "" -> private_directory(data)
       _none -> :ok
     end
 
-    with {:ok, executable} <- executable(command) do
-      {:ok,
-       Port.open({:spawn_executable, executable}, [
-         :binary,
-         :exit_status,
-         :hide,
-         args: args,
-         env: port_env(environment, credentials),
-         cd: cwd
-       ])}
+    with {:ok, executable} <- executable(command),
+         {:ok, bash} <- executable("bash"),
+         {:ok, capture, prefix} <- StderrCapture.start(server, environment) do
+      try do
+        port =
+          Port.open({:spawn_executable, bash}, [
+            :binary,
+            :exit_status,
+            :hide,
+            args: prefix ++ [executable | args],
+            env: port_env(environment, credentials),
+            cd: cwd
+          ])
+
+        {:ok,
+         %{
+           port: port,
+           diagnostics: capture,
+           close: fn ->
+             close_port(port)
+             StderrCapture.close(capture)
+           end
+         }}
+      rescue
+        error ->
+          StderrCapture.close(capture)
+          reraise error, __STACKTRACE__
+      end
     end
   end
 
