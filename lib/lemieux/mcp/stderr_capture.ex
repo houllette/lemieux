@@ -21,14 +21,32 @@ defmodule Lemieux.MCP.StderrCapture do
   alias Lemieux.Environment.Credentials
   alias Lemieux.Tool.Escapes
 
+  defmodule State do
+    @moduledoc false
+    @derive {Inspect, only: [:server, :remaining]}
+    defstruct [
+      :socket,
+      :port,
+      :token,
+      :reader,
+      :owner_ref,
+      :server,
+      :secrets,
+      buffer: "",
+      dropping?: false,
+      remaining: 16_384
+    ]
+  end
+
   @budget 16_384
   @line_limit 2_048
   @chunk 4_096
 
   @doc false
-  @spec start(server :: String.t(), env :: map()) :: {:ok, pid(), [String.t()]} | {:error, term()}
-  def start(server, env) do
-    case GenServer.start(__MODULE__, {self(), server, env}) do
+  @spec start(server :: String.t(), env :: map(), args :: [String.t()]) ::
+          {:ok, pid(), [String.t()]} | {:error, term()}
+  def start(server, env, args \\ []) do
+    case GenServer.start(__MODULE__, {self(), server, env, args}) do
       {:ok, pid} -> {:ok, pid, GenServer.call(pid, :arguments)}
       error -> error
     end
@@ -43,7 +61,7 @@ defmodule Lemieux.MCP.StderrCapture do
   end
 
   @impl true
-  def init({owner, server, env}) do
+  def init({owner, server, env, args}) do
     with {:ok, socket} <-
            :gen_tcp.listen(0, [
              :binary,
@@ -61,10 +79,12 @@ defmodule Lemieux.MCP.StderrCapture do
         Map.merge(System.get_env(), env)
         |> Enum.filter(fn {key, _value} -> Credentials.sensitive?(key, {:scrub, []}) end)
         |> Enum.map(&elem(&1, 1))
-        |> Enum.filter(&(byte_size(&1) >= 4))
+        |> Kernel.++(Map.values(env) ++ args)
+        |> Enum.filter(&(is_binary(&1) and byte_size(&1) > 0))
+        |> Enum.uniq()
 
       {:ok,
-       %{
+       %State{
          socket: socket,
          port: port,
          token: token,

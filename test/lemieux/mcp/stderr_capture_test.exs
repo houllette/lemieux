@@ -13,6 +13,7 @@ defmodule Lemieux.MCP.StderrCaptureTest do
     os.write(2, b'Bearer private-value\\n')
     os.write(2, b'https://example.test/callback?code=private-code\\n')
     os.write(2, os.environ['TEST_TOKEN'].encode() + b'\\n')
+    os.write(2, sys.argv[1].encode() + b'\\n')
     os.write(2, b'x' * 10000000 + b'\\n')
     for line in sys.stdin:
         request = json.loads(line)
@@ -25,7 +26,7 @@ defmodule Lemieux.MCP.StderrCaptureTest do
         %{
           "name" => "fixture",
           "command" => "python3",
-          "args" => [file],
+          "args" => [file, "short-private-value"],
           "env" => %{"TEST_TOKEN" => "private-value"}
         },
         cwd: dir
@@ -42,6 +43,7 @@ defmodule Lemieux.MCP.StderrCaptureTest do
         info = :sys.get_state(capture)
         assert byte_size(info.buffer) <= 2_048
         assert info.remaining == 0
+        refute inspect(info) =~ "private-value"
         assert :ok = Stdio.close(state)
         refute Process.alive?(capture)
         refute Process.alive?(info.reader)
@@ -52,6 +54,7 @@ defmodule Lemieux.MCP.StderrCaptureTest do
     assert log =~ "diagnostic withheld"
     refute log =~ "private-value"
     refute log =~ "private-code"
+    refute log =~ "short-private-value"
     refute log =~ "\e"
   end
 

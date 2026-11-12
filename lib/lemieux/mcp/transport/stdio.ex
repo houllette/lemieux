@@ -192,6 +192,7 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
   def handle_message(%{port: port} = state, {port, {:exit_status, status}}) do
     StdioLifecycle.emit(state.observer, port, :wrapper_exit, status)
+    close(state)
     {:closed, "the MCP server #{state.command} exited with status #{status}", state}
   end
 
@@ -201,8 +202,10 @@ defmodule Lemieux.MCP.Transport.Stdio do
     {:closed, "the MCP stdio stream ended", %{state | buffer: ""}}
   end
 
-  def handle_message(%{port: port} = state, {:EXIT, port, reason}),
-    do: {:closed, "the MCP server #{state.command} stopped: #{inspect(reason)}", state}
+  def handle_message(%{port: port} = state, {:EXIT, port, reason}) do
+    close(state)
+    {:closed, "the MCP server #{state.command} stopped: #{inspect(reason)}", state}
+  end
 
   def handle_message(_state, _message), do: :unknown
 
@@ -265,7 +268,7 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
     with {:ok, executable} <- executable(command),
          {:ok, bash} <- executable("bash"),
-         {:ok, capture, prefix} <- StderrCapture.start(server, environment) do
+         {:ok, capture, prefix} <- StderrCapture.start(server, environment, args) do
       try do
         port =
           Port.open({:spawn_executable, bash}, [
@@ -404,9 +407,11 @@ defmodule Lemieux.MCP.Transport.Stdio do
 
       {^port, {:exit_status, status}} ->
         StdioLifecycle.emit(state.observer, port, :wrapper_exit, status)
+        close(state)
         {:error, "the MCP server #{state.command} exited with status #{status}", state}
 
       {:EXIT, ^port, reason} ->
+        close(state)
         {:error, "the MCP server #{state.command} stopped: #{inspect(reason)}", state}
     after
       remaining ->
