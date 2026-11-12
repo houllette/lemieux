@@ -48,7 +48,7 @@ No provider key is needed. The tests drive a real Lemieux session with
 scripted model responses and check that the tool's result reaches the
 transcript. `LEMIEUX_EXTENSION_BASE` points the example at your checkout. For
 a project of your own, copy the directory and replace the `lemieux()`
-dependency in its `mix.exs` with `{:lemieux, "~> 1.0"}` from Hex.
+dependency in its `mix.exs` with `{:lemieux, "~> 1.1"}` from Hex.
 
 Read the complete [implementation](https://github.com/houllette/lemieux/blob/main/examples/extensions/hello/lib/hello_extension.ex):
 
@@ -128,7 +128,7 @@ loads it. Its manifest names only the Lemieux it was written for, as a version
 
 ```json
 {"schema_version": 1, "name": "planning", "module": "LemieuxPlanningExample",
- "script": "planning.exs", "versions": {"lemieux": "~> 1.0"}}
+ "script": "planning.exs", "versions": {"lemieux": "~> 1.1"}}
 ```
 
 [`examples/extensions/planning`](https://github.com/houllette/lemieux/blob/main/examples/extensions/planning/README.md)

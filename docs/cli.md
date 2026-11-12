@@ -1441,6 +1441,8 @@ the same ledger as `lmx feedback`, in the same shape, and never touches the
 transcript. While it is open, every typed line is an answer; `/cancel`
 discards it. It is refused mid-turn, when a typed line is a steer.
 
+#### Sanitized bug reports
+
 Unexpected failures inside Lemieux show a muted reporting hint immediately
 after the error, and a red error count when the turn ends, including after
 successful recovery. Command exit codes, project test failures, provider

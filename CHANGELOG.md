@@ -7,16 +7,116 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 1.1.0 — unreleased
+
+Restart `lmx` after updating from 1.0.0 on every platform, then resume with
+`lmx -c` or `lmx --resume SESSION`. Session/TUI state, retained callbacks,
+new modules and dependency/native code have changed; no hot path is declared.
+The supported 1.x contracts and extension API 1 remain in place.
+
+### Features
+
+- Discover the active Codex account's visible models in the background,
+  including IDs absent from bundled metadata. Keep explicit ReqLLM OAuth-file
+  authentication ahead of native access-token borrowing, invalidate changed
+  accounts, and preserve the selected model and effort. Codex keeps refresh
+  ownership. (#131, #154)
+- Add `/usage [refresh]` for configured provider accounts: OpenRouter key
+  spend, authorized OpenAI/Anthropic organization cost reports, and Codex
+  subscription windows. Reporting is asynchronous, bounded and cached;
+  missing permissions, unsupported routes and unknown or stale values stay
+  explicit. It makes no inference request. (#151)
+- Add optional deferred `ask_user` questions so independent work can continue.
+  Blocking remains the default. Answers are correlated and delivered once at
+  a request boundary; an idle answer waits for the next explicit prompt.
+  Timeouts, cancellation, resume and fork preserve their defined ownership.
+  An unanswered question grants no approval. (#152)
+- Add internal-error hints, deduplicated turn summaries and `/feedback bug`
+  report drafts. Users inspect/edit a bounded, sanitized report before
+  `/feedback bug submit` explicitly sends it through an authenticated GitHub
+  CLI. Ordinary command/provider failures and budget refusals are not counted
+  as Lemieux bugs; ordinary anchored feedback remains available. (#149, #150)
+- Inspect a server's cached MCP tools, descriptions and schemas from `/mcp`,
+  or through `Session.inspect_mcp/2`, without invoking tools or connecting.
+  (#139)
+- Add terminal-native `lmx mcp add --local|--global` with HTTP/stdio
+  descriptors, explicit replacement and secret references. Interactive adds
+  can complete OAuth and discovery; background and non-interactive adds do
+  not open browsers. `Session.add_mcp_servers/3` adds an optional
+  `interactive_auth` override while `/2` retains the host policy. (#140, #143)
+- Discover local MTPLX models and show model-output token throughput in the
+  TUI. Preserve provider-scoped model/effort preferences and shared-key
+  provider selection. (#128, #129)
+- Reload supported System One settings at an idle request boundary. Validate
+  the complete config first; routing, credentials and other settings still
+  require a restart. (#132)
+
+### Fixes
+
+- Make wrapped/scrolled `ask_user` question text, options and previews
+  selectable and copyable, including Ctrl+Shift+C, while preserving staged
+  answers and drafts. Keep long questions and narrow previews readable. (#138)
+- Place the editing cursor when the prompt is clicked, wrap long question
+  options, and keep selection and preview scrolling usable. (#133, #136)
+- Explain sandbox denials for protected paths with a policy hint instead of
+  an unexplained permission error. (#130)
+- Drain default stdio MCP stderr through a bounded diagnostic pipe instead
+  of inheriting the terminal. Debug logs are sanitized and server-attributed;
+  custom launchers retain their diagnostic policy. The default separate-pipe
+  launcher requires Bash (Git Bash on Windows). (#142)
+- Keep MCP discovery alive when a client exits and ignore successful
+  browser-helper exits after OAuth. Failed login remains retryable and
+  retains configuration and stored credentials. (#141)
+- Render subagent admission failures with labeled budget amounts and a next
+  step while keeping the exact structured diagnostic in the saved transcript.
+  Budget refusals remain distinct from unexpected runtime faults. (#149)
+- Keep transient tool receipt bodies scoped to the request that owns them,
+  with complete persistent receipt evidence and request-lifetime documentation.
+  (#120)
+- Cache the header's home directory outside rendering to avoid synchronous
+  VM lookups stalling startup and redraws under load.
 
 ### Dependencies
 
-- Update the library and standalone host to ExRatatui 0.18.0 and patched
-  JSV 0.26.2, fixing CVE-2026-117680 in both dependency graphs. Override the
-  bundled compaction SDK's older validator constraint with compatibility
-  coverage until its upstream dependency permits the patched version.
+- Update ReqLLM to 1.30.0, LLMDB to 2026.11.2, Finch to the 0.24 series,
+  ExRatatui to 0.20.0 and JSV to 0.27.0. Both library and standalone host
+  use the patched validator; compatibility coverage protects the bundled
+  compaction extension. The earlier JSV 0.26.2 update addressed
+  CVE-2026-117680. (#118, #127, #135)
+- Refresh all resolvable dependency locks across the library, release host,
+  bundled extension and examples. This includes Dialyxir 1.4.9 and HTTPoison
+  3.0.1; ReqLLM 1.30.0 is the current stable release. Upstream bounds still
+  constrain some transitive packages; no unsupported version override is added.
 
-### Release readiness
+### Experimental learning
+
+- Add provider-free study planning, complete execution bindings, actual
+  per-kind asset-use evidence, and embedded export dependency checks. The
+  selective asset lane abstains on passing baselines, loads reviewed
+  procedures through the real loader and reuses exact single-component
+  probes. New registrations require fresh mechanism receipts. (#121, #122)
+- These changes do not establish independent hosted efficacy or enable new
+  asset kinds for automatic persistent selection. The earlier pilot's
+  mechanism was not demonstrated and its efficacy was inconclusive; see
+  [qualification](docs/learning-qualification.md).
+
+### Upgrade notes
+
+- No personal-config migration is required. Existing `openai_codex:MODEL`
+  names and provider model/effort settings remain valid; retain an explicit
+  ReqLLM OAuth override when it is the credential source you intend to use.
+- The release requires a complete runtime restart on all four archive
+  targets. Save drafts before restarting; resumes keep consumed request and
+  spending accounting and use current host authorization.
+- Update constrained provider-stack locks together (`req_llm`, `llm_db`,
+  `finch` and `jsv`); see [embedding requirements](docs/embedding.md#1-add-the-dependency).
+  Review extensions pinned to the 1.0 patch line and rebuild only those the
+  loader refuses. Historical qualification receipts do not grant approval
+  to a changed runtime or experimental asset registration.
+
+## 1.0.0 — 2026-10-31
+
+### Compatibility and controls
 
 - Define the supported 1.x API, automation, transcript and extension compatibility
   promise while keeping experimental namespaces outside the stable public API.
@@ -29,20 +129,6 @@ API.
   late pre-forget captures, and report full history with a recovery hint.
 
 ### Fixes
-
-- Allow selection and copying in the `ask_user` panel, including wrapped and
-  scrolled question text, options and previews. Copying omits answer markers
-  and preserves staged answers and drafts; Ctrl+Shift+C also copies without
-  a mouse. Long questions and narrow previews remain fully readable. (#138)
-
-- Drain default stdio MCP stderr through a separate, bounded diagnostic pipe.
-  Sanitized, server-attributed debug logs replace inherited terminal output;
-  host launchers continue to own their diagnostic policy. The default launcher
-  uses Bash (Git Bash on Windows) for the separate pipe. (#142)
-
-- Keep MCP sessions alive when a client exits during discovery, and ignore
-  successful browser-helper exits after OAuth sign-in. Reconnect remains
-  retryable and reuses stored credentials. (#141)
 
 - Settle and checkpoint cancelled tool reservations before ending the turn.
   Free tools no longer strand a hold that blocks dollar-limited resume; paid
@@ -58,33 +144,6 @@ API.
 
 ### Features
 
-- Inspect MCP tools from `/mcp`: Enter opens a server's cached tools and a
-  tool's description, names, availability and scrollable input schema. Esc
-  preserves navigation selections. `Session.inspect_mcp/2` exposes the same
-  cached, read-only view without invoking tools or connecting. (#139)
-
-- Continue interactive MCP add through OAuth and tool discovery in the TUI
-  and normal terminal. Background startup and piped/`--non-interactive` adds
-  never open a browser. `Session.add_mcp_servers/3` adds an optional
-  `interactive_auth` override; existing `/2` calls retain their host policy.
-  Connection tasks keep session reads responsive and close cancelled startup
-  clients, while failed login retains the saved configuration. (#143)
-
-- Add terminal-native `lmx mcp add --local|--global`, with HTTP and stdio
-  descriptors, explicit replacement and secret references. Scope is required;
-  personal names retain precedence over repository names. (#140)
-
-- Add a selective experimental asset policy: abstain on verified passing
-  baselines, invoke matching reviewed procedures through the actual loader,
-  reject unused candidates early and reuse exact single-component probe results.
-  New v8 registrations require a fresh v3 mechanism receipt; the prior pilot's
-  failed mechanism and inconclusive efficacy remain unchanged. (#47, #79, #80)
-- Add provider-free planning for learning studies and a v7 protocol binding
-  mechanism receipts to the full execution configuration. Require observed use
-  of every enabled typed asset kind, add explicit tool-description experiments,
-  and validate embedded procedure bytes and dependency closure before export.
-  These experimental checks prepare the 1.1 learning work; hosted efficacy and
-  automatic persistent selection remain separately gated. (#47, #79, #80, #81)
 - Start an independent todo list with `action: "new"` or `Planning.new/2`,
   retaining earlier plans in the transcript and keeping task ids monotonic.
   `set` still continues the current work; completed plans no longer appear as

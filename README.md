@@ -18,6 +18,7 @@ itself, with no vendor CLI behind it, and `lmx` is built on its public API.
 ## Contents
 
 - [What makes it different](#what-makes-it-different)
+- [New in 1.1](#new-in-11)
 - [Also included](#also-included)
 - [Install](#install)
 - [Quickstart](#quickstart)
@@ -55,11 +56,35 @@ from:
   becomes an error the model can read, not a dead session. An installed
   `lmx` is an OTP release, so a compatible, signed update can load into the
   terminal UI while it runs.
-- **The same loop runs in your application.** Add `{:lemieux, "~> 1.0"}`,
+- **The same loop runs in your application.** Add `{:lemieux, "~> 1.1"}`,
   mount `Lemieux.Supervisor`, and supply your own tools, store, approval
   policy and interface through the API `lmx` uses; `lmx` has no private path
   into the library. [First embedded agent](docs/first-embedded-agent.md) runs
   a complete session without an API key.
+
+## New in 1.1
+
+- **Models and account usage.** The Codex picker discovers the
+  active account's visible models. `/usage` reports supported provider spend
+  and subscription windows, with scope, caching and unavailable values labeled.
+  [Providers](docs/providers.md#use-an-existing-codex-sign-in) and
+  [account usage](docs/cli.md#provider-account-usage) explain credentials and limits.
+- **Questions that can wait.** The agent can ask an optional question while
+  continuing independent work. Required questions still block; unanswered
+  questions never approve an action. Question panels also support text selection
+  and copying. See [questions](docs/cli.md#terminal-ui).
+- **MCP setup and inspection.** Add local or global servers from the terminal,
+  complete interactive OAuth, and inspect cached tools and schemas in `/mcp`.
+  [MCP](docs/mcp.md) covers trust and unattended behavior.
+- **Errors you can act on.** Readable budget refusals keep their exact saved
+  diagnostics. Internal faults show a reporting hint and turn summary;
+  `/feedback bug` prepares a sanitized draft for your review and explicit submission.
+  [Bug reports](docs/cli.md#sanitized-bug-reports) explains what is included.
+
+The [changelog](CHANGELOG.md) includes the dependency updates, local MTPLX
+discovery, configuration reload limits and experimental learning changes.
+Updating from 1.0 requires a restart on every platform; save drafts, restart
+and resume with `lmx -c` ([upgrade steps](docs/releases.md#upgrading-from-10-to-11)).
 
 ## Also included
 
@@ -143,7 +168,7 @@ shows how to make `lmx` work from any directory.
 
 ```elixir
 def deps do
-  [{:lemieux, "~> 1.0"}]
+  [{:lemieux, "~> 1.1"}]
 end
 ```
 
@@ -162,11 +187,13 @@ that directory may be untrusted, set `config :req_llm, load_dotenv: false`
    export ANTHROPIC_API_KEY=...   # or OPENAI_API_KEY, GOOGLE_API_KEY, ... (lmx help models)
    ```
 
-   Or run a model that can call tools in [Ollama](https://ollama.com), started
+   A usable [local Codex sign-in](docs/providers.md#use-an-existing-codex-sign-in)
+   is another option in the provider panel. Or run a model that can call tools
+   in [Ollama](https://ollama.com), started
    with a long enough context window: `OLLAMA_CONTEXT_LENGTH=65536 ollama serve`
    (32768 at the least; with less than about 23 GiB of GPU memory, Ollama
    otherwise serves 4,096 tokens and silently drops the start of a longer
-   conversation, your task first). With neither, `lmx` opens a panel where you
+   conversation, your task first). With none of these, `lmx` opens a panel where you
    pick a provider and paste its key.
 2. **Start it in your project:**
 
@@ -306,11 +333,13 @@ guides and the API reference are on [HexDocs](https://hexdocs.pm/lemieux).
 
 ## Project status
 
-Lemieux is at 1.0.0 in this release candidate, with one maintainer; 0.8 was its first public release.
+Lemieux 1.1 builds on the supported 1.x contracts, with one maintainer;
+0.8 was its first public release.
 The contracts that [Support and compatibility](docs/support.md) lists as
 supported (sessions, tools, transcripts, resume and fork, extensions) have
-offline tests, and `lmx` is the supported first-party host. APIs may still change before 1.0,
-with migration notes in the [changelog](CHANGELOG.md).
+offline tests, and `lmx` is the supported first-party host. Supported source
+and automation contracts remain compatible throughout 1.x; experimental
+interfaces have their own migration notes in the [changelog](CHANGELOG.md).
 
 Experimental and outside the stable public API: the harness-learning,
 feedback, benchmarking and evaluation tools (modules whose documentation opens
@@ -318,7 +347,7 @@ with **Experimental.**, `lmx feedback`, `lmx corpus` and `lmx harness`, and
 the `mix lemieux.*` tasks), the Windows build, and the computer-use example.
 The [roadmap](docs/roadmap.md) lists what comes next.
 
-Version 1.0 stabilizes the supported library, CLI and extension contracts in
+Version 1.0 established the supported library, CLI and extension contracts in
 [Support and compatibility](docs/support.md#public-api). Learning remains
 experimental: retained experience and observed reuse do not establish better
 task outcomes or lower cost. `lmx learning inspect`, `off`, `undo` and `forget`

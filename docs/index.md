@@ -14,7 +14,7 @@ budgets. Add it to `mix.exs`:
 
 ```elixir
 def deps do
-  [{:lemieux, "~> 0.9"}]
+  [{:lemieux, "~> 1.1"}]
 end
 ```
 
@@ -40,7 +40,8 @@ working session first; the references explain the options when you need them.
 | Understand the design first | [Why Lemieux](why-lemieux.md) → [Transcript compatibility](transcript-compatibility.md) |
 
 The embedded tutorial runs without an API key. A real model needs a
-provider's API key, or a local model in Ollama. The
+provider's API key, a usable [Codex sign-in](providers.md#use-an-existing-codex-sign-in),
+or a local model in Ollama. The
 [examples](https://github.com/houllette/lemieux/blob/main/examples/README.md)
 are runnable agents and extensions, each with a check that runs offline.
 

@@ -2,8 +2,9 @@
 
 `lmx` is a coding agent for your terminal. This guide installs it, connects a
 model, runs a first prompt, and shows what runs without asking. You need a
-model: an API key from a provider, who bills your requests, or a model running
-on your machine in Ollama.
+model: a provider API key, a usable existing Codex sign-in, or a model running
+on your machine in Ollama. [Codex sign-in](providers.md#use-an-existing-codex-sign-in)
+explains account discovery and credential ownership.
 
 > **Requirements**
 >
@@ -15,7 +16,7 @@ on your machine in Ollama.
 >   experimental.
 > - **A source checkout instead:** git and [mise](https://mise.jdx.dev/), on
 >   macOS or Linux, x86-64 or arm64 (Linux arm64 has no binary yet).
-> - **A model:** one provider's API key, or Ollama serving a model that can
+> - **A model:** one provider's API key, a usable Codex sign-in, or Ollama serving a model that can
 >   call tools with a context window of at least 32k tokens.
 > - **Network:** `lmx` connects to providers directly. It does not use
 >   `HTTP_PROXY` or `HTTPS_PROXY`, so a network that only lets traffic out

@@ -70,7 +70,7 @@ installer refuses system-wide installs), name the archive for its target and
 write a checksum file:
 
 ```sh
-cp _build/prod/lmx-0.8.0.tar.gz /tmp/lmx_macos_silicon.tar.gz
+cp _build/prod/lmx-1.1.0.tar.gz /tmp/lmx_macos_silicon.tar.gz
 (cd /tmp && shasum -a 256 lmx_macos_silicon.tar.gz > SHA256SUMS)
 python3 ../../scripts/install.py /tmp/lmx_macos_silicon.tar.gz --checksums /tmp/SHA256SUMS
 ```
