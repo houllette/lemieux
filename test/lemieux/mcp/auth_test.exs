@@ -553,6 +553,67 @@ defmodule Lemieux.MCP.AuthTest do
       end)
     end
 
+    test "cancelling a completed but unsettled connection closes its client", context do
+      serve("oauth", context.port)
+      test = self()
+      visit = browser()
+
+      redirect = fn url, uri ->
+        send(test, {:pending_client, self()})
+
+        receive do
+          :continue -> visit.(url, uri)
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect)
+        )
+
+      capture_log(fn ->
+        adding =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:pending_client, client}
+        [{_ref, {_name, connector}}] = Map.to_list(:sys.get_state(session).mcp_pending)
+        connector_ref = Process.monitor(connector.pid)
+        client_ref = Process.monitor(client)
+        :sys.suspend(session)
+
+        removing =
+          Task.async(fn ->
+            tag = make_ref()
+            send(session, {:"$gen_call", {self(), tag}, {:remove_mcp_server, "fixture"}})
+            send(test, :removal_queued)
+
+            receive do
+              {^tag, result} -> result
+            end
+          end)
+
+        try do
+          assert_receive :removal_queued
+          send(client, :continue)
+          assert_receive {:DOWN, ^connector_ref, :process, _pid, :normal}
+        after
+          :sys.resume(session)
+        end
+
+        assert Task.await(removing) == :ok
+        assert Task.await(adding) == :ok
+        assert_receive {:DOWN, ^client_ref, :process, ^client, _reason}
+        assert [] = Session.mcp_status(session)
+      end)
+    end
+
     test "removing a server during consent closes the pending client", context do
       serve("oauth", context.port)
       test = self()

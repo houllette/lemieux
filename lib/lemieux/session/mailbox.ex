@@ -271,6 +271,12 @@ defmodule Lemieux.Session.Mailbox do
     end
   end
 
+  def message(
+        {:mcp_client_started, %{server: name, client: client, connector: connector}},
+        state
+      ),
+      do: {:noreply, MCPServers.connection_started(state, name, client, connector)}
+
   def message({:mcp_connection_closed, %{server: name, client: client}}, state),
     do: {:noreply, MCPServers.connection_closed(state, name, client)}
 

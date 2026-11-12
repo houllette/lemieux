@@ -246,6 +246,7 @@ defmodule Lemieux.MCP do
     [
       owner: Keyword.get(opts, :owner),
       startup_owner: self(),
+      startup_notify: Keyword.get(opts, :startup_notify),
       timeout: budget(config, "timeout"),
       startup_timeout: budget(config, "startup_timeout"),
       tool_timeout: budget(config, "tool_timeout") || budget(config, "timeout")

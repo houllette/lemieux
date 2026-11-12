@@ -243,6 +243,7 @@ defmodule Lemieux.MCP.Client do
       needs_auth: nil,
       owner_ref: owner && Process.monitor(owner),
       startup_guard: startup_guard(Keyword.get(opts, :startup_owner)),
+      startup_notify: Keyword.get(opts, :startup_notify),
       notify: Keyword.get(opts, :notify, owner),
       pending: %{},
       monitors: %{},
@@ -428,7 +429,18 @@ defmodule Lemieux.MCP.Client do
     {:reply, info, state}
   end
 
-  def handle_call(:finish_startup, _from, state) do
+  def handle_call(:finish_startup, {connector, _ref}, state) do
+    # The receipt precedes guard release. If a completed connection task's
+    # result is discarded by cancellation, the session still learns which
+    # client to close. Sending only the task result leaked that client until
+    # the whole session stopped.
+    if state.startup_notify && is_nil(state.failure),
+      do:
+        send(
+          state.startup_notify,
+          {:mcp_client_started, %{server: state.server, client: self(), connector: connector}}
+        )
+
     release_startup_guard(state.startup_guard)
     result = if state.failure, do: {:error, state.failure}, else: :ok
     {:reply, result, %{state | startup_guard: nil}}

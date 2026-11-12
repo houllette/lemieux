@@ -94,7 +94,11 @@ defmodule Lemieux.Session.MCPServers do
   end
 
   def start_mcp_connections(state, configs, overrides \\ []) do
-    opts = Keyword.merge(mcp_connect_options(state), overrides)
+    opts =
+      state
+      |> mcp_connect_options()
+      |> Keyword.merge(overrides)
+      |> Keyword.put(:startup_notify, self())
 
     configs
     |> Enum.reject(&MapSet.member?(state.mcp_disabled, Map.fetch!(&1, "name")))
@@ -323,6 +327,7 @@ defmodule Lemieux.Session.MCPServers do
           not MapSet.member?(state.mcp_disabled, name),
           not Map.has_key?(state.mcp_errors, name),
           Process.alive?(client),
+          not pending_server?(state, name),
           do: {name, client}
 
     Enum.sort_by(clients, &elem(&1, 0))
@@ -379,6 +384,31 @@ defmodule Lemieux.Session.MCPServers do
   defp profile_reason(state, tool) do
     {:deny, reason} = Profile.decision(state.tool_profile, tool)
     reason
+  end
+
+  def connection_started(state, name, client, connector) do
+    connected =
+      case Map.get(state.mcp_connections, name) do
+        {_tools, clients} -> client in clients
+        nil -> false
+      end
+
+    pending =
+      Enum.any?(state.mcp_pending, fn {_ref, {pending, task}} ->
+        pending == name and task.pid == connector
+      end)
+
+    cond do
+      connected ->
+        state
+
+      pending ->
+        Map.update!(state, :mcp_connections, &Map.put(&1, name, {[], [client]}))
+
+      true ->
+        MCP.disconnect([client], state.supervisor)
+        state
+    end
   end
 
   def connection_closed(state, name, client) do
