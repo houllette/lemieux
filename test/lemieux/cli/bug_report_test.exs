@@ -161,7 +161,7 @@ defmodule Lemieux.CLI.BugReportTest do
     #!/usr/bin/env python3
     import os, sys, stat
     assert sys.argv[1:3] == ['issue', 'create']
-    assert sys.argv[sys.argv.index('--repo') + 1] == 'houllette/lemieux'
+    assert sys.argv[sys.argv.index('--repo') + 1] == 'github.com/houllette/lemieux'
     assert os.environ['GH_PROMPT_DISABLED'] == '1'
     path = sys.argv[sys.argv.index('--body-file') + 1]
     assert stat.S_IMODE(os.stat(path).st_mode) == 0o600

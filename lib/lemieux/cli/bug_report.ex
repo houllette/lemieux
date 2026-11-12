@@ -175,7 +175,16 @@ defmodule Lemieux.CLI.BugReport do
         Task.Supervisor.async_nolink(supervisor, fn ->
           System.cmd(
             executable,
-            ["issue", "create", "--repo", @repo, "--title", @title, "--body-file", path],
+            [
+              "issue",
+              "create",
+              "--repo",
+              "github.com/" <> @repo,
+              "--title",
+              @title,
+              "--body-file",
+              path
+            ],
             stderr_to_stdout: true,
             env: [{"GH_PROMPT_DISABLED", "1"}, {"GIT_TERMINAL_PROMPT", "0"}]
           )
