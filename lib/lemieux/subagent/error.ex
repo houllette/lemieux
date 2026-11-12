@@ -24,7 +24,12 @@ defmodule Lemieux.Subagent.Error do
   @doc "Explains a JSON diagnostic; missing amounts remain explicitly unknown."
   @spec message(reason :: term()) :: String.t()
   def message(%{"reason" => "tree_budget"} = reason) do
-    amounts = Map.get(reason, "micros", %{})
+    amounts =
+      case Map.get(reason, "micros") do
+        amounts when is_map(amounts) -> amounts
+        _unknown -> %{}
+      end
+
     cap = amounts["cap"]
     spent = amounts["spent"]
     reserved = amounts["reserved"]
@@ -50,7 +55,9 @@ defmodule Lemieux.Subagent.Error do
   def message("duplicate_work_in_group"),
     do: "Subagent launch contains duplicate work. Give each child a distinct investigation."
 
-  def message(text) when is_binary(text) and text != "", do: text
+  def message(text) when is_binary(text) and text != "" do
+    if String.contains?(text, " "), do: text, else: message(%{})
+  end
 
   def message(_unknown),
     do:

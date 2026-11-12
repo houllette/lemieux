@@ -45,6 +45,11 @@ defmodule Lemieux.Subagent.ErrorTest do
            }) =~ "available $0.00"
 
     assert Error.message(%{"reason" => "tree_budget"}) =~ "available unknown"
+
+    assert Error.message(%{"reason" => "tree_budget", "micros" => "invalid"}) =~
+             "available unknown"
+
+    assert Error.result(:unknown_failure).model_text =~ "saved tool result"
     assert Error.result({:new_failure, %{code: 42}}).model_text =~ "saved tool result"
     assert Error.result({:root_limit, 3}).model_text =~ "limit of 3"
   end
