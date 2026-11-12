@@ -777,6 +777,11 @@ defmodule Lemieux.MCP.Client do
     {:noreply, closed(state, "the MCP server #{state.server} stopped: #{inspect(reason)}")}
   end
 
+  # A platform browser opener uses System.cmd while this client traps exits.
+  # Its successfully closed Port leaves a normal EXIT in our mailbox; stopping
+  # here killed the client after OAuth stored its token, before tools/list.
+  # Transport exits are handled above, and OTP handles the supervisor's exit.
+  defp other({:EXIT, _helper, :normal}, state), do: {:noreply, state}
   defp other({:EXIT, _linked, reason}, state), do: {:stop, reason, state}
   defp other(_message, state), do: {:noreply, state}
 

@@ -418,6 +418,29 @@ defmodule Lemieux.MCP.AuthTest do
       refute_received :browser_opened
     end
 
+    test "a browser helper's normal exit does not end discovery", context do
+      serve("oauth", context.port)
+      visit = browser()
+
+      redirect = fn url, uri ->
+        # System.cmd's linked Port leaves an EXIT message when the MCP client
+        # traps exits, just as the platform browser opener does.
+        {"", 0} = System.cmd("python3", ["-c", "pass"])
+        visit.(url, uri)
+      end
+
+      {result, _log} =
+        with_log(fn ->
+          MCP.connect_server(http_config(context),
+            supervisor: context.runtime,
+            auth: auth(context, redirect: redirect)
+          )
+        end)
+
+      assert {:ok, %{client: client, tools: [_ | _]}} = result
+      assert Client.info(client).ready?
+    end
+
     test "a token already stored is still used", context do
       serve("oauth", context.port)
       auth = auth(context)

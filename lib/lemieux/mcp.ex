@@ -270,6 +270,15 @@ defmodule Lemieux.MCP do
         stop_client(client, supervisor)
         failed(name, reason, info.needs_auth, Keyword.get(opts, :interactive_auth, true))
     end
+  catch
+    # The supervised external client can disappear during either call, including
+    # between a successful listing and info. Never repeat an exit payload: a
+    # transport may include credentials or a callback response in it.
+    :exit, _reason ->
+      stop_client(client, supervisor)
+      reason = "the MCP client stopped during connection or tool discovery; reconnect to retry"
+      unavailable(name, reason)
+      {:error, %{name: name, reason: reason}}
   end
 
   # A server with no tools is still worth its connection when it declared

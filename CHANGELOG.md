@@ -30,6 +30,10 @@ API.
 
 ### Fixes
 
+- Keep MCP sessions alive when a client exits during discovery, and ignore
+  successful browser-helper exits after OAuth sign-in. Reconnect remains
+  retryable and reuses stored credentials. (#141)
+
 - Settle and checkpoint cancelled tool reservations before ending the turn.
   Free tools no longer strand a hold that blocks dollar-limited resume; paid
   tools retain unknown cost and consumed requests rather than refunding them.
