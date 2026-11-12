@@ -35,6 +35,7 @@ defmodule Lemieux.Subagent.Delegate do
   alias Lemieux.Subagent
   alias Lemieux.Subagent.Context
   alias Lemieux.Subagent.Definition
+  alias Lemieux.Subagent.Error
   alias Lemieux.Subagent.Group.Result
   alias Lemieux.Subagent.Request
   alias Lemieux.Subagent.Task
@@ -388,7 +389,7 @@ defmodule Lemieux.Subagent.Delegate do
          {:ok, result} <- Subagent.await(group_ref, :infinity) do
       outcome(result, budget(context))
     else
-      {:error, reason} -> {:error, describe(reason)}
+      {:error, reason} -> {:error, Error.result(reason)}
     end
   end
 
@@ -447,7 +448,4 @@ defmodule Lemieux.Subagent.Delegate do
   end
 
   def request(_tool, _task), do: {:error, :invalid_task}
-
-  defp describe(reason) when is_binary(reason), do: reason
-  defp describe(reason), do: inspect(reason)
 end
