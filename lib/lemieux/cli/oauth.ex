@@ -67,8 +67,8 @@ defmodule Lemieux.CLI.OAuth do
   @page """
   <!doctype html><meta charset="utf-8"><title>lemieux</title>
   <body style="font: 16px/1.5 system-ui; margin: 4rem auto; max-width: 30rem">
-  <h1>Authorized</h1><p>lemieux has the token. You can close this tab and go
-  back to your terminal.</p>
+  <h1>Authorization received</h1><p>Return to your terminal while lemieux
+  finishes signing in and discovering tools. You can close this tab.</p>
   """
 
   @doc """
@@ -80,6 +80,8 @@ defmodule Lemieux.CLI.OAuth do
   ## Options
 
     * `:open` — how to open a URL, for tests. Defaults to the platform opener.
+    * `:announce` — where to present the URL. Defaults to stderr; the TUI
+      supplies its own renderer so authorization never writes over the screen.
     * `:timeout` — how long to wait for somebody to finish, in milliseconds.
   """
   @spec redirect(url :: String.t(), redirect_uri :: String.t(), opts :: keyword()) ::
@@ -88,7 +90,7 @@ defmodule Lemieux.CLI.OAuth do
     with {:ok, port} <- loopback_port(redirect_uri),
          {:ok, socket} <- listen(port) do
       try do
-        announce(url)
+        Keyword.get(opts, :announce, &announce/1).(url)
         opener(opts).(url)
 
         accept(socket, Keyword.get(opts, :timeout, @timeout))

@@ -1471,6 +1471,18 @@ defmodule Lemieux.Session do
     :exit, _reason -> :gone
   end
 
+  @doc """
+  Inspects one server's cached discovery catalog without connecting or invoking it.
+
+  Returns the connection status, discovery notices and tools, including tools
+  disabled by the session or excluded by its profile. Each tool has its MCP
+  name, model-facing name, description, input schema and availability reason.
+  A connecting server answers immediately with its current state.
+  """
+  @spec inspect_mcp(session :: session(), name :: String.t()) ::
+          {:ok, map()} | {:error, :unknown_server}
+  def inspect_mcp(session, name), do: GenServer.call(session, {:inspect_mcp, name})
+
   @doc "Enables or disables a configured MCP server for this session only."
   @spec set_mcp_enabled(session :: session(), name :: String.t(), enabled? :: boolean()) ::
           :ok | {:error, :busy | :unknown_server}
@@ -1481,11 +1493,20 @@ defmodule Lemieux.Session do
   Adds or replaces MCP server configurations, matching them by server name.
 
   The session must be idle so its tool set cannot change underneath work that
-  is already in flight.
+  is already in flight. Connection runs outside the session process, so info
+  and cancellation remain responsive while this call waits for discovery.
+  Pass `interactive_auth: true` for an explicit interactive setup; otherwise
+  the host's connection options apply, including its background auth policy.
   """
-  @spec add_mcp_servers(session :: session(), servers :: [map()]) :: :ok | {:error, :busy}
-  def add_mcp_servers(session, servers) when is_list(servers),
-    do: GenServer.call(session, {:add_mcp_servers, servers}, :infinity)
+  @spec add_mcp_servers(session :: session(), servers :: [map()], opts :: keyword()) ::
+          :ok | {:error, :busy}
+  def add_mcp_servers(session, servers, opts \\ []) when is_list(servers),
+    do:
+      GenServer.call(
+        session,
+        {:add_mcp_servers, servers, Keyword.take(opts, [:interactive_auth])},
+        :infinity
+      )
 
   @doc """
   Removes one configured MCP server by name while the session is idle.

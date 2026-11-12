@@ -10,6 +10,7 @@ defmodule Lemieux.Session.MCPServers do
   alias Lemieux.Session.Requests
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Tool
+  alias Lemieux.Tool.Profile
 
   # The explicit operations — adding, re-enabling, reconnecting — still connect
   # before they answer, because a host that asked for a server is waiting to
@@ -92,8 +93,12 @@ defmodule Lemieux.Session.MCPServers do
     )
   end
 
-  def start_mcp_connections(state, configs) do
-    opts = mcp_connect_options(state)
+  def start_mcp_connections(state, configs, overrides \\ []) do
+    opts =
+      state
+      |> mcp_connect_options()
+      |> Keyword.merge(overrides)
+      |> Keyword.put(:startup_notify, self())
 
     configs
     |> Enum.reject(&MapSet.member?(state.mcp_disabled, Map.fetch!(&1, "name")))
@@ -117,6 +122,7 @@ defmodule Lemieux.Session.MCPServers do
     {{name, _task}, pending} = Map.pop(state.mcp_pending, ref)
     state = %{state | mcp_pending: pending}
     config = Enum.find(state.mcp_servers, &(&1["name"] == name))
+    result = settled_result(state, name, result)
     {tools, clients, failures} = connection(result)
 
     state =
@@ -136,6 +142,21 @@ defmodule Lemieux.Session.MCPServers do
 
     mcp_settled(state)
   end
+
+  # A close notification can beat the connection task's result into this
+  # mailbox. Match the client, so an old connection cannot poison a retry.
+  defp settled_result(state, name, {:ok, %{client: client}} = result) do
+    case Map.get(state.mcp_connections, name) do
+      {_tools, [^client]} when is_map_key(state.mcp_errors, name) ->
+        MCP.disconnect([client], state.supervisor)
+        {:error, %{name: name, reason: state.mcp_errors[name]}}
+
+      _other ->
+        result
+    end
+  end
+
+  defp settled_result(_state, _name, result), do: result
 
   # Called by the explicit operations for the servers they are about to
   # connect themselves, so a slower startup attempt cannot land afterwards and
@@ -195,11 +216,13 @@ defmodule Lemieux.Session.MCPServers do
     {tools, clients} = Map.get(state.mcp_connections, name, {[], []})
     error = Map.get(state.mcp_errors, name)
 
+    status = mcp_server_state(state, name, clients)
+
     %{
       name: name,
       transport: config["transport"],
-      status: mcp_server_state(state, name, clients),
-      tool_count: length(tools),
+      status: status,
+      tool_count: if(status == :connected, do: length(tools), else: 0),
       error: error,
       notices: Map.get(state.mcp_notices, name, []),
       auth: Map.get(state.mcp_needs_auth, name)
@@ -216,11 +239,14 @@ defmodule Lemieux.Session.MCPServers do
       Enum.any?(state.mcp_pending, fn {_ref, {pending, _task}} -> pending == name end) ->
         :connecting
 
-      clients != [] ->
-        :connected
-
       Map.has_key?(state.mcp_needs_auth, name) ->
         :needs_auth
+
+      Map.has_key?(state.mcp_errors, name) ->
+        :failed
+
+      Enum.any?(clients, &Process.alive?/1) ->
+        :connected
 
       true ->
         :failed
@@ -299,9 +325,119 @@ defmodule Lemieux.Session.MCPServers do
     clients =
       for {name, {_tools, [client | _rest]}} <- state.mcp_connections,
           not MapSet.member?(state.mcp_disabled, name),
+          not Map.has_key?(state.mcp_errors, name),
+          Process.alive?(client),
+          not pending_server?(state, name),
           do: {name, client}
 
     Enum.sort_by(clients, &elem(&1, 0))
+  end
+
+  def inspect_server(state, name) do
+    case Enum.find(state.mcp_servers, &(&1["name"] == name)) do
+      nil ->
+        {:error, :unknown_server}
+
+      config ->
+        status = mcp_server_status(state, config)
+        enabled_names = MapSet.new(state.tools, &Tool.name/1)
+
+        tools =
+          for %Lemieux.MCP.RemoteTool{server: ^name} = tool <-
+                Catalog.discovered_remote_tools(state) do
+            inspect_tool(state, status, enabled_names, tool)
+          end
+
+        {:ok, %{server: status, tools: tools, notices: Map.get(state.mcp_notices, name, [])}}
+    end
+  end
+
+  defp inspect_tool(state, status, enabled_names, tool) do
+    reason =
+      cond do
+        status.status != :connected ->
+          "server is #{status.status}"
+
+        MapSet.member?(state.disabled_tools, Tool.name(tool)) ->
+          "disabled for this session"
+
+        not Profile.allowed?(state.tool_profile, tool) ->
+          "excluded by the host tool profile: #{profile_reason(state, tool)}"
+
+        not MapSet.member?(enabled_names, Tool.name(tool)) ->
+          "excluded from the executable catalog"
+
+        true ->
+          nil
+      end
+
+    %{
+      name: tool.name,
+      model_name: Tool.name(tool),
+      description: Tool.description(tool),
+      input_schema: Tool.schema(tool),
+      enabled?: is_nil(reason),
+      reason: reason
+    }
+  end
+
+  defp profile_reason(state, tool) do
+    {:deny, reason} = Profile.decision(state.tool_profile, tool)
+    reason
+  end
+
+  def connection_started(state, name, client, connector) do
+    connected =
+      case Map.get(state.mcp_connections, name) do
+        {_tools, clients} -> client in clients
+        nil -> false
+      end
+
+    pending =
+      Enum.any?(state.mcp_pending, fn {_ref, {pending, task}} ->
+        pending == name and task.pid == connector
+      end)
+
+    cond do
+      connected ->
+        state
+
+      pending ->
+        Map.update!(state, :mcp_connections, &Map.put(&1, name, {[], [client]}))
+
+      true ->
+        MCP.disconnect([client], state.supervisor)
+        state
+    end
+  end
+
+  def connection_closed(state, name, client) do
+    case Map.get(state.mcp_connections, name) do
+      {_tools, clients} ->
+        if client in clients, do: note_closed(state, name), else: state
+
+      nil ->
+        if pending_server?(state, name) do
+          state
+          |> Map.update!(:mcp_connections, &Map.put(&1, name, {[], [client]}))
+          |> note_closed(name)
+        else
+          state
+        end
+    end
+  end
+
+  defp pending_server?(state, name),
+    do: Enum.any?(state.mcp_pending, fn {_ref, {pending, _task}} -> pending == name end)
+
+  defp note_closed(state, name) do
+    state =
+      state
+      |> Map.update!(:mcp_errors, &Map.put(&1, name, "connection closed; reconnect to retry"))
+      |> refresh_mcp_tools()
+
+    config = Enum.find(state.mcp_servers, &(&1["name"] == name))
+    Core.emit(state, {:mcp_server, mcp_server_status(state, config)})
   end
 
   def mcp_statuses(state) do
@@ -311,7 +447,8 @@ defmodule Lemieux.Session.MCPServers do
       %{
         name: config["name"],
         transport: config["transport"],
-        tool_count: length(tools),
+        tool_count:
+          if(Map.has_key?(state.mcp_errors, config["name"]), do: 0, else: length(tools)),
         enabled?: not MapSet.member?(state.mcp_disabled, config["name"]),
         error: Map.get(state.mcp_errors, config["name"])
       }

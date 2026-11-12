@@ -11,7 +11,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Editor
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.MCPForm
+    alias Lemieux.TUI.MCPPanel
     alias Lemieux.TUI.QuestionFlow
+    alias Lemieux.TUI.Screen
 
     @doc false
     @spec key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
@@ -27,6 +29,42 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def key(event, %{tools: %{mcp_flow: %{mode: :add}}} = state, ctx),
       do: mcp_add_key(event, state, ctx)
+
+    def key(event, %{tools: %{mcp_flow: %{mode: mode}}} = state, _ctx)
+        when mode in [:tools, :tool], do: inspect_key(event, state)
+
+    def key(%ExRatatui.Event.Key{code: "enter"}, state, _ctx) do
+      case Enum.at(state.tools.mcp_flow.statuses, state.tools.mcp_flow.selected) do
+        nil ->
+          {:noreply, state}
+
+        server ->
+          app = self()
+          session = state.session
+
+          Task.start(fn ->
+            result =
+              try do
+                session |> Session.inspect_mcp(server.name) |> prepare_inspection()
+              catch
+                :exit, _reason -> {:error, :session_unavailable}
+              end
+
+            send(app, {:mcp_inspection, session, server.name, result})
+          end)
+
+          flow =
+            Map.merge(state.tools.mcp_flow, %{
+              mode: :tools,
+              inspection: nil,
+              inspection_name: server.name,
+              tool_selected: 0,
+              detail_scroll: 0
+            })
+
+          {:noreply, put_in(state.tools.mcp_flow, flow)}
+      end
+    end
 
     def key(%ExRatatui.Event.Key{code: "esc"}, state, ctx),
       do: ctx.continue.(put_in(state.tools.mcp_flow, nil))
@@ -47,6 +85,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def key(%ExRatatui.Event.Key{code: "a"}, state, _ctx) do
+      draft = ExRatatui.textarea_get_value(state.input)
       :ok = Editor.replace(state.input, "")
 
       flow =
@@ -54,6 +93,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> Map.merge(%{
           mode: :add,
           questionnaire: MCPForm.new(),
+          saved_draft: draft,
           notice: nil,
           path: mcp_config_path(state)
         })
@@ -134,6 +174,86 @@ if Code.ensure_loaded?(ExRatatui.App) do
         else: {:noreply, state}
     end
 
+    @doc false
+    @spec mouse(ExRatatui.Event.Mouse.t(), map()) :: tuple()
+    def mouse(%ExRatatui.Event.Mouse{kind: kind}, state)
+        when kind in ["scroll_up", "scroll_down"],
+        do:
+          inspect_key(
+            %ExRatatui.Event.Key{code: if(kind == "scroll_up", do: "up", else: "down")},
+            state
+          )
+
+    def mouse(_event, state), do: {:noreply, state}
+
+    defp inspect_key(%ExRatatui.Event.Key{code: "esc"}, state) do
+      mode = if state.tools.mcp_flow.mode == :tool, do: :tools, else: :list
+      {:noreply, put_in(state.tools.mcp_flow.mode, mode)}
+    end
+
+    defp inspect_key(%ExRatatui.Event.Key{code: "enter"}, state) do
+      flow = state.tools.mcp_flow
+
+      if flow.mode == :tools and is_map(flow.inspection) and flow.inspection.tools != [],
+        do: {:noreply, put_in(state.tools.mcp_flow.mode, :tool)},
+        else: {:noreply, state}
+    end
+
+    defp inspect_key(%ExRatatui.Event.Key{code: code}, state)
+         when code in ["up", "down", "page_up", "page_down"] do
+      flow = state.tools.mcp_flow
+      by = if code in ["up", "page_up"], do: -1, else: 1
+
+      if flow.mode == :tool do
+        by = by * if(code in ["page_up", "page_down"], do: 8, else: 1)
+        next = MCPPanel.scroll(flow, Screen.panes(state), by)
+        {:noreply, put_in(state.tools.mcp_flow, next)}
+      else
+        count = if is_map(flow.inspection), do: length(flow.inspection.tools), else: 0
+        selected = min(max(flow.tool_selected + by, 0), max(count - 1, 0))
+
+        {:noreply,
+         put_in(state.tools.mcp_flow, %{flow | tool_selected: selected, detail_scroll: 0})}
+      end
+    end
+
+    defp inspect_key(_event, state), do: {:noreply, state}
+
+    @doc false
+    @spec inspection_result(map(), pid(), String.t(), term()) :: {:noreply, map()}
+    def inspection_result(
+          %{session: session, tools: %{mcp_flow: %{inspection_name: name} = flow}} = state,
+          session,
+          name,
+          result
+        ) do
+      inspection =
+        case result do
+          {:ok, inspection} ->
+            inspection
+
+          {:error, reason} ->
+            %{
+              server: %{status: :failed, error: "Inspection unavailable: #{reason}"},
+              tools: [],
+              notices: []
+            }
+        end
+
+      {:noreply, put_in(state.tools.mcp_flow, Map.put(flow, :inspection, inspection))}
+    end
+
+    def inspection_result(state, _session, _name, _result), do: {:noreply, state}
+
+    defp prepare_inspection({:ok, inspection}) do
+      {:ok,
+       Map.update!(inspection, :tools, fn tools ->
+         Enum.map(tools, &Map.put(&1, :detail_text, MCPPanel.describe_tool(&1)))
+       end)}
+    end
+
+    defp prepare_inspection(error), do: error
+
     defp mcp_delete_key(state, ctx) do
       case Enum.at(state.tools.mcp_flow.statuses, state.tools.mcp_flow.selected) do
         nil ->
@@ -166,6 +286,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp mcp_add_key(%ExRatatui.Event.Key{code: "esc"}, state, _ctx) do
       :ok = Editor.replace(state.input, "")
+      :ok = Editor.replace(state.input, Map.get(state.tools.mcp_flow, :saved_draft, ""))
       {:noreply, put_in(state.tools.mcp_flow.mode, :list)}
     end
 
@@ -281,7 +402,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         {:mcp_add, path, server["name"]},
         fn ->
           with :ok <- save.(server) do
-            Session.add_mcp_servers(state.session, [server])
+            Session.add_mcp_servers(state.session, [server], interactive_auth: true)
           end
         end,
         ctx
@@ -398,7 +519,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
         }
 
         updated = Map.delete(updated, :withheld)
-        :ok = Editor.replace(state.input, "")
+
+        if flow.mode == :add,
+          do: Editor.replace(state.input, Map.get(flow, :saved_draft, ""))
+
         {:noreply, put_in(state.tools.mcp_flow, updated)}
       end
     end

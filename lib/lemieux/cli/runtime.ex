@@ -1742,12 +1742,12 @@ defmodule Lemieux.CLI.Runtime do
   used (see `Lemieux.CLI.OAuth`); a file somebody named is theirs and nothing
   is moved into it.
   """
-  @spec auth(options :: Options.t()) :: Auth.t()
-  def auth(%Options{} = options) do
+  @spec auth(options :: Options.t(), redirect_opts :: keyword()) :: Auth.t()
+  def auth(%Options{} = options, redirect_opts \\ []) do
     Auth.new(
       store: credential_store(options.credentials),
       redirect_uri: "http://127.0.0.1:#{options.oauth_callback_port}/callback",
-      redirect: &OAuth.redirect/2,
+      redirect: fn url, uri -> OAuth.redirect(url, uri, redirect_opts) end,
       clients: options.oauth_clients,
       # What a person reads on the consent screen. No `client_id_metadata_url` yet:
       # CIMD needs a JSON document hosted at a stable HTTPS URL somebody owns, which is

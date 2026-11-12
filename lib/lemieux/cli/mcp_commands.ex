@@ -34,6 +34,7 @@ defmodule Lemieux.CLI.MCPCommands do
 
   alias Lemieux.CLI
   alias Lemieux.CLI.Config
+  alias Lemieux.CLI.MCPAdd
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
   alias Lemieux.CLI.Sanitize
@@ -42,15 +43,37 @@ defmodule Lemieux.CLI.MCPCommands do
   alias Lemieux.MCP.Config, as: MCPConfig
   alias Lemieux.MCP.Trust
 
-  @switches [yes: :boolean, config: :string, project: :string]
+  @switches [
+    yes: :boolean,
+    config: :string,
+    project: :string,
+    global: :boolean,
+    local: :boolean,
+    replace: :boolean,
+    transport: :string,
+    header: :keep,
+    env: :keep,
+    non_interactive: :boolean,
+    credentials: :string,
+    oauth_callback_port: :integer
+  ]
 
   @doc "Runs an `mcp` subcommand, printing what it did."
   @spec run(argv :: [String.t()], opts :: keyword()) :: :ok | {:error, pos_integer()}
   def run(argv, opts \\ []) do
-    {parsed, rest, invalid} = OptionParser.parse(argv, strict: @switches)
-    config_argv = if parsed[:config], do: ["--config", parsed[:config]], else: []
+    {head, tail} = Enum.split_while(argv, &(&1 != "--"))
+    {parsed, rest, invalid} = OptionParser.parse(head, strict: @switches)
+    rest = if tail == [], do: rest, else: rest ++ tail
+
+    config_argv =
+      for key <- [:config, :credentials, :oauth_callback_port],
+          value = parsed[key],
+          not is_nil(value),
+          part <- ["--" <> String.replace(Atom.to_string(key), "_", "-"), to_string(value)],
+          do: part
 
     with [] <- invalid,
+         :ok <- scope_flags(parsed),
          {:ok, options} <- Options.parse(config_argv, command: :request) do
       command(rest, parsed, options, Keyword.get_lazy(opts, :cwd, &File.cwd!/0), opts)
     else
@@ -59,7 +82,10 @@ defmodule Lemieux.CLI.MCPCommands do
     end
   end
 
-  defp command(["list"], _parsed, options, cwd, _opts), do: list(options, cwd)
+  defp command(["add" | args], parsed, options, cwd, opts),
+    do: MCPAdd.run(args, parsed, options, cwd, opts)
+
+  defp command(["list"], parsed, options, cwd, _opts), do: list(options, cwd, parsed)
   defp command(["trust"], parsed, options, cwd, _opts), do: trust(options, cwd, parsed[:yes])
   defp command(["untrust"], _parsed, options, cwd, _opts), do: untrust(options, cwd)
 
@@ -69,13 +95,25 @@ defmodule Lemieux.CLI.MCPCommands do
   defp command(_argv, _parsed, _options, _cwd, _opts),
     do:
       fail(
-        "usage: lmx mcp list | lmx mcp trust [--yes] | lmx mcp untrust | lmx mcp import claude|codex"
+        "usage: lmx mcp add --local|--global [--transport http] NAME URL | lmx mcp list | lmx mcp trust [--yes] | lmx mcp untrust | lmx mcp import claude|codex"
       )
 
-  defp list(options, cwd) do
-    claimed = Runtime.claimed_mcp_names(options)
-    IO.puts("Your servers (config): #{claimed |> Enum.sort() |> names()}")
+  defp scope_flags(parsed) do
+    if parsed[:local] && parsed[:global],
+      do: {:error, "--local and --global are mutually exclusive"},
+      else: :ok
+  end
 
+  defp list(options, cwd, parsed) do
+    claimed = Runtime.claimed_mcp_names(options)
+
+    unless parsed[:local],
+      do: IO.puts("Your servers (config): #{claimed |> Enum.sort() |> names()}")
+
+    unless parsed[:global], do: list_project(options, cwd, claimed)
+  end
+
+  defp list_project(options, cwd, claimed) do
     case Discovery.project_mcp_config(cwd) do
       nil -> IO.puts("This repository has no .mcp.json.")
       file -> IO.puts("#{shown(file)}: #{project_status(options, file, claimed)}")

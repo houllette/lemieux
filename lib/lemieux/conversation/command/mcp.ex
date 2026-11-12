@@ -81,7 +81,7 @@ defmodule Lemieux.Conversation.Command.MCP do
 
     change(acc, host, "add", fn ->
       with {:ok, servers} <- MCPConfig.read(path) do
-        Session.add_mcp_servers(session, servers)
+        Session.add_mcp_servers(session, servers, interactive_auth: true)
       end
     end)
   end

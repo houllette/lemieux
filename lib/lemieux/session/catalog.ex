@@ -24,7 +24,12 @@ defmodule Lemieux.Session.Catalog do
   # Every enabled server's tools, with names settled across servers by
   # `Lemieux.MCP.disambiguate/1`: two servers offering a tool that sanitises to
   # the same name must not reach a provider as one name for two tools.
-  def remote_tools(state) do
+  def remote_tools(state),
+    do: Enum.reject(discovered_remote_tools(state), &Map.has_key?(state.mcp_errors, &1.server))
+
+  # Keep cached descriptors for inspection after a transport closes. Names are
+  # settled before filtering unavailable servers so unrelated names stay stable.
+  def discovered_remote_tools(state) do
     state.mcp_servers
     |> Enum.flat_map(fn config ->
       {tools, _clients} = Map.get(state.mcp_connections, config["name"], {[], []})

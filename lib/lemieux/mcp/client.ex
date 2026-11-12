@@ -63,6 +63,11 @@ defmodule Lemieux.MCP.Client do
 
       {:mcp_list_changed, %{server: name, client: pid, kind: :prompts | :resources}}
 
+  A closed duplex transport also sends
+  `{:mcp_connection_closed, %{server: name, client: pid}}` to `:notify`.
+  This contains no transport error payload; sessions retain cached descriptors
+  for inspection while removing that connection's tools from future requests.
+
   A `ping` is answered; any other request a server sends gets "method not
   found", because lemieux declares no capability a server may call back into,
   and a server waiting on an answer that never comes is a server that hangs.
@@ -203,6 +208,10 @@ defmodule Lemieux.MCP.Client do
   @spec info(client :: client()) :: map()
   def info(client), do: GenServer.call(client, :info, :infinity)
 
+  @doc false
+  @spec finish_startup(client :: client()) :: :ok | {:error, String.t()}
+  def finish_startup(client), do: GenServer.call(client, :finish_startup, :infinity)
+
   @impl GenServer
   def init(opts) do
     # Stdio transports own a linked port, and its OS process may disappear with an
@@ -233,6 +242,8 @@ defmodule Lemieux.MCP.Client do
       failure: nil,
       needs_auth: nil,
       owner_ref: owner && Process.monitor(owner),
+      startup_guard: startup_guard(Keyword.get(opts, :startup_owner)),
+      startup_notify: Keyword.get(opts, :startup_notify),
       notify: Keyword.get(opts, :notify, owner),
       pending: %{},
       monitors: %{},
@@ -249,6 +260,28 @@ defmodule Lemieux.MCP.Client do
     end
   end
 
+  # Startup can block inside a browser callback. A monitor handled in this
+  # GenServer's mailbox cannot stop that wait when its connection task is
+  # cancelled. This short-lived guard follows both processes independently;
+  # until discovery hands ownership back, cancellation kills the client and
+  # closes its sockets/Ports. Transport pipe managers also monitor the client.
+  defp startup_guard(nil), do: nil
+
+  defp startup_guard(owner) do
+    client = self()
+
+    spawn(fn ->
+      owner_ref = Process.monitor(owner)
+      client_ref = Process.monitor(client)
+
+      receive do
+        {:startup_finished, ^client, ref} -> send(client, {:startup_released, ref})
+        {:DOWN, ^client_ref, :process, ^client, _reason} -> :ok
+        {:DOWN, ^owner_ref, :process, ^owner, _reason} -> Process.exit(client, :kill)
+      end
+    end)
+  end
+
   @impl GenServer
   def handle_continue(:probe, state) do
     state = probe(state)
@@ -261,6 +294,22 @@ defmodule Lemieux.MCP.Client do
         else: state
 
     {:noreply, state}
+  end
+
+  defp release_startup_guard(nil), do: :ok
+
+  defp release_startup_guard(guard) do
+    ref = Process.monitor(guard)
+    send(guard, {:startup_finished, self(), ref})
+
+    receive do
+      {:startup_released, ^ref} ->
+        Process.demonitor(ref, [:flush])
+        :ok
+
+      {:DOWN, ^ref, :process, ^guard, _reason} ->
+        exit(:startup_guard_stopped)
+    end
   end
 
   # Anything a transport says other than the three modes is read as serial,
@@ -378,6 +427,23 @@ defmodule Lemieux.MCP.Client do
     }
 
     {:reply, info, state}
+  end
+
+  def handle_call(:finish_startup, {connector, _ref}, state) do
+    # The receipt precedes guard release. If a completed connection task's
+    # result is discarded by cancellation, the session still learns which
+    # client to close. Sending only the task result leaked that client until
+    # the whole session stopped.
+    if state.startup_notify && is_nil(state.failure),
+      do:
+        send(
+          state.startup_notify,
+          {:mcp_client_started, %{server: state.server, client: self(), connector: connector}}
+        )
+
+    release_startup_guard(state.startup_guard)
+    result = if state.failure, do: {:error, state.failure}, else: :ok
+    {:reply, result, %{state | startup_guard: nil}}
   end
 
   def handle_call(_request, _from, %{failure: failure} = state) when is_binary(failure),
@@ -777,6 +843,11 @@ defmodule Lemieux.MCP.Client do
     {:noreply, closed(state, "the MCP server #{state.server} stopped: #{inspect(reason)}")}
   end
 
+  # A platform browser opener uses System.cmd while this client traps exits.
+  # Its successfully closed Port leaves a normal EXIT in our mailbox; stopping
+  # here killed the client after OAuth stored its token, before tools/list.
+  # Transport exits are handled above, and OTP handles the supervisor's exit.
+  defp other({:EXIT, _helper, :normal}, state), do: {:noreply, state}
   defp other({:EXIT, _linked, reason}, state), do: {:stop, reason, state}
   defp other(_message, state), do: {:noreply, state}
 
@@ -886,6 +957,9 @@ defmodule Lemieux.MCP.Client do
   # The server has gone. Everything in flight fails with the reason, and
   # everything after it answers the same.
   defp closed(state, reason) do
+    if is_nil(state.failure) and state.notify,
+      do: send(state.notify, {:mcp_connection_closed, %{server: state.server, client: self()}})
+
     state = fail(state, reason)
 
     state.pending

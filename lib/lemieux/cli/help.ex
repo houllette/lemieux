@@ -117,7 +117,7 @@ defmodule Lemieux.CLI.Help do
       lmx status [options]          Inspect local extension readiness
       lmx learning [COMMAND]        Inspect, undo or opt out of scoped experience
       lmx explain [options]         Show what a session would start with (JSON)
-      lmx mcp list|trust|import     Manage MCP servers (lmx help mcp)
+      lmx mcp add|list|trust|import     Manage MCP servers (lmx help mcp)
       lmx plugin install|list|remove Manage Claude Code-compatible plugins
       lmx extension new|list        Write or list your own Elixir extensions
       lmx skills [--json]           List the skills a session finds, and from where
@@ -384,6 +384,20 @@ defmodule Lemieux.CLI.Help do
     """
     Usage: lmx mcp list | lmx mcp trust [--yes] | lmx mcp untrust
            lmx mcp import claude|codex
+           lmx mcp add --global|--local [--transport http] NAME URL
+           lmx mcp add --global|--local NAME -- COMMAND [ARGS]
+
+    Add requires an explicit scope: --global uses the active personal config
+    (--config, LMX_CONFIG or ~/.lmx/config.json); --local uses the repository
+    root's .mcp.json. --replace permits replacing an existing name. Headers
+    and environment entries use repeated --header NAME=VALUE and --env NAME=VALUE
+    before --. Secret values are saved as ${NAME} references. Saving starts
+    no server when piped or with --non-interactive. Interactive add connects,
+    signs in through the browser when needed, and reports the discovered tools.
+    Failed sign-in keeps the configuration; /mcp, select it and r retries.
+    list accepts --local or --global too.
+
+    Example: lmx mcp add --global --transport http linear https://mcp.linear.app/mcp
 
     MCP servers come from four places:
 

@@ -245,6 +245,8 @@ defmodule Lemieux.MCP do
   defp client_opts(config, opts) do
     [
       owner: Keyword.get(opts, :owner),
+      startup_owner: self(),
+      startup_notify: Keyword.get(opts, :startup_notify),
       timeout: budget(config, "timeout"),
       startup_timeout: budget(config, "startup_timeout"),
       tool_timeout: budget(config, "tool_timeout") || budget(config, "timeout")
@@ -263,13 +265,31 @@ defmodule Lemieux.MCP do
   defp finish_client_start(client, name, supervisor, opts) do
     case Client.list_tools(client) do
       {:ok, tools} ->
-        keep_client(client, name, supervisor, tools, Client.info(client))
+        info = Client.info(client)
+
+        case Client.finish_startup(client) do
+          :ok ->
+            keep_client(client, name, supervisor, tools, info)
+
+          {:error, reason} ->
+            stop_client(client, supervisor)
+            failed(name, reason, info.needs_auth, Keyword.get(opts, :interactive_auth, true))
+        end
 
       {:error, reason} ->
         info = Client.info(client)
         stop_client(client, supervisor)
         failed(name, reason, info.needs_auth, Keyword.get(opts, :interactive_auth, true))
     end
+  catch
+    # The supervised external client can disappear during either call, including
+    # between a successful listing and info. Never repeat an exit payload: a
+    # transport may include credentials or a callback response in it.
+    :exit, _reason ->
+      stop_client(client, supervisor)
+      reason = "the MCP client stopped during connection or tool discovery; reconnect to retry"
+      unavailable(name, reason)
+      {:error, %{name: name, reason: reason}}
   end
 
   # A server with no tools is still worth its connection when it declared

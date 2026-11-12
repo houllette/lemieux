@@ -374,6 +374,7 @@ defmodule Lemieux.TUI.TestSupport do
               %{name: "bash", source: :local, enabled?: true}
             ]),
           mcp_statuses: Keyword.get(choices, :mcp_statuses, []),
+          mcp_inspections: Keyword.get(choices, :mcp_inspections, %{}),
           refresh: Keyword.get(choices, :refresh, {:ok, 0}),
           compact_result: Keyword.get(choices, :compact_result, {:error, :nothing_to_do}),
           steers: [],
@@ -537,6 +538,10 @@ defmodule Lemieux.TUI.TestSupport do
         GenServer.reply(from, state.mcp_statuses)
         fake_session_loop(state)
 
+      {:"$gen_call", from, {:inspect_mcp, name}} ->
+        GenServer.reply(from, Map.get(state.mcp_inspections, name, {:error, :unknown_server}))
+        fake_session_loop(state)
+
       {:"$gen_call", from, {:reconnect_mcp, name}} ->
         send(state.owner, {:reconnected_mcp, name})
         GenServer.reply(from, :ok)
@@ -554,7 +559,8 @@ defmodule Lemieux.TUI.TestSupport do
         GenServer.reply(from, :ok)
         fake_session_loop(%{state | mcp_statuses: statuses})
 
-      {:"$gen_call", from, {:add_mcp_servers, servers}} ->
+      {:"$gen_call", from, {:add_mcp_servers, servers, options}} ->
+        send(state.owner, {:mcp_add_options, options})
         send(state.owner, {:added_mcp, servers})
 
         statuses =

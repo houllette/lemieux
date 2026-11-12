@@ -1351,6 +1351,30 @@ inherit](#what-commands-inherit)), with the [credential
 scrub](#credential-scrubbing) applied, and get `CLAUDE_PROJECT_DIR` unless
 their configuration sets it.
 
+Add servers from a normal terminal with an explicit scope:
+
+```sh
+lmx mcp add --global --transport http linear https://mcp.linear.app/mcp
+lmx mcp add --local --transport http docs https://mcp.example.com/mcp
+lmx mcp add --local tracker -- '/path with spaces/tracker-mcp' --stdio
+lmx mcp add --global --header 'Authorization=Bearer ${DOCS_TOKEN}' docs https://mcp.example.com/mcp
+```
+
+`--global` uses the active personal config (`--config`, `LMX_CONFIG`, then
+`~/.lmx/config.json`); `--local` uses the repository root's `.mcp.json`, even
+from a subdirectory. Neither scope changes the other. Existing names require
+`--replace`. Repeat `--header NAME=VALUE` for HTTP or `--env NAME=VALUE` for
+stdio before `--`; everything after `--` belongs to the server, including
+flags and arguments with spaces. Secret-looking values become `${NAME}`
+references; export the named variables before connecting. Output names the
+scope and file without printing values. Interactive add connects and, when
+needed, continues directly into browser sign-in and tool discovery. Piped
+invocations and `--non-interactive` only save: they open no browser and start
+no server. Failed or cancelled sign-in keeps the saved configuration; open
+`/mcp`, select it and press `r` to retry. Repository trust
+still applies, and personal names override repository names. `lmx mcp list`
+accepts `--local` or `--global` to show one scope.
+
 `lmx mcp import claude` copies only Claude Code's user-scope servers, the
 top-level `mcpServers` of `~/.claude.json`. Local-scope servers, which
 `claude mcp add` creates per project by default, often with that project's
@@ -1359,10 +1383,20 @@ or pass `--mcp-config` to use it there. `lmx mcp import codex` copies the
 servers in `~/.codex/config.toml`. Servers already in your file keep what you
 wrote.
 
-In the terminal UI, `/mcp` opens a server panel. `a` adds a server through a
+In the terminal UI, `/mcp` opens a server panel. Enter opens the selected
+server's cached tool list; Enter on a tool shows its original and model-facing
+names, description, input schema and availability. Arrow keys and PgUp/PgDn
+scroll details; Esc returns through tools to servers while keeping selection.
+Connection states and discovery exclusions explain unavailable tools. Inspecting
+reads the session's catalog without invoking tools or refreshing discovery;
+`r` explicitly reconnects. `a` adds a server through a
 short questionnaire, saved to your `"mcp_servers"` by default or to the
 repository's `.mcp.json`; a header or environment value that looks secret is
-saved as a `${NAME}` reference, never as written. `r` reconnects the selected
+saved as a `${NAME}` reference, never as written. Saving continues into
+connection, browser authorization when required, and tool discovery without
+a separate reconnect. Existing credentials are reused. The screen remains
+responsive during sign-in, and failed sign-in keeps the saved configuration.
+Background startup never opens a browser. `r` reconnects the selected
 server, `o` turns it on or off for the session, `d` twice removes it from the
 session, and Shift-D twice deletes it from its file.
 

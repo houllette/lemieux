@@ -30,6 +30,20 @@ API.
 
 ### Fixes
 
+- Allow selection and copying in the `ask_user` panel, including wrapped and
+  scrolled question text, options and previews. Copying omits answer markers
+  and preserves staged answers and drafts; Ctrl+Shift+C also copies without
+  a mouse. Long questions and narrow previews remain fully readable. (#138)
+
+- Drain default stdio MCP stderr through a separate, bounded diagnostic pipe.
+  Sanitized, server-attributed debug logs replace inherited terminal output;
+  host launchers continue to own their diagnostic policy. The default launcher
+  uses Bash (Git Bash on Windows) for the separate pipe. (#142)
+
+- Keep MCP sessions alive when a client exits during discovery, and ignore
+  successful browser-helper exits after OAuth sign-in. Reconnect remains
+  retryable and reuses stored credentials. (#141)
+
 - Settle and checkpoint cancelled tool reservations before ending the turn.
   Free tools no longer strand a hold that blocks dollar-limited resume; paid
   tools retain unknown cost and consumed requests rather than refunding them.
@@ -43,6 +57,22 @@ API.
   provider failures in `provider_error`, including unclassified errors. (#114)
 
 ### Features
+
+- Inspect MCP tools from `/mcp`: Enter opens a server's cached tools and a
+  tool's description, names, availability and scrollable input schema. Esc
+  preserves navigation selections. `Session.inspect_mcp/2` exposes the same
+  cached, read-only view without invoking tools or connecting. (#139)
+
+- Continue interactive MCP add through OAuth and tool discovery in the TUI
+  and normal terminal. Background startup and piped/`--non-interactive` adds
+  never open a browser. `Session.add_mcp_servers/3` adds an optional
+  `interactive_auth` override; existing `/2` calls retain their host policy.
+  Connection tasks keep session reads responsive and close cancelled startup
+  clients, while failed login retains the saved configuration. (#143)
+
+- Add terminal-native `lmx mcp add --local|--global`, with HTTP and stdio
+  descriptors, explicit replacement and secret references. Scope is required;
+  personal names retain precedence over repository names. (#140)
 
 - Add a selective experimental asset policy: abstain on verified passing
   baselines, invoke matching reviewed procedures through the actual loader,

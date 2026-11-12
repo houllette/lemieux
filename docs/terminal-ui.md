@@ -1123,6 +1123,13 @@ use up to five lines of 72 columns. The panel keeps the height its largest tab
 needs, and the transcript viewport ends at its top so recent lines stay
 visible.
 
+Drag question text, option labels/descriptions, or examples to select and
+copy them on release. Selection follows scrolling, rejoins wrapped text and
+omits answer markers and borders. It keeps the question, highlighted choice
+and draft answer open. Ctrl+Shift+C copies the selection, or the full current
+question with its options and examples when nothing is selected. PgUp/PgDn
+scroll the question; the mouse wheel scrolls the region under the pointer.
+
 Up and Down highlight a choice, Enter selects it, and Left and Right (or Tab
 and Shift-Tab) cycle through questions and Review. For checkbox selection,
 Space toggles suggestions and Enter continues. For ranking, highlight each

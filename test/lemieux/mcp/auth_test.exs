@@ -418,6 +418,305 @@ defmodule Lemieux.MCP.AuthTest do
       refute_received :browser_opened
     end
 
+    test "a browser helper's normal exit does not end discovery", context do
+      serve("oauth", context.port)
+      visit = browser()
+
+      redirect = fn url, uri ->
+        # System.cmd's linked Port leaves an EXIT message when the MCP client
+        # traps exits, just as the platform browser opener does.
+        {"", 0} = System.cmd("python3", ["-c", "pass"])
+        visit.(url, uri)
+      end
+
+      {result, _log} =
+        with_log(fn ->
+          MCP.connect_server(http_config(context),
+            supervisor: context.runtime,
+            auth: auth(context, redirect: redirect)
+          )
+        end)
+
+      assert {:ok, %{client: client, tools: [_ | _]}} = result
+      assert Client.info(client).ready?
+    end
+
+    test "explicit add signs in continuously while session reads stay responsive", context do
+      serve("oauth", context.port)
+      test = self()
+      visit = browser()
+
+      redirect = fn url, uri ->
+        send(test, {:signing_in, self()})
+
+        receive do
+          :continue -> visit.(url, uri)
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect),
+          mcp_connect_opts: [interactive_auth: false]
+        )
+
+      capture_log(fn ->
+        task =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:signing_in, client}
+        assert Session.info(session).mcp |> Enum.any?(&(&1.status == :connecting))
+        send(client, :continue)
+        assert Task.await(task) == :ok
+        assert [%{tool_count: count, error: nil}] = Session.mcp_status(session)
+        assert count > 0
+        assert :ok = Session.reconnect_mcp(session, "fixture")
+        refute_receive {:signing_in, _}, 50
+        assert Process.alive?(session)
+      end)
+    end
+
+    test "cancelled add leaves the session usable and retry reuses its descriptor", context do
+      serve("oauth", context.port)
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: fn _, _ -> {:error, "authorization cancelled"} end),
+          mcp_connect_opts: [interactive_auth: false]
+        )
+
+      capture_log(fn ->
+        assert :ok =
+                 Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+
+        assert [%{name: "fixture", error: error}] = Session.mcp_status(session)
+        assert error =~ "cancelled"
+        assert Process.alive?(session)
+        assert :ok = Session.reconnect_mcp(session, "fixture")
+        assert [%{name: "fixture"}] = Session.mcp_status(session)
+      end)
+    end
+
+    test "a close notification arriving before discovery settles cannot become connected",
+         context do
+      serve("oauth", context.port)
+      test = self()
+      visit = browser()
+
+      redirect = fn url, uri ->
+        send(test, {:consent_client, self()})
+
+        receive do
+          :continue -> visit.(url, uri)
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect)
+        )
+
+      capture_log(fn ->
+        task =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:consent_client, client}
+        send(session, {:mcp_connection_closed, %{server: "fixture", client: client}})
+        assert [%{status: :connecting}] = Session.info(session).mcp
+        send(client, :continue)
+        assert Task.await(task) == :ok
+
+        assert [%{tool_count: 0, error: "connection closed; reconnect to retry"}] =
+                 Session.mcp_status(session)
+
+        assert [] = Session.catalog(session)
+        refute Process.alive?(client)
+      end)
+    end
+
+    test "cancelling a completed but unsettled connection closes its client", context do
+      serve("oauth", context.port)
+      test = self()
+      visit = browser()
+
+      redirect = fn url, uri ->
+        send(test, {:pending_client, self()})
+
+        receive do
+          :continue -> visit.(url, uri)
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect)
+        )
+
+      capture_log(fn ->
+        adding =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:pending_client, client}
+        [{_ref, {_name, connector}}] = Map.to_list(:sys.get_state(session).mcp_pending)
+        connector_ref = Process.monitor(connector.pid)
+        client_ref = Process.monitor(client)
+        :sys.suspend(session)
+
+        removing =
+          Task.async(fn ->
+            tag = make_ref()
+            send(session, {:"$gen_call", {self(), tag}, {:remove_mcp_server, "fixture"}})
+            send(test, :removal_queued)
+
+            receive do
+              {^tag, result} -> result
+            end
+          end)
+
+        try do
+          assert_receive :removal_queued
+          send(client, :continue)
+          assert_receive {:DOWN, ^connector_ref, :process, _pid, :normal}
+        after
+          :sys.resume(session)
+        end
+
+        assert Task.await(removing) == :ok
+        assert Task.await(adding) == :ok
+        assert_receive {:DOWN, ^client_ref, :process, ^client, _reason}
+        assert [] = Session.mcp_status(session)
+      end)
+    end
+
+    test "removing a server during consent closes the pending client", context do
+      serve("oauth", context.port)
+      test = self()
+
+      redirect = fn _url, _uri ->
+        send(test, {:waiting_for_consent, self()})
+
+        receive do
+          :never -> {:error, "cancelled"}
+        end
+      end
+
+      {:ok, session} =
+        Lemieux.start_session(
+          supervisor: context.runtime,
+          provider: Scripted.new([]),
+          model: "test:model",
+          tools: [],
+          store: JSONL.new(context.tmp_dir),
+          mcp_auth: auth(context, redirect: redirect)
+        )
+
+      capture_log(fn ->
+        task =
+          Task.async(fn ->
+            Session.add_mcp_servers(session, [http_config(context)], interactive_auth: true)
+          end)
+
+        assert_receive {:waiting_for_consent, client}
+        ref = Process.monitor(client)
+        assert :ok = Session.remove_mcp_server(session, "fixture")
+        assert_receive {:DOWN, ^ref, :process, ^client, :killed}
+        assert Task.await(task) == :ok
+        assert [] = Session.mcp_status(session)
+        assert Process.alive?(session)
+      end)
+    end
+
+    test "terminal interactive add completes OAuth and retains saved global config", context do
+      serve("oauth", context.port)
+      config = Path.join(context.tmp_dir, "config.json")
+      File.write!(config, ~s({"version":1}))
+      File.chmod!(config, 0o600)
+
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          capture_log(fn ->
+            assert :ok =
+                     Lemieux.CLI.run(
+                       [
+                         "mcp",
+                         "add",
+                         "--global",
+                         "--config",
+                         config,
+                         "fixture",
+                         http_config(context)["url"]
+                       ],
+                       cwd: context.tmp_dir,
+                       supervisor: context.runtime,
+                       interactive?: true,
+                       mcp_auth: auth(context)
+                     )
+          end)
+        end)
+
+      assert output =~ "connected and ready"
+      assert_received {:visited, _url}
+
+      assert JSON.decode!(File.read!(config))["mcp_servers"]["fixture"]["url"] ==
+               http_config(context)["url"]
+    end
+
+    test "background session discovery remains needs-auth without opening a browser", context do
+      serve("oauth", context.port)
+      test = self()
+
+      capture_log(fn ->
+        {:ok, session} =
+          Lemieux.start_session(
+            supervisor: context.runtime,
+            provider: Scripted.new([]),
+            model: "test:model",
+            tools: [],
+            store: JSONL.new(context.tmp_dir),
+            mcp_servers: [http_config(context)],
+            mcp_connect_opts: [interactive_auth: false],
+            mcp_auth:
+              auth(context,
+                redirect: fn _, _ ->
+                  send(test, :unexpected_browser)
+                  {:error, "no"}
+                end
+              )
+          )
+
+        assert [%{tool_count: 0}] = Session.mcp_status(session, :infinity)
+        assert [%{status: :needs_auth}] = Session.info(session).mcp
+        assert [] = Session.mcp_clients(session)
+        refute_receive :unexpected_browser, 50
+      end)
+    end
+
     test "a token already stored is still used", context do
       serve("oauth", context.port)
       auth = auth(context)

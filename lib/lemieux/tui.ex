@@ -152,6 +152,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.Pointer
     alias Lemieux.TUI.QuestionInteraction
+    alias Lemieux.TUI.QuestionSelection
     alias Lemieux.TUI.Renderer
     alias Lemieux.TUI.Replies
     alias Lemieux.TUI.Screen
@@ -775,11 +776,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp route_event(%ExRatatui.Event.Key{code: code} = event, state) when is_binary(code),
       do: Composer.key(event, state)
 
+    defp route_event(%ExRatatui.Event.Mouse{} = event, %{tools: %{question_flow: flow}} = state)
+         when not is_nil(flow), do: QuestionSelection.mouse(event, state)
+
     defp route_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tasks}} = state),
       do: TaskPanel.mouse(event, state)
 
     defp route_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :tools}} = state),
       do: ToolsPanel.mouse(event, state)
+
+    defp route_event(
+           %ExRatatui.Event.Mouse{} = event,
+           %{tools: %{mcp_flow: %{mode: mode}}} = state
+         )
+         when mode in [:tools, :tool], do: MCPInteraction.mouse(event, state)
 
     defp route_event(%ExRatatui.Event.Mouse{} = event, state), do: Pointer.mouse(event, state)
 
@@ -975,6 +985,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def handle_info({:mcp_result, _action, _result, _statuses} = message, state),
       do: {:noreply, Effects.answer(state, message)}
+
+    def handle_info({:mcp_inspection, session, name, result}, state),
+      do: MCPInteraction.inspection_result(state, session, name, result)
+
+    def handle_info({:mcp_authorize, url}, %{tools: %{mcp_flow: flow}} = state)
+        when not is_nil(flow),
+        do:
+          {:noreply,
+           put_in(state.tools.mcp_flow.notice, "Finish sign-in in your browser: " <> url)}
+
+    def handle_info({:mcp_authorize, _url}, state), do: {:noreply, state}
 
     def handle_info({:mcp_ui_result, action, result, statuses}, state),
       do: MCPInteraction.ui_result(state, action, result, statuses)
