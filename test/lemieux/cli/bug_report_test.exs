@@ -109,9 +109,11 @@ defmodule Lemieux.CLI.BugReportTest do
 
   test "ordinary feedback stays available and bug submission needs a prepared report" do
     conversation = Conversation.new(model: "test:model")
-    assert [{:bug_report, "", nil}] = Feedback.parse("bug", conversation)
 
-    assert [{:bug_report, "description", 3}] =
+    assert {%{bug_report: %{phase: :preparing}}, [{:bug_report, "", nil}]} =
+             Feedback.parse("bug", conversation)
+
+    assert {%{bug_report: %{phase: :preparing}}, [{:bug_report, "description", 3}]} =
              Feedback.parse("bug turn 3 description", conversation)
 
     assert [{:say, _}] = Feedback.parse("bug submit", conversation)
@@ -121,5 +123,63 @@ defmodule Lemieux.CLI.BugReportTest do
 
     assert [{:say, _}] = Feedback.parse("bug", %{conversation | busy?: true})
     assert {:error, _} = BugReport.prepare(%{id: "empty", entries: []}, "", [])
+  end
+
+  test "submission is single-flight and failure keeps the reviewed draft retryable" do
+    conversation = Conversation.new(model: "test:model")
+    report = %{path: "draft", body: "reviewed", sha256: "digest"}
+    {reviewed, _} = Conversation.event(conversation, {:bug_report_result, {:ok, report}})
+    {submitting, [{:bug_submit, outgoing}]} = Feedback.parse("bug submit", reviewed)
+    assert outgoing.body == "reviewed"
+    assert [{:say, _}] = Feedback.parse("bug submit", submitting)
+    {retryable, _} = Conversation.event(submitting, {:bug_submit_result, {:error, "unavailable"}})
+    assert retryable.bug_report.phase == :reviewed
+    assert {%{}, [{:bug_submit, _}]} = Feedback.parse("bug submit", retryable)
+  end
+
+  test "bounded Unicode drafts still export when the feedback ledger cannot be written", ctx do
+    blocked = Path.join(ctx.tmp_dir, "blocked")
+    File.write!(blocked, "file instead of directory")
+
+    {:ok, report} =
+      BugReport.prepare(snapshot(), String.duplicate("🦆", 20_000),
+        feedback_store: JSONL.new(blocked),
+        bug_reports_dir: ctx.tmp_dir
+      )
+
+    assert byte_size(report.body) <= 16_384
+    assert String.valid?(report.body)
+    assert report.feedback_id == nil
+    assert report.notice =~ "draft export remains available"
+    assert File.read!(report.path) == report.body
+  end
+
+  test "GitHub CLI receives a private frozen body file and no interactive prompt", ctx do
+    executable = Path.join(ctx.tmp_dir, "github fixture")
+
+    File.write!(executable, """
+    #!/usr/bin/env python3
+    import os, sys, stat
+    assert sys.argv[1:3] == ['issue', 'create']
+    assert sys.argv[sys.argv.index('--repo') + 1] == 'houllette/lemieux'
+    assert os.environ['GH_PROMPT_DISABLED'] == '1'
+    path = sys.argv[sys.argv.index('--body-file') + 1]
+    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+    assert 'Diagnostics' in open(path).read()
+    print('https://github.com/houllette/lemieux/issues/999')
+    """)
+
+    File.chmod!(executable, 0o700)
+
+    {:ok, report} =
+      BugReport.prepare(snapshot(), "A bug",
+        feedback_store: JSONL.new(Path.join(ctx.tmp_dir, "feedback")),
+        bug_reports_dir: ctx.tmp_dir
+      )
+
+    assert {:ok, "https://github.com/houllette/lemieux/issues/999"} =
+             BugReport.submit(report, github_command: executable)
+
+    assert File.exists?(report.path)
   end
 end

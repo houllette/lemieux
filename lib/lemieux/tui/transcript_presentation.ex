@@ -274,15 +274,22 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     end
 
     defp entry_lines(%{type: :error, payload: payload}) do
-      [{:lmx, "error: #{payload["reason"] || inspect(payload)}"}] ++ diagnostic_hint(payload)
+      message =
+        case Diagnostic.from_payload(payload) do
+          nil -> payload["reason"] || inspect(payload)
+          diagnostic -> Diagnostic.message(diagnostic)
+        end
+
+      [{:lmx, "error: #{message}"}] ++ diagnostic_hint(payload)
     end
 
     defp entry_lines(%{
+           id: id,
            type: :extension_state,
            payload: %{"namespace" => "lemieux.errors", "value" => %{"count" => count}}
          })
          when is_integer(count) and count > 0,
-         do: [{:bug_summary, Diagnostic.summary(count)}]
+         do: [{:bug_summary, id, Diagnostic.summary(count)}]
 
     defp entry_lines(%{type: :cancelled}), do: [{:lmx, "— cancelled —"}]
 
@@ -299,7 +306,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp diagnostic_hint(payload) do
       case Diagnostic.from_payload(payload) do
         nil -> []
-        _diagnostic -> [{:bug_hint, Diagnostic.hint()}]
+        diagnostic -> [{:bug_hint, diagnostic["id"], Diagnostic.hint()}]
       end
     end
 

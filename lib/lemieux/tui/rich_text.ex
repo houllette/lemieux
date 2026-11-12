@@ -88,9 +88,8 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
              | :notice
              | :interrupted
              | :verify
-             | :hook
-             | :bug_hint
-             | :bug_summary, String.t()}
+             | :hook, String.t()}
+            | {:bug_hint | :bug_summary, String.t(), String.t()}
             | {:activity, String.t(), String.t()}
             | Blocks.row()
             | {:subagent_child, child()}
@@ -264,10 +263,10 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     defp styled({:lmx, text}, theme), do: [{text, lmx_style(text, theme)}]
 
-    defp styled({:bug_hint, text}, theme),
+    defp styled({:bug_hint, _id, text}, theme),
       do: [{text, %Style{fg: theme.text.muted, modifiers: [:italic]}}]
 
-    defp styled({:bug_summary, text}, theme),
+    defp styled({:bug_summary, _id, text}, theme),
       do: [{text, %Style{fg: theme.text.error, modifiers: [:bold]}}]
 
     # What the model had said when its stream broke off: on the record, dimmed

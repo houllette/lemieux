@@ -32,21 +32,31 @@ defmodule Lemieux.Session.Diagnostics do
     )
   end
 
-  def child(state, {:subagent, _path, {:entry, entry}} = event) do
+  def child(state, {:subagent, path, {:entry, entry}} = event) do
     case Diagnostic.from_payload(entry.payload) do
       nil ->
         Core.emit(state, event)
 
       diagnostic ->
-        if Map.has_key?(state.internal_errors, diagnostic["id"]),
-          do: state,
-          else:
-            Core.append(
-              state,
-              {:error, %{"reason" => diagnostic["message"], "diagnostic" => diagnostic}, nil}
-            )
+        if not current_child?(state, path) or
+             Map.has_key?(state.internal_errors, diagnostic["id"]),
+           do: state,
+           else:
+             Core.append(
+               state,
+               {:error, %{"reason" => Diagnostic.message(diagnostic), "diagnostic" => diagnostic},
+                nil}
+             )
     end
   end
 
   def child(state, event), do: Core.emit(state, event)
+
+  defp current_child?(%{evidence: %{current_run: %{start_seq: start}}} = state, [_root, child | _]) do
+    Enum.any?(state.reversed_entries, fn entry ->
+      entry.seq >= start and entry.type == :subagent_spawn and entry.payload["child_id"] == child
+    end)
+  end
+
+  defp current_child?(_state, _path), do: false
 end

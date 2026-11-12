@@ -18,6 +18,7 @@ defmodule Lemieux.CLI.BugReport do
   alias Lemieux.Contract
   alias Lemieux.Diagnostic
   alias Lemieux.ID
+  alias Lemieux.Tool
 
   @max_bytes 16_384
   @title "Bug report: unexpected Lemieux behavior"
@@ -30,20 +31,34 @@ defmodule Lemieux.CLI.BugReport do
     with {:ok, entries} <- select_errors(snapshot.entries, opts[:turn_seq]),
          [anchor | _] <- entries,
          body = markdown(entries, summary),
-         {:ok, path} <- export(body, opts),
-         {:ok, feedback} <-
-           Feedback.capture(
-             %{
-               text: body,
-               session_id: snapshot.id,
-               entry_id: anchor.id,
-               type: :bug,
-               scope: :project,
-               durability: :one_off
-             },
-             opts
-           ) do
-      {:ok, %{path: path, body: body, sha256: Contract.sha256(body), feedback_id: feedback.id}}
+         {:ok, path} <- export(body, opts) do
+      submission = %{
+        text: body,
+        session_id: snapshot.id,
+        entry_id: anchor.id,
+        type: :bug,
+        scope: :project,
+        durability: :one_off
+      }
+
+      {feedback_id, notice} =
+        case Feedback.capture(submission, opts) do
+          {:ok, feedback} ->
+            {feedback.id, nil}
+
+          {:error, _reason} ->
+            {nil,
+             "The local feedback ledger could not be written; the draft export remains available."}
+        end
+
+      {:ok,
+       %{
+         path: path,
+         body: body,
+         sha256: Contract.sha256(body),
+         feedback_id: feedback_id,
+         notice: notice
+       }}
     else
       [] -> {:error, "no classified Lemieux errors in that turn"}
       error -> error
@@ -79,9 +94,10 @@ defmodule Lemieux.CLI.BugReport do
   @spec submit(report :: map(), opts :: keyword()) ::
           {:ok, String.t()} | {:preview, map()} | {:error, term()}
   def submit(report, opts \\ []) do
-    with {:ok, stat} <- File.stat(report.path),
+    with {:ok, %{type: :regular} = stat} <- File.lstat(report.path),
          true <- stat.size <= @max_bytes,
-         {:ok, bytes} <- File.read(report.path) do
+         {:ok, bytes} <- File.read(report.path),
+         true <- byte_size(bytes) <= @max_bytes do
       body = sanitize(bytes)
 
       checked_submit(report, body, bytes, opts)
@@ -91,12 +107,15 @@ defmodule Lemieux.CLI.BugReport do
 
       {:error, _reason} ->
         {:error, "could not read the draft; the prepared report remains available"}
+
+      _not_regular ->
+        {:error, "the draft must be a regular file; the prepared report remains available"}
     end
   end
 
   defp checked_submit(report, body, bytes, opts) do
     if body == bytes and Contract.sha256(body) == report.sha256 do
-      run = Keyword.get(opts, :submit, &github/1)
+      run = Keyword.get(opts, :submit, fn body -> github(body, opts) end)
       run.(body)
     else
       with :ok <- File.write(report.path, body) do
@@ -105,17 +124,15 @@ defmodule Lemieux.CLI.BugReport do
     end
   end
 
-  defp github(body) do
-    case System.find_executable("gh") do
+  defp github(body, opts) do
+    case Keyword.get_lazy(opts, :github_command, fn -> System.find_executable("gh") end) do
       nil ->
         {:error, "GitHub CLI is unavailable. The draft is ready to copy into a repository issue."}
 
       executable ->
         # Freeze the checked bytes into a new private file. gh must never read
         # the editable draft again after its digest has been approved.
-        task = Task.async(fn -> submit_file(executable, body) end)
-
-        submitted(Task.yield(task, 30_000) || Task.shutdown(task, :brutal_kill))
+        submit_file(executable, body)
     end
   end
 
@@ -141,14 +158,32 @@ defmodule Lemieux.CLI.BugReport do
         File.chmod!(path, 0o600)
         File.write!(path, body)
 
-        System.cmd(
-          executable,
-          ["issue", "create", "--repo", @repo, "--title", @title, "--body-file", path],
-          stderr_to_stdout: true
-        )
+        run_submission(executable, path)
       after
         File.rm_rf(root)
       end
+    end
+  rescue
+    _error -> {:error, "Could not start GitHub submission. The reviewed draft is preserved."}
+  end
+
+  defp run_submission(executable, path) do
+    {:ok, supervisor} = Task.Supervisor.start_link()
+
+    try do
+      task =
+        Task.Supervisor.async_nolink(supervisor, fn ->
+          System.cmd(
+            executable,
+            ["issue", "create", "--repo", @repo, "--title", @title, "--body-file", path],
+            stderr_to_stdout: true,
+            env: [{"GH_PROMPT_DISABLED", "1"}, {"GIT_TERMINAL_PROMPT", "0"}]
+          )
+        end)
+
+      submitted(Task.yield(task, 30_000) || Task.shutdown(task, :brutal_kill))
+    after
+      Supervisor.stop(supervisor)
     end
   end
 
@@ -197,7 +232,7 @@ defmodule Lemieux.CLI.BugReport do
        JSON.encode!(diagnostics) <>
        "\n```\n\nNo conversation, tool input/output, credentials or host metadata are attached.\n")
     |> sanitize()
-    |> String.slice(0, @max_bytes)
+    |> Tool.truncate(@max_bytes - 256)
   end
 
   defp safe_component(component) when component in ["tool", "runtime", "hook", "presentation"],

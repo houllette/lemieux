@@ -34,6 +34,13 @@ defmodule Lemieux.Diagnostic do
 
   def from_payload(_payload), do: nil
 
+  @doc "A readable fallback for incomplete diagnostic records."
+  @spec message(diagnostic :: map()) :: String.t()
+  def message(%{"message" => message}) when is_binary(message) and message != "", do: message
+
+  def message(_diagnostic),
+    do: "An internal Lemieux operation failed. Inspect the saved transcript for details."
+
   @doc "Whether a process exit describes an exception in bundled Lemieux code."
   @spec internal_crash?(reason :: term()) :: boolean()
   def internal_crash?({%{__exception__: true}, [{module, _, _, _} | _]}) when is_atom(module),

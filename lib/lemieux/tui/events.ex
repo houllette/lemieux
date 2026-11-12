@@ -50,17 +50,21 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp diagnostic_hint(state, {:entry, %{payload: payload}}) do
       case Diagnostic.from_payload(payload) do
-        nil -> state
-        _diagnostic -> Transcript.append_rows(state, [{:bug_hint, Diagnostic.hint()}])
+        nil ->
+          state
+
+        diagnostic ->
+          row = {:bug_hint, diagnostic["id"], Diagnostic.hint()}
+          if row in state.lines, do: state, else: Transcript.append_rows(state, [row])
       end
     end
 
     defp diagnostic_hint(state, _event), do: state
 
-    defp error_summary(%{"namespace" => "lemieux.errors", "value" => %{"count" => count}})
-         when is_integer(count) and count > 0, do: [{:bug_summary, Diagnostic.summary(count)}]
+    defp error_summary(id, %{"namespace" => "lemieux.errors", "value" => %{"count" => count}})
+         when is_integer(count) and count > 0, do: [{:bug_summary, id, Diagnostic.summary(count)}]
 
-    defp error_summary(_payload), do: []
+    defp error_summary(_id, _payload), do: []
 
     @doc false
     @spec phase(TUI.t(), atom(), term()) :: TUI.t()
@@ -299,17 +303,25 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp present_event(
            state,
            {:entry,
-            %{type: :extension_state, payload: %{"namespace" => "lemieux.errors"} = payload}},
+            %{
+              id: id,
+              type: :extension_state,
+              payload: %{"namespace" => "lemieux.errors"} = payload
+            }},
            effects
          ),
-         do: {Transcript.append_rows(state, error_summary(payload)), effects}
+         do:
+           {Transcript.append_rows(
+              state,
+              Enum.reject(error_summary(id, payload), &(&1 in state.lines))
+            ), effects}
 
     defp present_event(
            state,
            {:entry, %{type: :error, payload: %{"diagnostic" => diagnostic}}},
            effects
          ),
-         do: {Transcript.say(state, :lmx, "error: " <> diagnostic["message"]), effects}
+         do: {Transcript.say(state, :lmx, "error: " <> Diagnostic.message(diagnostic)), effects}
 
     defp present_event(%{turn: %{compacting: %{}}} = state, {:compacted, _data}, effects) do
       report =

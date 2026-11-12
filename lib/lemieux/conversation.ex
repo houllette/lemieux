@@ -230,6 +230,8 @@ defmodule Lemieux.Conversation do
           | :mine_opportunities
           | :feedback
           | {:feedback, Dialogue.submission()}
+          | {:bug_report, String.t(), non_neg_integer() | nil}
+          | {:bug_submit, map()}
           | :new
           | :refresh
           | :provider_status
@@ -960,7 +962,9 @@ defmodule Lemieux.Conversation do
 
   def event(conversation, {kind, {:error, reason}})
       when kind in [:bug_report_result, :bug_submit_result],
-      do: {conversation, [{:say, "could not report bug: " <> describe(reason)}]}
+      do:
+        {%{conversation | bug_report: report_failed(conversation.bug_report)},
+         [{:say, "could not report bug: " <> describe(reason)}]}
 
   def event(conversation, {:feedback_result, {:ok, id}}),
     do:
@@ -2014,13 +2018,16 @@ defmodule Lemieux.Conversation do
   # that fails to write cannot leave a dialogue half-open waiting on lines
   # nobody is going to type.
   defp bug_preview(conversation, report) do
-    {%{conversation | bug_report: report},
+    {%{conversation | bug_report: Map.put(report, :phase, :reviewed)},
      [
        {:say, "Sanitized bug report preview (nothing submitted):\n\n" <> report.body},
        {:say,
         "Draft: #{report.path}\nReview/edit that file. /feedback bug submit explicitly submits the reviewed bytes to houllette/lemieux. Changes require another preview before submission. Keep the file to export without GitHub authentication."}
      ]}
   end
+
+  defp report_failed(%{phase: :submitting} = report), do: %{report | phase: :reviewed}
+  defp report_failed(_report), do: nil
 
   defp capture(conversation, {:ask, dialogue}),
     do: {%{conversation | feedback: dialogue}, [{:say, Dialogue.question(dialogue)}, :ready]}

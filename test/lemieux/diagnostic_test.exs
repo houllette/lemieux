@@ -86,16 +86,15 @@ defmodule Lemieux.DiagnosticTest do
     start_supervised!({Lemieux.Supervisor, name: runtime})
     parent = self()
 
-    provider =
-      Scripted.new([
-        fn _request ->
-          send(parent, :working)
+    work = fn _request ->
+      send(parent, :working)
 
-          receive do
-            :finish -> Scripted.complete("done")
-          end
-        end
-      ])
+      receive do
+        :finish -> Scripted.complete("done")
+      end
+    end
+
+    provider = Scripted.new([work, work])
 
     {:ok, session} =
       Lemieux.start_session(
@@ -110,6 +109,10 @@ defmodule Lemieux.DiagnosticTest do
     id = Session.id(session)
     :ok = Session.prompt(session, "work")
     assert_receive :working
+
+    {:ok, _spawn} =
+      GenServer.call(session, {:append_subagent_entry, :subagent_spawn, %{"child_id" => "child"}})
+
     diagnostic = Diagnostic.new("tool", "Child fault", %{})
     entry = Entry.new(:error, %{"diagnostic" => diagnostic, "reason" => "Child fault"})
 
@@ -131,6 +134,21 @@ defmodule Lemieux.DiagnosticTest do
 
     assert [summary] = summaries
     assert summary.payload["value"]["count"] == 1
+    :ok = Session.prompt(session, "A different turn")
+    assert_receive :working
+
+    GenServer.cast(
+      session,
+      {:publish_subagent_event, {:subagent, [id, "child"], {:entry, entry}}}
+    )
+
+    :ok = Session.cancel(session)
+    assert_receive {:lemieux, ^id, {:finished, :cancelled}}
+
+    assert Enum.count(
+             Session.snapshot(session).entries,
+             &(&1.payload["namespace"] == "lemieux.errors")
+           ) == 1
   end
 
   test "live and restored transcripts show immediate muted italic hints and a red summary" do
@@ -143,8 +161,12 @@ defmodule Lemieux.DiagnosticTest do
     state = tui()
     {:noreply, state} = Events.handle(state, {:entry, error})
     {:noreply, state} = Events.handle(state, {:entry, summary})
-    assert {:bug_hint, Diagnostic.hint()} in state.lines
-    assert {:bug_summary, Diagnostic.summary(1)} in state.lines
+    assert {:bug_hint, diagnostic["id"], Diagnostic.hint()} in state.lines
+    assert {:bug_summary, summary.id, Diagnostic.summary(1)} in state.lines
+    {:noreply, state} = Events.handle(state, {:entry, error})
+    {:noreply, state} = Events.handle(state, {:entry, summary})
+    assert Enum.count(state.lines, &(elem(&1, 0) == :bug_hint)) == 1
+    assert Enum.count(state.lines, &(elem(&1, 0) == :bug_summary)) == 1
 
     replay =
       TranscriptPresentation.lines([error, summary], %{
@@ -157,10 +179,10 @@ defmodule Lemieux.DiagnosticTest do
              Enum.filter(Enum.reverse(state.lines), &(elem(&1, 0) in [:bug_hint, :bug_summary]))
 
     for theme <- [Theme.default(), Theme.light(), Theme.mono()] do
-      [hint] = RichText.lines([{:bug_hint, "report"}], 80, theme)
+      [hint] = RichText.lines([{:bug_hint, "id", "report"}], 80, theme)
       assert hd(hint.spans).style.fg == theme.text.muted
       assert :italic in hd(hint.spans).style.modifiers
-      [summary] = RichText.lines([{:bug_summary, "one error"}], 80, theme)
+      [summary] = RichText.lines([{:bug_summary, "id", "one error"}], 80, theme)
       assert hd(summary.spans).style.fg == theme.text.error
     end
   end
