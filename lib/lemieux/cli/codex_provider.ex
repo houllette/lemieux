@@ -55,6 +55,10 @@ defmodule Lemieux.CLI.CodexProvider do
       System.get_env("REQ_LLM_OAUTH_FILE") != nil
   end
 
+  @doc false
+  @spec local_auth?(params :: keyword()) :: boolean()
+  def local_auth?(params), do: not explicit_auth?(params)
+
   defp credential_options(params, credential) do
     params
     |> Keyword.get(:provider_options, [])

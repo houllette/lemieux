@@ -168,6 +168,33 @@ defmodule Lemieux.CLI.AccountUsageTest do
     assert hd(report.accounts).status == :unavailable
   end
 
+  test "an unchosen fallback and disabled local sign-in do not query accounts" do
+    parent = self()
+
+    report =
+      AccountUsage.fetch(options(%{}, %{host: %{model_source: :fallback}}),
+        request: fn _ -> send(parent, :queried) end
+      )
+
+    assert report.accounts == []
+
+    report =
+      AccountUsage.fetch(options(%{}, %{model: "openai_codex:test"}),
+        request: fn _ -> send(parent, :queried) end
+      )
+
+    assert hd(report.accounts).message =~ "lookup is disabled"
+
+    report =
+      AccountUsage.fetch(options(%{}, %{model: "openai_codex:test"}),
+        params: [provider_options: [access_token: "custom"]],
+        request: fn _ -> send(parent, :queried) end
+      )
+
+    assert hd(report.accounts).message =~ "Custom Codex authentication"
+    refute_receive :queried, 20
+  end
+
   test "quota windows preserve unknown values and multiple buckets without account metadata" do
     limits = %{
       "rateLimitsByLimitId" => %{
@@ -247,8 +274,11 @@ defmodule Lemieux.CLI.AccountUsageTest do
     assert [{:say, cached}] = Usage.parse("", %{conversation | account_usage: old, busy?: true})
     assert cached =~ "cached"
 
-    assert [{:account_usage, ^old}] =
+    assert {pending, [{:account_usage, request_id, ^old}]} =
              Usage.parse("refresh", %{conversation | account_usage: old, busy?: true})
+
+    assert pending.usage_request_id == request_id
+    assert [{:say, _}] = Usage.parse("refresh", pending)
 
     new = %{
       fetched_at: now + 60,
@@ -256,6 +286,13 @@ defmodule Lemieux.CLI.AccountUsageTest do
     }
 
     assert Report.format(Report.merge(new, old)) =~ "STALE"
+
+    changed_scope =
+      put_in(new.accounts, [
+        %{provider: "test", scope_key: "different-account", status: :error, message: "timeout"}
+      ])
+
+    refute Report.format(Report.merge(changed_scope, old)) =~ "STALE"
     refute Report.fresh?(old, now + 60)
     assert Usage in Builtin.all()
     parent = self()
@@ -273,8 +310,20 @@ defmodule Lemieux.CLI.AccountUsageTest do
         account_usage: fn -> old end
       )
 
-    assert :responsive = Usage.perform(:responsive, host, {:account_usage, nil})
+    assert :responsive = Usage.perform(:responsive, host, {:account_usage, request_id, nil})
     assert_receive {:work, work}
-    assert {:account_usage_result, ^old} = work.()
+    assert {:account_usage_result, ^request_id, {:ok, ^old, text}} = work.()
+    assert text =~ "Provider account usage"
+
+    assert {^pending, []} =
+             Conversation.event(pending, {:account_usage_result, "stale", {:ok, old, "wrong"}})
+
+    {completed, _} =
+      Conversation.event(pending, {:account_usage_result, request_id, {:ok, old, text}})
+
+    assert completed.usage_request_id == nil
+    assert completed.account_usage == old
+    assert Conversation.help(conversation) =~ "refresh"
+    assert Conversation.help(conversation) =~ "bug submit"
   end
 end

@@ -158,7 +158,6 @@ defmodule Lemieux.Conversation do
 
   alias Lemieux.Provider.Error, as: ProviderError
 
-  alias Lemieux.AccountUsage
   alias Lemieux.CLI.Errors
   alias Lemieux.CLI.Models
   alias Lemieux.Context
@@ -232,6 +231,7 @@ defmodule Lemieux.Conversation do
           | {:feedback, Dialogue.submission()}
           | {:bug_report, String.t(), non_neg_integer() | nil}
           | {:bug_submit, map()}
+          | {:account_usage, String.t(), map() | nil}
           | :new
           | :refresh
           | :provider_status
@@ -310,6 +310,7 @@ defmodule Lemieux.Conversation do
           feedback: Dialogue.t() | {:pending, String.t()} | nil,
           bug_report: map() | nil,
           account_usage: map() | nil,
+          usage_request_id: String.t() | nil,
           noted_window?: boolean(),
           pending_context: [String.t()]
         }
@@ -376,7 +377,8 @@ defmodule Lemieux.Conversation do
             # Newest first; see "A person's own commands".
             pending_context: [],
             bug_report: nil,
-            account_usage: nil
+            account_usage: nil,
+            usage_request_id: nil
 
   @doc """
   A conversation with nothing said yet.
@@ -1100,8 +1102,19 @@ defmodule Lemieux.Conversation do
   def event(conversation, {:export_result, {:error, reason}}),
     do: ready_unless_busy(conversation, [{:say, "could not export: #{describe(reason)}"}])
 
-  def event(conversation, {:account_usage_result, report}),
-    do: {%{conversation | account_usage: report}, [{:say, AccountUsage.format(report)}]}
+  def event(
+        %{usage_request_id: id} = conversation,
+        {:account_usage_result, id, {:ok, report, text}}
+      ),
+      do: {%{conversation | account_usage: report, usage_request_id: nil}, [{:say, text}]}
+
+  def event(
+        %{usage_request_id: id} = conversation,
+        {:account_usage_result, id, {:error, message}}
+      ),
+      do: {%{conversation | usage_request_id: nil}, [{:say, message}]}
+
+  def event(conversation, {:account_usage_result, _stale_id, _result}), do: {conversation, []}
 
   def event(conversation, {:extension_result, report}) when is_binary(report),
     do: ready_unless_busy(conversation, [{:say, report}])

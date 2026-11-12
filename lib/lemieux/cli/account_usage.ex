@@ -11,6 +11,7 @@ defmodule Lemieux.CLI.AccountUsage do
   fixed official endpoints, independently of model inference through ReqLLM.
   """
   alias Lemieux.CLI.AccountUsage.Codex
+  alias Lemieux.CLI.CodexProvider
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.Learning.CodexAuth
   alias Lemieux.Contract
@@ -49,13 +50,20 @@ defmodule Lemieux.CLI.AccountUsage do
 
     codex =
       if Config.personal?(options.config) and
+           CodexProvider.local_auth?(Keyword.get(opts, :params, [])) and
            match?({:ok, _}, CodexAuth.credential(Keyword.get(opts, :codex_auth, []))),
          do: ["openai_codex"],
          else: []
 
     routes = Keyword.get(opts, :routes, []) |> Enum.map(&elem(&1, 0))
 
-    (explicit ++ ambient ++ codex ++ routes ++ [ModelSpec.provider(options.model)])
+    selected =
+      case Map.get(options, :host, %{}) do
+        %{model_source: :fallback} -> []
+        _chosen -> [ModelSpec.provider(options.model)]
+      end
+
+    (explicit ++ ambient ++ codex ++ routes ++ selected)
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
     |> Enum.sort()
@@ -73,14 +81,7 @@ defmodule Lemieux.CLI.AccountUsage do
   defp safe_fetch(provider, options, now, opts) do
     section = Config.get(options.config, "providers", %{}) |> Map.get(provider, %{})
 
-    account =
-      if options.base_url && provider != "openai_codex",
-        do:
-          unavailable(
-            provider,
-            "Custom inference endpoint: no account-reporting capability is registered for this route."
-          ),
-        else: fetch_provider(provider, section, now, opts)
+    account = routed_fetch(provider, section, options, now, opts)
 
     Map.put(account, :scope_key, scope_key(provider, section, opts))
   rescue
@@ -90,8 +91,39 @@ defmodule Lemieux.CLI.AccountUsage do
     _kind, _reason -> failed(provider, "Usage reporting stopped unexpectedly.")
   end
 
+  defp routed_fetch("openai_codex" = provider, section, options, now, opts) do
+    cond do
+      not CodexProvider.local_auth?(Keyword.get(opts, :params, [])) ->
+        unavailable(
+          provider,
+          "Custom Codex authentication is in use; no matching account reporter is registered, so local sign-in was not queried."
+        )
+
+      Config.personal?(options.config) or Keyword.has_key?(opts, :codex_auth) ->
+        fetch_provider(provider, section, now, opts)
+
+      true ->
+        unavailable(
+          provider,
+          "Local Codex sign-in lookup is disabled for this configuration; quota is unknown."
+        )
+    end
+  end
+
+  defp routed_fetch(provider, section, options, now, opts) do
+    if options.base_url,
+      do:
+        unavailable(
+          provider,
+          "Custom inference endpoint: no account-reporting capability is registered for this route."
+        ),
+      else: fetch_provider(provider, section, now, opts)
+  end
+
   # Cached results must never migrate across a key/account/project change.
   # This opaque equality key is not displayed or written into a transcript.
+  defp scope_key("openai_codex", _section, _opts), do: nil
+
   defp scope_key(provider, section, opts) do
     env_names = [
       String.upcase(provider) <> "_API_KEY",
