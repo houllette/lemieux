@@ -113,7 +113,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         rows: rows,
         meta: body_meta(flow, rows, look, width, side?),
         scroll: body_scroll(flow, rows, body_area.height),
-        signature: {width, flow.index, flow.review?, flow.selected}
+        signature: {width, side?, flow.index, flow.review?, flow.selected}
       }
 
       visual = visual(flow)

@@ -248,6 +248,34 @@ defmodule Lemieux.TUI.QuestionFlowTest do
     assert state.tools.question_flow.call_id == "ask-1"
   end
 
+  test "resizing between inline and side previews invalidates old selection coordinates" do
+    test = self()
+    payload = %{single() | options: [%{label: "First", preview: "sample value"}]}
+
+    state =
+      tui(
+        clipboard: fn text ->
+          send(test, {:copied, text})
+          :ok
+        end
+      )
+      |> info({:question, payload})
+
+    assert {:noreply, state} =
+             TUI.handle_event(%ExRatatui.Event.Resize{width: 53, height: 24}, state)
+
+    view = question_view(state)
+    state = mouse(state, "down", view.area.x, view.area.y)
+    state = mouse(state, "drag", view.area.x + 4, view.area.y)
+
+    assert {:noreply, state} =
+             TUI.handle_event(%ExRatatui.Event.Resize{width: 104, height: 24}, state)
+
+    expected = QuestionPanel.copy_text(state.tools.question_flow)
+    _state = press(state, "c", ["ctrl", "shift"])
+    assert_receive {:copied, ^expected}
+  end
+
   test "keyboard copy includes previews and preserves an open question" do
     test = self()
     payload = %{single() | options: [%{label: "First", preview: "sample value"}]}
