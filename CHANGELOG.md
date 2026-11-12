@@ -53,6 +53,10 @@ API.
 
 ### Features
 
+- Add terminal-native `lmx mcp add --local|--global`, with HTTP and stdio
+  descriptors, explicit replacement and secret references. Scope is required;
+  personal names retain precedence over repository names. (#140)
+
 - Add a selective experimental asset policy: abstain on verified passing
   baselines, invoke matching reviewed procedures through the actual loader,
   reject unused candidates early and reuse exact single-component probe results.

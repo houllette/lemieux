@@ -941,7 +941,7 @@ defmodule Lemieux.CLI.Config do
   end
 
   defp valid_server_name?(name),
-    do: is_binary(name) and Regex.match?(~r/^[A-Za-z0-9][A-Za-z0-9_-]*$/, name)
+    do: is_binary(name) and Regex.match?(~r/^[A-Za-z0-9][A-Za-z0-9_.-]*$/, name)
 
   defp validate_extension_options(options) do
     if Enum.all?(options, fn {name, value} -> Extensions.valid_name?(name) and is_map(value) end),

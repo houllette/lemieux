@@ -1351,6 +1351,27 @@ inherit](#what-commands-inherit)), with the [credential
 scrub](#credential-scrubbing) applied, and get `CLAUDE_PROJECT_DIR` unless
 their configuration sets it.
 
+Add servers from a normal terminal with an explicit scope:
+
+```sh
+lmx mcp add --global --transport http linear https://mcp.linear.app/mcp
+lmx mcp add --local --transport http docs https://mcp.example.com/mcp
+lmx mcp add --local tracker -- '/path with spaces/tracker-mcp' --stdio
+lmx mcp add --global --header 'Authorization=Bearer ${DOCS_TOKEN}' docs https://mcp.example.com/mcp
+```
+
+`--global` uses the active personal config (`--config`, `LMX_CONFIG`, then
+`~/.lmx/config.json`); `--local` uses the repository root's `.mcp.json`, even
+from a subdirectory. Neither scope changes the other. Existing names require
+`--replace`. Repeat `--header NAME=VALUE` for HTTP or `--env NAME=VALUE` for
+stdio before `--`; everything after `--` belongs to the server, including
+flags and arguments with spaces. Secret-looking values become `${NAME}`
+references; export the named variables before connecting. Output names the
+scope and file without printing values. Saving does not start the server;
+open `/mcp`, select it and press `r` to connect or sign in. Repository trust
+still applies, and personal names override repository names. `lmx mcp list`
+accepts `--local` or `--global` to show one scope.
+
 `lmx mcp import claude` copies only Claude Code's user-scope servers, the
 top-level `mcpServers` of `~/.claude.json`. Local-scope servers, which
 `claude mcp add` creates per project by default, often with that project's

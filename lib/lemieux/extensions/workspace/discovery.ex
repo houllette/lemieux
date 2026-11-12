@@ -391,10 +391,15 @@ defmodule Lemieux.Extensions.Workspace.Discovery do
   """
   @spec project_mcp_config(cwd :: Path.t()) :: Path.t() | nil
   def project_mcp_config(cwd) when is_binary(cwd) do
-    path = cwd |> Path.expand() |> repository_root() |> Path.join(".mcp.json")
+    path = project_mcp_path(cwd)
 
     if File.regular?(path), do: path
   end
+
+  @doc "The repository's MCP configuration path, including when it does not exist yet."
+  @spec project_mcp_path(cwd :: Path.t()) :: Path.t()
+  def project_mcp_path(cwd),
+    do: cwd |> Path.expand() |> repository_root() |> Path.join(".mcp.json")
 
   @doc """
   What this repository leaves lying about that `lmx` will not act on, and what
