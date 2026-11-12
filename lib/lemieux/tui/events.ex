@@ -422,6 +422,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {state, without(effects, :say)}
     end
 
+    defp present_event(
+           state,
+           {:entry, %{type: :user, payload: %{"source" => "question_answer"} = payload}},
+           effects
+         ),
+         do:
+           {Transcript.say(state, :lmx, TranscriptPresentation.question_answer(payload)), effects}
+
     defp present_event(state, {:question, question}, effects) do
       id = Map.get(question, :call_id) || Map.get(question, "call_id") || "question"
 

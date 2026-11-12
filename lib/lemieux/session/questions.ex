@@ -1,6 +1,7 @@
 defmodule Lemieux.Session.Questions do
   @moduledoc false
 
+  alias Lemieux.Clock
   alias Lemieux.Contract
   alias Lemieux.Session.Approvals
   alias Lemieux.Session.Core
@@ -21,9 +22,10 @@ defmodule Lemieux.Session.Questions do
         id = "question_" <> Lemieux.ID.generate()
         ttl = state.approval_timeout
         expires = if is_integer(ttl), do: System.system_time(:millisecond) + ttl
+        deadline = if is_integer(ttl), do: Clock.now_ms(state.clock) + ttl
         payload = Map.merge(payload, %{call_id: id, tool_call_id: call_id, deferred: true})
         timer = Approvals.park_timer(state, ttl, id)
-        question = %{payload: payload, timer: timer, expires_at: expires}
+        question = %{payload: payload, timer: timer, expires_at: expires, deadline: deadline}
 
         state =
           %{state | deferred_question: Map.put(question, :id, id)}
@@ -41,14 +43,19 @@ defmodule Lemieux.Session.Questions do
 
   def answer(%{deferred_question: %{id: id} = question} = state, id, answer) do
     cond do
-      expired?(question.expires_at) -> {:reply, {:error, :unknown_call}, expire(state, id)}
-      byte_size(JSON.encode!(answer)) > 32_768 -> {:reply, {:error, :invalid_answer}, state}
-      true -> accept_answer(state, id, question, answer)
+      expired?(question.deadline, state.clock) ->
+        {:reply, {:error, :unknown_call}, expire(state, id)}
+
+      byte_size(JSON.encode!(answer)) > 32_768 ->
+        {:reply, {:error, :invalid_answer}, state}
+
+      true ->
+        accept_answer(state, id, question, answer)
     end
   end
 
-  defp expired?(expires) when is_integer(expires), do: expires <= System.system_time(:millisecond)
-  defp expired?(_infinite), do: false
+  defp expired?(deadline, clock) when is_integer(deadline), do: deadline <= Clock.now_ms(clock)
+  defp expired?(_infinite, _clock), do: false
 
   defp accept_answer(state, id, question, answer) do
     Approvals.cancel_timer(state, question.timer)
@@ -89,6 +96,8 @@ defmodule Lemieux.Session.Questions do
   end
 
   defp close(state, id, status) do
+    Approvals.cancel_timer(state, state.deferred_question.timer)
+
     payload = %{
       "call_id" => id,
       "kind" => "question",
@@ -119,8 +128,9 @@ defmodule Lemieux.Session.Questions do
          %{
            "source" => "question_answer",
            "question_id" => answer["call_id"],
+           "question_answer" => data,
            "text" =>
-             "Human answer to deferred question (not approval of any other action):\n" <>
+             "Deferred question resolution (not approval of any other action):\n" <>
                JSON.encode!(data)
          }, nil}
       )
@@ -188,10 +198,17 @@ defmodule Lemieux.Session.Questions do
     # Only the known presentation keys become atoms; never external atom creation.
     payload = atom_keys(pending["presentation"])
     timer = Approvals.park_timer(state, remaining, id)
+    deadline = if is_integer(remaining), do: Clock.now_ms(state.clock) + remaining
 
     state = %{
       state
-      | deferred_question: %{id: id, payload: payload, expires_at: expires, timer: timer}
+      | deferred_question: %{
+          id: id,
+          payload: payload,
+          expires_at: expires,
+          deadline: deadline,
+          timer: timer
+        }
     }
 
     if remaining == 0, do: expire(state, id), else: state

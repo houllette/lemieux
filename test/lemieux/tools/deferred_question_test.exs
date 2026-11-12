@@ -1,6 +1,8 @@
 defmodule Lemieux.Tools.DeferredQuestionTest do
   use ExUnit.Case, async: true
 
+  alias Lemieux.Clock
+  alias Lemieux.Clock.Manual
   alias Lemieux.Conversation
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
@@ -162,13 +164,17 @@ defmodule Lemieux.Tools.DeferredQuestionTest do
   end
 
   test "expiration closes optional attention without polling the provider", ctx do
+    clock = start_supervised!({Manual, []})
+
     {session, provider, id} =
       start(ctx, [[{:tool_call, question()}, {:done, :tool_calls}], Scripted.complete("Done")],
-        approval_timeout: 50
+        approval_timeout: 60_000,
+        clock: clock
       )
 
     assert_receive {:lemieux, ^id, {:question, %{call_id: qid}}}
     assert_receive {:lemieux, ^id, {:finished, :stop}}
+    Manual.advance(clock, 60_000, settle: session)
 
     assert_receive {:lemieux, ^id,
                     {:entry,
@@ -191,7 +197,7 @@ defmodule Lemieux.Tools.DeferredQuestionTest do
     assert_receive {:lemieux, ^id, {:finished, :stop}}
 
     :sys.replace_state(session, fn state ->
-      put_in(state.deferred_question.expires_at, System.system_time(:millisecond) - 1)
+      put_in(state.deferred_question.deadline, Clock.now_ms(state.clock) - 1)
     end)
 
     assert {:error, :unknown_call} = Session.answer(session, qid, "too late")
