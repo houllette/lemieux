@@ -1,0 +1,80 @@
+alias Lemieux.CLI.Learning.Installation
+alias Lemieux.CLI.Learning.Repositories
+alias Lemieux.Contract
+root = "tmp/selective-public-feedback-v2"
+:ok = File.mkdir(root)
+manifest = "tmp/selective-pint-calibration-manifest.json"
+{fixtures, _metadata} = Repositories.materialize(manifest, Path.join(root, "imported"))
+fixture = Enum.find(fixtures, &(&1.id == "hgrecco-pint-948"))
+item = manifest |> File.read!() |> JSON.decode!() |> Map.fetch!("tasks") |> Enum.find(&(&1["id"] == fixture.id))
+original = fixture.task.cwd
+model = Path.join(root, "model-artifact")
+oracle = Path.join(root, "reference")
+{:ok, _} = File.cp_r(original, model)
+{:ok, _} = File.cp_r(Path.join(Path.dirname(item["source"]), "oracle"), oracle)
+# The expanded test is the original model-visible repository test, including
+# its original test helpers. No private test patch supplies public feedback.
+:ok = File.rm_rf!(Path.join(oracle, "pint/testsuite")) |> then(fn _ -> :ok end)
+{:ok, _} = File.cp_r(Path.join(original, "pint/testsuite"), Path.join(oracle, "pint/testsuite"))
+
+source_root = "tmp/selective-pint-calibration-live"
+{evidence_path, evidence} =
+  Path.wildcard(Path.join([source_root, "*", "evidence.json"]))
+  |> Enum.map(&{&1, &1 |> File.read!() |> JSON.decode!()})
+  |> Enum.find(fn {_path, ev} -> ev["context"]["arm"] == "disabled" and get_in(ev, ["context", "task", "id"]) == fixture.id end)
+identity = evidence["original_grade"]["workspace_evidence_sha256"]
+{snapshot_path, snapshot} =
+  Path.wildcard(Path.join([source_root, "workspaces", "*.json"]))
+  |> Enum.map(&{&1, &1 |> File.read!() |> JSON.decode!()})
+  |> Enum.find(fn {_path, snapshot} -> snapshot["sha256"] == identity end)
+:ok = Contract.verify_digest(snapshot, "sha256")
+true = snapshot["complete"]
+[entry] = snapshot["entries"]
+true = entry["path"] == "pint/definitions.py" and entry["retained"]
+bytes = Base.decode64!(entry["base64"])
+true = Contract.sha256(bytes) == entry["sha256"]
+:ok = File.write(Path.join(model, entry["path"]), bytes)
+
+public_path = "pint/testsuite/test_definitions.py"
+public_bytes = File.read!(Path.join(original, public_path))
+true = public_bytes == File.read!(Path.join(model, public_path))
+true = public_bytes == File.read!(Path.join(oracle, public_path))
+{:ok, _container, state} = case fixture.environment do {container, state} -> {:ok, container, state} end
+true = state.verification_mounts == []
+ordinary = %{fixture | cases: fixture.probe_cases}
+replayed = Repositories.grade(ordinary, model, fixture.environment)
+true = replayed["passed"] == evidence["original_grade"]["passed"] and replayed["passed"]
+expanded = %{ordinary | public_pytest_args: fixture.public_pytest_args ++ [public_path]}
+positive = Repositories.grade(expanded, oracle, fixture.environment)
+true = positive["passed"] and positive["checks"] > 1
+expanded = %{expanded | minimum_checks: Map.put(expanded.minimum_checks, "public", positive["checks"])}
+negative = Repositories.grade(expanded, original, fixture.environment)
+observed = Repositories.grade(expanded, model, fixture.environment)
+false = negative["passed"]
+true = observed["verification_complete"] and observed["safety_failures"] == []
+result = %{
+ "schema_version" => 1,
+ "kind" => "retrospective_public_feedback_diagnostic/v2",
+ "detected_observed_failure" => not observed["passed"],
+ "historical_private_grade_passed" => evidence["confirmation_grade"]["passed"],
+ "source_revision" => "404737075f022d0384d41742c66cb2eca7832f3a",
+ "task_id" => fixture.id,
+ "arm" => "disabled",
+ "hosted_requests" => 0,
+ "model_rerun" => false,
+ "original_report_reclassified" => false,
+ "source_evidence_bytes_sha256" => Contract.sha256(File.read!(evidence_path)),
+ "snapshot_bytes_sha256" => Contract.sha256(File.read!(snapshot_path)),
+ "snapshot_sha256" => identity,
+ "restored_changed_file_sha256" => entry["sha256"],
+ "public_repository_test" => %{"path" => public_path, "sha256" => Contract.sha256(public_bytes), "already_model_visible" => true, "original_test_tree_preserved_in_all_workspaces" => true},
+ "private_grader_mounted" => false,
+ "original_public_replay" => replayed,
+ "expanded_public_positive_control" => positive,
+ "expanded_public_untouched_control" => negative,
+ "expanded_public_model_artifact" => observed,
+ "public_pytest_args" => expanded.public_pytest_args,
+ "interpretation" => "Retrospective artifact regrading records whether an original public test detects the historical private failure. A passing expanded public grade leaves the feedback gap unresolved. This is not a new model outcome, learned mechanism, independent holdout or revised frozen trial."
+}
+:ok = Installation.write(Path.join(root, "report.json"), Map.put(result, "sha256", Contract.digest(result)))
+IO.puts(JSON.encode!(Map.take(result, ~w(task_id hosted_requests private_grader_mounted original_public_replay expanded_public_positive_control expanded_public_untouched_control expanded_public_model_artifact))))

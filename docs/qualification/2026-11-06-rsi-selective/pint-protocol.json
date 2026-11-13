@@ -1,0 +1,36 @@
+{
+  "asset_kinds": [
+    "skill"
+  ],
+  "calibration_registration_bytes_sha256": "2303eb7047762dd7592458de6934b592c3dbed7c911629241640824f4ad977ce",
+  "claim": "Development difficulty and mechanism diagnostics only; separate adequately powered fresh corpus remains necessary for efficacy.",
+  "controls_bytes_sha256": "024ff80e51dec45408150b2f58c21402edfcdfc5fd0d2bc75a37cc57a670066a",
+  "editor_effort": "high",
+  "editor_model": "openai_codex:gpt-6-sol",
+  "effort": "low",
+  "executable_helpers": false,
+  "kind": "retained_repository_calibration_protocol/v1",
+  "manifest_bytes_sha256": "a54586262c4f41ff5727a29983d112dc30da7aa67a4b400825bb1c40443c4f1d",
+  "mechanism_selection": {
+    "eligibility": "Completed, safe, known-token disabled original fails public verification; completed, safe, known-token reference original passes public verification. Calibration must be complete. Private outcome never selects the target.",
+    "eligible_targets": [
+      "hgrecco-pint-920",
+      "hgrecco-pint-948"
+    ],
+    "rule": "Choose first eligible target in chronological order; otherwise stop hosted work.",
+    "sample": "one ordinary seed and twelve target episodes across all six arms and two repetitions, fixed R48 scope; a partial capped sample never qualifies.",
+    "seed": "hgrecco-pint-652"
+  },
+  "model": "openai_codex:gpt-6-luna",
+  "profile_search": false,
+  "reason": "If the fixed synthetic calibration offers no eligible failed-public-verification task, stop that study and use a separately registered harder-corpus diagnostic. Its outcomes are never substituted into the synthetic sample.",
+  "registered_at_utc": "2026-11-06T00:49:29.109628+00:00",
+  "revision": "404737075f022d0384d41742c66cb2eca7832f3a",
+  "schema_version": 1,
+  "selection": "All three retained chronological Pint tasks, ids 652,920,948, with fixed disabled/reference pairs; no outcome filtering within the sample.",
+  "shared_allowance": "Same existing 1200 request, 8000000 token, 7200000ms ledger; retain all consumption and original deadline; no new allowance.",
+  "source_exposure": "developer_exposed; these fixtures, private controls and original dataset have been seen in earlier development. No new independent holdout claim.",
+  "start_condition": "The synthetic calibration completes with known safe accounting, then its preregistered evaluator selects no stream.",
+  "stopping": "No eligible target, unsafe/incomplete evidence, uncovered unknown usage, shared cap, refused mechanism or complete sample. Do not replay failed intents or silently increase limits.",
+  "task_requests": 48
+}

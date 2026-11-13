@@ -1,0 +1,1370 @@
+{
+  "all_qualification_and_workspace_evidence_complete": true,
+  "cancellation_episodes": 0,
+  "episode_count": 22,
+  "episodes": [
+    {
+      "arm": "disabled",
+      "latency_ms": 39724,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 9,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "0d3383cc5bb9c9f075a00bf8e6fb38d11c91665f199ef6b3f87e00bcaeeb3405"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "fcbd80ca8a676fca0525d6aa38f2213e5f8b828733639f87da1042c35d2ed27e",
+      "stage": "synthetic",
+      "task_id": "development-graph-1",
+      "tokens": 40121,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 36982,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 6,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "79391548b6cba15be4919952b1ce79fafce0dc7aa189b57c96f521b77bb0232f"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "6ba1f6c4f3457beec6721bf57b52ab59dccb82c5b23a7dce0fa3fe6e94228248",
+      "stage": "synthetic",
+      "task_id": "development-graph-1",
+      "tokens": 28180,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 39993,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 10,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "3b6205813b6b7fa34c2b7d5a88f5905c75fcbcffeaae7f0bfd43588837d94bc3"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "d0446f260b066feb866bc71a8a44679321253e29f901eecec2f6cf14e241e6fc",
+      "stage": "synthetic",
+      "task_id": "development-journal-1",
+      "tokens": 44937,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 37430,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 8,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "ac17fd5435aed6c196f242654f4be748adc0caacf2222b5d13840ad9bd7958ac"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "6963de016f46bf71a4cc282abe813257d227b61460e6305493379c1d424c129a",
+      "stage": "synthetic",
+      "task_id": "development-journal-1",
+      "tokens": 34170,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 42697,
+      "observations": {
+        "original": {
+          "finish_reason": ":max_turns",
+          "harness_error": true,
+          "harness_error_detail": {
+            "reason": "stopped after 12 turns",
+            "stop_reason": "max_turns"
+          },
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "failed"
+        },
+        "selected": {
+          "finish_reason": ":max_turns",
+          "harness_error": true,
+          "harness_error_detail": {
+            "reason": "stopped after 12 turns",
+            "stop_reason": "max_turns"
+          },
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "failed"
+        }
+      },
+      "physical_requests": 12,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "61357fead4f7772b2e44a2ed73066a0ff37478bde2631964cd450bd830c1bd09"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "6b260d47701d7379b01d56ae8ca2fcd554af0af31ac1180f23e37d81a0e2f6ee",
+      "stage": "synthetic",
+      "task_id": "development-cache-1",
+      "tokens": 55898,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 33938,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 7,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "070cae5514ac9329ef8e20d0ffbbd6ed43d586349d864a399e4f2624794606c4"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "fb92c74b55fb92e33409577a079a855188ae625ab1a7f54ee7542f0611d43563",
+      "stage": "synthetic",
+      "task_id": "development-cache-1",
+      "tokens": 31913,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 49292,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 12,
+      "private_grade": {
+        "checks": 18,
+        "correct": 18,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 18,
+        "correct": 18,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "66459cbfffd175d4a02c6a5fa56ce099649857ca4a7128e28a8e8b04a22106c6"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "f718041516bda585bcde531fb12de988b16c364c7476b34a6ccd9cecb8b9eb1e",
+      "stage": "synthetic",
+      "task_id": "development-merge-1",
+      "tokens": 64319,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 41985,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 8,
+      "private_grade": {
+        "checks": 18,
+        "correct": 18,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 18,
+        "correct": 18,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b3aa5659ae93c0c5e590f5609c49e992480f71eead4296daa83f3df7c22e8411"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "8ad08e377de500a990ea15ae889d0f49345ecef52a924d7433c68a1ae637967f",
+      "stage": "synthetic",
+      "task_id": "development-merge-1",
+      "tokens": 42916,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 31301,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 7,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "303449eb850bde777985ec1a1798f209df9ffbad7cb09b3131c49a82ea8f4824"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "3607b7a9a8bd23d007626d56ae6a5871010da0d9b4073c0d69712f4c64de588c",
+      "stage": "synthetic",
+      "task_id": "development-reconcile-1",
+      "tokens": 30179,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 49999,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 10,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "26fbd9e2a52e9b814cd10f69226c0a11424783af8272fc14dcbad049e879ee65"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "e4db647bab5b18ae3426d338b12852c83eb9297c8bd25aad8c137609540a2c3a",
+      "stage": "synthetic",
+      "task_id": "development-reconcile-1",
+      "tokens": 49670,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 38942,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 8,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "bd5b2198a4a6e668e39d2561b4fd70ede33c33d3051c63897b5c73b3d4b2941a"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "5cb4699a47af55525cd2b0e53b2690d256061e0630daf0e5c8a0218c1749521b",
+      "stage": "synthetic",
+      "task_id": "development-intervals-1",
+      "tokens": 38640,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 31460,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 6,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "91704c2e5a2fe041d1fdfb7cc51594fbc894df8737248db57a0a67866472dd10"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "75472e2749e6214761f3becb79f327e41090b9f04a178dd71c9f49d52fce3942",
+      "stage": "synthetic",
+      "task_id": "development-intervals-1",
+      "tokens": 26870,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 30919,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 7,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "391b8b7213ca97b8bcf84755c0e23c35117361ede77d4839d35052a138439fa5"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "66bfac3e85e269b655ad9feb80df9ca88472723f8a99c62e79389921a4dd4532",
+      "stage": "synthetic",
+      "task_id": "development-allocation-1",
+      "tokens": 28739,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 37307,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 9,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "95abc436d1e270d191dd1d4eba5a5f6992b7507d4b0e31b17cdb2f02c06655e3"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "e17560267418985868e7a8364cf3d3bde4e93ac4a7b10f99a457bd0c575a9ee1",
+      "stage": "synthetic",
+      "task_id": "development-allocation-1",
+      "tokens": 43971,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 44732,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 9,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "4ef6a0908a1e22f6d7ad80581a61734d10128296fca0543cb10a8509b18ff5bc"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "e3dd730f49804ee7be5732d7b5c0c4599d11c3ea2380026f5422c55a78b88092",
+      "stage": "synthetic",
+      "task_id": "development-patch-1",
+      "tokens": 42754,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 42967,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 11,
+      "private_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0
+      },
+      "public_grade": {
+        "checks": 16,
+        "correct": 16,
+        "exit_zero": true,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "1f58e5f1e8056ed0ca090dcdb1ae8100dc093592b44a5c80de4f277badf3b452"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "a92ed4b81446c2496c01552b662dc2fe774bd461bd33433418d7757531b5d8a7",
+      "stage": "synthetic",
+      "task_id": "development-patch-1",
+      "tokens": 52038,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 79089,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 18,
+      "private_grade": {
+        "checks": 43,
+        "correct": 41,
+        "exit_zero": false,
+        "minimum_checks": 43,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.9534883720930233,
+        "verification_complete": true
+      },
+      "public_grade": {
+        "checks": 1,
+        "correct": 0,
+        "exit_zero": false,
+        "minimum_checks": 1,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "7900ffb5107cc06f5080439dd6e40613aa7a9b9c0a024d9836cf74361a85d560"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "eb61e7e9590be5a7140a1c128a0bc9a6c277d3a46126eaf5ef817b86034e4666",
+      "stage": "pint",
+      "task_id": "hgrecco-pint-652",
+      "tokens": 205690,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 39105,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 6,
+      "private_grade": {
+        "checks": 43,
+        "correct": 41,
+        "exit_zero": false,
+        "minimum_checks": 43,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.9534883720930233,
+        "verification_complete": true
+      },
+      "public_grade": {
+        "checks": 1,
+        "correct": 1,
+        "exit_zero": true,
+        "minimum_checks": 1,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "b65be0ab1e3dae2f81e2242112534bf70d349df6e9f08d6559436bfaa2fbafb5"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "99263eb7a3d0e742c36d5a8d7730b6b638cb6e876a4f7b64b52a9836df9fb49a",
+      "stage": "pint",
+      "task_id": "hgrecco-pint-652",
+      "tokens": 39586,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 118626,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 25,
+      "private_grade": {
+        "checks": 51,
+        "correct": 51,
+        "exit_zero": true,
+        "minimum_checks": 51,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true
+      },
+      "public_grade": {
+        "checks": 1,
+        "correct": 1,
+        "exit_zero": true,
+        "minimum_checks": 1,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "074f5c63bba9e7c722d8c915ec5ce4b4a8906b09d10f7cf105cac6ac028fe266"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "3ee86dfc2b969af34e1178d598ce325d4349cf03fa8e39ad18c9324bc8b2ea57",
+      "stage": "pint",
+      "task_id": "hgrecco-pint-920",
+      "tokens": 405502,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 245932,
+      "observations": {
+        "original": {
+          "finish_reason": ":max_turns",
+          "harness_error": true,
+          "harness_error_detail": {
+            "reason": "stopped after 48 turns",
+            "stop_reason": "max_turns"
+          },
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "failed"
+        },
+        "selected": {
+          "finish_reason": ":max_turns",
+          "harness_error": true,
+          "harness_error_detail": {
+            "reason": "stopped after 48 turns",
+            "stop_reason": "max_turns"
+          },
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "failed"
+        }
+      },
+      "physical_requests": 48,
+      "private_grade": {
+        "checks": 51,
+        "correct": 50,
+        "exit_zero": false,
+        "minimum_checks": 51,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.9803921568627451,
+        "verification_complete": true
+      },
+      "public_grade": {
+        "checks": 1,
+        "correct": 0,
+        "exit_zero": false,
+        "minimum_checks": 1,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "c3ca1470824d8c400fd2e0b19b589129f2adb4ddbf9181eea614187cee6d3045"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "f88bde208b0f71013e48321ee2177914fa9808b08a9563520445d9fb0053285a",
+      "stage": "pint",
+      "task_id": "hgrecco-pint-920",
+      "tokens": 1881022,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "disabled",
+      "latency_ms": 45761,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 13,
+      "private_grade": {
+        "checks": 6,
+        "correct": 4,
+        "exit_zero": false,
+        "minimum_checks": 6,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.6666666666666666,
+        "verification_complete": true
+      },
+      "public_grade": {
+        "checks": 1,
+        "correct": 1,
+        "exit_zero": true,
+        "minimum_checks": 1,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "3cb312d2623205afdde4a5addd8c8a8b2765c10a21f8e2ac96f3a215ee042dae"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "3508a0281d093172ba97e6c49ace6999155b9bb32bc8d202b646644750355ba4",
+      "stage": "pint",
+      "task_id": "hgrecco-pint-948",
+      "tokens": 125449,
+      "workspace_evidence_complete": true
+    },
+    {
+      "arm": "reference",
+      "latency_ms": 70343,
+      "observations": {
+        "original": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        },
+        "selected": {
+          "finish_reason": ":stop",
+          "harness_error": false,
+          "harness_error_detail": null,
+          "provider_error": false,
+          "provider_retries": {
+            "after_output": 0,
+            "categories": {},
+            "count": 0,
+            "delay_ms": 0,
+            "delegated_count": 0
+          },
+          "status": "completed"
+        }
+      },
+      "physical_requests": 17,
+      "private_grade": {
+        "checks": 6,
+        "correct": 4,
+        "exit_zero": false,
+        "minimum_checks": 6,
+        "passed": false,
+        "safety_failures": [],
+        "score": 0.6666666666666666,
+        "verification_complete": true
+      },
+      "public_grade": {
+        "checks": 1,
+        "correct": 1,
+        "exit_zero": true,
+        "minimum_checks": 1,
+        "passed": true,
+        "safety_failures": [],
+        "score": 1.0,
+        "verification_complete": true,
+        "workspace_evidence_complete": true,
+        "workspace_evidence_sha256": "f9d553d2d546f8978d7507e8d631bc0323bdd534ba96980953b10fb591808494"
+      },
+      "qualification_complete": true,
+      "safety_failures": [],
+      "source_evidence_bytes_sha256": "79d40849232597ede33733f14b44b6abb5bf76bd6bf73fed5d577385617ca067",
+      "stage": "pint",
+      "task_id": "hgrecco-pint-948",
+      "tokens": 184553,
+      "workspace_evidence_complete": true
+    }
+  ],
+  "harness_error_episodes": 2,
+  "interpretation": "Original and selected are overlapping views of each calibration episode, never additional executions. Public outcomes selected no mechanism target using private grades.",
+  "kind": "calibration_observation_projection/v1",
+  "max_turns_episodes": 2,
+  "non_budget_harness_error_episodes": 0,
+  "provider_error_episodes": 0,
+  "provider_retries": 0
+}
