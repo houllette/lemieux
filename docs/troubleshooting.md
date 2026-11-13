@@ -637,10 +637,16 @@ trust, so only `--project-mcp` starts them.
 
 ### The agent appears stuck on a question
 
-An `ask_user` question waits for you. In the terminal UI, choose an answer (or
+An `ask_user` question blocks by default. In the terminal UI, choose an answer (or
 Other), review the set and choose Submit answers. An embedding host receives
 `{:question, question}` and must answer through the session's API. `lmx run`
 offers no `ask_user` tool, because nobody may be there to answer.
+
+An optional deferred question can remain visible while independent work
+continues. Its answer is delivered once at a request boundary. If that work
+has already ended, answering does not start another model request: send the
+next prompt to continue. Required decisions still block, and a pending question
+does not grant approval. See [question behavior](cli.md#terminal-ui).
 
 ### `Invalid lmx config field: …` or `Unknown field … in lmx … section`
 

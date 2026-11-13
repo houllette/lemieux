@@ -1,6 +1,6 @@
 # Support, compatibility and upgrades
 
-Lemieux is preparing for 1.0. This page says which parts are supported and which are
+Lemieux 1.x has supported source and automation contracts. This page says which parts are supported and which are
 experimental, which platforms `lmx` runs on, and how to upgrade the library,
 the binary and your extensions. The license is
 [Apache 2.0](https://github.com/houllette/lemieux/blob/main/LICENSE).
@@ -128,9 +128,7 @@ private assembly and the terminal UI's native code are not extension APIs. Do
 not depend on `:sys.get_state/1` in an extension. `lmx` itself gets no
 privileged core API.
 
-Before 1.0, a minor release may break source compatibility; the changelog
-then says how to migrate. Patch releases keep documented source contracts.
-Beginning with 1.0:
+Pre-1.0 migration notes remain in the changelog. Throughout 1.x:
 
 - Patch releases fix bugs while preserving supported contracts. Minor releases
   add compatible behavior; removal or incompatible changes to supported APIs
@@ -187,6 +185,14 @@ paths the test suite exercises. Use request limits when pricing cannot
 support a dollar limit.
 
 ## Upgrading Lemieux and extensions
+
+The 1.0-to-1.1 binary update requires a complete restart on every platform.
+New session/question state, background discovery, retained callbacks and
+dependency/native code have no supported hot migration. Save drafts before
+restarting and resume with `lmx -c`; the [upgrade steps](releases.md#upgrading-from-10-to-11)
+cover configuration, provider credentials and extension checks. Supported
+library contracts and extension API 1 remain compatible; no personal-config
+schema migration is required.
 
 Read the changelog and this page before you replace a runtime. Keep the
 previous binary and a copy of your session directory, and never edit a

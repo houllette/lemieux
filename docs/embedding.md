@@ -91,13 +91,14 @@ numbers in it were measured, and each says where.
 
 ```elixir
 # mix.exs
-{:lemieux, "~> 0.12.0"}
+{:lemieux, "~> 1.1"}
 ```
 
 Lemieux needs Elixir 1.19 or later and recent releases of its provider stack:
-`req_llm` 1.29 or later, `req` 0.7 or later, `finch` 0.22 or later, `splode`
-0.3, and `llm_db` 2026.10.2 or later in the 2026.10.x series (which is what
-`req_llm` 1.29.0 accepts; the current lock resolves 2026.10.6).
+`req_llm ~> 1.30`, `req ~> 0.7`, `finch ~> 0.24`, and Splode 0.3.3 or later.
+ReqLLM 1.30 uses
+`llm_db ~> 2026.11.0`; this release locks ReqLLM 1.30.0, LLMDB 2026.11.2
+and the patched JSV 0.27.0 validator.
 A newly generated Phoenix 1.8 or Ash 3
 application resolves them without edits. An older `mix.lock` stops
 `mix deps.get` with a message like this:
@@ -114,7 +115,7 @@ help, because the conflict is in your lock, not in Lemieux:
 ```sh
 mix deps.update req finch        # locks older than Req 0.7.0 (28 July 2026)
 mix deps.update splode           # Ash apps locked before splode 0.3.0 (16 January 2026)
-mix deps.update req_llm llm_db   # apps already on a ReqLLM older than 1.29
+mix deps.update req_llm llm_db finch jsv  # provider stack older than ReqLLM 1.30
 ```
 
 Req 0.7 changes Req itself. Its Finch and Plug adapters replace the
@@ -154,7 +155,7 @@ control should never load it; the installed `lmx` turns it off for that
 reason. In Livebook or a script, pass the same setting to `Mix.install/2`:
 
 ```elixir
-Mix.install([{:lemieux, "~> 0.12.0"}], config: [req_llm: [load_dotenv: false]])
+Mix.install([{:lemieux, "~> 1.1"}], config: [req_llm: [load_dotenv: false]])
 ```
 
 With the default subagent admission, a runtime can run 8 delegated children

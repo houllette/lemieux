@@ -20,7 +20,7 @@ the repository root unless they start with `cd dist/lmx`.
 On your trusted macOS or Linux machine, from the repository root:
 
 ```sh
-./scripts/release.sh 1.0.0 /Volumes/LMX-KEYS/lmx-release.key
+./scripts/release.sh 1.1.0 /Volumes/LMX-KEYS/lmx-release.key
 ```
 
 Pass the prepared stable version and the existing signing key. A leading `v`
@@ -97,7 +97,7 @@ Workflow waits default to four hours each; `--timeout SECONDS` accepts 60 throug
 86400. A failed workflow stops with its URL. To retry its failed jobs once:
 
 ```sh
-./scripts/release.sh 1.0.0 /Volumes/LMX-KEYS/lmx-release.key --retry-failed
+./scripts/release.sh 1.1.0 /Volumes/LMX-KEYS/lmx-release.key --retry-failed
 ```
 
 Human terminal/provider [qualification](#qualification) remains the maintainer's
@@ -264,8 +264,15 @@ minimum macOS version belongs to each release: check it again every time
 
 - Bump `VERSION` and the `@version` literal in `mix.exs` together; a test
   checks the pair.
-- In `CHANGELOG.md`, turn the `## Unreleased` section (for 0.8.0,
-  `## 0.8.0 — unreleased`) into the version's dated section:
+- Audit current stable dependency releases before freezing the source.
+  Run `mix hex.outdated --all` in the library, release host and bundled
+  extension, and refresh committed example locks. Update every resolvable
+  dependency, check parent requirements for anything held back, and record
+  those bounds in the release PR. `mix deps.drift` checks the shared locks;
+  `mix usage_rules.sync --yes` refreshes dependency guidance. Dependency or
+  native changes invalidate earlier candidate identities and qualification.
+- In `CHANGELOG.md`, turn `## Unreleased` or the prepared
+  `## X.Y.Z — unreleased` section into the version's dated section:
   `## X.Y.Z — YYYY-MM-DD`. After an update, the terminal UI links the
   changelog as it is at the version's tag.
 - Rewrite `.github/release-notes.md` as this release's GitHub release body:
@@ -277,12 +284,11 @@ minimum macOS version belongs to each release: check it again every time
   ([Qualification](#qualification)).
 - Commit the reviewed upgrade decision, `dist/lmx/upgrades/X.Y.Z.exs`
   ([Upgrade decisions](#upgrade-decisions)).
-- Regenerate `test/fixtures/harness_learning/contracts.json`. Its harness
-  snapshot records the Lemieux version, so every bump moves the version and
-  three digests in it (the snapshot's manifest and semantic digests and the
-  run evidence digest), and the golden contracts test fails until they move:
-  `mix test test/lemieux/learning/golden_contracts_test.exs` shows the new
-  values. Change only those, so the file keeps its layout.
+- Run `mix test test/lemieux/learning/golden_contracts_test.exs`. Its shared
+  JSON fixture now deliberately pins a historical runtime (Lemieux 0.12.0,
+  ReqLLM 1.29.0), so a version bump alone must not rewrite its version or
+  digests. Change the fixture only for an intentional wire-contract change,
+  with the corresponding compatibility review.
 - Run `mise exec -- mix precommit.full` (it needs network access and
   `python3`).
 - Check that no placeholder or private wording is left. The placeholder

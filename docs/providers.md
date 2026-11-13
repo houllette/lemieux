@@ -73,11 +73,14 @@ When nothing above names a model, `lmx` tries these in order:
    prefers the local model it used most recently, then the most recently
    pulled or updated one, and says which it chose in a startup notice. See
    [Use a local model](#use-a-local-model).
-4. **The placeholder `anthropic:claude-sonnet-5`.** The terminal UI opens
+4. **A local MTPLX model.** If Ollama has no candidate, `lmx` checks its
+   default loopback endpoint for models advertised by MTPLX. See
+   [MTPLX configuration](configuration.md#mtplx).
+5. **The placeholder `anthropic:claude-sonnet-5`.** The terminal UI opens
    its provider panel so you can paste a key; `lmx run` exits with status 3
    and a sentence listing your choices.
 
-A model `lmx` picked in steps 2 to 4 is recorded as used, never as your
+A model `lmx` picked in steps 2 to 5 is recorded as used, never as your
 choice, so a key you set later still wins. If a remembered local model is no
 longer served, or Ollama does not answer, that start moves to the next step
 and a notice says so; your choice stays remembered for when Ollama is back.
@@ -86,7 +89,7 @@ and a notice says so; your choice stays remembered for when Ollama is back.
 this: it starts on `anthropic:claude-sonnet-5` unless `--model`, `LMX_MODEL`
 or an Ixway route names another, and never picks a model from your keys or a
 local Ollama. If the default config file cannot be created, as on a
-read-only home directory in CI, steps 2 to 4 still apply. Set `LMX_HOME` to
+read-only home directory in CI, steps 2 to 5 still apply. Set `LMX_HOME` to
 give `lmx` a writable state directory.
 
 ### Starting without a key
@@ -114,6 +117,50 @@ to look around first.`
 `lmx run` never asks. Without a usable key it exits with status 3 before any
 session or transcript exists, and its message names what to set. [Your first
 session](getting-started.md) walks through the first run.
+
+## Use an existing Codex sign-in
+
+`lmx` can borrow a usable local Codex sign-in for the `openai_codex` provider.
+The first-run provider panel offers it even when an automatic local-model
+fallback was selected. Choose it there, or select a Codex model with `/model`
+or the existing `openai_codex:MODEL` syntax. Provider-scoped model and effort
+preferences keep their normal precedence.
+
+Borrowing reads only the access credential and account from Codex's existing
+auth file (`$CODEX_HOME/auth.json`, otherwise `~/.codex/auth.json`). It never
+copies or refreshes Codex's refresh token. Renew an expired sign-in with
+`codex login` in your own terminal. `--config none` skips native borrowing;
+explicit ReqLLM access credentials and OAuth-file overrides, including
+`REQ_LLM_OAUTH_FILE` and `REQ_LLM_AUTH_FILE`, take precedence over it.
+
+The picker fetches the account's visible model catalog in the background,
+using the same access credential, account and existing ReqLLM Codex route as
+inference. Bundled metadata can enrich a model, but cannot add account choices.
+Server-returned IDs remain selectable when metadata is missing. Successful
+catalogs are cached for five minutes; credential checks every 30 seconds
+discard changed accounts and stale in-flight results. Discovery failures
+show a notice and preserve the selected model. A valid model can still be
+entered manually. Custom inference routes are not guessed.
+
+This retains ReqLLM's Codex transport and credential lifecycle. It does not
+introduce the public Sign in with ChatGPT flow or change its endpoint/token
+contract. The installed 1.0 binary needs an updated build to gain discovery;
+changing its config or removing a credential shim does not add that capability.
+
+### Account usage and run accounting
+
+`/usage [refresh]` reports supported account spend and subscription windows
+with the available reporting credentials. It runs asynchronously, caches a
+report for up to one minute and labels unknown, unsupported and stale values.
+OpenAI/Anthropic organization reporting needs authorized reporting credentials;
+Codex quota reporting uses the installed Codex app-server's account surface.
+Neither a catalog listing nor a usage report guarantees a successful model
+request. See [account usage](cli.md#provider-account-usage) for supported scopes
+and permissions.
+
+`/context` reports the session's own accounting, and configured request/tree
+budgets remain run limits. They are separate from provider-reported account
+balances and subscription allowances.
 
 ## Use a local model
 

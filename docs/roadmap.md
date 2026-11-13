@@ -1,6 +1,8 @@
 # Roadmap
 
-Lemieux is at 1.0.0 in this release candidate. This page lists the work that is still open, so that a
+Lemieux is at 1.1.0. This release adds account discovery/reporting, optional deferred questions,
+internal-error reporting and MCP setup improvements to the supported 1.x
+runtime. This page lists the work that is still open, so that a
 contributor can see where help is useful and what "done" means for each item.
 It is not a promise of dates. Before you begin a large change, start a
 conversation in
@@ -11,17 +13,17 @@ describes.
 What already works is described in the guides and module documentation; this
 page holds only what remains.
 
-## The 1.0 scope
+## Release scope and qualification
 
-The release stabilizes the supported loop, sessions, tools, CLI and extension
-contracts. Before the cut, align the public guides with actual defaults,
-enforce the repository's required checks, and qualify the exact candidate's
+The 1.0 release established the supported loop, sessions, tools, CLI and extension
+contracts. Each release retains those contracts, aligns the guides with actual defaults,
+enforces the repository's required checks, and qualifies the exact candidate's
 installation, terminal, provider and embedding paths. The maintainer's
 [release qualification](https://github.com/houllette/lemieux/blob/main/RELEASING.md#qualification) records the source,
 archive hashes, model/transport and observed results. A passing offline gate
 does not fill an unrun live or human check.
 
-The remaining feature issues are post-1.0 work:
+These broader feature issues remain open after the 1.1 implementation work:
 
 | Work | Remaining scope |
 | --- | --- |
@@ -30,6 +32,7 @@ The remaining feature issues are post-1.0 work:
 | [Tool programs #46](https://github.com/houllette/lemieux/issues/46) | A bounded execution capability and its policy/effect qualification. |
 | [Learning #47](https://github.com/houllette/lemieux/issues/47) and [qualification #79](https://github.com/houllette/lemieux/issues/79) | The complete research objective remains open. #79 gates claims of improved outcomes or economics; the stable runtime does not depend on such a claim. |
 | [Typed assets #80](https://github.com/houllette/lemieux/issues/80) and [qualified exports #81](https://github.com/houllette/lemieux/issues/81) | Further qualification and productization of experimental assets and packages. |
+| [Transcript spacing #145](https://github.com/houllette/lemieux/issues/145), [todo subtasks #146](https://github.com/houllette/lemieux/issues/146), [snippet copying #147](https://github.com/houllette/lemieux/issues/147) and [pointer feedback #148](https://github.com/houllette/lemieux/issues/148) | These UI proposals remain open; question-panel copying and deferred questions do not implement them. |
 
 Windows remains experimental. Platform signing, Linux arm64 binaries and the
 research acceptance items below retain their own completion criteria.
@@ -138,9 +141,10 @@ These proposals wait on evidence and have no scheduled implementation:
   explicitly selected host; the library starts no coordination daemon.
 - Structured compaction sections remain opt-in until a paired workload
   demonstrates better obligation retention without unacceptable overhead.
-- Remote receipt reconciliation, hermetic builds, subscription remaining/reset
-  displays and automatic activation require a host with the relevant service,
-  data or isolation. Code release remains human-owned.
+- Remote receipt reconciliation, hermetic builds and automatic activation require
+  a host with the relevant service, data or isolation. `/usage` now reports
+  supported account windows; additional provider capabilities still need their
+  own authorized reporting seam. Code release remains human-owned.
 
 ## Not planned
 

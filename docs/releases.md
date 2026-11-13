@@ -39,6 +39,41 @@ An installation belongs to the user who installs it. Nothing is installed
 system-wide, and the installer refuses to run as root unless you choose the
 prefix yourself.
 
+## Upgrading from 1.0 to 1.1
+
+This update requires restarting the complete runtime on every platform. It
+changes session/TUI state, retained callbacks, dependencies and native code;
+no hot update or live downgrade is declared.
+
+1. Save unsent drafts outside the terminal UI and keep a private copy of the
+   session directory before trying a new reader.
+2. Stage the signed release with `lmx update`, or use `/update` in an
+   installer-managed TUI. The explicit TUI restart resumes its exact session;
+   automatic restart is limited to a pristine, idle screen. Otherwise quit,
+   restart and use `lmx -c` or `lmx --resume SESSION`.
+3. Check `lmx --version` and `lmx explain --no-user-extensions`, then
+   `lmx extension list`. Review patch-line version constraints and rebuild
+   extensions only when the loader requires it.
+4. Resume under the current host's permissions and budgets. Consumed request
+   and dollar accounting is retained; an upgrade does not reset allowances.
+
+Personal config version 1, `openai_codex:MODEL` names and provider model/effort
+preferences remain compatible. Explicit ReqLLM OAuth-file overrides keep
+precedence over native Codex borrowing; remove one only when you intend to
+change credential source. Codex retains refresh ownership. Existing launcher
+shims for older binaries should be retired only alongside upgrading those
+binaries, not as a model-discovery workaround.
+
+The default stdio MCP launcher now uses Bash for its separate diagnostic
+pipe. Install Bash where it is absent; Windows uses Git Bash. Custom host
+launchers continue to own their diagnostic policy.
+
+Windows uses a fresh unpacked archive and manual restart/resume. Source
+checkouts update through Git, fetch dependencies and restart. Library hosts
+update their dependency locks and start a fresh supervised runtime; see
+[embedding](embedding.md#1-add-the-dependency) and
+[support](support.md#upgrading-lemieux-and-extensions).
+
 ## Install a release
 
 On macOS and Linux:
