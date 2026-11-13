@@ -7,7 +7,7 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## 1.1.0 — unreleased
+## 1.1.0 — 2026-11-13
 
 Restart `lmx` after updating from 1.0.0 on every platform, then resume with
 `lmx -c` or `lmx --resume SESSION`. Session/TUI state, retained callbacks,
