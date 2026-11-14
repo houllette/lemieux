@@ -21,7 +21,7 @@ defmodule Lemieux.TUI.StatusTest do
     context = %Context{measured?: true, tokens: 7_500, window: 10_000, fraction: 0.75}
     status = Status.new(conversation: %{conversation | context: context}, compact_at: 0.8)
 
-    assert Status.compaction_warning(status) == "auto-compact in 5.0pp of context"
+    assert Status.compaction_warning(status) == "auto-compact in 5.0pp of planning window"
 
     assert Status.compaction_warning(%{status | compact_at: 0.7}) ==
              "auto-compact due on next request"

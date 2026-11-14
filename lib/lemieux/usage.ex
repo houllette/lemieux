@@ -53,6 +53,13 @@ defmodule Lemieux.Usage do
     usage = json(usage)
 
     usage
+    # Preserve availability before compatibility counters fill missing input
+    # with zero. Otherwise the UI cannot distinguish a measured zero from a
+    # provider that never reported the parent's context position (#158).
+    |> Map.put_new("usage_reported", %{
+      "input" => reported_count?(usage["input_tokens"]),
+      "output" => reported_count?(usage["output_tokens"])
+    })
     |> Map.put("input_tokens", count(usage, ["input_tokens"]))
     |> Map.put("output_tokens", count(usage, ["output_tokens"]))
     |> Map.put(
@@ -121,6 +128,8 @@ defmodule Lemieux.Usage do
       end
     end)
   end
+
+  defp reported_count?(value), do: is_integer(value) and value >= 0
 
   defp cost(usage) do
     direct = Map.get(usage, "cost_usd") || Map.get(usage, "total_cost")

@@ -116,6 +116,9 @@ defmodule Lemieux.Context do
           measured?: boolean(),
           compacted?: boolean(),
           window: pos_integer() | nil,
+          planning_window: pos_integer() | nil,
+          compact_at: float() | nil,
+          price_compaction?: boolean(),
           fraction: float() | nil,
           current: %{
             input: non_neg_integer(),
@@ -156,6 +159,9 @@ defmodule Lemieux.Context do
             measured?: false,
             compacted?: false,
             window: nil,
+            planning_window: nil,
+            compact_at: nil,
+            price_compaction?: false,
             fraction: nil,
             current: %{input: 0, output: 0, cached: 0, cache_write: 0},
             spent: %{input: 0, output: 0, cached: 0, cache_write: 0, requests: 0},
@@ -169,6 +175,9 @@ defmodule Lemieux.Context do
     * `:window` — the model's context window. Without it there is no fraction
       and `full?/2` is always false: a threshold needs something to be a
       threshold of.
+    * `:planning_window`, `:compact_at`, `:price_compaction?` — the session's
+      compaction policy, for explaining why a large real window can compact
+      at low utilization. These never change the occupancy denominator.
   """
   @spec position(entries :: [Entry.t()], opts :: keyword()) :: t()
   def position(entries, opts \\ []) do
@@ -181,7 +190,10 @@ defmodule Lemieux.Context do
       measured?: measured?,
       compacted?: compacted?,
       window: window,
-      fraction: fraction(tokens, window),
+      planning_window: Keyword.get(opts, :planning_window),
+      compact_at: Keyword.get(opts, :compact_at),
+      price_compaction?: Keyword.get(opts, :price_compaction?, false),
+      fraction: if(measured?, do: fraction(tokens, window)),
       current: current,
       spent: spent(entries),
       delegated: entries |> delegated_usages() |> summed()
@@ -218,14 +230,15 @@ defmodule Lemieux.Context do
   def with_usage(%__MODULE__{} = context, usage) when is_map(usage) do
     current = breakdown(usage)
     tokens = token_total(current)
+    measured? = measured_usage?(usage)
 
     %{
       context
       | current: current,
         tokens: tokens,
-        measured?: true,
+        measured?: measured?,
         compacted?: false,
-        fraction: fraction(tokens, context.window)
+        fraction: if(measured?, do: fraction(tokens, context.window))
     }
   end
 
@@ -511,15 +524,35 @@ defmodule Lemieux.Context do
   defp current(entries) do
     entries
     |> Enum.reverse()
-    |> Enum.find(
-      &(&1.type == :compaction or
-          (&1.type not in [:guidance, :extension_state] and is_map(&1.usage)))
-    )
+    |> Enum.find(&(&1.type == :compaction or &1.type == :assistant))
     |> case do
       %Entry{type: :compaction} -> {empty_breakdown(), false, true}
-      %Entry{usage: usage} when is_map(usage) -> {breakdown(usage), true, false}
+      %Entry{usage: usage} when is_map(usage) -> {breakdown(usage), measured_usage?(usage), false}
       _otherwise -> {empty_breakdown(), false, false}
     end
+  end
+
+  # Normalized missing input is zero too. Trusting that zero, or falling back
+  # to an older answer when the newest one lacks usage, made an unknown
+  # position look like a small, fresh measurement (#158).
+  defp measured_usage?(usage) do
+    reported? =
+      case Map.get(usage, "usage_reported") do
+        nil ->
+          true
+
+        true ->
+          true
+
+        %{} = reported ->
+          Map.get(reported, "input") != false and Map.get(reported, "output") != false
+
+        _unreported ->
+          false
+      end
+
+    input = Map.get(usage, "input_tokens")
+    is_number(input) and input >= 0 and reported?
   end
 
   defp breakdown(usage) do
@@ -638,6 +671,7 @@ defmodule Lemieux.Context do
     spent = context.spent
 
     (current ++
+       planning_lines(context) ++
        [
          "",
          "Session total",
@@ -668,10 +702,11 @@ defmodule Lemieux.Context do
     end
   end
 
-  defp current_lines(%__MODULE__{measured?: false}) do
+  defp current_lines(%__MODULE__{measured?: false, window: window}) do
     [
       "Context window",
-      "  Unmeasured — new session or just compacted"
+      "  Unmeasured — new session or just compacted, or provider usage unavailable",
+      "  Window           #{if window, do: thousands(window) <> " tokens", else: "unknown"}"
     ]
   end
 
@@ -684,8 +719,28 @@ defmodule Lemieux.Context do
       token_line("Uncached input", current.input),
       token_line("Cache read", current.cached),
       token_line("Cache write", current.cache_write),
-      token_line("Model output", current.output)
+      token_line("Model output", current.output),
+      "  Freshness        last provider usage; later messages and tool results are not yet measured"
     ] ++ available_line(context)
+  end
+
+  defp planning_lines(context) do
+    threshold =
+      case {context.planning_window, context.compact_at} do
+        {window, at} when is_integer(window) and is_number(at) ->
+          [
+            "  Auto-compaction  forecast trigger #{thousands(round(window * at))} input tokens (#{percentage(at)} of #{thousands(window)} planning window)"
+          ]
+
+        _unknown ->
+          []
+      end
+
+    threshold ++
+      if(context.price_compaction?,
+        do: ["  Price policy     may compact earlier to reduce request cost"],
+        else: []
+      )
   end
 
   # A caller may have constructed the public struct before `current` existed.

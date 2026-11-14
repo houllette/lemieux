@@ -20,6 +20,52 @@ defmodule Lemieux.ContextTest do
   defp usage(fields), do: Map.new(fields, fn {key, value} -> {to_string(key), value} end)
 
   describe "position" do
+    test "missing usage on the latest answer invalidates an older measurement" do
+      old = entry(:assistant, usage(input_tokens: 100_000, output_tokens: 1_000))
+
+      for latest <- [
+            entry(:assistant),
+            entry(:assistant, %{
+              "input_tokens" => 0,
+              "output_tokens" => 5,
+              "usage_reported" => %{"input" => false}
+            })
+          ] do
+        context = Context.position([old, latest], window: 200_000)
+        refute context.measured?
+        assert context.fraction == nil
+        refute Context.details(context) =~ "Available"
+      end
+    end
+
+    test "streamed unavailable input never becomes a trustworthy small percentage" do
+      context = Context.position([], window: 200_000)
+
+      live =
+        Context.with_usage(context, %{
+          "input_tokens" => 0,
+          "output_tokens" => 5,
+          "usage_reported" => %{"input" => false}
+        })
+
+      refute live.measured?
+      assert live.fraction == nil
+    end
+
+    test "the planning cap explains early compaction without changing the real denominator" do
+      context =
+        Context.position([entry(:assistant, usage(input_tokens: 150_000, output_tokens: 1_000))],
+          window: 1_000_000,
+          planning_window: 200_000,
+          compact_at: 0.8
+        )
+
+      assert context.fraction == 0.151
+      assert Context.details(context) =~ "160.0k input tokens"
+      assert Context.details(context) =~ "200.0k planning window"
+      assert Context.details(context) =~ "1.0m"
+    end
+
     test "is zero for a session that has not asked the model anything yet" do
       assert %Context{tokens: 0, measured?: false} = Context.position([])
     end

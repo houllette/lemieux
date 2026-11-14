@@ -1607,8 +1607,8 @@ defmodule Lemieux.Conversation do
   # only says the word itself for the unmeasured case.
   defp position(%Context{compacted?: true, window: nil}), do: "context ?"
   defp position(%Context{compacted?: true, window: window}), do: "context ?/#{tokens(window)}"
-  defp position(%Context{measured?: false, window: nil}), do: "context 0"
-  defp position(%Context{measured?: false, window: window}), do: "context 0/#{tokens(window)}"
+  defp position(%Context{measured?: false, window: nil}), do: "context ?"
+  defp position(%Context{measured?: false, window: window}), do: "context ?/#{tokens(window)}"
   defp position(%Context{} = context), do: "context " <> Context.describe(context)
 
   @doc "Formats the current context and cost for an interactive front end."
