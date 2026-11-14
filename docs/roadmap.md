@@ -1,7 +1,7 @@
 # Roadmap
 
-Lemieux is at 1.1.1; changes awaiting the next release are listed under
-[Unreleased](../CHANGELOG.md#unreleased). This page lists the work that is
+Lemieux is at 1.1.2; its workflow and terminal fixes are listed in the
+[changelog](../CHANGELOG.md). This page lists the work that is
 still open, so that a contributor can see where help is useful and what
 "done" means for each item.
 It is not a promise of dates. Before you begin a large change, start a

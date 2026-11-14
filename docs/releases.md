@@ -92,6 +92,31 @@ cache/context measurements stay unknown. Native local-pointer support remains
 pending upstream terminal-runtime support; opted-in cell transports own pointer
 restoration and disconnect cleanup.
 
+## Upgrading from 1.1.1 to 1.1.2
+
+This patch requires restarting `lmx` on every platform. The sandbox's
+activation state, retained TUI callbacks and new snippet, cost and responsive
+display modules have no supported live migration. No hot update or live
+downgrade is declared.
+
+Save unsent drafts, stage the signed update with `lmx update` or `/update`,
+then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
+installer-managed TUI restart preserves its exact session. Personal config
+version 1, extension API 1 and the supported 1.x contracts remain compatible.
+Consumed request and spending accounting stays attached to the resumed session.
+
+After the restart, `/permissions full-auto` disables the CLI's implicit
+sandbox for subsequent operations; changing back restores it. An explicit
+`--sandbox`, configured sandbox or host-required boundary keeps its authority.
+The mode-change message reports the effective sandbox state. Commands already
+started keep their original policy.
+
+Existing flat plans restore through the same version-1 document format.
+Optional subtasks add `parent_id` and weighted progress; see
+[Session plans](workflows.md#session-plans). Code snippets now copy their source
+without frame decorations, and turn summaries show measured average throughput
+and compact cost labels. Accounting and budget precision are unchanged.
+
 ## Install a release
 
 On macOS and Linux:

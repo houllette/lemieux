@@ -7,7 +7,15 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 1.1.2 — 2026-11-14
+
+Restart `lmx` after updating from 1.1.1 on every platform, then resume with
+`lmx -c` or `lmx --resume SESSION`. Sandbox and TUI state, retained callbacks
+and new TUI modules require fresh initialization; no hot update or live
+downgrade is declared. Supported 1.x contracts, personal config version 1,
+extension API 1 and existing flat plan documents remain compatible.
+
+### Fixes and workflow improvements
 
 - Remove unused internal turn/research accessors, obsolete per-request row
   formatting and a redundant recovery binding after a Reacher audit. Refresh
@@ -29,6 +37,9 @@ API.
   move measured request throughput into one weighted turn-average summary,
   and animate the pale-yellow running Tasks badge even between turns.
   Accounting and budget precision stay unchanged. (#172, #173, #174)
+- Refresh committed example locks to the published Lemieux 1.1.1 package.
+  The library, release host and bundled extension retain their dependency
+  versions after resolving the current upstream constraint bounds.
 
 ## 1.1.1 — 2026-11-13
 
