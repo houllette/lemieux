@@ -1,9 +1,9 @@
 # Roadmap
 
-Lemieux is at 1.1.1. This patch fixes terminal input, context and cost reporting,
-and provider recovery in the supported 1.x runtime. This page lists the work
-that is still open, so that a
-contributor can see where help is useful and what "done" means for each item.
+Lemieux is at 1.1.1; changes awaiting the next release are listed under
+[Unreleased](../CHANGELOG.md#unreleased). This page lists the work that is
+still open, so that a contributor can see where help is useful and what
+"done" means for each item.
 It is not a promise of dates. Before you begin a large change, start a
 conversation in
 [Discussions → Ideas](https://github.com/houllette/lemieux/discussions/categories/ideas),
@@ -32,7 +32,7 @@ These broader feature issues remain open after the 1.1 implementation work:
 | [Tool programs #46](https://github.com/houllette/lemieux/issues/46) | A bounded execution capability and its policy/effect qualification. |
 | [Learning #47](https://github.com/houllette/lemieux/issues/47) and [qualification #79](https://github.com/houllette/lemieux/issues/79) | The complete research objective remains open. #79 gates claims of improved outcomes or economics; the stable runtime does not depend on such a claim. |
 | [Typed assets #80](https://github.com/houllette/lemieux/issues/80) and [qualified exports #81](https://github.com/houllette/lemieux/issues/81) | Further qualification and productization of experimental assets and packages. |
-| [Transcript spacing #145](https://github.com/houllette/lemieux/issues/145), [todo subtasks #146](https://github.com/houllette/lemieux/issues/146), [snippet copying #147](https://github.com/houllette/lemieux/issues/147) and [pointer feedback #148](https://github.com/houllette/lemieux/issues/148) | These UI proposals remain open; question-panel copying and deferred questions do not implement them. |
+| [Pointer feedback #148](https://github.com/houllette/lemieux/issues/148) | The host transport has pointer intents for clickable regions. Local terminal pointer control still needs upstream capability detection, runtime-owned set/restore and manual terminal qualification; see [transport capability](terminal-ui.md#hover-pointers-and-transport-capability). |
 
 Windows remains experimental. Platform signing, Linux arm64 binaries and the
 research acceptance items below retain their own completion criteria.

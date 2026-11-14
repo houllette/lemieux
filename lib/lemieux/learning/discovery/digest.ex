@@ -25,16 +25,6 @@ defmodule Lemieux.Learning.Discovery.Digest do
   alias Lemieux.Learning.Discovery.Policy
   alias Lemieux.Reflection
 
-  @mechanisms ~w(
-    wrote_outside_allowlist model_output_limit answered_without_tools edit_mismatch tool_error_loop
-    denied_tool command_timeout output_limit repeated_tool_wave
-    no_verification_after_change unknown none
-  )
-
-  @doc "The closed mechanism vocabulary, in priority order."
-  @spec mechanisms() :: [String.t()]
-  def mechanisms, do: @mechanisms
-
   @doc """
   Computes one evaluation's signature from its recorded facts and, when
   available, its decoded transcript entries (JSON maps as retained by the

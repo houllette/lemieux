@@ -9,6 +9,10 @@ API.
 
 ## Unreleased
 
+- Remove unused internal turn/research accessors, obsolete per-request row
+  formatting and a redundant recovery binding after a Reacher audit. Refresh
+  the guides for current permissions, snippet copying and turn summaries,
+  and remove completed UI work from the roadmap.
 - Keep transcript group gaps consistent when an answer already ends in a blank
   row; retain intentional source whitespace. (#145)
 - Add optional todo subtasks with stable identities, derived parent statuses,

@@ -57,8 +57,11 @@ On macOS, the Alt shortcuts need the Option key to send Alt; see
 [Your terminal](getting-started.md#your-terminal).
 
 For longer tasks the model keeps a plan with its `todo` tool, shown above the
-input while a task is open. A turn that took a while ends with a desktop
-notification (Alt-N turns them off for the sitting).
+input while a task is open. Optional subtasks are indented beneath their
+parent; progress gives each top-level task equal weight and divides a
+parent's share among its children. See
+[Session plans](workflows.md#session-plans). A turn that took a while ends
+with a desktop notification (Alt-N turns them off for the sitting).
 
 ## Seeing what happened
 
@@ -66,28 +69,41 @@ Edits, writes and patches are drawn as numbered unified diffs. Tool output is
 shortened in the transcript; **Ctrl-O** pages through the full output of
 recent calls. `/diff` shows the working tree's `git diff`, and `/context`
 draws what is filling the context window. Each turn ends with a summary line:
-how long it took, its requests, tokens and tool calls. A turn cut short by
-the model's output limit says so at its end; send `continue` and the model
-picks up where it stopped.
+how long it took, its requests, tokens and tool calls, and measured output
+tokens per second when available. The turn average divides measured output
+tokens by their combined request durations; it resets each turn. Costs show
+the session total rounded up to cents, with `~` marking estimates and
+`unknown` marking unavailable prices. A turn cut short by the model's output
+limit says so at its end; send `continue` and the model picks up where it
+stopped.
 
 ## Approvals and permissions
 
-Nothing asks unless you ask for it:
+`lmx` starts in `auto`: workspace edits run automatically, and commands do
+so only in a working OS sandbox. Without one, commands ask for approval.
+MCP, web and Elixir-evaluation tools ask either way. Choose a stricter mode
+at startup with:
 
 ```sh
 lmx --permission-mode ask            # ask before edits and commands
 lmx --permission-mode accept_edits   # edits run, commands ask
 ```
 
-or `"permissions": {"mode": "ask"}` in `~/.lmx/config.json`. Once permissions
-are on, Shift-Tab steps through the modes during a session; with them off it
-reminds you how to turn them on. A call that needs you appears on an approval
+or `"permissions": {"mode": "ask"}` in `~/.lmx/config.json`. Shift-Tab steps
+through the modes during a session; with permissions off it reminds you how
+to turn them on. A call that needs you appears on an approval
 card: `y` runs it, `n` with a reason refuses it (the model reads the reason),
 and `a` runs it and remembers the card's suggested rule, such as
 `Bash(npm test:*)`, for this repository. `/permissions` lists and edits the
-remembered rules. Add `--sandbox` to run commands in an operating-system
-sandbox: they write only to the working directory, temporary directories and
-tool caches, reach no network beyond loopback, and cannot see credential
+remembered rules. `/permissions full-auto` also disables the implicit sandbox
+for subsequent operations; changing back restores it. Commands already
+started keep their original policy. An explicit `--sandbox` or configured
+sandbox remains active across permission changes.
+
+Use `--sandbox` to require the operating-system sandbox even when another
+permission mode would omit it. Sandboxed commands write only to the working
+directory, temporary directories and tool caches, reach no network beyond
+loopback, and cannot see credential
 locations such as `~/.ssh`, `~/.aws` and `~/.git-credentials`, which the
 file tools refuse too. `lmx help permissions` and `lmx help sandbox` have the
 details.

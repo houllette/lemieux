@@ -124,7 +124,6 @@ defmodule Lemieux.TUI.FeedbackRegressionsTest do
   end
 
   test "request rows disappear and turn throughput uses only measured request durations" do
-    assert Turn.request_rows(%{"output_tokens" => 100, "request_duration_us" => 1_000_000}) == []
     state = tui() |> Turn.start_processing()
 
     state =
@@ -141,6 +140,7 @@ defmodule Lemieux.TUI.FeedbackRegressionsTest do
          %{type: :assistant, usage: %{"output_tokens" => 100, "request_duration_us" => 3_000_000}}}
       )
 
+    refute Enum.any?(state.lines, &match?({:summary, _}, &1))
     finished = Turn.finish_processing(state)
     assert {:summary, summary} = hd(finished.lines)
     assert summary =~ "avg 50.0 tok/s"

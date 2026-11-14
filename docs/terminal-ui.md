@@ -40,7 +40,8 @@ of the actual pointer. [Kitty's protocol](https://sw.kovidgoyal.net/kitty/pointe
 supports queries and a pointer stack;
 [Ghostty documents differing shape support](https://ghostty.org/docs/vt/osc/22).
 No terminal-name guess or raw write from a render callback substitutes for that
-contract. Snippet hover awaits an actual clickable snippet region (#147).
+contract. Snippet copy regions emit the same host pointer intents as links;
+a link inside a snippet retains precedence over copying the block.
 
 ### Runtime
 
@@ -742,6 +743,12 @@ it; dragging past the top or bottom edge scrolls and keeps selecting, and
 releasing copies the whole range, including the part no longer visible. It is
 linear, not rectangular. The one edit that clears it is a tool result
 replacing the rows its own progress line held.
+
+Clicking and releasing a code snippet copies its source, including an
+unfinished block. Frames and fence labels stay out of the clipboard; tabs,
+blank lines and source spacing are retained, and visual wraps are rejoined.
+Dragging selects a partial range instead. A link inside the snippet opens
+the link rather than copying the block.
 
 Clicking a styled Markdown link, an http(s) URL or an existing local file path
 in the transcript opens it:

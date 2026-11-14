@@ -12,9 +12,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Transcript
 
     @tick_ms 250
-    @doc false
-    @spec tick_ms() :: pos_integer()
-    def tick_ms, do: @tick_ms
 
     @doc false
     @spec start_processing(TUI.t()) :: TUI.t()
@@ -187,10 +184,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def rate({tokens, duration}),
       do: :erlang.float_to_binary(tokens * 1_000_000 / duration, decimals: 1) <> " tok/s"
-
-    @doc false
-    @spec request_rows(map() | nil) :: [{:summary, String.t()}]
-    def request_rows(_usage), do: []
 
     defp turn_rate(usage) do
       case rate(Map.get(usage, :rate, {0, 0})) do
