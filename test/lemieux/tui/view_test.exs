@@ -88,8 +88,8 @@ defmodule Lemieux.TUI.ViewTest do
       |> info({:usage, %{"input_tokens" => 10, "output_tokens" => 2, "cost_usd" => nil}})
       |> info({:route_observation, observation})
 
-    assert status_row(state) =~ "estimated cost: $0.0011273"
-    assert String.starts_with?(status_row(state), " estimated cost:")
+    assert status_row(state) =~ "cost: ~$0.01"
+    assert status_row(state) =~ "cost: ~$0.01"
     refute Enum.any?(state.lines, &(inspect(&1) =~ "API equivalent estimate"))
   end
 
@@ -343,7 +343,7 @@ defmodule Lemieux.TUI.ViewTest do
 
       assert rendered =~ "context ?"
       assert rendered =~ "session 0 tok"
-      assert rendered =~ "$0.0000"
+      assert rendered =~ "cost: $0.00"
       refute rendered =~ "cache 0/0"
     end
 
@@ -615,16 +615,16 @@ defmodule Lemieux.TUI.ViewTest do
       rendered = screen(state)
 
       assert rendered =~ "── 12s · 2 reqs · 1.5k tokens this turn"
-      assert rendered =~ "1.2k in · cache read >=100, write"
-      assert rendered =~ ">=20 · 220 out"
-      assert unwrapped(state) =~ "2 tool calls ─"
-      assert rendered =~ "$0.0130"
+      assert unwrapped(state) =~ "1.2k in cache read >=100, write"
+      assert unwrapped(state) =~ ">=20 · 220 out"
+      assert unwrapped(state) =~ "2 tool calls"
+      assert rendered =~ "cost: $0.02"
       assert rendered =~ "── 12s"
       refute state.conversation.busy?
       assert is_nil(state.turn.started_at)
     end
 
-    test "shows per-request throughput and the duration-weighted session rate on resume" do
+    test "omits request throughput decorations and retains the weighted session rate on resume" do
       payload = %{"content" => [%{"type" => "text", "text" => "Done"}]}
       first = %{"output_tokens" => 100, "request_duration_us" => 1_000_000}
       second = %{"output_tokens" => 100, "request_duration_us" => 3_000_000}
@@ -640,8 +640,8 @@ defmodule Lemieux.TUI.ViewTest do
 
       assert {:ok, resumed} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
       assert resumed.session_view.throughput == {200, 4_000_000}
-      assert {:summary, "Request · 100.0 tok/s"} in resumed.lines
-      assert {:summary, "Request · 33.3 tok/s"} in resumed.lines
+      refute {:summary, "Request · 100.0 tok/s"} in resumed.lines
+      refute {:summary, "Request · 33.3 tok/s"} in resumed.lines
       refute {:summary, "Request · 0.0 tok/s"} in resumed.lines
       assert screen(sized(resumed)) =~ "50.0 tok/s"
 
@@ -650,7 +650,7 @@ defmodule Lemieux.TUI.ViewTest do
         |> info({:usage, first})
         |> info({:entry, hd(entries)})
 
-      assert {:summary, "Request · 100.0 tok/s"} in live.lines
+      refute {:summary, "Request · 100.0 tok/s"} in live.lines
       assert screen(sized(live)) =~ "100.0 tok/s"
     end
 
@@ -752,7 +752,7 @@ defmodule Lemieux.TUI.ViewTest do
 
       assert {:summary, summary} = Elixir.List.first(state.lines)
 
-      assert summary == "0s · 0 reqs · tokens unmeasured · 0 tool calls"
+      assert summary == "0s · 0 reqs · tokens unmeasured · 0 tool calls · cost: $0.00"
 
       refute summary =~ "$0.0000"
     end

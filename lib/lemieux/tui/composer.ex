@@ -75,6 +75,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @spec blink(TUI.t(), reference()) :: {:noreply, TUI.t()}
     def blink(%TUI{terminal: %{cursor_blink: %{tick: tick}}} = state, tick) do
       Process.send_after(self(), {:cursor_blink, tick}, @cursor_blink_ms)
+
+      state =
+        update_in(
+          state.terminal.cursor_blink,
+          &Map.update(&1, :frame, 1, fn frame -> frame + 1 end)
+        )
+
       {:noreply, update_in(state.terminal.cursor_blink.visible?, &(!&1))}
     end
 

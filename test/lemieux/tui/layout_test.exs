@@ -85,6 +85,7 @@ defmodule Lemieux.TUI.LayoutTest do
     test "is the input height the screen reserves" do
       assert Layout.input_height() == 3
       assert Layout.input_height("abcd abcd abcd", 10) == 5
+      assert Layout.input_height(String.duplicate("中", 7), 9) == 5
       assert Layout.input_height("one\ntwo\nthree\nfour\nfive\nsix", 80) == 7
     end
   end

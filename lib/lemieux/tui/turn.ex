@@ -5,6 +5,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     alias Lemieux.TUI
     alias Lemieux.TUI.Activity
+    alias Lemieux.TUI.Cost
     alias Lemieux.TUI.Followup
     alias Lemieux.TUI.Processing
     alias Lemieux.TUI.Screen
@@ -55,8 +56,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
           Activity.duration(elapsed),
           plural(usage.requests, "req"),
           processing_tokens(usage),
-          plural(usage.tool_calls, "tool call")
+          plural(usage.tool_calls, "tool call"),
+          turn_rate(usage),
+          Cost.format(state.conversation)
         ]
+        |> Enum.reject(&is_nil/1)
         |> Enum.join(" · ")
 
       state
@@ -117,6 +121,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         requests: 0,
         tool_calls: 0,
         cost_usd: nil,
+        rate: {0, 0},
         measured?: false
       }
     end
@@ -150,6 +155,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         requests: current.requests + 1,
         tool_calls: current.tool_calls,
         cost_usd: add_cost(current, cost),
+        rate: Map.get(current, :rate, {0, 0}),
         measured?: true
       }
     end
@@ -184,10 +190,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     @doc false
     @spec request_rows(map() | nil) :: [{:summary, String.t()}]
-    def request_rows(usage) do
-      case usage |> rate_sample() |> rate() do
-        nil -> []
-        measured -> [{:summary, "Request · #{measured}"}]
+    def request_rows(_usage), do: []
+
+    defp turn_rate(usage) do
+      case rate(Map.get(usage, :rate, {0, 0})) do
+        nil -> nil
+        measured -> "avg " <> measured
       end
     end
 

@@ -419,12 +419,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # Frames are computed on ticks, outside Screen.render/3.
     @doc false
     @spec start_habs(TUI.t()) :: TUI.t()
-    def start_habs(state), do: start_animation(state, StartupAnimation.default())
+    def start_habs(state), do: start_animation(state, StartupAnimation.default(), false)
 
     defp start_startup(%TUI{status: %{startup_animation: false}} = state), do: state
     defp start_startup(state), do: start_animation(state, state.status.startup_animation)
 
-    defp start_animation(state, settings) do
+    defp start_animation(state, settings, boot? \\ true) do
       token = make_ref()
       Process.send_after(self(), {:habs_tick, token}, @habs_frame_ms)
       animation = Art.new(settings["piece"], settings["options"], settings["parts"])
@@ -434,6 +434,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         state
         | overlay: %{
             frame: 0,
+            boot?: boot?,
             tick: token,
             animation: animation,
             art: art,

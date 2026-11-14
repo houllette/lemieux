@@ -16,6 +16,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.CLI.Tasks
     alias Lemieux.Conversation
     alias Lemieux.TUI
+    alias Lemieux.TUI.Activity
 
     alias Lemieux.TUI.{
       Choices,
@@ -246,19 +247,33 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @spec title(state :: TUI.t(), width :: non_neg_integer()) :: [
             ExRatatui.Widgets.Block.Title.t()
           ]
-    def title(state, width) when width >= 28 do
+    def title(state, width) when width >= 20 do
       running = Enum.count(cache(state).rows, &active?/1)
       count = if running > 0, do: " #{running}", else: ""
 
       shortcut =
-        if Keys.action(state.status.keys, %{code: "up", modifiers: ["shift"]}) == :tasks,
-          do: " · Shift+Up",
+        if width >= 40 and
+             Keys.action(state.status.keys, %{code: "up", modifiers: ["shift"]}) == :tasks,
+           do: " · Shift+Up",
+           else: ""
+
+      spinner =
+        if running > 0,
+          do: Activity.spinner(Map.get(state.terminal.cursor_blink, :frame, 0)) <> " ",
           else: ""
 
-      label = " Tasks#{count}#{shortcut} "
+      label = " #{spinner}Tasks#{count}#{shortcut} "
+      style = if running > 0, do: %Style{fg: :light_yellow}, else: %Style{}
 
       if decision(state, :open) == :allow,
-        do: [%ExRatatui.Widgets.Block.Title{content: label, alignment: :right, position: :top}],
+        do: [
+          %ExRatatui.Widgets.Block.Title{
+            content: label,
+            alignment: :right,
+            position: :top,
+            style: style
+          }
+        ],
         else: []
     end
 

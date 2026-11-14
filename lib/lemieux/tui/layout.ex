@@ -117,39 +117,55 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
         value
         |> String.split("\n")
         |> Enum.reduce_while(0, fn line, count ->
-          count = count + wrapped_rows(String.graphemes(line), columns, 0)
+          count = count + wrapped_rows(line, columns)
           if count >= @max_input_rows, do: {:halt, count}, else: {:cont, count}
         end)
 
       min(rows, @max_input_rows) + 2
     end
 
-    defp wrapped_rows(_chars, _columns, count) when count >= @max_input_rows, do: count
-    defp wrapped_rows([], _columns, 0), do: 1
-    defp wrapped_rows([], _columns, count), do: count
+    # The native word wrapper retains whitespace and punctuation chunks.
+    # Dropping a boundary space underestimated the editor by one row and
+    # scrolled its first line out of an otherwise correctly growing box.
+    defp wrapped_rows(line, columns) do
+      chunks = Regex.scan(~r/[\p{L}\p{N}\p{M}_]+(?:['’][\p{L}\p{N}\p{M}_]+)*|\s+|./u, line)
+      chunk_rows(List.flatten(chunks), columns, 0, 0)
+    end
 
-    # In columns, as the textarea draws: a draft of CJK measured in graphemes
-    # was given half the rows it wraps to. See `Lemieux.TUI.Width`.
-    defp wrapped_rows(chars, columns, count) do
-      case Enum.split(chars, Width.fit(chars, columns)) do
-        {_row, []} ->
-          count + 1
+    defp chunk_rows(_chunks, _columns, count, _used) when count >= @max_input_rows, do: count
+    defp chunk_rows([], _columns, count, used), do: max(count + if(used > 0, do: 1, else: 0), 1)
 
-        {row, [next | _after] = unbroken} ->
-          break_at =
-            (row ++ [next])
-            |> Enum.with_index()
-            |> Enum.reduce(nil, fn
-              {" ", index}, _previous -> index
-              {_char, _index}, previous -> previous
-            end)
+    defp chunk_rows([chunk | rest] = chunks, columns, count, used) do
+      width =
+        chunk
+        |> String.graphemes()
+        |> Enum.reduce(used, fn
+          "\t", position -> position + 4 - rem(position, 4)
+          grapheme, position -> position + Width.of(grapheme)
+        end)
 
-          rest =
-            if is_nil(break_at),
-              do: unbroken,
-              else: chars |> Enum.drop(break_at + 1) |> Enum.drop_while(&(&1 == " "))
+      cond do
+        width <= columns ->
+          chunk_rows(rest, columns, count, width)
 
-          wrapped_rows(rest, columns, count + 1)
+        used > 0 ->
+          chunk_rows(chunks, columns, count + 1, 0)
+
+        true ->
+          chunk_rows(rest, columns, count + glyph_rows(String.graphemes(chunk), columns, 0, 0), 0)
+      end
+    end
+
+    defp glyph_rows([], _columns, count, used), do: count + if(used > 0, do: 1, else: 0)
+    defp glyph_rows(_chars, _columns, count, _used) when count >= @max_input_rows, do: count
+
+    defp glyph_rows([char | rest] = chars, columns, count, used) do
+      width = if char == "\t", do: 4 - rem(used, 4), else: Width.of(char)
+
+      cond do
+        used > 0 and used + width > columns -> glyph_rows(chars, columns, count + 1, 0)
+        width > columns -> glyph_rows(rest, columns, count + 1, 0)
+        true -> glyph_rows(rest, columns, count, used + width)
       end
     end
 

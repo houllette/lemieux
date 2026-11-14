@@ -77,7 +77,10 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     alias ExRatatui.Widgets.Paragraph
     alias Lemieux.Conversation
     alias Lemieux.TUI.Activity
+    alias Lemieux.TUI.Cost
+    alias Lemieux.TUI.Responsive
     alias Lemieux.TUI.Theme
+    alias Lemieux.TUI.Width
 
     @typedoc """
     What the session is doing right now, and for how long.
@@ -156,6 +159,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
             requests: non_neg_integer(),
             request_cap: pos_integer() | nil,
             throughput: String.t() | nil,
+            scroll_frame: non_neg_integer(),
             mcp_connecting: [String.t()]
           }
 
@@ -186,6 +190,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
               requests: 0,
               request_cap: nil,
               throughput: nil,
+              scroll_frame: 0,
               mcp_connecting: []
 
     @doc """
@@ -289,11 +294,29 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       # could change: on a light terminal the status row was white on white
       # under `/theme light` too.
       paragraph = %Paragraph{
-        text: " " <> Enum.join(segments(status), " · "),
+        text: responsive_text(status, area.width),
         style: %Style{fg: plain(status.theme), modifiers: [:dim]}
       }
 
       [{paragraph, area}]
+    end
+
+    defp responsive_text(status, width) do
+      text = " " <> Enum.join(segments(status), " · ")
+
+      if Width.of(text) <= width do
+        text
+      else
+        fixed = if status.permission, do: permission(status) <> " · ", else: ""
+        rest = segments(status) |> Enum.reject(&(&1 == permission(status))) |> Enum.join(" · ")
+
+        fixed <>
+          Responsive.scroll(
+            rest,
+            max(width - Width.of(fixed), 0),
+            status.scroll_frame
+          )
+      end
     end
 
     defp plain(%{text: %{plain: colour}}), do: colour
@@ -381,7 +404,9 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     defp conversation_status(%__MODULE__{conversation: nil}), do: nil
 
     defp conversation_status(%__MODULE__{conversation: conversation}),
-      do: Conversation.status(conversation)
+      do:
+        Conversation.status(conversation.context) <>
+          " · " <> Cost.format(conversation)
 
     @doc """
     What the *screen* is doing, which is the only activity the shipped row says.
