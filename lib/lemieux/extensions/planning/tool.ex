@@ -30,7 +30,11 @@ defmodule Lemieux.Extensions.Planning.Tool do
     do:
       "Keep a plan for multi-step work, and finish its tasks before you end your turn " <>
         "unless the person asked you to stop sooner: a plan with open tasks says the work " <>
-        "is not done. Use `new` with tasks for unrelated work; do not carry completed tasks " <>
+        "is not done. Choose useful granularity from the work, with no fixed task count. " <>
+        "Treat the initial plan as provisional: after discovery, add, split, remove or " <>
+        "revise tasks to reflect concrete obligations you uncovered, rather than only " <>
+        "advancing the original statuses. Avoid trivial steps and needless plan churn. " <>
+        "Use `new` with tasks for unrelated work; do not carry completed tasks " <>
         "from a previous request into a fresh plan. Use `set` to continue or append to the same work. Send the whole list with action `set` whenever it " <>
         "changes — each task a title and a status (pending, in_progress, completed) — and " <>
         "keep the task you are working on in_progress. `list` shows the plan. Completed means " <>

@@ -9,6 +9,12 @@ defmodule Lemieux.Extensions.Planning do
   session's generic document seam before any successful tool result is returned.
   Hosts own cross-session work items and scheduling.
 
+  Plan shape is guidance, not a quota. No task count is preferred; discovery
+  may replace a provisional outline with concrete obligations using `set/2`,
+  retaining ids for renamed tasks. Optional subtasks are a separate feature.
+  The tool description asks for revision because a reducer cannot infer what
+  discovery revealed, or force a model to use what it learned.
+
   ## Writing a plan
 
   `set/2` replaces the whole list — titles and statuses, as the model sees the
