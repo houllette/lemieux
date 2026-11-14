@@ -60,6 +60,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     alias ExRatatui.Style
     alias ExRatatui.Text.Line
     alias ExRatatui.Text.Span
+    alias Lemieux.TUI.Width
 
     @typedoc """
     A cell of the transcript: `{depth, column}`, both zero-based.
@@ -181,8 +182,14 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
             &row_text(Enum.at(rows, &1), from_column(&1, first, from), to_column(&1, last, to))
           )
           |> Enum.reject(&is_nil/1)
-          |> Enum.map_join("\n", &String.trim_trailing/1)
+          |> Enum.reduce({"", nil}, &join_fragment/2)
+          |> elem(0)
       end
+    end
+
+    defp join_fragment({text, continuation?}, {out, previous}) do
+      separator = if previous in [nil, true], do: "", else: "\n"
+      {out <> separator <> text, continuation?}
     end
 
     @doc """
@@ -258,8 +265,20 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     defp row_text(nil, _from, _to), do: nil
 
+    defp row_text(%{copy: :decoration}, _from, _to), do: nil
+
+    defp row_text(%{copy: %{cells: cells, continuation?: continuation?}}, from, to) do
+      {parts, _column} =
+        Enum.map_reduce(cells, 0, fn cell, column ->
+          selected? = column + cell.width > from and (to == :end or column <= to)
+          {if(selected?, do: cell.source, else: ""), column + cell.width}
+        end)
+
+      {Enum.join(parts), continuation?}
+    end
+
     defp row_text(%Line{} = line, from, to) do
-      line |> plain() |> slice(from, to)
+      {line |> plain() |> slice(from, to) |> String.trim_trailing(), false}
     end
 
     defp slice(text, from, :end), do: String.slice(text, from..-1//1)
@@ -270,7 +289,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     defp restyle(%Line{spans: spans} = line, from, to, style) do
       {restyled, _column} =
         Enum.map_reduce(spans, 0, fn span, column ->
-          {split(span, column, from, to, style), column + String.length(span.content)}
+          {split(span, column, from, to, style), column + Width.of(span.content)}
         end)
 
       %{line | spans: List.flatten(restyled)}
@@ -282,8 +301,12 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     # about.
     defp split(%Span{content: content} = span, column, from, to, style) do
       length = String.length(content)
-      start = max(from - column, 0)
-      finish = if to == :end, do: length, else: min(to - column + 1, length)
+      start = cell_index(content, max(from - column, 0))
+
+      finish =
+        if to == :end,
+          do: length,
+          else: if(to < column, do: 0, else: min(cell_index(content, to - column) + 1, length))
 
       if start >= length or finish <= start do
         span
@@ -295,6 +318,16 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
         ]
         |> Enum.reject(&is_nil/1)
       end
+    end
+
+    defp cell_index(text, target) do
+      text
+      |> String.graphemes()
+      |> Enum.reduce_while({0, 0}, fn char, {index, column} ->
+        next = column + Width.of(char)
+        if next > target, do: {:halt, {index, next}}, else: {:cont, {index + 1, next}}
+      end)
+      |> elem(0)
     end
 
     defp piece(_span, "", _style), do: nil

@@ -13,6 +13,7 @@ defmodule Lemieux.TUI.BlocksTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.TUI.Blocks
+  alias Lemieux.TUI.RichText
   alias Lemieux.TUI.Theme
 
   @theme Theme.default()
@@ -58,9 +59,11 @@ defmodule Lemieux.TUI.BlocksTest do
       assert grown == {:model_code, "elixir", "x = a * b", nil}
     end
 
-    test "a tab in code is drawn as spaces because a span cannot measure one" do
+    test "code retains tabs for source copying; the renderer expands their cells" do
       [line | _rest] = stream("```\n\tindented")
-      assert {:model_code, nil, "    indented", nil} = line
+      assert {:model_code, nil, "\tindented", nil} = line
+      [rendered] = RichText.lines([line], 80)
+      assert Enum.map_join(rendered.spans, & &1.content) == "    indented"
     end
   end
 

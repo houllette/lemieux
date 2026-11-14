@@ -12,8 +12,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Links
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.QuestionPanel
+    alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Selection
+    alias Lemieux.TUI.Snippets
     alias Lemieux.TUI.TaskPanel
     alias Lemieux.TUI.Transcript
     alias Lemieux.TUI.Window
@@ -96,8 +98,15 @@ if Code.ensure_loaded?(ExRatatui.App) do
           state = put_in(state.terminal.link_press, nil)
 
           case target_at(state, event) do
-            {:link, ^target, _point} -> {:noreply, open_target(state, target)}
-            _elsewhere -> {:noreply, state}
+            {:link, ^target, _point} ->
+              {:noreply, open_target(state, target)}
+
+            {:snippet, ^target, _point} ->
+              {:snippet, _bounds, source} = target
+              {:noreply, copied(source, state)}
+
+            _elsewhere ->
+              {:noreply, state}
           end
 
         nil ->
@@ -115,6 +124,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp click(state, _event, {:link, target, point}),
       do: {:noreply, put_in(state.terminal.link_press, {target, point})}
+
+    defp click(state, _event, {:snippet, target, point}),
+      do: {:noreply, put_in(%{state | selection: nil}.terminal.link_press, {target, point})}
 
     defp click(state, event, nil) do
       if input_at?(state, event) do
@@ -159,8 +171,20 @@ if Code.ensure_loaded?(ExRatatui.App) do
         true ->
           case clicked_link(state, event) do
             {target, point} -> {:link, target, point}
-            nil -> nil
+            nil -> snippet_at(state, event)
           end
+      end
+    end
+
+    defp snippet_at(state, event) do
+      with point when not is_nil(point) <- cell(state, view(state), event),
+           target when not is_nil(target) <-
+             Snippets.at(state.lines, point, fn row ->
+               RichText.lines([row], Screen.columns(state), Screen.theme(state))
+             end) do
+        {:snippet, target, point}
+      else
+        _none -> nil
       end
     end
 
