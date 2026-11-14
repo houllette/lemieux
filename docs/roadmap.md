@@ -1,8 +1,8 @@
 # Roadmap
 
-Lemieux is at 1.1.0. This release adds account discovery/reporting, optional deferred questions,
-internal-error reporting and MCP setup improvements to the supported 1.x
-runtime. This page lists the work that is still open, so that a
+Lemieux is at 1.1.1. This patch fixes terminal input, context and cost reporting,
+and provider recovery in the supported 1.x runtime. This page lists the work
+that is still open, so that a
 contributor can see where help is useful and what "done" means for each item.
 It is not a promise of dates. Before you begin a large change, start a
 conversation in

@@ -333,7 +333,7 @@ guides and the API reference are on [HexDocs](https://hexdocs.pm/lemieux).
 
 ## Project status
 
-Lemieux is at 1.1.0, with supported 1.x contracts and one maintainer;
+Lemieux is at 1.1.1, with supported 1.x contracts and one maintainer;
 0.8 was its first public release.
 The contracts that [Support and compatibility](docs/support.md) lists as
 supported (sessions, tools, transcripts, resume and fork, extensions) have
