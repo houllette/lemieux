@@ -7,6 +7,48 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## 1.1.1 — 2026-11-13
+
+Restart `lmx` after updating from 1.1.0 on every platform, then resume with
+`lmx -c` or `lmx --resume SESSION`. Context/conversation and TUI state changed,
+and a new hover module has no supported live migration. The supported 1.x
+contracts, personal config version 1 and extension API 1 remain compatible.
+
+### Fixes
+
+- Complete submitted `@` file references at their actual opening boundary,
+  preserving punctuation and quoted paths while excluding emails and escaped
+  references. (#157)
+- Show unknown context utilization when the latest measurement is missing or
+  explicitly unreported. Explain the actual context window, planning cap,
+  compaction forecast and measurement freshness without reusing stale values.
+  (#158)
+- Preserve whether cache counters were reported. Label subscription/catalog
+  comparisons as API-equivalent estimates, retain unknown USD values, and use
+  OpenAI reference tariffs for Codex comparisons. These estimates do not prove
+  a cash charge, remaining quota or hosted cache hit rate. (#159)
+- Request provisional plans with task-driven granularity, and retain expanded
+  or renamed plans after substantive discovery. A new unrelated task still
+  starts its own plan. (#160)
+- Retry typed network-down and network-unreachable failures through the
+  existing backoff and budget policy, including interrupted streams. (#162)
+- Show a theme-aware blinking cursor in free-form, Other and note editors.
+  Arrow keys edit the focused answer; Tab changes questions and preserves
+  drafts. (#163)
+
+### Host integration and regression coverage
+
+- Share visible click-target hit testing with hover, exclude covered targets,
+  avoid redraws for motion alone, and send deduplicated pointer/restore intents
+  through opted-in cell-session transports. Native local-pointer support in
+  #148 remains open pending an upstream ExRatatui capability/lifecycle API.
+- Add offline coverage for delayed SSH-like MCP stderr, descriptor isolation,
+  reconnect cleanup and draft/cursor preservation. The bounded default stderr
+  capture first shipped in 1.1.0; no real SSH disconnect is claimed. (#161)
+- Refresh the hello and research example locks to the newly published
+  Lemieux 1.1.0 package. The library, release host and bundled extension retain
+  their existing dependency versions and upstream constraint bounds.
+
 ## 1.1.0 — 2026-11-13
 
 Restart `lmx` after updating from 1.0.0 on every platform, then resume with

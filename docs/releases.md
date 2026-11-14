@@ -74,6 +74,24 @@ update their dependency locks and start a fresh supervised runtime; see
 [embedding](embedding.md#1-add-the-dependency) and
 [support](support.md#upgrading-lemieux-and-extensions).
 
+## Upgrading from 1.1.0 to 1.1.1
+
+This patch requires restarting `lmx` on every platform. Context and cost
+reporting, retained conversation/TUI state and hover handling changed; no hot
+update or live downgrade is declared.
+
+Save unsent drafts, stage the signed update with `lmx update` or `/update`,
+then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
+installer-managed TUI restart preserves its exact session. Personal config
+version 1, extension API 1 and the supported 1.x contracts remain compatible;
+no config or transcript migration is required. Consumed request and spending
+accounting stays attached to the resumed session.
+
+Subscription cost labels now identify API-equivalent comparisons, and absent
+cache/context measurements stay unknown. Native local-pointer support remains
+pending upstream terminal-runtime support; opted-in cell transports own pointer
+restoration and disconnect cleanup.
+
 ## Install a release
 
 On macOS and Linux:
