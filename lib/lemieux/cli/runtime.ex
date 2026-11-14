@@ -386,7 +386,8 @@ defmodule Lemieux.CLI.Runtime do
     with :ok <- experience_boundary(options, opts),
          {:ok, resume} <- resolved_resume(store, options.resume),
          {:ok, permissions} <- permissions(options, opts),
-         {:ok, environment} <- environment(options, opts, store),
+         {:ok, environment} <-
+           environment(options, Keyword.put(opts, :permissions, permissions), store),
          recorded = recorded_config(store, resume),
          # Current host ceilings override history; omitted ceilings retain it.
          # Reapplying these after extensions prevents a profile relaxing a CLI cap.
@@ -1519,13 +1520,22 @@ defmodule Lemieux.CLI.Runtime do
         {:ok, local}
 
       :auto ->
-        case sandbox_environment(options, opts, store, local, []) do
+        case sandbox_environment(options, opts, store, local, implicit_activation(opts)) do
           {:ok, sandbox} -> {:ok, sandbox}
           {:error, _unavailable} -> {:ok, local}
         end
 
       settings ->
         sandbox_environment(options, opts, store, local, settings)
+    end
+  end
+
+  # Only the CLI's implicit sandbox follows its shared permission handle.
+  # An explicit sandbox or caller-supplied environment retains host authority.
+  defp implicit_activation(opts) do
+    case opts[:permissions] do
+      %Permissions.Handle{} = handle -> [active: fn -> Permissions.mode(handle) != :full_auto end]
+      _none -> []
     end
   end
 

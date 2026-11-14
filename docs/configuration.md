@@ -514,6 +514,12 @@ or, for every session:
 | `full_auto` | Everything except what a deny rule names |
 | `read_only` | Reading only; anything that changes things is refused unless a rule names it |
 
+Changing to `full-auto` with `/permissions full-auto` also disables the CLI's
+implicit sandbox for subsequent operations; changing back restores it. Commands
+already started keep their original execution policy. An explicit `--sandbox`,
+config-file sandbox, or host-supplied environment retains its own authority;
+the mode-change message says when the OS sandbox remains active.
+
 Claude Code's mode names (`default`, `acceptEdits`, `bypassPermissions`,
 `plan`) are accepted too. Rules use Claude Code's syntax (`Bash(npm test:*)`,
 `Edit(src/**)`, `Read`, `mcp__server__tool`), and deny always wins. On an

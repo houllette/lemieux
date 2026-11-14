@@ -344,8 +344,9 @@ defmodule Lemieux.CLI.Help do
     "allow", "deny" and "ask" take Claude Code-style rules: "Bash(npm test:*)",
     "Edit(src/**)", "Read", "mcp__server__tool". Deny always wins. "Always
     allow" answers are remembered per repository under ~/.lmx/permissions.
-    The OS sandbox denies access to ~/.lmx and known credential locations
-    regardless of permission mode, including full_auto. Edit protected config
+    An explicitly enabled OS sandbox denies access to ~/.lmx and known credential
+    locations even in full_auto. Switching to full-auto in-session disables the
+    implicit sandbox for subsequent operations. Edit explicitly protected config
     from your own terminal; see lmx help sandbox.
     In lmx run nobody can answer, so a call that would ask is refused
     ("non_interactive": "allow" changes that). In the terminal UI, Shift-Tab
