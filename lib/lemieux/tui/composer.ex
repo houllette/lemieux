@@ -267,7 +267,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       if state.tools.question_flow.other? or not is_nil(state.tools.question_flow.note_option),
         do: :ok = ExRatatui.textarea_insert_str(state.input, line_endings(content))
 
-      {:noreply, state}
+      {:noreply, reveal_cursor(state)}
     end
 
     def paste(

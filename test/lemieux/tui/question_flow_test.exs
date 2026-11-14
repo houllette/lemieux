@@ -65,6 +65,69 @@ defmodule Lemieux.TUI.QuestionFlowTest do
     end
   end
 
+  defp answer_cursor(state) do
+    {editor, area} =
+      Enum.find(TUI.render(state, @frame), fn
+        {%ExRatatui.Widgets.Textarea{block: %{title: title}}, _area} ->
+          title =~ "saves"
+
+        _other ->
+          false
+      end)
+
+    canvas = CellSession.new(@frame.width, @frame.height)
+
+    try do
+      :ok = CellSession.draw(canvas, [{editor, area}])
+
+      CellSession.take_cells(canvas).cells
+      |> Enum.filter(
+        &(&1.row == area.y + 1 and &1.col > area.x and &1.col < area.x + area.width - 1 and
+            (&1.bg != :reset or :reversed in &1.modifiers))
+      )
+    after
+      CellSession.close(canvas)
+    end
+  end
+
+  test "answer cursors paint the insertion cell in every theme, including after wrapping" do
+    payload = %{
+      batch()
+      | questions: [%{question_id: "why", question: "Why?", type: "text", options: []}]
+    }
+
+    for theme <- ["dark", "light", "mono"] do
+      state = tui(theme: theme) |> info({:question, payload})
+      assert [empty] = answer_cursor(state)
+      assert empty.symbol == " "
+
+      state = state |> type("abc") |> press("left")
+      assert [middle] = answer_cursor(state)
+      assert middle.symbol == "c"
+      assert middle.col == empty.col + 2
+
+      state = type(state, String.duplicate("word ", 50))
+      assert [_wrapped] = answer_cursor(state)
+      hidden = put_in(state.terminal.cursor_blink.visible?, false)
+      assert answer_cursor(hidden) == []
+      assert [_revealed] = answer_cursor(press(hidden, "home"))
+    end
+  end
+
+  test "Other and note editors paint a cursor and restore drafts across question tabs" do
+    state =
+      tui() |> info({:question, batch()}) |> press("down") |> press("down") |> press("enter")
+
+    assert [_empty] = answer_cursor(state)
+    state = type(state, "custom") |> press("tab") |> press("back_tab")
+    assert typed(state) == "custom"
+    assert [_restored] = answer_cursor(state)
+
+    # A note editor uses the same footer as a free-form answer.
+    note = tui() |> info({:question, batch()}) |> press("n")
+    assert [_note] = answer_cursor(note)
+  end
+
   test "long labels and descriptions wrap completely and remain scrollable" do
     label = "Choose the existing database with all its historical records preserved"
 
@@ -342,17 +405,17 @@ defmodule Lemieux.TUI.QuestionFlowTest do
                     %{"answers" => [%{"selected" => ["pg"]}, %{"selected" => ["west"]}]}}
   end
 
-  test "left and right arrows cycle questions and retain a typed Other draft" do
+  test "Tab cycles questions while arrows edit a typed Other draft" do
     state = tui(session: fake_session(snapshot("01SESSION"))) |> info({:question, batch()})
     state = state |> press("down") |> press("down") |> press("enter") |> type("Central")
-    state = press(state, "right")
+    state = press(state, "tab")
     assert state.tools.question_flow.index == 1
     state = state |> press("right") |> press("right")
     assert state.tools.question_flow.index == 0
     assert state.tools.question_flow.other?
     assert typed(state) == "Central"
     assert screen(state) =~ "Central"
-    state = press(state, "left")
+    state = press(state, "back_tab")
     assert state.tools.question_flow.review?
   end
 
