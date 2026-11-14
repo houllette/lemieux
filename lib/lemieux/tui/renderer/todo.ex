@@ -17,17 +17,29 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     def result(%{id: id}, %{payload: payload, output: output}, _theme) do
       case plan(payload, output) do
         {:ok, revision, tasks} ->
-          done = Enum.count(tasks, &(&1["status"] == "completed"))
+          roots = Enum.filter(tasks, &is_nil(&1["parent_id"]))
+          done = Enum.count(roots, &(&1["status"] == "completed"))
+
+          progress =
+            if length(roots) != length(tasks),
+              do: " · #{round(Planning.progress(tasks))}%",
+              else: ""
 
           heading =
             ToolText.heading(
               id,
               :todo,
               "Todo List:",
-              "revision #{revision} · #{done}/#{length(tasks)} complete"
+              "revision #{revision} · #{done}/#{length(roots)} complete#{progress}"
             )
 
-          rows = Enum.map(tasks, &{:todo_item, id, &1["status"], ToolText.one_line(&1["title"])})
+          rows =
+            Enum.map(
+              tasks,
+              &{:todo_item, id, &1["status"],
+               if(&1["parent_id"], do: "↳ ", else: "") <> ToolText.one_line(&1["title"])}
+            )
+
           rows = if rows == [], do: ToolText.detail(id, "No tasks"), else: rows
           {:replace, [heading | rows]}
 

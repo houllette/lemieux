@@ -47,6 +47,27 @@ completed tasks first; remove dependency references before deleting a
 prerequisite. A `set` keeps recorded dependencies that still hold and releases
 those the model reports past.
 
+Tasks may optionally include a `subtasks` list in `new` or `set`. Children use
+the same `title`, `status` and optional stable `id`; nesting is limited to one
+child level. Fine-grained `create` and `update` accept a root's `parent_id`.
+The existing 64-task bound includes both parents and children. Parents derive
+their status from live children: all complete means complete, some started or
+complete means in progress, and otherwise pending. Reopening a child reopens
+its parent and clears the parent's completion evidence. Deleting a parent also
+deletes its children. With no live children left, the parent is a flat task
+and retains its last reported status until updated.
+
+Progress gives every root task equal weight; each parent's share is divided
+equally among its live children. One completed child out of four is 25% of a
+single-parent plan. A completed flat task plus a half-complete parent is 75%.
+Parents and children are never counted twice. The panel and `/plan` indent
+children and retain individual statuses. Completion remains reported, never
+independently verified.
+
+Stored plan version 1 remains compatible: child tasks have an optional
+`parent_id`; older flat plans have no such field. Transcript restoration,
+resume and fork retain this additive hierarchy through the same document seam.
+
 `todo` calls share a wave with other tools and take turns only with each other.
 A host renders the plan from the session's `{:entry, entry}` events: an
 `:extension_state` entry whose payload namespace is `"lemieux.plan"` carries the
