@@ -48,6 +48,36 @@ defmodule Lemieux.SessionRetryTest do
 
   defp gateway_down, do: Scripted.http_error(503, reason: "gateway is restarting")
 
+  test "network restoration retries the original work before and after partial output", context do
+    for reason <- [:enetdown, :enetunreach, :ehostunreach], partial? <- [false, true] do
+      error =
+        ReqLLM.Error.API.Stream.exception(
+          reason: "Stream failed",
+          cause: %Finch.TransportError{reason: reason}
+        )
+
+      failed =
+        if partial?, do: [{:text_delta, "partial"}, {:error, error}], else: [{:error, error}]
+
+      {session, provider} = start_session(context, [failed, Scripted.complete("recovered")])
+      id = Session.id(session)
+      :ok = Session.prompt(session, "keep the original work")
+
+      assert_receive {:lemieux, ^id,
+                      {:provider_retry, %{attempt: 1, after_output: ^partial?, category: :server}}}
+
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      assert [first, second] = Scripted.requests(provider)
+
+      assert Enum.filter(first.entries, &(&1.type == :user)) ==
+               Enum.filter(second.entries, &(&1.type == :user))
+
+      refute Enum.any?(second.entries, &(&1.type == :assistant))
+      assert Session.snapshot(session).status == :idle
+      :ok = GenServer.stop(session)
+    end
+  end
+
   describe "retry admission and host accounting" do
     for status <- [429, 503] do
       @status status

@@ -113,7 +113,17 @@ defmodule Lemieux.Provider.ErrorTest do
   end
 
   test "recognizes a cause-less stream wrapper's inspected transport failure" do
-    for reason <- [:closed, :econnreset, :econnaborted, :epipe, :enetreset] do
+    for reason <- [
+          :closed,
+          :econnreset,
+          :econnaborted,
+          :epipe,
+          :enetreset,
+          :enetdown,
+          :enetunreach,
+          :ehostdown,
+          :ehostunreach
+        ] do
       transport = %Finch.TransportError{
         reason: reason,
         source: %Mint.TransportError{reason: reason}
@@ -129,6 +139,20 @@ defmodule Lemieux.Provider.ErrorTest do
         assert Error.transient?(error)
         assert Error.message(error) == error.reason
       end
+    end
+  end
+
+  test "local network outages remain typed transient failures" do
+    for reason <- [:enetdown, :enetunreach, :ehostdown, :ehostunreach],
+        cause <- [
+          reason,
+          %Mint.TransportError{reason: reason},
+          %Finch.TransportError{reason: reason}
+        ] do
+      error = StreamError.exception(reason: "Stream failed", cause: cause)
+      assert Error.category(error) == :server
+      assert Error.transient?(error)
+      assert error.cause == cause
     end
   end
 
