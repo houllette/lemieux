@@ -284,8 +284,8 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     Where the session stands, and before it the screen's own work when there is
     any. `Lemieux.Conversation.status/1` says why the context position leads:
     a bare ratio behind three labelled numbers read as the window to nobody.
-    An illustrative cost estimate leads while present so its label remains
-    visible on narrower terminals.
+    Costs keep compact measured, estimated and unknown labels. On narrow
+    terminals, overflow scrolls behind the stationary permission mode.
     """
     @spec render(status :: t(), area :: Rect.t()) :: [{term(), Rect.t()}]
     def render(%__MODULE__{} = status, %Rect{} = area) do

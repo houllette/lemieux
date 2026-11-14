@@ -414,6 +414,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             turn: turn(),
             overlay:
               %{
+                optional(:boot?) => boolean(),
                 frame: non_neg_integer(),
                 tick: reference(),
                 frames: pos_integer(),

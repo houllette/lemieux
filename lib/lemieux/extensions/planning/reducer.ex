@@ -58,14 +58,26 @@ defmodule Lemieux.Extensions.Planning.Reducer do
 
   @set_statuses ~w(pending in_progress completed)
 
+  # At most 64 identities. A plain map keeps their membership transparent
+  # through reducer callbacks; MapSet's inlined OTP sets produced an opaque
+  # type mismatch across the recursive child boundary under Dialyzer.
   defp set_tasks(items, live, next_id) do
-    set_level(items, live, next_id, MapSet.new(), nil, 0)
+    set_level(items, live, next_id, %{}, nil, 0)
     |> case do
       {:ok, tasks, next, _used} -> {:ok, tasks, next}
       {:error, reason} -> {:error, reason}
     end
   end
 
+  @spec set_level(
+          items :: term(),
+          live :: [map()],
+          next :: pos_integer(),
+          used :: map(),
+          parent :: String.t() | nil,
+          depth :: non_neg_integer()
+        ) ::
+          {:ok, [map()], pos_integer(), map()} | {:error, atom()}
   defp set_level(items, live, next, used, parent, depth)
        when is_list(items) and length(items) <= 64 and depth <= 1 do
     by_id = Map.new(live, &{&1["id"], &1})
@@ -77,7 +89,7 @@ defmodule Lemieux.Extensions.Planning.Reducer do
         item = Map.put(item, "parent_id", parent_id)
 
         with {:ok, task, next} <- set_task(item, by_id, by_title, next, used),
-             used = MapSet.put(used, task["id"]),
+             used = Map.put(used, task["id"], true),
              {:ok, children, next, used} <-
                set_children(Map.get(item, "subtasks", []), live, next, used, task["id"], depth) do
           next_tasks = tasks ++ [Map.put(task, "parent_id", parent_id)] ++ children
@@ -99,6 +111,15 @@ defmodule Lemieux.Extensions.Planning.Reducer do
 
   defp continue_level(_tasks, _next, _used), do: {:halt, {:error, :plan_too_large}}
 
+  @spec set_children(
+          items :: term(),
+          live :: [map()],
+          next :: pos_integer(),
+          used :: map(),
+          parent :: String.t(),
+          depth :: non_neg_integer()
+        ) ::
+          {:ok, [map()], pos_integer(), map()} | {:error, atom()}
   defp set_children([], _live, next, used, _parent, _depth), do: {:ok, [], next, used}
 
   defp set_children(items, live, next, used, parent, depth),
@@ -117,7 +138,7 @@ defmodule Lemieux.Extensions.Planning.Reducer do
         {:error, :unknown_task}
 
       %{"id" => id} = task ->
-        if MapSet.member?(used, id),
+        if Map.has_key?(used, id),
           do: fresh(title, status, next),
           else: {:ok, restated(task, title, status), next}
 
