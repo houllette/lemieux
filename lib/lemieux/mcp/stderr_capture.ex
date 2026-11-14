@@ -14,6 +14,13 @@ defmodule Lemieux.MCP.StderrCapture do
   the capture and reader follow the client, including an untrappable kill.
   Host launchers retain ownership of their own stderr and can use this helper
   or their own diagnostic sink without changing the launcher result contract.
+
+  This includes an SSH command's later timeout and disconnect messages, not
+  just startup warnings: descriptor 2 remains the capture socket for the
+  child's lifetime. The default launcher first ships this in lmx 1.1.0
+  (#142/#144); older installed binaries must restart into that version.
+  Reconnecting creates a new capture and budget. A custom host launcher must
+  provide the same isolation itself; this helper cannot redirect its writer.
   """
   use GenServer
   require Logger
