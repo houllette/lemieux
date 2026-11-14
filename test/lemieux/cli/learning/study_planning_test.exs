@@ -53,6 +53,9 @@ defmodule Lemieux.CLI.Learning.StudyPlanningTest do
         ],
         stderr_to_stdout: true,
         env: [
+          # Mix aliases select :test only in their own VM. A child defaults to
+          # :dev without this, where a clean release checkout has no compiled app.
+          {"MIX_ENV", Atom.to_string(Mix.env())},
           {"PATH", bin <> ":" <> System.get_env("PATH")},
           {"LMX_CONFIG", "none"},
           {"ERL_FLAGS", "+S 2:2"}
