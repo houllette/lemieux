@@ -1,5 +1,5 @@
 defmodule Lemieux.CLI.PermissionSandboxTransitionTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   alias Lemieux.CLI.{Options, Runtime}
   alias Lemieux.Environment
   alias Lemieux.Environment.Sandbox
@@ -11,6 +11,20 @@ defmodule Lemieux.CLI.PermissionSandboxTransitionTest do
   test "the implicit sandbox follows full-auto and restores protection on the next operation", %{
     tmp_dir: dir
   } do
+    original = System.get_env("PATH")
+    on_exit(fn -> restore_path(original) end)
+    # Exercise both the real sandbox and the unavailable-sandbox branch on
+    # every platform, rather than leaving that branch to Linux CI alone.
+    for path <- [original, dir] do
+      restore_path(path)
+      assert_implicit_transition(dir)
+    end
+  end
+
+  defp restore_path(nil), do: System.delete_env("PATH")
+  defp restore_path(path), do: System.put_env("PATH", path)
+
+  defp assert_implicit_transition(dir) do
     protected = Path.join(dir, "protected")
     File.mkdir_p!(protected)
     File.write!(Path.join(protected, "fixture"), "fixture")
@@ -50,7 +64,7 @@ defmodule Lemieux.CLI.PermissionSandboxTransitionTest do
       assert Sandbox.sandboxed?(environment)
       assert Environment.read_file(environment, dir, "protected/fixture") == {:error, :eacces}
     else
-      assert Enum.any?(prepared.notices, &String.contains?(&1, "No OS sandbox"))
+      assert Enum.any?(prepared.harness.notices, &String.contains?(&1, "No OS sandbox"))
     end
   end
 
