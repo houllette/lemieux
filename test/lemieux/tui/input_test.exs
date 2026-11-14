@@ -1397,6 +1397,27 @@ defmodule Lemieux.TUI.InputTest do
       assert typed(state) == "explain @lib/turn.ex "
     end
 
+    test "opening punctuation uses the submitted reference boundaries", %{cwd: cwd} do
+      for opening <- ["(", "[", "{", "<", "'", "\"", "`"] do
+        prefix = "see " <> opening
+        state = tui(cwd: cwd) |> type(prefix <> "@lib/")
+        assert suggestions(state).items == ["session.ex", "turn.ex"]
+        completed = state |> press("tab") |> typed()
+        assert completed == prefix <> "@lib/session.ex "
+        assert [%Reference{path: "lib/session.ex"}] = Reference.parse(completed)
+      end
+    end
+
+    test "quoted paths retain opening punctuation and escaped references stay prose", %{cwd: cwd} do
+      File.write!(Path.join(cwd, "my notes.md"), "")
+      state = tui(cwd: cwd) |> type(~s(see [@"my no)) |> press("tab")
+      assert typed(state) == ~s(see [@"my notes.md" )
+
+      for text <- [~S(see \@lib/), "someone@lib/", "word@lib/"] do
+        assert suggestions(tui(cwd: cwd) |> type(text)) == nil
+      end
+    end
+
     test "quotes a name the prompt grammar could not read bare", %{cwd: cwd} do
       File.write!(Path.join(cwd, "last (final).md"), "")
 
