@@ -11,6 +11,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Flash
     alias Lemieux.TUI.Links
     alias Lemieux.TUI.Notices
+    alias Lemieux.TUI.QuestionPanel
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Selection
     alias Lemieux.TUI.TaskPanel
@@ -61,41 +62,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # selection with it, and a transcript you cannot copy an error message out
     # of is a bad trade however good the scrolling is.
     def mouse(%ExRatatui.Event.Mouse{kind: "down", button: "left"} = event, state) do
-      cond do
-        input_at?(state, event) ->
-          pane = Screen.panes(state).input
-
-          :ok =
-            Editor.place_cursor(
-              state.input,
-              pane.width - 2,
-              pane.height - 2,
-              event.x - pane.x - 1,
-              event.y - pane.y - 1
-            )
-
-          {:noreply, Composer.reveal_cursor(%{state | selection: nil})}
-
-        TaskPanel.badge_at?(state, event) ->
-          {:noreply, TaskPanel.open(state)}
-
-        scrollback_marker_at?(state, event) ->
-          {:noreply, %{state | scroll: 0, selection: nil}}
-
-        tab = Composer.tab_at(state, event) ->
-          {:ok, field, tab} = tab
-          {:noreply, %{Map.put(state, field, tab) | command_index: 0}}
-
-        # A link opens on release, whatever modifier the press reports, so a
-        # drag that starts on one still selects. Super+click once opened on
-        # the press, and never did: terminals report mouse modifiers in the
-        # button code, which has bits for Shift, Alt and Ctrl and none for
-        # Super, so no click arrives with it.
-        link = clicked_link(state, event) ->
-          {:noreply, put_in(state.terminal.link_press, link)}
-
-        true ->
-          {:noreply, begin_selection(state, event)}
+      if covered?(state, event) do
+        {:noreply, state}
+      else
+        click(state, event, target_at(state, event))
       end
     end
 
@@ -117,11 +87,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # Releasing copies. A terminal's own copy shortcut never reaches an application
     # that has taken the mouse, so a selection waiting to be told to copy never would
     # be. Silent on success, because the highlight is the receipt.
-    def mouse(%ExRatatui.Event.Mouse{kind: "up", button: "left"}, state) do
+    # No Super requirement: terminals can consume Cmd-click themselves and
+    # standard mouse reports do not have a Super bit. Keep plain release and
+    # drag semantics, and recheck visibility if a modal covered the press.
+    def mouse(%ExRatatui.Event.Mouse{kind: "up", button: "left"} = event, state) do
       case state.terminal.link_press do
         {target, _point} ->
-          {:noreply,
-           state |> put_in([Access.key!(:terminal), :link_press], nil) |> open_target(target)}
+          state = put_in(state.terminal.link_press, nil)
+
+          case target_at(state, event) do
+            {:link, ^target, _point} -> {:noreply, open_target(state, target)}
+            _elsewhere -> {:noreply, state}
+          end
 
         nil ->
           {:noreply, copy_selection(state)}
@@ -129,6 +106,82 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def mouse(_event, state), do: {:noreply, state}
+
+    defp click(state, _event, :tasks), do: {:noreply, TaskPanel.open(state)}
+    defp click(state, _event, :latest), do: {:noreply, %{state | scroll: 0, selection: nil}}
+
+    defp click(state, _event, {:tab, field, tab}),
+      do: {:noreply, %{Map.put(state, field, tab) | command_index: 0}}
+
+    defp click(state, _event, {:link, target, point}),
+      do: {:noreply, put_in(state.terminal.link_press, {target, point})}
+
+    defp click(state, event, nil) do
+      if input_at?(state, event) do
+        pane = Screen.panes(state).input
+
+        :ok =
+          Editor.place_cursor(
+            state.input,
+            pane.width - 2,
+            pane.height - 2,
+            event.x - pane.x - 1,
+            event.y - pane.y - 1
+          )
+
+        {:noreply, Composer.reveal_cursor(%{state | selection: nil})}
+      else
+        {:noreply, begin_selection(state, event)}
+      end
+    end
+
+    @doc "The enabled visible click action at a cell, shared with hover."
+    @spec target_at(TUI.t(), ExRatatui.Event.Mouse.t()) :: term()
+    def target_at(state, event) do
+      if covered?(state, event), do: nil, else: visible_target(state, event)
+    end
+
+    defp visible_target(state, event) do
+      cond do
+        input_at?(state, event) ->
+          nil
+
+        TaskPanel.badge_at?(state, event) ->
+          :tasks
+
+        scrollback_marker_at?(state, event) ->
+          :latest
+
+        tab = Composer.tab_at(state, event) ->
+          {:ok, field, tab} = tab
+          {:tab, field, tab}
+
+        true ->
+          case clicked_link(state, event) do
+            {target, point} -> {:link, target, point}
+            nil -> nil
+          end
+      end
+    end
+
+    defp covered?(%{modal: modal}, _event) when not is_nil(modal), do: true
+    defp covered?(%{overlay: overlay}, _event) when not is_nil(overlay), do: true
+
+    defp covered?(%{tools: %{question_flow: flow}} = state, event) when not is_nil(flow),
+      do: event.y >= QuestionPanel.area(flow, Screen.panes(state)).y
+
+    defp covered?(%{tools: %{mcp_flow: flow}}, _event) when not is_nil(flow), do: true
+
+    defp covered?(%{status: %{update: %{phase: phase}}}, _event)
+         when phase in [:apply, :restarting], do: true
+
+    defp covered?(state, event) do
+      Composer.tab_at(state, event) == nil and
+        Enum.any?(Composer.autocomplete(state, Screen.panes(state)), fn {_widget, area} ->
+          event.x >= area.x and event.x < area.x + area.width and
+            event.y >= area.y and event.y < area.y + area.height
+        end)
+    end
 
     # Clamped by `Window.rows/5`, because how far back the transcript goes depends
     # on how its lines wrap. Measured with the renderer the pane draws with: the
