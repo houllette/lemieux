@@ -20,7 +20,7 @@ the repository root unless they start with `cd dist/lmx`.
 On your trusted macOS or Linux machine, from the repository root:
 
 ```sh
-./scripts/release.sh 1.1.1 /Volumes/LMX-KEYS/lmx-release.key
+./scripts/release.sh 1.1.2 /Volumes/LMX-KEYS/lmx-release.key
 ```
 
 Pass the prepared stable version and the existing signing key. A leading `v`
@@ -97,7 +97,7 @@ Workflow waits default to four hours each; `--timeout SECONDS` accepts 60 throug
 86400. A failed workflow stops with its URL. To retry its failed jobs once:
 
 ```sh
-./scripts/release.sh 1.1.1 /Volumes/LMX-KEYS/lmx-release.key --retry-failed
+./scripts/release.sh 1.1.2 /Volumes/LMX-KEYS/lmx-release.key --retry-failed
 ```
 
 Human terminal/provider [qualification](#qualification) remains the maintainer's
