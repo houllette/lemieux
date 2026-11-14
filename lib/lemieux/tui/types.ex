@@ -45,6 +45,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             input: non_neg_integer(),
             cache_read: non_neg_integer(),
             cache_write: non_neg_integer(),
+            cache_reporting: map(),
             output: non_neg_integer(),
             tokens: non_neg_integer(),
             requests: non_neg_integer(),

@@ -11,6 +11,10 @@ defmodule Lemieux.Usage do
       counts, zero when the provider reported none.
     * `"cost_usd"` — the request cost as a number, or `nil` when pricing is
       unavailable. Unknown cost is never represented as zero.
+      `"cost_basis": "api_equivalent"` marks an illustrative subscription
+      comparison, not a cash charge; `"cost_reference"` identifies its tariff.
+    * `"cache_reporting"` — optional read/write availability facts. Missing
+      historical zero counts cannot establish that a provider reported zero.
     * `"model"` — the model specification used for the request.
 
   The full map remains attached to the assistant entry and is also emitted as
@@ -41,7 +45,23 @@ defmodule Lemieux.Usage do
     |> add_count(left, right, "cache_read_tokens")
     |> add_count(left, right, "cache_write_tokens")
     |> Map.put("cost_usd", add_cost(cost_usd(left), cost_usd(right)))
+    |> cost_basis(left, right)
   end
+
+  defp cost_basis(total, left, right) do
+    bases =
+      Enum.flat_map([left, right], &usage_bases/1)
+      |> Enum.uniq()
+
+    if "api_equivalent" in bases,
+      do:
+        Map.put(total, "cost_basis", if("metered" in bases, do: "mixed", else: "api_equivalent")),
+      else: total
+  end
+
+  defp usage_bases(%{"cost_basis" => "api_equivalent"}), do: ["api_equivalent"]
+  defp usage_bases(%{"cost_basis" => "mixed"}), do: ["api_equivalent", "metered"]
+  defp usage_bases(usage), do: if(cost_usd(usage) in [nil, 0, 0.0], do: [], else: ["metered"])
 
   @doc "Sums request usage values into one aggregate."
   @spec sum(usages :: Enumerable.t()) :: t()

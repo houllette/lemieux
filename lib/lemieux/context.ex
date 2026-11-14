@@ -119,6 +119,7 @@ defmodule Lemieux.Context do
           planning_window: pos_integer() | nil,
           compact_at: float() | nil,
           price_compaction?: boolean(),
+          cache_reporting: map(),
           fraction: float() | nil,
           current: %{
             input: non_neg_integer(),
@@ -162,6 +163,7 @@ defmodule Lemieux.Context do
             planning_window: nil,
             compact_at: nil,
             price_compaction?: false,
+            cache_reporting: %{},
             fraction: nil,
             current: %{input: 0, output: 0, cached: 0, cache_write: 0},
             spent: %{input: 0, output: 0, cached: 0, cache_write: 0, requests: 0},
@@ -182,7 +184,7 @@ defmodule Lemieux.Context do
   @spec position(entries :: [Entry.t()], opts :: keyword()) :: t()
   def position(entries, opts \\ []) do
     window = Keyword.get(opts, :window)
-    {current, measured?, compacted?} = current(entries)
+    {current, measured?, compacted?, reporting} = current(entries)
     tokens = token_total(current)
 
     %__MODULE__{
@@ -193,6 +195,7 @@ defmodule Lemieux.Context do
       planning_window: Keyword.get(opts, :planning_window),
       compact_at: Keyword.get(opts, :compact_at),
       price_compaction?: Keyword.get(opts, :price_compaction?, false),
+      cache_reporting: reporting,
       fraction: if(measured?, do: fraction(tokens, window)),
       current: current,
       spent: spent(entries),
@@ -235,6 +238,7 @@ defmodule Lemieux.Context do
     %{
       context
       | current: current,
+        cache_reporting: Map.get(usage, "cache_reporting", %{}),
         tokens: tokens,
         measured?: measured?,
         compacted?: false,
@@ -526,9 +530,14 @@ defmodule Lemieux.Context do
     |> Enum.reverse()
     |> Enum.find(&(&1.type == :compaction or &1.type == :assistant))
     |> case do
-      %Entry{type: :compaction} -> {empty_breakdown(), false, true}
-      %Entry{usage: usage} when is_map(usage) -> {breakdown(usage), measured_usage?(usage), false}
-      _otherwise -> {empty_breakdown(), false, false}
+      %Entry{type: :compaction} ->
+        {empty_breakdown(), false, true, %{}}
+
+      %Entry{usage: usage} when is_map(usage) ->
+        {breakdown(usage), measured_usage?(usage), false, Map.get(usage, "cache_reporting", %{})}
+
+      _otherwise ->
+        {empty_breakdown(), false, false, %{}}
     end
   end
 
@@ -679,7 +688,8 @@ defmodule Lemieux.Context do
          token_line("Uncached input", Map.get(spent, :input, 0)),
          token_line("Cache read", Map.get(spent, :cached, 0)),
          token_line("Cache write", Map.get(spent, :cache_write, 0)),
-         token_line("Model output", Map.get(spent, :output, 0))
+         token_line("Model output", Map.get(spent, :output, 0)),
+         "  Cache totals     sum reported counts only; unavailable reports are excluded"
        ] ++ delegated_lines(context))
     |> Enum.join("\n")
   end
@@ -717,12 +727,18 @@ defmodule Lemieux.Context do
       "Context window (last measured request)",
       "  Used             #{describe(context)}",
       token_line("Uncached input", current.input),
-      token_line("Cache read", current.cached),
-      token_line("Cache write", current.cache_write),
+      cache_line("Cache read", current.cached, context.cache_reporting["read"]),
+      cache_line("Cache write", current.cache_write, context.cache_reporting["write"]),
       token_line("Model output", current.output),
       "  Freshness        last provider usage; later messages and tool results are not yet measured"
     ] ++ available_line(context)
   end
+
+  defp cache_line(label, tokens, reported?) when tokens > 0 or reported? == true,
+    do: token_line(label, tokens)
+
+  defp cache_line(label, _tokens, _reported?),
+    do: "  #{String.pad_trailing(label, 17)}unavailable (not a measured zero)"
 
   defp planning_lines(context) do
     threshold =

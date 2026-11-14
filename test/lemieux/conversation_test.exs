@@ -1109,6 +1109,35 @@ defmodule Lemieux.ConversationTest do
   end
 
   describe "the context window" do
+    test "subscription comparisons remain labelled live, delegated and after restoration" do
+      usage = %{
+        "input_tokens" => 100_000,
+        "output_tokens" => 1_000,
+        "cache_read_tokens" => 90_000,
+        "cost_usd" => 0.01,
+        "cost_basis" => "api_equivalent",
+        "cost_reference" => "openai_codex:gpt-5.6"
+      }
+
+      {live, []} = Conversation.event(conversation(), {:usage, usage})
+      assert Conversation.cost(live) == "API-equivalent estimate: $0.0100"
+      assert Conversation.context_report(live) =~ "subscription fees and quota are separate"
+      assert Conversation.context_report(live) =~ "openai_codex:gpt-5.6"
+      {delegated, []} = Conversation.event(live, {:subagent, ["root", "child"], {:usage, usage}})
+      assert Conversation.cost(delegated) == "API-equivalent estimate: $0.0200"
+
+      restored =
+        Conversation.restore_usage(conversation(), [Entry.new(:assistant, %{}, usage: usage)])
+
+      assert restored.cost_bases == live.cost_bases
+
+      {unknown, []} = Conversation.event(conversation(), {:usage, %{usage | "cost_usd" => nil}})
+      assert Conversation.cost(unknown) == "API-equivalent estimate: unknown"
+      refute Conversation.cost(unknown) =~ "$0"
+      {mixed, []} = Conversation.event(live, {:usage, %{"cost_usd" => 0.02}})
+      assert Conversation.cost(mixed) == "cost + API-equivalent estimate: $0.0300"
+    end
+
     defp context(fields), do: struct!(%Context{measured?: true}, fields)
 
     test "is reported by /context whenever it is asked for" do

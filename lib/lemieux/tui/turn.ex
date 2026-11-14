@@ -111,6 +111,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         input: 0,
         cache_read: 0,
         cache_write: 0,
+        cache_reporting: %{"read" => true, "write" => true},
         output: 0,
         tokens: 0,
         requests: 0,
@@ -140,6 +141,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
         input: current.input + input,
         cache_read: current.cache_read + cached,
         cache_write: current.cache_write + cache_write,
+        cache_reporting: %{
+          "read" => cache_known?(current, usage, "read", cached),
+          "write" => cache_known?(current, usage, "write", cache_write)
+        },
         output: current.output + output,
         tokens: current.tokens + tokens,
         requests: current.requests + 1,
@@ -208,9 +213,19 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp processing_tokens(usage) do
       "#{compact_number(usage.tokens)} tokens this turn " <>
         "(#{compact_number(usage.input)} in · " <>
-        "#{compact_number(usage.cache_read)}/#{compact_number(usage.cache_write)} cache · " <>
+        "cache read #{cache_total(usage.cache_read, usage.cache_reporting["read"])}, " <>
+        "write #{cache_total(usage.cache_write, usage.cache_reporting["write"])} · " <>
         "#{compact_number(usage.output)} out)"
     end
+
+    defp cache_known?(current, usage, key, count),
+      do:
+        current.cache_reporting[key] and
+          (count > 0 or get_in(usage, ["cache_reporting", key]) == true)
+
+    defp cache_total(tokens, true), do: compact_number(tokens)
+    defp cache_total(0, false), do: "unavailable"
+    defp cache_total(tokens, false), do: ">=" <> compact_number(tokens)
 
     defp plural(1, noun), do: "1 #{noun}"
     defp plural(amount, noun), do: "#{amount} #{noun}s"
