@@ -78,10 +78,6 @@ defmodule Lemieux.Reflection.HostEvidence do
   @typedoc "The bounded, correlated projection handed to a reflection request."
   @type projection :: %{required(String.t()) => term()}
 
-  @doc "The projection for a session whose host supplied no gateway evidence."
-  @spec not_supplied() :: projection()
-  def not_supplied, do: @not_supplied
-
   @doc """
   Projects host-supplied gateway evidence against the session's own entries.
 

@@ -360,6 +360,10 @@ reads as history.
   text as the transcript scrolls or streams, and is copied when you release
   (the status line shows how many characters). Dragging past the top or
   bottom edge scrolls and keeps selecting. A click or Esc clears it.
+- **Click a code snippet** to copy the whole source block on release, even
+  while it is still streaming. Frames and fence labels are omitted; source
+  whitespace is retained and visual wraps are rejoined. Drag to copy part
+  of a block. A link inside the snippet keeps its click-to-open action.
 - **Click a link** to open it. An http(s) address opens in the browser. A
   local file that is text opens in a text editor; a file whose type can
   launch or run code (`.app`, `.command`, `.sh`, `.exe`, `.bat`, `.ps1`,

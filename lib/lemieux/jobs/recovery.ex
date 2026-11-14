@@ -114,7 +114,7 @@ defmodule Lemieux.Jobs.Recovery do
       |> Enum.filter(&(&1.value["effect"]["session_id"] == session_id))
       |> Enum.sort_by(& &1.value["started_at"])
 
-    {entries, appended} =
+    {_entries, appended} =
       Enum.reduce(records, {entries, []}, fn record, {entries, appended} ->
         specs = missing_entries(record.value, entries) ++ reconciliation_note(record, entries)
 
@@ -132,7 +132,6 @@ defmodule Lemieux.Jobs.Recovery do
         end)
       end)
 
-    _entries = entries
     Store.append(store, session_id, appended)
   end
 

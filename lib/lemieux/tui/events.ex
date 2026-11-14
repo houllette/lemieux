@@ -560,15 +560,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # the answer.
     defp present_event(
            state,
-           {:entry, %{type: :assistant, payload: %{"partial" => true}} = entry},
+           {:entry, %{type: :assistant, payload: %{"partial" => true}}},
            effects
          ) do
-      rows = [
-        {:interrupted, "interrupted · this partial answer was kept, and is not sent back"}
-        | Turn.request_rows(Map.get(entry, :usage))
-      ]
-
-      {Transcript.append_rows(state, rows), effects}
+      {Transcript.say(
+         state,
+         :interrupted,
+         "interrupted · this partial answer was kept, and is not sent back"
+       ), effects}
     end
 
     defp present_event(state, _event, effects), do: {state, effects}

@@ -220,7 +220,10 @@ run automatically only inside an available OS sandbox. Without one, commands
 ask for approval. MCP, web and Elixir-evaluation tools ask either way;
 unattended calls that would ask are denied. The startup banner reports the
 actual mode and sandbox. `--permission-mode full_auto` explicitly bypasses
-approval prompts; deny rules still apply.
+approval prompts and the implicit sandbox; deny rules still apply.
+`/permissions full-auto` makes the same change during a session, from the
+next operation. An explicitly required sandbox remains active; see
+[permissions](docs/configuration.md#permissions).
 
 Commands inherit your environment, less variables whose names contain `KEY`,
 `TOKEN`, `SECRET`, `PASSWORD` or `PASSWD` (by name only: a password inside
