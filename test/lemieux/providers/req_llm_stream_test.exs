@@ -235,6 +235,61 @@ defmodule Lemieux.Providers.ReqLLMStreamTest do
   # OpenAI routes a cache hit by `prompt_cache_key`; without one, a benchmark
   # of Codex sessions read 7.7–11% of its input from cache (#34).
   describe "OpenAI prompt cache key" do
+    test "consecutive Codex requests preserve the prefix and report cache-adjusted comparisons" do
+      owner = self()
+
+      request =
+        Request.new("openai_codex:gpt-5.6",
+          system: "Stable instructions.",
+          tools: [FixtureTool],
+          entries: [Entry.new(:user, %{"text" => "Inspect this."})],
+          context: %{agent_id: "CACHE-SESSION"}
+        )
+
+      body = fn cached ->
+        sse([
+          %{
+            "type" => "response.completed",
+            "response" => %{
+              "id" => "r",
+              "output" => [],
+              "usage" => %{
+                "input_tokens" => 10_000,
+                "output_tokens" => 10,
+                "input_tokens_details" => %{"cached_tokens" => cached}
+              }
+            }
+          }
+        ])
+      end
+
+      assert :ok = Provider.run(codex(owner, body.(0)), request, &send(owner, &1))
+      assert_receive {:wire, first}
+      assert_receive {:usage, cold}
+
+      next = %{
+        request
+        | entries:
+            request.entries ++
+              [
+                Entry.new(:assistant, %{"text" => "Findings."}),
+                Entry.new(:user, %{"text" => "Continue."})
+              ]
+      }
+
+      assert :ok = Provider.run(codex(owner, body.(9_000)), next, &send(owner, &1))
+      assert_receive {:wire, second}
+      assert_receive {:usage, warm}
+      assert first["prompt_cache_key"] == second["prompt_cache_key"]
+      assert first["instructions"] == second["instructions"]
+      assert first["tools"] == second["tools"]
+      assert Enum.take(second["input"], length(first["input"])) == first["input"]
+      assert warm["cache_read_tokens"] == 9_000
+      assert warm["cost_basis"] == "api_equivalent"
+      assert is_number(warm["cost_usd"]), inspect(warm)
+      assert warm["cost_usd"] < cold["cost_usd"]
+    end
+
     test "a session's requests carry one stable key, and another session's another" do
       owner = self()
       first = session_request("01SESSIONA")

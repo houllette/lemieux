@@ -212,7 +212,15 @@ defmodule Lemieux.Session.Compacting do
 
   defp price_due?(_state, _request, _tokens), do: false
 
-  def context(state), do: Context.position(Core.entries(state), window: Window.known(state))
+  def context(state) do
+    Context.position(Core.entries(state),
+      window: Window.known(state),
+      planning_window: Window.planning(state),
+      compact_at: if(state.compaction.auto_compaction?, do: state.compaction.compact_at),
+      price_compaction?:
+        state.compaction.auto_compaction? and map_size(state.compaction.price_tiers) > 0
+    )
+  end
 
   # Returns the state with a summarising task running, or `nil` when there is
   # nothing worth cutting — which lets `continue/1` fall through to the turn

@@ -18,6 +18,32 @@ a terminal](#testing-it-without-a-terminal) covers how to check those changes.
 
 ## What it is
 
+### Hover pointers and transport capability
+
+A host using ExRatatui's four-tuple `:cell_session` transport can opt in with
+`hover_pointer: true`. Its intent writer receives
+`{:mouse_pointer, :pointer}` when the visible click action is enabled and
+`{:mouse_pointer, :restore}` when leaving it, covering it, selecting text,
+returning to the latest transcript or stopping. The host applies these through
+its own surface API, preserving and restoring the prior pointer. It also owns
+cleanup on suspension and abrupt disconnection. Repeated motion over one
+target emits no duplicate intent and requests no frame. Links retain their
+existing release-to-open gesture; no Super mouse event is assumed.
+
+The installed local `lmx` does **not** yet change the operating system mouse
+pointer. ExRatatui 0.20 has no supported local mouse-pointer control API.
+Its text-cursor and title APIs do not supply one. Local, SSH, distributed,
+headless and unknown transports keep working without pointer escapes or probes.
+Completing issue #148 requires upstream capability detection and runtime-owned
+OSC 22 set/restore and suspension cleanup, followed by a manual terminal check
+of the actual pointer. [Kitty's protocol](https://sw.kovidgoyal.net/kitty/pointer-shapes/)
+supports queries and a pointer stack;
+[Ghostty documents differing shape support](https://ghostty.org/docs/vt/osc/22).
+No terminal-name guess or raw write from a render callback substitutes for that
+contract. Snippet hover awaits an actual clickable snippet region (#147).
+
+### Runtime
+
 The screen is built on [`ex_ratatui`](https://hexdocs.pm/ex_ratatui): Elixir
 bindings to [ratatui](https://ratatui.rs), the Rust terminal-UI library, over
 a Rustler NIF. `ex_ratatui` is not a line editor or a curses wrapper: it is

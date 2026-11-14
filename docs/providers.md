@@ -763,7 +763,7 @@ target the adapter sends directly — `anthropic:`, and Claude models on
 `anthropic_prompt_cache` with a rolling `anthropic_cache_messages: -1`
 breakpoint: the tools, the system prompt and the last message each carry
 `cache_control`, so every request reads the prefix the previous one wrote,
-at a tenth of the input price. Cache reads and writes appear in usage as
+when the provider admits and retains that prefix. Cache reads and writes appear in usage as
 `cache_read_tokens` and `cache_write_tokens`. Pass
 `anthropic_prompt_cache: false` in provider options or request params to turn
 it off. Routed requests are left as the route shapes them, and no other
@@ -779,7 +779,25 @@ the session and across a resume, and its own for each subagent. Pass your own
 none. A transport route that speaks OpenAI's wire for another provider is not
 sent one.
 
+`/context` and the turn summary distinguish reported cache counts from
+unavailable reporting. A canonical zero synthesized by ReqLLM does not prove
+zero hits; positive counts and retained native reporting details establish
+availability. Cache totals sum reported counts, and caching changes the price
+and latency of input, not how much context it occupies. Offline wire fixtures
+check stable Codex prefixes, session keys, overrides and cache-adjusted
+accounting. They do not measure a hosted provider's hit rate or retention.
+
 ## Cost estimates
+
+Direct Codex, Ollama Cloud and Z.AI coding-plan usage is labelled as an
+**API-equivalent estimate**, with its catalog reference in `/context`.
+Codex uses the exact same model ID in the OpenAI API catalog when it has a
+USD tariff; no nearby-model substitution is made. Missing tariffs stay
+unknown, and Z.AI credit rates are not converted to dollars. A mixed total
+explicitly includes API equivalents. These figures exclude subscription fees
+and do not describe remaining quota or a per-token cash charge. Existing USD
+run budgets can still bound the illustrative comparison; `/usage` is the
+separate account-level report.
 
 The adapter's cost estimate (`Lemieux.Provider.estimate_cost/2`), which a
 session's `:max_cost_usd` gate uses, is a realistic upper estimate rather than

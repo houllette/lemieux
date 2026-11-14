@@ -31,9 +31,17 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
             panes :: map(),
             editor :: term(),
             accent :: Theme.colour(),
-            theme :: Theme.t()
+            theme :: Theme.t(),
+            cursor_style :: Style.t()
           ) :: [{term(), Rect.t()}]
-    def render(flow, panes, editor, accent, theme \\ Theme.default()) do
+    def render(
+          flow,
+          panes,
+          editor,
+          accent,
+          theme \\ Theme.default(),
+          cursor_style \\ %Style{modifiers: [:reversed]}
+        ) do
       bottom = panes.input.y + panes.input.height
       inner_width = max(panes.input.width - 4, 1)
       visual = visual(flow)
@@ -66,7 +74,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
           [
             {tabs, tab_area},
             {%Paragraph{text: lines, scroll: {views.body.scroll, 0}}, body},
-            {footer(flow, editor), input_area}
+            {footer(flow, editor, cursor_style), input_area}
           ]
 
       if side? and visual do
@@ -323,15 +331,15 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       |> Enum.max(fn -> length(diagram_lines(question.diagram)) end)
     end
 
-    defp footer(%{note_option: :question}, editor),
-      do: editor_footer(editor, " Note for this question · Enter saves · Esc returns ")
+    defp footer(%{note_option: :question}, editor, cursor),
+      do: editor_footer(editor, " Note for this question · Enter saves · Esc returns ", cursor)
 
-    defp footer(%{note_option: id} = flow, editor) when is_binary(id) do
+    defp footer(%{note_option: id} = flow, editor, cursor) when is_binary(id) do
       option = Enum.find(QuestionFlow.current(flow).options, &(&1.id == id))
-      editor_footer(editor, " Note for #{option.label} · Enter saves · Esc returns ")
+      editor_footer(editor, " Note for #{option.label} · Enter saves · Esc returns ", cursor)
     end
 
-    defp footer(%{other?: true} = flow, editor) do
+    defp footer(%{other?: true} = flow, editor, cursor) do
       title =
         case QuestionFlow.current(flow).type do
           "number" -> " Number · Enter saves "
@@ -339,20 +347,21 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
           _choice -> " Other answer · Enter saves "
         end
 
-      editor_footer(editor, title)
+      editor_footer(editor, title, cursor)
     end
 
-    defp footer(flow, _editor),
+    defp footer(flow, _editor, _cursor),
       do: %Paragraph{
         text: footer_text(flow),
         block: %Block{title: " Answer ", borders: [:all], border_type: :rounded}
       }
 
-    defp editor_footer(editor, title),
+    defp editor_footer(editor, title, cursor),
       do: %Textarea{
         state: editor,
         wrap_mode: :word_or_glyph,
-        block: %Block{title: title, borders: [:all], border_type: :rounded}
+        cursor_style: cursor,
+        block: %Block{title: title <> "· Tab questions ", borders: [:all], border_type: :rounded}
       }
 
     defp tab_labels(flow) do

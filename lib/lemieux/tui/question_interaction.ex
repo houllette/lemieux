@@ -4,6 +4,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @moduledoc "Handles question and questionnaire keyboard input for a TUI state."
 
     alias Lemieux.Session
+    alias Lemieux.TUI.Composer
     alias Lemieux.TUI.Editor
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.QuestionFlow
@@ -14,6 +15,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @doc false
     @spec key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
     def key(%ExRatatui.Event.Key{code: code, modifiers: modifiers} = event, state, ctx) do
+      state = Composer.reveal_cursor(state)
+
       cond do
         code in ["c", "C"] and "ctrl" in modifiers and "shift" in modifiers ->
           QuestionSelection.keyboard_copy(state)
@@ -29,6 +32,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     @doc false
     @spec question_key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
+    # While an answer owns the editor, arrows move its insertion point. Tab
+    # still switches questions and stashes the draft; arrows used to do that
+    # too, making ordinary in-place answer editing impossible.
+    defp question_key(
+           %ExRatatui.Event.Key{code: code} = event,
+           %{tools: %{question_flow: %{other?: other?, note_option: note}}} = state,
+           ctx
+         )
+         when code in ["left", "right"] and (other? or not is_nil(note)),
+         do: ctx.edit.(event, state)
+
     defp question_key(%ExRatatui.Event.Key{code: code}, state, _ctx)
          when code in ["page_up", "page_down"] do
       by = if code == "page_up", do: -3, else: 3
@@ -37,9 +51,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp question_key(
-           %ExRatatui.Event.Key{code: code},
+           %ExRatatui.Event.Key{code: code} = event,
            %{tools: %{question_flow: %{note_option: nil}}} = state,
-           _ctx
+           ctx
          )
          when code in ["up", "down"] do
       by = if code == "up", do: -1, else: 1
@@ -49,7 +63,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> QuestionFlow.stash_editor(ExRatatui.textarea_get_value(state.input))
 
       if QuestionFlow.current(flow) && QuestionFlow.current(flow).type in ~w(text number) do
-        {:noreply, state}
+        ctx.edit.(event, state)
       else
         {:noreply, question_update(state, QuestionFlow.move(%{flow | other?: false}, by))}
       end

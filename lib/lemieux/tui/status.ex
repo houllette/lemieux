@@ -348,18 +348,32 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     @spec compaction_warning(status :: t()) :: String.t() | nil
     def compaction_warning(%__MODULE__{
           compact_at: at,
-          conversation: %{context: %{measured?: true, fraction: fraction}}
+          conversation: %{context: %{measured?: true} = context}
         })
-        when is_number(at) and is_number(fraction) and fraction >= at,
-        do: "auto-compact due on next request"
+        when is_number(at) do
+      # Compaction may plan against a cap smaller than the displayed model
+      # window. Comparing its threshold to the display fraction hid warnings
+      # on large-window models until long after the trigger (#158).
+      fraction =
+        case context.planning_window do
+          window when is_integer(window) and window > 0 -> context.tokens / window
+          _unknown -> context.fraction
+        end
 
-    def compaction_warning(%__MODULE__{
-          compact_at: at,
-          conversation: %{context: %{measured?: true, fraction: fraction}}
-        })
-        when is_number(at) and is_number(fraction) and fraction >= at - 0.1 do
-      remaining = Float.round((at - fraction) * 100, 1)
-      "auto-compact in #{remaining}pp of context"
+      cond do
+        not is_number(fraction) ->
+          nil
+
+        fraction >= at ->
+          "auto-compact due on next request"
+
+        fraction >= at - 0.1 ->
+          remaining = Float.round((at - fraction) * 100, 1)
+          "auto-compact in #{remaining}pp of planning window"
+
+        true ->
+          nil
+      end
     end
 
     def compaction_warning(_status), do: nil

@@ -102,7 +102,15 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # The theme as well as the accent: what a person answered is drawn from
     # the theme's slots, which a pale page re-picks (`Lemieux.TUI.QuestionPanel`).
     defp question_panel(flow, panes, state),
-      do: QuestionPanel.render(flow, panes, state.input, accent(state), theme(state))
+      do:
+        QuestionPanel.render(
+          flow,
+          panes,
+          state.input,
+          accent(state),
+          theme(state),
+          cursor_style(state)
+        )
 
     # What this terminal can show, applied to the finished frame so it reaches
     # every colour on it — the theme's, the syntax highlighter's, `/color`'s,

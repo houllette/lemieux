@@ -341,6 +341,45 @@ defmodule Lemieux.Extensions.PlanningTest do
 
     assert description =~ "finish its tasks before you end your turn"
     assert description =~ "a plan with open tasks says the work is not done"
+    assert description =~ "provisional"
+    assert description =~ "discovery"
+    assert description =~ "no fixed task count"
+  end
+
+  test "discovery can replace a provisional outline with persisted, projected obligations", ctx do
+    initial =
+      for title <- ["Discover", "Implement", "Verify"],
+          do: %{"title" => title, "status" => "pending"}
+
+    assert {:ok, _} =
+             Planning.Tool.run(%{"action" => "new", "tasks" => initial}, %{session: ctx.session})
+
+    revised = [
+      %{"id" => "t1", "title" => "Discover", "status" => "completed"},
+      %{"id" => "t2", "title" => "Fix the transport", "status" => "in_progress"},
+      %{"title" => "Preserve delayed diagnostics", "status" => "pending"},
+      %{"title" => "Exercise reconnect cleanup", "status" => "pending"},
+      %{"id" => "t3", "title" => "Verify", "status" => "pending"}
+    ]
+
+    assert {:ok, %Result{structured_content: %{"revision" => 2, "plan" => plan}}} =
+             Planning.Tool.run(%{"action" => "set", "tasks" => revised}, %{session: ctx.session})
+
+    assert length(Planning.tasks(plan)) == 5
+    assert Enum.at(Planning.tasks(plan), 1)["id"] == "t2"
+
+    id = Session.id(ctx.session)
+    :ok = Session.prompt(ctx.session, "continue")
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    [request] = Scripted.requests(ctx.provider)
+    projection = List.last(request.entries).payload["text"]
+    assert projection =~ "Plan revision 2"
+    assert projection =~ "Exercise reconnect cleanup"
+    refute projection =~ "[pending] Implement"
+    assert {:ok, entries} = Lemieux.Store.read(ctx.store, id)
+
+    assert {:ok, %{revision: 2, value: ^plan}} =
+             Document.read(Enum.reverse(entries), Planning.namespace())
   end
 
   test "document validation rejects oversized and non JSON state without killing session", ctx do

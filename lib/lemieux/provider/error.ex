@@ -53,9 +53,21 @@ defmodule Lemieux.Provider.Error do
   # sentence worth matching.
   @zai_providers ~w(zai zai_coder zai_coding_plan)
 
-  # A transport that dropped the connection mid-answer. Not a refusal: a refusal
-  # arrives with a status and a body.
-  @dropped_transport_reasons [:closed, :econnreset, :econnaborted, :epipe, :enetreset]
+  # A dropped connection or a temporarily unavailable local network. Treating
+  # network-down/unreachable as :other ended the turn immediately (#162), so
+  # restoring connectivity never reached the existing bounded retry machinery.
+  # Keep account/refusal failures and unknown transport causes outside this list.
+  @dropped_transport_reasons [
+    :closed,
+    :econnreset,
+    :econnaborted,
+    :epipe,
+    :enetreset,
+    :enetdown,
+    :enetunreach,
+    :ehostdown,
+    :ehostunreach
+  ]
 
   # The finish reasons `req_llm` gives a stream that ended without its terminal
   # event. An `{:unanswered, model, finish}` with one of these and nothing in it

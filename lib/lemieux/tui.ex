@@ -146,6 +146,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Effects
     alias Lemieux.TUI.Events
     alias Lemieux.TUI.Flash
+    alias Lemieux.TUI.Hover
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.Lifecycle
     alias Lemieux.TUI.MCPInteraction
@@ -378,6 +379,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               height: non_neg_integer(),
               cursor_blink: %{visible?: boolean(), tick: reference() | nil},
               link_press: {String.t(), {non_neg_integer(), non_neg_integer()}} | nil,
+              hover: %{enabled?: boolean(), shape: :pointer | :restore, event: term()},
               feedback: %{text: String.t(), token: reference()} | nil,
               notices: Lemieux.TUI.Notices.t(),
               row_cache: %{width: pos_integer(), theme: Theme.t(), rows: map()} | nil,
@@ -696,9 +698,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @impl ExRatatui.App
     def handle_event(event, %{status: %{update: %{phase: phase}}} = state)
         when phase in [:apply, :restarting] and not is_struct(event, ExRatatui.Event.Resize),
-        do: {:noreply, Updates.interact(state, event)}
+        do: Hover.transition({:noreply, Updates.interact(state, event)}, event)
 
-    def handle_event(event, state), do: route_event(event, Updates.interact(state, event))
+    def handle_event(event, state),
+      do: Hover.transition(route_event(event, Updates.interact(state, event)), event)
 
     defp route_event(event, state)
 
@@ -863,106 +866,108 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # handled, and the startup task's reply is recognised by its reference
     # before a later clause could mistake it for another task's.
     @impl ExRatatui.App
-    def handle_info(message, state)
+    def handle_info(message, state), do: Hover.transition(route_info(message, state))
 
-    def handle_info({:scroll_flush, token}, state), do: Pointer.scroll_flush(state, token)
+    defp route_info(message, state)
 
-    def handle_info(message, %{terminal: %{scroll_pending: %{}}} = state),
+    defp route_info({:scroll_flush, token}, state), do: Pointer.scroll_flush(state, token)
+
+    defp route_info(message, %{terminal: %{scroll_pending: %{}}} = state),
       do: handle_info(message, Pointer.flush_scroll(state))
 
-    def handle_info(
-          {ref, {:ok, details, ready_opts}},
-          %__MODULE__{resume: %{initial_task: %Task{ref: ref}}} = state
-        ),
-        do: Lifecycle.started(state, ref, details, ready_opts)
+    defp route_info(
+           {ref, {:ok, details, ready_opts}},
+           %__MODULE__{resume: %{initial_task: %Task{ref: ref}}} = state
+         ),
+         do: Lifecycle.started(state, ref, details, ready_opts)
 
-    def handle_info(
-          {ref, {:error, reason}},
-          %__MODULE__{resume: %{initial_task: %Task{ref: ref}}} = state
-        ),
-        do: Lifecycle.start_failed(state, ref, reason)
+    defp route_info(
+           {ref, {:error, reason}},
+           %__MODULE__{resume: %{initial_task: %Task{ref: ref}}} = state
+         ),
+         do: Lifecycle.start_failed(state, ref, reason)
 
-    def handle_info(
-          {:DOWN, ref, :process, _pid, reason},
-          %__MODULE__{resume: %{initial_task: %Task{ref: ref}}} = state
-        ),
-        do: {:noreply, Lifecycle.startup_failed(state, reason)}
+    defp route_info(
+           {:DOWN, ref, :process, _pid, reason},
+           %__MODULE__{resume: %{initial_task: %Task{ref: ref}}} = state
+         ),
+         do: {:noreply, Lifecycle.startup_failed(state, reason)}
 
-    def handle_info(
-          {:DOWN, ref, :process, _pid, reason},
-          %__MODULE__{resume: %{monitor: ref}} = state
-        ),
-        do: {:noreply, Lifecycle.session_down(state, reason)}
+    defp route_info(
+           {:DOWN, ref, :process, _pid, reason},
+           %__MODULE__{resume: %{monitor: ref}} = state
+         ),
+         do: {:noreply, Lifecycle.session_down(state, reason)}
 
-    def handle_info(
-          {ref, result},
-          %__MODULE__{references: %{skill_load: %{task: %Task{ref: ref}}}} = state
-        ),
-        do: {:noreply, SkillLoading.answer(state, result)}
+    defp route_info(
+           {ref, result},
+           %__MODULE__{references: %{skill_load: %{task: %Task{ref: ref}}}} = state
+         ),
+         do: {:noreply, SkillLoading.answer(state, result)}
 
-    def handle_info(
-          {:DOWN, ref, :process, _pid, _reason},
-          %__MODULE__{references: %{skill_load: %{task: %Task{ref: ref}}}} = state
-        ),
-        do: {:noreply, SkillLoading.failed(state)}
+    defp route_info(
+           {:DOWN, ref, :process, _pid, _reason},
+           %__MODULE__{references: %{skill_load: %{task: %Task{ref: ref}}}} = state
+         ),
+         do: {:noreply, SkillLoading.failed(state)}
 
     # Replies from the tasks the screen sends off so it never waits.
-    def handle_info(message, state)
-        when is_tuple(message) and elem(message, 0) in @replies,
-        do: {:noreply, Replies.handle(message, state)}
+    defp route_info(message, state)
+         when is_tuple(message) and elem(message, 0) in @replies,
+         do: {:noreply, Replies.handle(message, state)}
 
-    def handle_info({:tasks_result, session, token, kind, result}, state),
+    defp route_info({:tasks_result, session, token, kind, result}, state),
       do: {:noreply, TaskPanel.answer(state, session, token, kind, result)}
 
-    def handle_info({:tasks_tick, session, token}, state),
+    defp route_info({:tasks_tick, session, token}, state),
       do: {:noreply, TaskPanel.tick(state, session, token)}
 
-    def handle_info({:tools_panel_result, session, token, result}, state),
+    defp route_info({:tools_panel_result, session, token, result}, state),
       do: {:noreply, ToolsPanel.answer(state, session, token, result)}
 
-    def handle_info(:repaint_done, state), do: {:noreply, put_in(state.terminal.repaint, 0)}
+    defp route_info(:repaint_done, state), do: {:noreply, put_in(state.terminal.repaint, 0)}
 
     # The last opening question was answered with something staged, or a
     # session started before the screen left a `:prompt` to send; see
     # `Lemieux.TUI.History.answered/2`.
-    def handle_info(:continue_queued, state), do: Submission.continue_queued(state)
+    defp route_info(:continue_queued, state), do: Submission.continue_queued(state)
 
     # SIGTERM, through the trap a host asked `mount/1` to set: leave as
     # Ctrl-C twice does, so the terminal is restored. See
     # `Lemieux.TUI.Signals`.
-    def handle_info({:terminal_signal, signal}, state), do: Lifecycle.signalled(state, signal)
+    defp route_info({:terminal_signal, signal}, state), do: Lifecycle.signalled(state, signal)
 
     # The CLI checks Hex after the screen opens; only its result reaches the UI.
-    def handle_info({:version_notice, notice}, state) when is_binary(notice),
+    defp route_info({:version_notice, notice}, state) when is_binary(notice),
       do: {:noreply, Notices.say(state, :info, notice)}
 
-    def handle_info(:check_update, state), do: {:noreply, Updates.check(state)}
-    def handle_info({:update_check, token}, state), do: {:noreply, Updates.poll(state, token)}
+    defp route_info(:check_update, state), do: {:noreply, Updates.check(state)}
+    defp route_info({:update_check, token}, state), do: {:noreply, Updates.poll(state, token)}
 
-    def handle_info(:restart_update, %{status: %{update: %{phase: :restarting}}} = state),
+    defp route_info(:restart_update, %{status: %{update: %{phase: :restarting}}} = state),
       do: Lifecycle.stopping(state)
 
-    def handle_info(:update_idle, state), do: {:noreply, Updates.tick(state)}
+    defp route_info(:update_idle, state), do: {:noreply, Updates.tick(state)}
 
-    def handle_info({ref, result}, %{status: %{update: %{task: %Task{ref: ref}}}} = state) do
+    defp route_info({ref, result}, %{status: %{update: %{task: %Task{ref: ref}}}} = state) do
       Process.demonitor(ref, [:flush])
       {:noreply, Updates.result(state, result)}
     end
 
-    def handle_info(
-          {:DOWN, ref, :process, _pid, reason},
-          %{status: %{update: %{task: %Task{ref: ref}}}} = state
-        ),
-        do: {:noreply, Updates.result(state, {:error, reason})}
+    defp route_info(
+           {:DOWN, ref, :process, _pid, reason},
+           %{status: %{update: %{task: %Task{ref: ref}}}} = state
+         ),
+         do: {:noreply, Updates.result(state, {:error, reason})}
 
-    def handle_info({:open_link_result, result}, state),
+    defp route_info({:open_link_result, result}, state),
       do: Pointer.open_link_result(state, result)
 
-    def handle_info({:feedback_expired, token}, state), do: Flash.expire(state, token)
-    def handle_info({:notices_expired, token}, state), do: Notices.expire(state, token)
-    def handle_info({:compact_tick, tick}, state), do: Events.compact_tick(state, tick)
+    defp route_info({:feedback_expired, token}, state), do: Flash.expire(state, token)
+    defp route_info({:notices_expired, token}, state), do: Notices.expire(state, token)
+    defp route_info({:compact_tick, tick}, state), do: Events.compact_tick(state, tick)
 
-    def handle_info({:lemieux, id, event}, %__MODULE__{id: id} = state),
+    defp route_info({:lemieux, id, event}, %__MODULE__{id: id} = state),
       do: Events.handle(state, event)
 
     # The answers to work `Lemieux.Conversation.Dispatch` sent off to a task so
@@ -970,56 +975,56 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # feedback write. What each answer means — that an accepted retry is a
     # turn starting, that an MCP change is followed by a fresh listing — is
     # that module's to say, whichever host receives the answer.
-    def handle_info({:compaction_result, {:error, _reason}} = message, state) do
+    defp route_info({:compaction_result, {:error, _reason}} = message, state) do
       state
       |> Events.remove_compact_row()
       |> Effects.answer(message)
       |> Submission.continue_queued()
     end
 
-    def handle_info({:compaction_result, _result} = message, state),
+    defp route_info({:compaction_result, _result} = message, state),
       do: state |> Effects.answer(message) |> Submission.continue_queued()
 
-    def handle_info({tag, _result} = message, state) when tag in @answers,
+    defp route_info({tag, _result} = message, state) when tag in @answers,
       do: {:noreply, Effects.answer(state, message)}
 
     # The answers that carry what was asked beside the result: a `!cmd` and
     # the command line it ran, an MCP prompt and the server it came from, and
     # the models `/provider NAME` found for the provider it named.
-    def handle_info({tag, _first, _second} = message, state)
-        when tag in [:shell_result, :mcp_prompt_result, :provider_discovered],
-        do: {:noreply, Effects.answer(state, message)}
+    defp route_info({tag, _first, _second} = message, state)
+         when tag in [:shell_result, :mcp_prompt_result, :provider_discovered],
+         do: {:noreply, Effects.answer(state, message)}
 
-    def handle_info({:mcp_result, _action, _result, _statuses} = message, state),
+    defp route_info({:mcp_result, _action, _result, _statuses} = message, state),
       do: {:noreply, Effects.answer(state, message)}
 
-    def handle_info({:mcp_inspection, session, name, result}, state),
+    defp route_info({:mcp_inspection, session, name, result}, state),
       do: MCPInteraction.inspection_result(state, session, name, result)
 
-    def handle_info({:mcp_authorize, url}, %{tools: %{mcp_flow: flow}} = state)
-        when not is_nil(flow),
-        do:
-          {:noreply,
-           put_in(state.tools.mcp_flow.notice, "Finish sign-in in your browser: " <> url)}
+    defp route_info({:mcp_authorize, url}, %{tools: %{mcp_flow: flow}} = state)
+         when not is_nil(flow),
+         do:
+           {:noreply,
+            put_in(state.tools.mcp_flow.notice, "Finish sign-in in your browser: " <> url)}
 
-    def handle_info({:mcp_authorize, _url}, state), do: {:noreply, state}
+    defp route_info({:mcp_authorize, _url}, state), do: {:noreply, state}
 
-    def handle_info({:mcp_ui_result, action, result, statuses}, state),
+    defp route_info({:mcp_ui_result, action, result, statuses}, state),
       do: MCPInteraction.ui_result(state, action, result, statuses)
 
     # The automatic refresh speaks only when it re-attached something: nobody asked
     # for it, so "every attached file is current" is a line about nothing, and a
     # failure is not news either. The typed `/refresh` still reports all three
     # outcomes, through the answer clause above.
-    def handle_info({:refresh_result, :automatic, {:ok, count}}, state) when count > 0,
+    defp route_info({:refresh_result, :automatic, {:ok, count}}, state) when count > 0,
       do: {:noreply, Effects.fold(state, {:refresh_result, {:ok, count}})}
 
-    def handle_info({:refresh_result, :automatic, _result}, state), do: {:noreply, state}
+    defp route_info({:refresh_result, :automatic, _result}, state), do: {:noreply, state}
 
-    def handle_info({:models_discovered, models}, state) when is_list(models),
+    defp route_info({:models_discovered, models}, state) when is_list(models),
       do: {:noreply, Choices.discovered(state, models)}
 
-    def handle_info({:model_catalog, provider, models, notice}, state) when is_list(models) do
+    defp route_info({:model_catalog, provider, models, notice}, state) when is_list(models) do
       catalog =
         CatalogState.replace(
           state.catalog,
@@ -1033,35 +1038,35 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {:noreply, Notices.replace(state, {:model_catalog, provider}, :warning, texts)}
     end
 
-    def handle_info({:resume_result, _reference, {:ok, details, sessions}}, state),
+    defp route_info({:resume_result, _reference, {:ok, details, sessions}}, state),
       do: {:noreply, Lifecycle.switched(state, details, sessions, "resumed")}
 
-    def handle_info({:new_result, {:ok, details, sessions}}, state),
+    defp route_info({:new_result, {:ok, details, sessions}}, state),
       do: {:noreply, Lifecycle.switched(state, details, sessions, nil)}
 
-    def handle_info({:resume_result, _id, {:error, reason}}, state),
+    defp route_info({:resume_result, _id, {:error, reason}}, state),
       do: {:noreply, Lifecycle.resume_failed(state, reason)}
 
-    def handle_info({:new_result, {:error, reason}}, state),
+    defp route_info({:new_result, {:error, reason}}, state),
       do: {:noreply, Lifecycle.new_failed(state, reason)}
 
-    def handle_info({:ctrl_c_expired, token}, state), do: Composer.exit_expired(state, token)
-    def handle_info({:cursor_blink, tick}, state), do: Composer.blink(state, tick)
-    def handle_info({:habs_tick, token}, state), do: Lifecycle.habs_tick(state, token)
+    defp route_info({:ctrl_c_expired, token}, state), do: Composer.exit_expired(state, token)
+    defp route_info({:cursor_blink, tick}, state), do: Composer.blink(state, tick)
+    defp route_info({:habs_tick, token}, state), do: Lifecycle.habs_tick(state, token)
 
-    def handle_info({:startup_step, id, text, status}, state),
+    defp route_info({:startup_step, id, text, status}, state),
       do: {:noreply, Boot.observe(state, id, text, status)}
 
-    def handle_info({kind, _token, _result} = message, state)
-        when kind in [:diff_files, :diff_preview],
-        do: {:noreply, DiffPanel.answer(state, message)}
+    defp route_info({kind, _token, _result} = message, state)
+         when kind in [:diff_files, :diff_preview],
+         do: {:noreply, DiffPanel.answer(state, message)}
 
-    def handle_info({:activity_tick, token}, state), do: Turn.tick(state, token)
+    defp route_info({:activity_tick, token}, state), do: Turn.tick(state, token)
 
-    def handle_info({:config_reload_notice, session, kind, texts}, %{session: session} = state),
+    defp route_info({:config_reload_notice, session, kind, texts}, %{session: session} = state),
       do: {:noreply, Notices.replace(state, :config_reload, kind, texts)}
 
-    def handle_info(_message, state), do: {:noreply, state}
+    defp route_info(_message, state), do: {:noreply, state}
 
     @impl ExRatatui.App
     def terminate(reason, state), do: Lifecycle.terminate(reason, state)

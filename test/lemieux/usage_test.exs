@@ -3,6 +3,18 @@ defmodule Lemieux.UsageTest do
 
   alias Lemieux.Usage
 
+  test "normalization preserves missing input as unavailable context, including explicit false" do
+    for raw <- [%{output_tokens: 5}, %{input_tokens: 0, output_tokens: 5, usage_reported: false}] do
+      usage = Usage.normalize(raw, "test:model")
+      context = Lemieux.Context.with_usage(%Lemieux.Context{window: 200_000}, usage)
+      refute context.measured?
+      assert context.fraction == nil
+    end
+
+    measured = Usage.normalize(%{input_tokens: 0, output_tokens: 5}, "test:model")
+    assert Lemieux.Context.with_usage(%Lemieux.Context{}, measured).measured?
+  end
+
   test "guarantees stable token, cache, cost, and model keys" do
     usage = %{
       input_tokens: 120,

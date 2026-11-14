@@ -600,8 +600,17 @@ defmodule Lemieux.Providers.ReqLLM do
   defp fallback_estimate(options, model, input, cached, output) do
     if Keyword.has_key?(options, :service_tier),
       do: nil,
-      else: list_rate_estimate(model, input, cached, output)
+      else: list_rate_estimate(comparison_catalog(model), input, cached, output)
   end
+
+  defp comparison_catalog(%{provider: :openai_codex, id: id} = model) do
+    case ReqLLM.model("openai:" <> id) do
+      {:ok, reference} -> reference
+      _unknown -> model
+    end
+  end
+
+  defp comparison_catalog(model), do: model
 
   # A budget reservation uses the requested tier, never claims that it was the
   # tier actually billed. Actual usage keeps ReqLLM's returned-tier accounting.
@@ -717,12 +726,67 @@ defmodule Lemieux.Providers.ReqLLM do
   # tariff.
   defp price_usage(emit, request, nil) do
     fn
-      {:usage, usage} -> emit.({:usage, price_at_list_rates(usage, request.model)})
+      {:usage, usage} -> emit.({:usage, account_usage(usage, request.model)})
       event -> emit.(event)
     end
   end
 
   defp price_usage(emit, _request, _route), do: emit
+
+  @doc """
+  Adds direct-route pricing and reporting provenance without changing token counts.
+
+  Subscription catalog prices are API-equivalent comparisons, never evidence
+  of an incremental cash charge or remaining quota. A missing USD tariff
+  stays unknown (in particular Z.AI credits are not dollars). Numeric costs
+  remain available to existing budget guards, with their basis retained in
+  the transcript and interactive display. Routed hosts own their own pricing.
+
+  ReqLLM synthesizes canonical cache zeroes even when a provider omitted the
+  counters. Only positive counts, explicit reporting metadata, or retained
+  native details establish availability; a synthetic zero is not a zero hit.
+  """
+  @spec account_usage(usage :: map(), model :: String.t()) :: map()
+  def account_usage(usage, model) do
+    usage = usage |> json() |> price_at_list_rates(model)
+
+    usage =
+      Map.put_new(usage, "cache_reporting", %{
+        "read" => cache_reported?(usage, "cache_read_tokens", "cached_tokens"),
+        "write" => cache_reported?(usage, "cache_write_tokens", "cache_creation_tokens")
+      })
+
+    if ModelSpec.provider(model) in ~w(openai_codex ollama_cloud zai_coder zai_coding_plan) do
+      # A zero in a credits/subscription catalog is not a free USD tariff.
+      comparison =
+        with true <- whole_usage?(usage),
+             {:ok, catalog} <- ReqLLM.model(comparison_reference(model)),
+             rates when is_map(rates) <- list_rates(catalog) do
+          list_rate_cost(rates, measured_tokens(usage))
+        else
+          _unknown -> nil
+        end
+
+      usage
+      |> Map.drop(["cost", "total_cost"])
+      |> Map.put("cost_basis", "api_equivalent")
+      |> Map.put("cost_reference", comparison_reference(model))
+      |> Map.put("cost_usd", comparison)
+    else
+      usage
+    end
+  end
+
+  defp comparison_reference("openai_codex:" <> id), do: "openai:" <> id
+  defp comparison_reference(model), do: model
+
+  defp cache_reported?(usage, key, alias_key) do
+    usage_count(usage, [key, alias_key]) > 0 or
+      Enum.any?(["input_tokens_details", "prompt_tokens_details"], fn field ->
+        details = Map.get(usage, field) || %{}
+        Enum.any?([key, alias_key], &is_number(Map.get(details, &1)))
+      end)
+  end
 
   @doc """
   Prices reported usage at the model's list rates when `req_llm` left it
@@ -764,9 +828,22 @@ defmodule Lemieux.Providers.ReqLLM do
   end
 
   defp whole_usage?(usage) do
-    reported = Map.get(usage, "usage_reported") || %{}
+    reported? =
+      case Map.get(usage, "usage_reported") do
+        nil ->
+          true
 
-    Map.get(reported, "input") != false and Map.get(reported, "output") != false and
+        true ->
+          true
+
+        %{} = reported ->
+          Map.get(reported, "input") != false and Map.get(reported, "output") != false
+
+        _unreported ->
+          false
+      end
+
+    reported? and is_number(usage["input_tokens"]) and is_number(usage["output_tokens"]) and
       Map.get(usage, "billing_usage_complete") != false
   end
 

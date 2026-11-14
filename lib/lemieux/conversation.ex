@@ -311,6 +311,8 @@ defmodule Lemieux.Conversation do
           bug_report: map() | nil,
           account_usage: map() | nil,
           usage_request_id: String.t() | nil,
+          cost_bases: [String.t()],
+          cost_references: [String.t()],
           noted_window?: boolean(),
           pending_context: [String.t()]
         }
@@ -378,6 +380,8 @@ defmodule Lemieux.Conversation do
             pending_context: [],
             bug_report: nil,
             account_usage: nil,
+            cost_bases: [],
+            cost_references: [],
             usage_request_id: nil
 
   @doc """
@@ -446,6 +450,7 @@ defmodule Lemieux.Conversation do
         | measured_spent_usd: add_measured(conversation.measured_spent_usd, cost),
           unmeasured_requests: unmeasured_requests(conversation.unmeasured_requests, cost)
       }
+      |> note_cost_basis(usage)
     end)
   end
 
@@ -718,7 +723,8 @@ defmodule Lemieux.Conversation do
          spent_usd: spent,
          measured_spent_usd: add_measured(conversation.measured_spent_usd, cost),
          unmeasured_requests: unmeasured_requests(conversation.unmeasured_requests, cost)
-     }, []}
+     }
+     |> note_cost_basis(usage), []}
   end
 
   # Child usage belongs in the bill a person sees for the root run but not in the
@@ -738,7 +744,8 @@ defmodule Lemieux.Conversation do
          unmeasured_requests: unmeasured_requests(conversation.unmeasured_requests, cost),
          delegated_spent_usd: add_cost(conversation.delegated_spent_usd, cost),
          delegated_usage?: true
-     }, []}
+     }
+     |> note_cost_basis(usage), []}
   end
 
   def event(conversation, {:tool_call, call}),
@@ -861,6 +868,7 @@ defmodule Lemieux.Conversation do
             measured_spent_usd: add_measured(conversation.measured_spent_usd, cost),
             unmeasured_requests: unmeasured_requests(conversation.unmeasured_requests, cost)
         }
+        |> note_cost_basis(usage)
       else
         %{conversation | context: context}
       end
@@ -1592,6 +1600,9 @@ defmodule Lemieux.Conversation do
   def status(%__MODULE__{estimate_unknown_reasons: [_ | _]} = conversation),
     do: [cost(conversation), status(conversation.context)] |> Enum.join(" · ")
 
+  def status(%__MODULE__{cost_bases: ["api_equivalent" | _]} = conversation),
+    do: [cost(conversation), status(conversation.context)] |> Enum.join(" · ")
+
   def status(%__MODULE__{context: context} = conversation) do
     [status(context), cost(conversation)]
     |> Enum.reject(&is_nil/1)
@@ -1607,8 +1618,8 @@ defmodule Lemieux.Conversation do
   # only says the word itself for the unmeasured case.
   defp position(%Context{compacted?: true, window: nil}), do: "context ?"
   defp position(%Context{compacted?: true, window: window}), do: "context ?/#{tokens(window)}"
-  defp position(%Context{measured?: false, window: nil}), do: "context 0"
-  defp position(%Context{measured?: false, window: window}), do: "context 0/#{tokens(window)}"
+  defp position(%Context{measured?: false, window: nil}), do: "context ?"
+  defp position(%Context{measured?: false, window: window}), do: "context ?/#{tokens(window)}"
   defp position(%Context{} = context), do: "context " <> Context.describe(context)
 
   @doc "Formats the current context and cost for an interactive front end."
@@ -1619,6 +1630,12 @@ defmodule Lemieux.Conversation do
       context_cost(conversation) <>
       estimate_details(conversation)
   end
+
+  defp context_cost(%__MODULE__{cost_bases: ["api_equivalent" | _]} = conversation),
+    do:
+      "  Reference total  #{cost(conversation)}\n" <>
+        "  Basis            illustrative catalog USD; subscription fees and quota are separate\n" <>
+        "  Tariffs          #{Enum.join(conversation.cost_references, ", ")}"
 
   defp context_cost(%__MODULE__{spent_usd: spent, delegated_spent_usd: delegated})
        when is_number(spent) and is_number(delegated) and delegated > 0,
@@ -1654,6 +1671,11 @@ defmodule Lemieux.Conversation do
       else: unknown
   end
 
+  def cost(%__MODULE__{cost_bases: ["api_equivalent" | rest], spent_usd: spent}) do
+    label = if rest == [], do: "API-equivalent estimate", else: "cost + API-equivalent estimate"
+    label <> ": " <> if(is_number(spent), do: usd(spent), else: "unknown")
+  end
+
   def cost(%__MODULE__{spent_usd: spent, delegated_spent_usd: delegated})
       when is_number(spent) and is_number(delegated) and delegated > 0,
       do: "#{usd(spent)} incl. #{usd(delegated)} delegated"
@@ -1672,6 +1694,27 @@ defmodule Lemieux.Conversation do
 
   defp unmeasured_requests(count, cost) when is_number(cost), do: count
   defp unmeasured_requests(count, _cost), do: count + 1
+
+  defp note_cost_basis(conversation, usage) do
+    bases =
+      case usage["cost_basis"] do
+        "api_equivalent" -> ["api_equivalent"]
+        "mixed" -> ["api_equivalent", "metered"]
+        _other -> ["metered"]
+      end
+
+    references =
+      case usage["cost_reference"] do
+        value when is_binary(value) -> [value]
+        _none -> []
+      end
+
+    %{
+      conversation
+      | cost_bases: Enum.sort(Enum.uniq(conversation.cost_bases ++ bases)),
+        cost_references: Enum.uniq(conversation.cost_references ++ references)
+    }
+  end
 
   defp note_estimate(conversation, %{"request_id" => id, "data" => data})
        when is_binary(id) and is_map(data) do

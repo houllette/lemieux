@@ -341,7 +341,7 @@ defmodule Lemieux.TUI.ViewTest do
     test "is present and zeroed before the first response" do
       rendered = screen(tui())
 
-      assert rendered =~ "context 0"
+      assert rendered =~ "context ?"
       assert rendered =~ "session 0 tok"
       assert rendered =~ "$0.0000"
       refute rendered =~ "cache 0/0"
@@ -615,7 +615,8 @@ defmodule Lemieux.TUI.ViewTest do
       rendered = screen(state)
 
       assert rendered =~ "── 12s · 2 reqs · 1.5k tokens this turn"
-      assert rendered =~ "1.2k in · 100/20 cache · 220 out"
+      assert rendered =~ "1.2k in · cache read >=100, write"
+      assert rendered =~ ">=20 · 220 out"
       assert unwrapped(state) =~ "2 tool calls ─"
       assert rendered =~ "$0.0130"
       assert rendered =~ "── 12s"

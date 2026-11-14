@@ -15,12 +15,10 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
     alias Lemieux.TUI.ModelChoices
     alias Lemieux.TUI.Theme
 
-    # An `@` at a word boundary opens the file picker, and the reference runs to the
-    # end of the line — what is completed is always what the caret sits in. The word
-    # boundary stops a menu opening over `someone@example.com`, the same rule
-    # `Lemieux.Reference` parses a submitted prompt with. The quoted alternative is
-    # what lets the picker descend into a directory whose name has a space in it.
-    @path_reference ~r/(?:^|\s)(@(?:"[^"\n]*"?|\S*))$/
+    # Match Reference's opening boundary without consuming it: completing inside
+    # `(@lib/` must keep the parenthesis, while emails and escaped @ stay prose.
+    # The path may still be incomplete (including an unclosed quoted path).
+    @path_reference ~r/(?<![^\s(\[{<'"`])(@(?:"[^"\n]*"?|\S*))$/
 
     # A directory of five thousand generated files should not become a list
     # rebuilt behind the bounded menu on every keystroke.

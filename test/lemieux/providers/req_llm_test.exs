@@ -1349,6 +1349,90 @@ defmodule Lemieux.Providers.ReqLLMTest do
   end
 
   describe "price_at_list_rates/2" do
+    test "Codex next-request estimates use the exact API tariff and its observed cache share" do
+      provider = ReqLLMProvider.new()
+      question = Entry.new(:user, %{"text" => "go on"})
+
+      estimate = fn cached ->
+        usage = %{
+          "input_tokens" => 100_000,
+          "output_tokens" => 1_000,
+          "cache_read_tokens" => cached,
+          "input_includes_cached" => true
+        }
+
+        Provider.estimate_cost(
+          provider,
+          Request.new("openai_codex:gpt-5.6",
+            entries: [question, Entry.new(:assistant, %{"content" => []}, usage: usage), question],
+            params: [max_tokens: 100]
+          )
+        )
+      end
+
+      cold = estimate.(0)
+      warm = estimate.(90_000)
+      assert is_number(cold)
+      assert is_number(warm)
+      assert warm < cold / 2
+    end
+
+    test "subscription prices carry an illustrative basis and credits stay unknown" do
+      for model <- [
+            "openai_codex:gpt-5.6",
+            "ollama_cloud:deepseek-v4-pro",
+            "zai_coding_plan:glm-5.3"
+          ] do
+        priced =
+          ReqLLMProvider.account_usage(
+            %{
+              "input_tokens" => 100_000,
+              "output_tokens" => 1_000,
+              "cache_read_tokens" => 90_000,
+              "input_includes_cached" => true
+            },
+            model
+          )
+
+        assert priced["cost_basis"] == "api_equivalent"
+
+        assert priced["cost_reference"] ==
+                 String.replace_prefix(model, "openai_codex:", "openai:")
+
+        assert priced["cache_reporting"]["read"] == true
+        assert priced["cache_reporting"]["write"] == false
+        if String.starts_with?(model, "zai_"), do: assert(priced["cost_usd"] == nil)
+      end
+    end
+
+    test "synthetic canonical cache zeroes are unavailable unless native details report zero" do
+      unreported =
+        ReqLLMProvider.account_usage(
+          %{"input_tokens" => 0, "output_tokens" => 5, "usage_reported" => false},
+          "openai_codex:gpt-5.6"
+        )
+
+      assert unreported["cost_usd"] == nil
+
+      usage = %{
+        "input_tokens" => 100,
+        "output_tokens" => 1,
+        "cached_tokens" => 0,
+        "cache_creation_tokens" => 0
+      }
+
+      unknown = ReqLLMProvider.account_usage(usage, "openai:gpt-4o-mini")
+      refute unknown["cache_reporting"]["read"]
+
+      reported =
+        ReqLLMProvider.account_usage(
+          Map.put(usage, "input_tokens_details", %{"cached_tokens" => 0}),
+          "openai:gpt-4o-mini"
+        )
+
+      assert reported["cache_reporting"]["read"]
+    end
+
     # A usage map as req_llm normalises it and the adapter's json/1 leaves it:
     # string keys, both counts reported, consistent cache counts, unpriced.
     defp unpriced(fields) do
