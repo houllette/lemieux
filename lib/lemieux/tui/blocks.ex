@@ -468,7 +468,6 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp code_text(text) do
       text
       |> String.replace("\r", "")
-      |> String.replace("\t", "    ")
     end
 
     defp highlight_lines(source, count, language, theme) do

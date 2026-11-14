@@ -45,6 +45,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     alias Lemieux.TUI.Blocks
     alias Lemieux.TUI.Diagrams
     alias Lemieux.TUI.Notices
+    alias Lemieux.TUI.Snippets
     alias Lemieux.TUI.Theme
     alias Lemieux.TUI.TodoText
     alias Lemieux.TUI.Width
@@ -214,10 +215,10 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
           item(indent, marker, text, width, theme)
 
         {:model_fence, edge, language, _fence} ->
-          [fence(edge, language, width, theme)]
+          [Map.put(fence(edge, language, width, theme), :copy, :decoration)]
 
         {:model_code, _language, text, spans} ->
-          code(text, spans, width, theme)
+          Snippets.render(text, spans, width, theme.blocks.code_bg)
 
         {:model_table, table} ->
           table(table, width, theme)
@@ -463,13 +464,23 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     end
 
     defp summary(text, width, theme) do
-      prefix = "── #{text} "
       style = output_style(:ok, theme)
-
-      prefix
-      |> then(&[{&1, style}])
-      |> wrap(width)
+      # Keep each statistic's label and value together where it fits. The
+      # fallback still wraps a genuinely wider statistic on very small panes.
+      text
+      |> String.split(" · ")
+      |> Enum.reduce([], &summary_segment(&1, &2, width))
+      |> Enum.reverse()
+      |> Enum.flat_map(&wrap([{&1, style}], width))
       |> close_rule(width, style)
+    end
+
+    defp summary_segment(segment, [], _width), do: ["── " <> segment]
+
+    defp summary_segment(segment, [last | rest] = rows, width) do
+      if Width.of(last <> " · " <> segment) <= width - 4,
+        do: [last <> " · " <> segment | rest],
+        else: [segment | rows]
     end
 
     # A heading is its text in the heading colour and bold; the top level is
@@ -535,15 +546,6 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     # than marked, so a copied block is the block. The tint replaces whatever
     # background the highlighter's own theme painted, so a line still being
     # written, an empty line and a highlighted one are one colour.
-    defp code(text, nil, width, theme),
-      do: preserve([{text, %Style{bg: theme.blocks.code_bg}}], width)
-
-    defp code(_text, spans, width, theme) do
-      spans
-      |> Enum.map(&{&1.content, %{&1.style | bg: theme.blocks.code_bg}})
-      |> preserve(width)
-    end
-
     # One screen row per table row, always: columns take their natural width when it
     # fits and are squeezed from the widest down when it does not, with a truncated
     # cell ending in an ellipsis. That is what lets a table sit in a viewport that

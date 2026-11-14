@@ -46,8 +46,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def observe(state, _entry), do: state
 
     defp put_plan(state, tasks, revision) do
-      done = Enum.count(tasks, &(&1["status"] == "completed"))
-      progress = if tasks != [], do: Art.progress(100 * done / length(tasks), "todo")
+      progress = if tasks != [], do: Art.progress(Planning.progress(tasks), "todo")
 
       state
       |> put_in([Access.key!(:session_view), :plan], tasks)
@@ -79,9 +78,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
       progress? = height >= 5 and area.width >= 28
       room = height - 2 - if(progress?, do: 1, else: 0)
       theme = Screen.theme(state)
-      current = Enum.find_index(tasks, &(&1["status"] == "in_progress")) || 0
+
+      current =
+        Enum.find_index(tasks, &(&1["status"] == "in_progress" and not is_nil(&1["parent_id"]))) ||
+          Enum.find_index(tasks, &(&1["status"] == "in_progress")) || 0
+
       start = max(min(current - div(room, 2), length(tasks) - room), 0)
-      done = Enum.count(tasks, &(&1["status"] == "completed"))
+      roots = Enum.filter(tasks, &is_nil(&1["parent_id"]))
+      done = Enum.count(roots, &(&1["status"] == "completed"))
+
+      progress =
+        if length(roots) != length(tasks), do: " · #{round(Planning.progress(tasks))}%", else: ""
 
       lines =
         tasks
@@ -105,7 +112,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
         text: lines,
         wrap: false,
         block: %Block{
-          title: title(state.session_view.plan_revision, done, length(tasks), area.width),
+          title:
+            title(state.session_view.plan_revision, done, length(roots), area.width, progress),
           borders: [:all],
           border_type: :rounded,
           border_style: %Style{fg: theme.text.muted},
@@ -124,11 +132,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp visible(_state), do: []
 
-    defp title(revision, done, total, width) do
+    defp title(revision, done, total, width, progress) do
       titles = [
-        " Todo List · revision #{revision} · #{done}/#{total} complete ",
-        " Todo List · r#{revision} · #{done}/#{total} ",
-        " Todo · r#{revision} · #{done}/#{total} "
+        " Todo List · revision #{revision} · #{done}/#{total} complete#{progress} ",
+        " Todo List · r#{revision} · #{done}/#{total}#{progress} ",
+        " Todo · r#{revision} · #{done}/#{total}#{progress} "
       ]
 
       Enum.find(titles, List.last(titles), &(Width.of(&1) <= width - 2))
@@ -136,7 +144,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp line(task, theme, width) do
       {label, style} = TodoText.status(task["status"], theme)
-      prefix = label <> " · "
+      prefix = if(task["parent_id"], do: "  ↳ ", else: "") <> label <> " · "
       title = ToolText.one_line(task["title"])
       room = max(width - Width.of(prefix), 0)
 

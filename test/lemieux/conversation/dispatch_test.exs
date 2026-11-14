@@ -805,7 +805,7 @@ defmodule Lemieux.Conversation.DispatchTest do
       {:ok, handle} = Permissions.new(mode: :ask, store: store)
       host = host(session, permissions: handle)
 
-      assert ["permissions: accept edits, from the next tool call"] =
+      assert ["permissions: accept edits, from the next tool call · commands are not sandboxed"] =
                said(Dispatch.perform(acc(), host, {:set_permission_mode, "accept_edits"}))
 
       assert Permissions.mode(handle) == :accept_edits

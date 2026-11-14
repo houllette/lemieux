@@ -29,6 +29,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Policy
     alias Lemieux.TUI.QuestionPanel
     alias Lemieux.TUI.Renderer
+    alias Lemieux.TUI.Responsive
     alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Selection
     alias Lemieux.TUI.Status
@@ -213,15 +214,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
           end
 
         boot =
-          if state.resume.startup_status in [:loading, :ready] and state.terminal.boot.steps != [],
-            do:
-              Boot.render(state, %Rect{
-                x: 0,
-                y: min(banner_bottom, area.height),
-                width: area.width,
-                height: max(area.height - banner_bottom - 1, 0)
-              }),
-            else: []
+          if Map.get(overlay, :boot?, true) and state.resume.startup_status in [:loading, :ready] and
+               state.terminal.boot.steps != [],
+             do:
+               Boot.render(state, %Rect{
+                 x: 0,
+                 y: min(banner_bottom, area.height),
+                 width: area.width,
+                 height: max(area.height - banner_bottom - 1, 0)
+               }),
+             else: []
 
         [{%Clear{}, area}] ++ banner ++ boot
       end
@@ -509,7 +511,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         # ever saying so.
         wrap: false,
         block: %Block{
-          title: header(state),
+          title: header(state, pane.width - 2),
           # A pane that is not showing the newest line has to say so, or it
           # looks like an agent that stopped talking. A layout that could not
           # be drawn says so here too, on every frame until it is fixed.
@@ -526,7 +528,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       }
     end
 
-    defp header(state) do
+    defp header(state, width) do
       provider = ModelSpec.provider(state.conversation.model) || "unknown"
 
       model =
@@ -551,6 +553,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       # `Lemieux.version/0` comes from mix.exs but still works in a release
       # where Mix itself is absent.
       |> then(&(" " <> Enum.join(["lemieux (v#{Lemieux.version()})" | &1], " · ") <> " "))
+      |> Responsive.scroll(width, Map.get(state.terminal.cursor_blink, :frame, 0))
     end
 
     # Short enough to leave the header room for the session and the model,
@@ -887,6 +890,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         Map.to_list(activity(state)) ++
           [
             width: area.width,
+            scroll_frame: Map.get(state.terminal.cursor_blink, :frame, 0),
             height: area.height,
             theme: theme(state),
             accent: accent(state),

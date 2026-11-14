@@ -7,6 +7,25 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+- Keep transcript group gaps consistent when an answer already ends in a blank
+  row; retain intentional source whitespace. (#145)
+- Add optional todo subtasks with stable identities, derived parent statuses,
+  weighted progress and durable hierarchy. (#146)
+- Copy snippet source without frame decorations, including click-to-copy of
+  complete or unfinished blocks and source-aware drag selections. (#147)
+- Size the composer for retained boundary spaces, keep startup milestones out
+  of `/habs` replays, and scroll overflowing header/status information slowly
+  while keeping the permission mode stationary. (#168, #169, #170)
+- Let in-session full-auto disable the CLI's implicit sandbox for subsequent
+  operations and restore it when leaving that mode; explicit host sandboxes
+  remain authoritative. Recognize lowercase command-denial diagnostics. (#171)
+- Display costs rounded up to cents with compact estimated/unknown labels,
+  move measured request throughput into one weighted turn-average summary,
+  and animate the pale-yellow running Tasks badge even between turns.
+  Accounting and budget precision stay unchanged. (#172, #173, #174)
+
 ## 1.1.1 — 2026-11-13
 
 Restart `lmx` after updating from 1.1.0 on every platform, then resume with

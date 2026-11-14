@@ -36,6 +36,127 @@ defmodule Lemieux.Extensions.PlanningTest do
     }
   end
 
+  test "optional subtasks retain identity, progress and durable hierarchy", ctx do
+    children =
+      for n <- 1..4,
+          do: %{"title" => "part #{n}", "status" => if(n == 1, do: "completed", else: "pending")}
+
+    assert {:ok, doc} =
+             Planning.set(ctx.session, [
+               %{"title" => "Build", "status" => "completed", "subtasks" => children}
+             ])
+
+    assert Planning.progress(Planning.tasks(doc.value)) == 25.0
+    [parent | children] = Planning.tasks(doc.value)
+    assert parent["status"] == "in_progress"
+    assert Enum.all?(children, &(&1["parent_id"] == parent["id"]))
+
+    assert {:ok, updated} =
+             Planning.update(ctx.session, doc.revision, %{
+               "action" => "update",
+               "id" => Enum.at(children, 1)["id"],
+               "status" => "completed"
+             })
+
+    assert Planning.progress(Planning.tasks(updated.value)) == 50.0
+    assert Planning.summary(updated) =~ "  #{hd(children)["id"]}"
+    assert {:ok, entries} = Lemieux.Store.read(ctx.store, Session.id(ctx.session))
+    assert {:ok, restored} = Document.read(Enum.reverse(entries), Planning.namespace())
+    assert restored.value == updated.value
+
+    id = Session.id(ctx.session)
+    :ok = Session.prompt(ctx.session, "Report the current plan")
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert {:ok, forked} = Lemieux.Transcript.fork(ctx.store, Session.id(ctx.session))
+    assert {:ok, fork_entries} = Lemieux.Store.read(ctx.store, forked)
+    assert {:ok, fork_plan} = Document.read(Enum.reverse(fork_entries), Planning.namespace())
+    assert fork_plan.value == updated.value
+  end
+
+  test "mixed flat and nested work gives each root equal weight", ctx do
+    assert {:ok, doc} =
+             Planning.set(ctx.session, [
+               %{"title" => "Flat", "status" => "completed"},
+               %{
+                 "title" => "Parent",
+                 "status" => "pending",
+                 "subtasks" => [
+                   %{"title" => "Done", "status" => "completed"},
+                   %{"title" => "Next", "status" => "pending"}
+                 ]
+               }
+             ])
+
+    assert Planning.progress(Planning.tasks(doc.value)) == 75.0
+
+    assert {:error, _} =
+             Planning.set(ctx.session, [
+               %{
+                 "title" => "Too deep",
+                 "status" => "pending",
+                 "subtasks" => [
+                   %{
+                     "title" => "Child",
+                     "status" => "pending",
+                     "subtasks" => [%{"title" => "Grandchild", "status" => "pending"}]
+                   }
+                 ]
+               }
+             ])
+  end
+
+  test "child completion, reopening and parent deletion update progress and evidence", ctx do
+    {:ok, doc} =
+      Planning.set(ctx.session, [
+        %{
+          "title" => "Parent",
+          "status" => "pending",
+          "subtasks" => [
+            %{"title" => "First", "status" => "completed"},
+            %{"title" => "Last", "status" => "pending"}
+          ]
+        }
+      ])
+
+    [parent, _first, last] = Planning.tasks(doc.value)
+
+    assert {:ok, done} =
+             Planning.update(ctx.session, doc.revision, %{
+               "action" => "update",
+               "id" => last["id"],
+               "status" => "completed"
+             })
+
+    assert Planning.progress(Planning.tasks(done.value)) == 100.0
+    assert hd(Planning.tasks(done.value))["status"] == "completed"
+
+    assert {:ok, reopened} =
+             Planning.update(ctx.session, done.revision, %{
+               "action" => "reopen",
+               "id" => last["id"],
+               "reason" => "More verification needed"
+             })
+
+    assert Planning.progress(Planning.tasks(reopened.value)) == 50.0
+    assert hd(reopened.value["tasks"])["evidence"] == []
+
+    assert {:error, {:conflict, _}} =
+             Planning.update(ctx.session, done.revision, %{
+               "action" => "delete",
+               "id" => parent["id"]
+             })
+
+    assert {:ok, deleted} =
+             Planning.update(ctx.session, reopened.revision, %{
+               "action" => "delete",
+               "id" => parent["id"]
+             })
+
+    assert Planning.tasks(deleted.value) == []
+    assert Planning.progress([]) == 0.0
+    assert Enum.all?(deleted.value["tasks"], &(&1["status"] == "deleted"))
+  end
+
   test "CAS, request projection and resume retain plans independently of tool output", ctx do
     assert {:ok, %{revision: 1}} =
              Planning.update(ctx.session, 0, %{"action" => "create", "title" => "Verify"})

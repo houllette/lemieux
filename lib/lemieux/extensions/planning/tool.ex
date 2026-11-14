@@ -37,6 +37,7 @@ defmodule Lemieux.Extensions.Planning.Tool do
         "Use `new` with tasks for unrelated work; do not carry completed tasks " <>
         "from a previous request into a fresh plan. Use `set` to continue or append to the same work. Send the whole list with action `set` whenever it " <>
         "changes — each task a title and a status (pending, in_progress, completed) — and " <>
+        "Optionally group a parent task with subtasks (one level); parents derive status from children. " <>
         "keep the task you are working on in_progress. `list` shows the plan. Completed means " <>
         "you report it done, not that anything verified it. The create, update, reopen and " <>
         "delete actions edit single tasks and need the revision `list` returned."
@@ -62,7 +63,21 @@ defmodule Lemieux.Extensions.Planning.Tool do
             "properties" => %{
               "title" => %{"type" => "string"},
               "status" => %{"type" => "string", "enum" => ~w(pending in_progress completed)},
-              "id" => %{"type" => "string", "description" => "Keep an existing task's id."}
+              "id" => %{"type" => "string", "description" => "Keep an existing task's id."},
+              "subtasks" => %{
+                "type" => "array",
+                "maxItems" => 63,
+                "items" => %{
+                  "type" => "object",
+                  "additionalProperties" => false,
+                  "required" => ["title", "status"],
+                  "properties" => %{
+                    "title" => %{"type" => "string"},
+                    "id" => %{"type" => "string"},
+                    "status" => %{"type" => "string", "enum" => ~w(pending in_progress completed)}
+                  }
+                }
+              }
             }
           }
         },
@@ -71,6 +86,10 @@ defmodule Lemieux.Extensions.Planning.Tool do
         "title" => %{"type" => "string"},
         "reason" => %{"type" => "string"},
         "owner" => %{"type" => "string"},
+        "parent_id" => %{
+          "type" => "string",
+          "description" => "Optional root task id for create or update."
+        },
         "status" => %{"type" => "string", "enum" => ~w(pending in_progress completed)},
         "depends_on" => %{"type" => "array", "items" => %{"type" => "string"}},
         "evidence" => %{"type" => "array", "items" => %{"type" => "string"}}

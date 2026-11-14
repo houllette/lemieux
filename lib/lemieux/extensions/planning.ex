@@ -11,7 +11,12 @@ defmodule Lemieux.Extensions.Planning do
 
   Plan shape is guidance, not a quota. No task count is preferred; discovery
   may replace a provisional outline with concrete obligations using `set/2`,
-  retaining ids for renamed tasks. Optional subtasks are a separate feature.
+  retaining ids for renamed tasks. Optional `subtasks` give a task one level of
+  children. State version 1 remains readable: `parent_id` is an additive optional
+  field on stored tasks, absent in older flat plans. Parents derive their status
+  from live children; reopening a child reopens the parent and clears its evidence.
+  Progress gives each root equal weight and divides that root's contribution
+  equally among its live children, without counting the parent twice.
   The tool description asks for revision because a reducer cannot infer what
   discovery revealed, or force a model to use what it learned.
 
@@ -135,12 +140,42 @@ defmodule Lemieux.Extensions.Planning do
   """
   @spec tasks(plan :: map() | nil) :: [%{required(String.t()) => String.t()}]
   def tasks(%{"tasks" => tasks}) when is_list(tasks) do
-    for %{"status" => status} = task <- tasks, status != "deleted" do
-      Map.take(task, ~w(id title status))
-    end
+    tasks
+    |> Enum.reject(&(&1["status"] == "deleted"))
+    |> ordered()
+    |> Enum.map(fn task ->
+      task
+      |> Map.take(~w(id title status parent_id))
+      |> Map.reject(fn {key, value} -> key == "parent_id" and is_nil(value) end)
+    end)
   end
 
   def tasks(_plan), do: []
+
+  defp ordered(tasks) do
+    tasks
+    |> Enum.filter(&is_nil(&1["parent_id"]))
+    |> Enum.flat_map(fn root ->
+      [root | Enum.filter(tasks, &(&1["parent_id"] == root["id"]))]
+    end)
+  end
+
+  @doc "Completion percentage: equal root weights, with child fractions inside each root."
+  @spec progress(tasks :: [map()]) :: float()
+  def progress([]), do: 0.0
+
+  def progress(tasks) do
+    roots = Enum.filter(tasks, &is_nil(&1["parent_id"]))
+
+    contributions =
+      Enum.map(roots, fn root ->
+        children = Enum.filter(tasks, &(&1["parent_id"] == root["id"]))
+        parts = if children == [], do: [root], else: children
+        Enum.count(parts, &(&1["status"] == "completed")) / length(parts)
+      end)
+
+    if roots == [], do: 0.0, else: 100.0 * Enum.sum(contributions) / length(roots)
+  end
 
   @doc false
   @spec prepare(request :: Lemieux.Request.t(), context :: map()) :: term()
@@ -175,8 +210,9 @@ defmodule Lemieux.Extensions.Planning do
   @spec summary(document :: map()) :: String.t()
   def summary(%{revision: revision, value: plan}) do
     lines =
-      Enum.map(plan["tasks"], fn task ->
-        "#{task["id"]} [#{task["status"]}] #{task["title"]}" <>
+      Enum.map(ordered(plan["tasks"]), fn task ->
+        if(task["parent_id"], do: "  ", else: "") <>
+          "#{task["id"]} [#{task["status"]}] #{task["title"]}" <>
           if(task["depends_on"] == [],
             do: "",
             else: " (depends on #{Enum.join(task["depends_on"], ", ")})"

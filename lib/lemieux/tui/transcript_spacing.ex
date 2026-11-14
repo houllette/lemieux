@@ -15,12 +15,21 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
     def separate(rows, previous) do
       {groups, _last} =
         Enum.map_reduce(rows, previous, fn row, previous ->
-          rows = if boundary?(row, previous), do: [{:space, ""}, row], else: [row]
+          rows =
+            if boundary?(row, previous) and not blank?(previous),
+              do: [{:space, ""}, row],
+              else: [row]
+
           {rows, row}
         end)
 
       List.flatten(groups)
     end
+
+    # A blank paragraph already provides the group gap. Adding a spacer
+    # after a model's trailing newline produced the observed double spacing.
+    defp blank?({:model, text}), do: String.trim(text) == ""
+    defp blank?(_row), do: false
 
     defp boundary?(_row, nil), do: false
     defp boundary?(_row, {:space, _text}), do: false

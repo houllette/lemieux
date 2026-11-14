@@ -8,7 +8,8 @@ defmodule Lemieux.Extensions.Planning.Reducer do
   def valid?(%{"version" => 1, "tasks" => tasks, "next_id" => next})
       when is_list(tasks) and length(tasks) <= 64 and is_integer(next) and next > 0 do
     Enum.all?(tasks, &valid_task?/1) and
-      length(Enum.uniq_by(tasks, & &1["id"])) == length(tasks) and valid_graph?(tasks)
+      length(Enum.uniq_by(tasks, & &1["id"])) == length(tasks) and valid_graph?(tasks) and
+      valid_hierarchy?(tasks)
   end
 
   def valid?(_plan), do: false
@@ -21,7 +22,8 @@ defmodule Lemieux.Extensions.Planning.Reducer do
       "status" => "pending",
       "depends_on" => Map.get(command, "depends_on", []),
       "evidence" => [],
-      "owner" => Map.get(command, "owner")
+      "owner" => Map.get(command, "owner"),
+      "parent_id" => Map.get(command, "parent_id")
     }
 
     validate(%{plan | "next_id" => plan["next_id"] + 1, "tasks" => plan["tasks"] ++ [task]})
@@ -56,28 +58,78 @@ defmodule Lemieux.Extensions.Planning.Reducer do
 
   @set_statuses ~w(pending in_progress completed)
 
+  # At most 64 identities. A plain map keeps their membership transparent
+  # through reducer callbacks; MapSet's inlined OTP sets produced an opaque
+  # type mismatch across the recursive child boundary under Dialyzer.
   defp set_tasks(items, live, next_id) do
-    by_id = Map.new(live, &{&1["id"], &1})
-    by_title = live |> Enum.reverse() |> Map.new(&{&1["title"], &1})
-
-    items
-    |> Enum.reduce_while({:ok, [], next_id, MapSet.new()}, fn item, {:ok, tasks, next, used} ->
-      case set_task(item, by_id, by_title, next, used) do
-        {:ok, task, next} -> {:cont, {:ok, [task | tasks], next, MapSet.put(used, task["id"])}}
-        {:error, reason} -> {:halt, {:error, reason}}
-      end
-    end)
+    set_level(items, live, next_id, %{}, nil, 0)
     |> case do
-      {:ok, tasks, next, _used} -> {:ok, Enum.reverse(tasks), next}
+      {:ok, tasks, next, _used} -> {:ok, tasks, next}
       {:error, reason} -> {:error, reason}
     end
   end
+
+  @spec set_level(
+          items :: term(),
+          live :: [map()],
+          next :: pos_integer(),
+          used :: map(),
+          parent :: String.t() | nil,
+          depth :: non_neg_integer()
+        ) ::
+          {:ok, [map()], pos_integer(), map()} | {:error, atom()}
+  defp set_level(items, live, next, used, parent, depth)
+       when is_list(items) and length(items) <= 64 and depth <= 1 do
+    by_id = Map.new(live, &{&1["id"], &1})
+    by_title = live |> Enum.reverse() |> Map.new(&{{&1["title"], &1["parent_id"]}, &1})
+
+    Enum.reduce_while(items, {:ok, [], next, used}, fn
+      item, {:ok, tasks, next, used} when is_map(item) ->
+        parent_id = if depth == 0, do: Map.get(item, "parent_id"), else: parent
+        item = Map.put(item, "parent_id", parent_id)
+
+        with {:ok, task, next} <- set_task(item, by_id, by_title, next, used),
+             used = Map.put(used, task["id"], true),
+             {:ok, children, next, used} <-
+               set_children(Map.get(item, "subtasks", []), live, next, used, task["id"], depth) do
+          next_tasks = tasks ++ [Map.put(task, "parent_id", parent_id)] ++ children
+
+          continue_level(next_tasks, next, used)
+        else
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+
+      _item, _acc ->
+        {:halt, {:error, :invalid_plan_command}}
+    end)
+  end
+
+  defp set_level(_items, _live, _next, _used, _parent, _depth), do: {:error, :invalid_hierarchy}
+
+  defp continue_level(tasks, next, used) when length(tasks) <= 64,
+    do: {:cont, {:ok, tasks, next, used}}
+
+  defp continue_level(_tasks, _next, _used), do: {:halt, {:error, :plan_too_large}}
+
+  @spec set_children(
+          items :: term(),
+          live :: [map()],
+          next :: pos_integer(),
+          used :: map(),
+          parent :: String.t(),
+          depth :: non_neg_integer()
+        ) ::
+          {:ok, [map()], pos_integer(), map()} | {:error, atom()}
+  defp set_children([], _live, next, used, _parent, _depth), do: {:ok, [], next, used}
+
+  defp set_children(items, live, next, used, parent, depth),
+    do: set_level(items, live, next, used, parent, depth + 1)
 
   defp set_task(%{"title" => title, "status" => status} = item, by_id, by_title, next, used)
        when status in @set_statuses do
     existing =
       case Map.get(item, "id") do
-        nil -> by_title[title]
+        nil -> by_title[{title, item["parent_id"]}]
         id -> by_id[id] || {:unknown, id}
       end
 
@@ -86,7 +138,7 @@ defmodule Lemieux.Extensions.Planning.Reducer do
         {:error, :unknown_task}
 
       %{"id" => id} = task ->
-        if MapSet.member?(used, id),
+        if Map.has_key?(used, id),
           do: fresh(title, status, next),
           else: {:ok, restated(task, title, status), next}
 
@@ -152,11 +204,19 @@ defmodule Lemieux.Extensions.Planning.Reducer do
       else: {:error, :reopen_needs_completed_task_and_reason}
   end
 
-  defp change(plan, task, "delete", _command),
-    do: replace(plan, Map.put(task, "status", "deleted"))
+  defp change(plan, task, "delete", _command) do
+    tasks =
+      Enum.map(plan["tasks"], fn candidate ->
+        if candidate["id"] == task["id"] or candidate["parent_id"] == task["id"],
+          do: Map.put(candidate, "status", "deleted"),
+          else: candidate
+      end)
+
+    validate(%{plan | "tasks" => tasks})
+  end
 
   defp change(plan, task, "update", command) do
-    fields = Map.take(command, ~w(title status depends_on evidence owner))
+    fields = Map.take(command, ~w(title status depends_on evidence owner parent_id))
     next = Map.merge(task, fields)
 
     cond do
@@ -180,7 +240,51 @@ defmodule Lemieux.Extensions.Planning.Reducer do
       })
 
   defp validate(plan) do
+    plan = Map.update!(plan, "tasks", &aggregate_parents/1)
     if valid?(plan), do: {:ok, plan}, else: {:error, :invalid_plan_or_dependencies}
+  end
+
+  defp aggregate_parents(tasks) do
+    children =
+      tasks |> Enum.reject(&(&1["status"] == "deleted")) |> Enum.group_by(& &1["parent_id"])
+
+    Enum.map(tasks, &aggregate_task(&1, Map.get(children, &1["id"], [])))
+  end
+
+  defp aggregate_task(%{"status" => "deleted"} = task, _parts), do: task
+  defp aggregate_task(task, []), do: task
+
+  defp aggregate_task(task, parts) do
+    status = parent_status(parts)
+    task |> Map.put("status", status) |> Map.update!("evidence", &completion_evidence(&1, status))
+  end
+
+  defp completion_evidence(evidence, "completed"), do: evidence
+  defp completion_evidence(_evidence, _status), do: []
+
+  defp parent_status(parts) do
+    cond do
+      Enum.all?(parts, &(&1["status"] == "completed")) -> "completed"
+      Enum.any?(parts, &(&1["status"] in ~w(completed in_progress))) -> "in_progress"
+      true -> "pending"
+    end
+  end
+
+  defp valid_hierarchy?(tasks) do
+    by_id = Map.new(tasks, &{&1["id"], &1})
+
+    Enum.all?(tasks, fn task ->
+      case task["parent_id"] do
+        nil ->
+          true
+
+        id ->
+          parent = by_id[id]
+
+          is_binary(id) and parent != nil and id != task["id"] and is_nil(parent["parent_id"]) and
+            (parent["status"] != "deleted" or task["status"] == "deleted")
+      end
+    end)
   end
 
   defp valid_task?(%{

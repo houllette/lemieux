@@ -101,8 +101,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
          when is_integer(started) and is_map(usage),
          do: put_in(state.turn.usage, Turn.add_usage(state.turn.usage, usage))
 
-    defp sync_event(state, {:entry, %{type: :assistant, usage: usage}}),
-      do: update_in(state.session_view.throughput, &Turn.add_sample(&1, usage))
+    defp sync_event(state, {:entry, %{type: :assistant, usage: usage}}) do
+      state = update_in(state.session_view.throughput, &Turn.add_sample(&1, usage))
+
+      if is_integer(state.turn.started_at),
+        do: update_in(state.turn.usage.rate, &Turn.add_sample(&1, usage)),
+        else: state
+    end
 
     defp sync_event(
            %TUI{turn: %{started_at: started}} = state,
@@ -564,13 +569,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
       ]
 
       {Transcript.append_rows(state, rows), effects}
-    end
-
-    defp present_event(state, {:entry, %{type: :assistant, usage: usage}}, effects) do
-      case Turn.request_rows(usage) do
-        [] -> {state, effects}
-        [{:summary, text}] -> {Transcript.say(state, :summary, text), effects}
-      end
     end
 
     defp present_event(state, _event, effects), do: {state, effects}

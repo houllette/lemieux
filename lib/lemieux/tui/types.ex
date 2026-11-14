@@ -51,6 +51,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             requests: non_neg_integer(),
             tool_calls: non_neg_integer(),
             cost_usd: number() | nil,
+            rate: {non_neg_integer(), non_neg_integer()},
             measured?: boolean()
           }
 

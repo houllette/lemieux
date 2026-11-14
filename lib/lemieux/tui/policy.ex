@@ -25,6 +25,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     alias Lemieux.Conversation
     alias Lemieux.Conversation.Doctor
+    alias Lemieux.Environment.Sandbox
     alias Lemieux.Extensions.Permissions
     alias Lemieux.Session
     alias Lemieux.TUI
@@ -84,7 +85,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
           label -> "permission mode: #{label} (Shift-Tab changes it)"
         end
 
-      Notices.say(state, :info, mode <> " · " <> sandbox(state.session_view.sandbox))
+      Notices.say(
+        state,
+        :info,
+        mode <>
+          " · " <> sandbox(Sandbox.describe(state.references.environment))
+      )
     end
 
     # Said once, at the start: outside a git repository `/undo` takes back

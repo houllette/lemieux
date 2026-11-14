@@ -102,14 +102,14 @@ defmodule Lemieux.Environment.SandboxFilesTest do
   end
 
   defmodule DeniedCommand do
-    def run(_state, _command, _opts) do
-      {:ok, [{:data, "Operation not "}, {:data, "permitted"}, {:exit_status, 1}]}
+    def run(prefix, _command, _opts) do
+      {:ok, [{:data, prefix || "Operation not "}, {:data, "permitted"}, {:exit_status, 1}]}
     end
   end
 
   test "command denials carry a sandbox hint even across output chunks", ctx do
     {Sandbox, sandbox} = ctx.sandbox
-    sandbox = %{sandbox | inner: DeniedCommand}
+    sandbox = %{sandbox | inner: {DeniedCommand, "operation not "}}
     assert {:ok, events} = Sandbox.run(sandbox, "cat secrets", cwd: ctx.work)
     events = Enum.to_list(events)
     assert List.last(events) == {:exit_status, 1}

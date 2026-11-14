@@ -79,7 +79,7 @@ defmodule Lemieux.Environment.Sandbox do
   @typedoc "Which sandbox a platform provides."
   @type backend :: :seatbelt | :bubblewrap
 
-  @typedoc "The sandbox's policy, resolved once at construction."
+  @typedoc "The sandbox policy and optional host activation predicate."
   @type t :: %__MODULE__{
           backend: backend(),
           executable: Path.t(),
@@ -89,7 +89,8 @@ defmodule Lemieux.Environment.Sandbox do
           writable: [Path.t()],
           hidden: [Path.t()],
           shell: Path.t(),
-          read_only: boolean()
+          read_only: boolean(),
+          active: nil | (-> boolean())
         }
 
   @enforce_keys [:backend, :executable, :inner, :shell]
@@ -101,6 +102,7 @@ defmodule Lemieux.Environment.Sandbox do
     network: false,
     localhost: true,
     read_only: false,
+    active: nil,
     writable: [],
     hidden: []
   ]
@@ -153,6 +155,11 @@ defmodule Lemieux.Environment.Sandbox do
     * `:inner` — the environment files and commands go through (default
       `Lemieux.Environment.Local`). Pass `Lemieux.Environment.Local.new/1`'s
       result to keep a credential policy.
+    * `:active` — optional zero-argument host predicate, sampled at each
+      operation's start. A false result uses the inner environment. Already
+      started command streams keep their original sandbox. Restricted
+      read-only environments always remain active. This lets a host change
+      its implicit policy without teaching the environment permission modes.
     * `:probe` — run a trivial command through the sandbox first (default
       `true`), so a machine where bubblewrap is installed but user namespaces
       are forbidden fails here, with the reason, rather than on the model's
@@ -167,6 +174,7 @@ defmodule Lemieux.Environment.Sandbox do
         inner: Keyword.get(opts, :inner, Local),
         shell: sandbox_shell(),
         read_only: Keyword.get(opts, :read_only, false) == true,
+        active: Keyword.get(opts, :active),
         network: Keyword.get(opts, :network, false) == true,
         localhost: Keyword.get(opts, :localhost, true) != false,
         writable: existing(Keyword.get(opts, :writable, []) ++ default_writable()),
@@ -239,7 +247,7 @@ defmodule Lemieux.Environment.Sandbox do
   letting `:auto` mode run a command unasked.
   """
   @spec sandboxed?(environment :: Environment.t() | nil) :: boolean()
-  def sandboxed?({__MODULE__, %__MODULE__{}}), do: true
+  def sandboxed?({__MODULE__, %__MODULE__{} = sandbox}), do: active?(sandbox)
 
   def sandboxed?({module, state}) when is_atom(module),
     do: exports?(module, :sandboxed?, 1) and module.sandboxed?(state) == true
@@ -258,6 +266,12 @@ defmodule Lemieux.Environment.Sandbox do
   """
   @spec describe(environment :: Environment.t() | nil) :: map() | nil
   def describe({__MODULE__, %__MODULE__{} = sandbox}) do
+    if active?(sandbox), do: description(sandbox), else: nil
+  end
+
+  def describe(_environment), do: nil
+
+  defp description(sandbox) do
     %{
       "backend" => Atom.to_string(sandbox.backend),
       "network" => sandbox.network,
@@ -266,8 +280,6 @@ defmodule Lemieux.Environment.Sandbox do
       "hidden" => sandbox.hidden
     }
   end
-
-  def describe(_environment), do: nil
 
   @doc """
   The shell command that runs `command` inside the sandbox from `cwd`.
@@ -286,8 +298,12 @@ defmodule Lemieux.Environment.Sandbox do
   def run(%__MODULE__{} = sandbox, command, opts) do
     cwd = Keyword.fetch!(opts, :cwd)
 
-    with {:ok, events} <- Environment.run(sandbox.inner, wrap(sandbox, command, cwd), opts) do
-      {:ok, Stream.transform(events, {false, ""}, &denial_hint/2)}
+    if active?(sandbox) do
+      with {:ok, events} <- Environment.run(sandbox.inner, wrap(sandbox, command, cwd), opts) do
+        {:ok, Stream.transform(events, {false, ""}, &denial_hint/2)}
+      end
+    else
+      Environment.run(sandbox.inner, command, opts)
     end
   end
 
@@ -295,7 +311,11 @@ defmodule Lemieux.Environment.Sandbox do
   # without claiming to know which syscall failed or parsing shell syntax.
   defp denial_hint({:data, bytes} = event, {denied?, tail}) do
     text = tail <> bytes
-    denied? = denied? or String.contains?(text, ["Operation not permitted", "Permission denied"])
+
+    denied? =
+      denied? or
+        String.contains?(String.downcase(text), ["operation not permitted", "permission denied"])
+
     {[event], {denied?, String.slice(text, -64, 64)}}
   end
 
@@ -356,13 +376,21 @@ defmodule Lemieux.Environment.Sandbox do
   # hidden path stays listable, names included, as it is to `ls`.
   defp visible(%__MODULE__{hidden: []}, _cwd, _path), do: :ok
 
-  defp visible(%__MODULE__{hidden: hidden}, cwd, path) when is_binary(cwd) and is_binary(path) do
+  defp visible(%__MODULE__{hidden: hidden} = sandbox, cwd, path)
+       when is_binary(cwd) and is_binary(path) do
     target = real(if Path.type(path) == :absolute, do: path, else: Path.join(cwd, path))
-    if Enum.any?(hidden, &within?(target, &1)), do: {:error, :eacces}, else: :ok
+
+    if active?(sandbox) and Enum.any?(hidden, &within?(target, &1)),
+      do: {:error, :eacces},
+      else: :ok
   end
 
   # Not a path the inner environment will accept either; it says why.
   defp visible(_sandbox, _cwd, _path), do: :ok
+
+  defp active?(%__MODULE__{read_only: true}), do: true
+  defp active?(%__MODULE__{active: nil}), do: true
+  defp active?(%__MODULE__{active: predicate}), do: predicate.() != false
 
   @doc false
   # Whether `path` is `directory` or lies under it, both real paths. The

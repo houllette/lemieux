@@ -18,6 +18,7 @@ defmodule Lemieux.Conversation.Command.Permissions do
   @behaviour Lemieux.Conversation.Command
 
   alias Lemieux.Conversation.Dispatch
+  alias Lemieux.Environment.Sandbox
   alias Lemieux.Extensions.Permissions
 
   @usage "usage: /permissions [ask | accept-edits | auto | full-auto | read-only | " <>
@@ -81,7 +82,14 @@ defmodule Lemieux.Conversation.Command.Permissions do
     case Permissions.set_mode(host.permissions, mode) do
       :ok ->
         label = host.permissions |> Permissions.mode() |> Permissions.label()
-        Dispatch.say(acc, host, "permissions: #{label}, from the next tool call")
+        environment = Dispatch.environment(host)
+
+        boundary =
+          if Sandbox.sandboxed?(environment),
+            do: "OS sandbox remains active",
+            else: "commands are not sandboxed"
+
+        Dispatch.say(acc, host, "permissions: #{label}, from the next tool call · #{boundary}")
 
       {:error, reason} ->
         Dispatch.say(acc, host, reason <> " · " <> @usage)
