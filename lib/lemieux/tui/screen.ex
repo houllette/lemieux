@@ -536,24 +536,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       effort = state.conversation.reasoning_effort
 
-      # The session's name goes here now, where its id deliberately did not.
-      # An opaque ULID in a permanently visible header was noise nobody could
-      # act on; a shorthand is the argument you give `--resume` tomorrow, so
-      # it earns the space that the id did not.
-      #
-      # The working directory goes first after the version, because it is the
-      # one thing here that says what the agent can change: it edits and runs
-      # commands there without asking unless permissions are on, and nothing
-      # on the screen used to say where "there" was — `-C DIR` and the
-      # directory lmx was started in were indistinguishable once it was open.
-      # A header too long for the terminal loses its end, so the effort goes
-      # before the directory does.
-      [place(state), name(state), provider, model, "effort #{effort}"]
-      |> Enum.reject(&is_nil/1)
-      # `Lemieux.version/0` comes from mix.exs but still works in a release
-      # where Mix itself is absent.
-      |> then(&(" " <> Enum.join(["lemieux (v#{Lemieux.version()})" | &1], " · ") <> " "))
-      |> Responsive.scroll(width, chrome_frame(state))
+      # Identity answers where the agent can act and which session to resume.
+      # Keep it stationary: sending it through the metadata ticker hid that
+      # context precisely when the terminal had the least room for it.
+      identity =
+        ["lemieux (v#{Lemieux.version()})", place(state), name(state)]
+        |> Enum.reject(&is_nil/1)
+        |> Enum.join(" · ")
+
+      metadata = Enum.join([provider, model, "effort #{effort}"], " · ")
+      Responsive.header(" " <> identity, metadata, width, chrome_frame(state))
     end
 
     # Screen time survives transcript replacement, cursor interaction and

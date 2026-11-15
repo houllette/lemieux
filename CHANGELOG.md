@@ -11,6 +11,7 @@ API.
 
 ### Fixes and workflow improvements
 - Keep header scrolling progress tied to screen time across transcript additions. (#178)
+- Keep the version, working directory and session name fixed beside scrolling header metadata. (#179)
 
 ## 1.1.2 — 2026-11-14
 
