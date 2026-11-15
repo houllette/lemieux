@@ -37,6 +37,8 @@ defmodule Lemieux.Conversation.Command.Fast do
   def perform(acc, host, {:set_fast_mode, mode}) do
     case Session.set_fast_mode(host.session, mode) do
       {:ok, mode} ->
+        acc = Dispatch.react(acc, host, {:fast_mode_set, mode})
+
         Dispatch.say(
           acc,
           host,

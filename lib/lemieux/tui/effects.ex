@@ -333,6 +333,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp react(state, {:provider_set, selected}),
       do: Choices.open_model_completions(state, ModelSpec.provider(selected))
 
+    defp react(state, {:fast_mode_set, mode}), do: put_in(state.conversation.fast_mode, mode)
+
     defp react(state, {:reasoning_effort_set, _effort}), do: Choices.refresh_choices(state)
     defp react(state, {:tool_statuses, statuses}), do: Choices.put_tool_statuses(state, statuses)
 

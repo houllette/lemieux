@@ -205,9 +205,12 @@ defmodule Lemieux.TUI.CommandsTest do
       enabled = command(state, "/fast")
       assert_receive {:set_fast_mode, "toggle"}
       assert screen(enabled) =~ "fast: fast"
+      assert enabled.conversation.fast_mode == "fast"
       assert screen(command(enabled, "/fast ultrafast")) =~ "fast: ultrafast"
       assert_receive {:set_fast_mode, "ultrafast"}
-      assert screen(command(enabled, "/fast off")) =~ "fast: off"
+      disabled = command(enabled, "/fast off")
+      assert screen(disabled) =~ "fast: off"
+      assert disabled.conversation.fast_mode == "off"
       assert_receive {:set_fast_mode, "off"}
     end
   end

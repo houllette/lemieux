@@ -100,7 +100,14 @@ defmodule Lemieux.TUI.TestSupport do
 
   defp titles(block),
     do:
-      Enum.map_join([block.title | Enum.map(block.titles || [], & &1.content)], " ", &to_string/1)
+      Enum.map_join(
+        [block.title | Enum.map(block.titles || [], & &1.content)],
+        " ",
+        &title_text/1
+      )
+
+  defp title_text(%ExRatatui.Text.Line{spans: spans}), do: Enum.map_join(spans, & &1.content)
+  defp title_text(value), do: to_string(value)
 
   defp rendered_text(text) when is_binary(text), do: text
 

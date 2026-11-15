@@ -7,6 +7,8 @@ defmodule Lemieux.TUI.ChromeTest do
   alias Lemieux.TUI
   alias Lemieux.TUI.{Responsive, Width}
 
+  import Lemieux.TUI.TestSupport, only: [fake_session: 1, snapshot: 1]
+
   test "overflow gets a quarter-second clock independent of cursor blinking and stops when it fits" do
     clock = :atomics.new(1, [])
 
@@ -122,6 +124,38 @@ defmodule Lemieux.TUI.ChromeTest do
     :atomics.put(clock, 1, 8_000)
     assert header(state) != advanced
     assert state.terminal.cursor_blink.visible?
+  end
+
+  test "enabled fast service stays visible in red beside scrolling metadata" do
+    state =
+      TUI.new(id: "fast", model: "test:" <> String.duplicate("long-", 30), test_mode: {80, 24})
+
+    assert {:noreply, state} =
+             TUI.handle_info({:lemieux, state.id, {:fast_mode_changed, "off", "fast"}}, state)
+
+    for width <- [8, 35, 80], frame <- [0, 2_000] do
+      title = header(%{state | clock: fn -> frame end}, width)
+      assert %ExRatatui.Text.Line{} = title
+      assert Enum.any?(title.spans, &(&1.content =~ "fast" and &1.style.fg == :red)) or width < 6
+      assert Width.of(Enum.map_join(title.spans, & &1.content)) <= max(width - 2, 0)
+    end
+
+    assert {:noreply, state} =
+             TUI.handle_info({:lemieux, state.id, {:fast_mode_changed, "fast", "off"}}, state)
+
+    assert is_binary(header(state))
+    assert header(state, 2) == ""
+  end
+
+  test "resuming uses the session's active mode and older snapshots default to off" do
+    session = fake_session(Map.put(snapshot("restored"), :fast_mode, "ultrafast"))
+    assert {:ok, state} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
+    assert state.conversation.fast_mode == "ultrafast"
+    assert Enum.any?(header(state).spans, &(&1.content =~ "ultrafast" and &1.style.fg == :red))
+    old_session = fake_session(snapshot("older"))
+    assert {:ok, old} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, old_session} end)
+    assert old.conversation.fast_mode == "off"
+    assert is_binary(header(old))
   end
 
   defp header(state, width \\ 80) do

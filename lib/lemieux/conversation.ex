@@ -289,6 +289,7 @@ defmodule Lemieux.Conversation do
           model: String.t() | nil,
           model_chosen?: boolean(),
           reasoning_effort: String.t(),
+          fast_mode: String.t(),
           context: Context.t(),
           spent_usd: number() | nil,
           measured_spent_usd: number(),
@@ -329,6 +330,7 @@ defmodule Lemieux.Conversation do
             # model change makes it somebody's choice again.
             model_chosen?: true,
             reasoning_effort: "default",
+            fast_mode: "off",
             # Where the session stands in its context window, as of the last
             # turn. Kept rather than asked for, because a snapshot copies the
             # whole transcript and a status line wants a number.
@@ -395,6 +397,7 @@ defmodule Lemieux.Conversation do
       `unchosen/1`. Defaults to `true`, the case for a host that named the
       model it starts on.
     * `:reasoning_effort` — the model's selected effort, or `"default"`.
+    * `:fast_mode` — requested faster service, or `"off"`.
     * `:commands` — `Lemieux.Conversation.Command` modules of the host's own,
       put ahead of the built-ins. A module whose name or alias is a
       built-in's replaces that built-in — see that behaviour's documentation
@@ -408,6 +411,7 @@ defmodule Lemieux.Conversation do
       model: Keyword.get(opts, :model),
       model_chosen?: Keyword.get(opts, :model_chosen?, true) != false,
       reasoning_effort: Keyword.get(opts, :reasoning_effort, "default"),
+      fast_mode: Keyword.get(opts, :fast_mode, "off"),
       context: %Context{},
       observed_request_ids: MapSet.new(),
       commands: Command.registry!(Keyword.get(opts, :commands) || [])
@@ -902,6 +906,9 @@ defmodule Lemieux.Conversation do
     {%{conversation | model: model, model_chosen?: true, noted_window?: false},
      [{:say, "switched to #{model}"}]}
   end
+
+  def event(conversation, {:fast_mode_changed, _old, mode}),
+    do: {%{conversation | fast_mode: mode}, []}
 
   def event(conversation, {:reasoning_effort_changed, _old, effort}) do
     {%{conversation | reasoning_effort: effort}, [{:say, "reasoning effort: #{effort}"}]}
