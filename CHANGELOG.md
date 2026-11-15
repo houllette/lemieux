@@ -13,6 +13,7 @@ API.
 - Keep header scrolling progress tied to screen time across transcript additions. (#178)
 - Keep the version, working directory and session name fixed beside scrolling header metadata. (#179)
 - Move overflowing header metadata one terminal column every 250 ms on an independent clock; stop its timer when it fits. (#180)
+- Rotate complete status stats in viewport-sized pages every five seconds, preserving the current stat and reading interval across live updates. (#181)
 
 ## 1.1.2 — 2026-11-14
 

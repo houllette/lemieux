@@ -182,6 +182,15 @@ are on, and `req N/M` when a request cap is set. A live row at the foot of
 the transcript says what the turn is doing right now: `thinking (40s)`,
 `running bash (2m)`, `waiting for your approval of bash`.
 
+In a narrow window, the version, directory and session name stay fixed while
+metadata to their right scrolls one terminal column every 250 ms. A very long
+identity is shortened with an ellipsis. The status line uses stationary groups
+of complete stats: each group stays for five seconds, then the next group
+appears, repeating after every stat has been shown. A stat too wide for its
+own page is explicitly shortened with an ellipsis. The permission mode stays
+fixed, incoming transcript additions preserve progress, and a wide enough
+window shows everything statically.
+
 **When it ends.** On a clean exit, `lmx` prints where the conversation went:
 ``lmx: session NAME is saved · `lmx --resume NAME` resumes it`` (with `-C DIR`
 when the session worked in another directory). This names the session you just

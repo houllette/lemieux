@@ -132,6 +132,9 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
       * `:requests` and `:request_cap` — direct provider requests so far and
         the `max_requests` bounding them; the cap is `nil` when there is none.
       * `:throughput` — measured session-average output tokens per second, or `nil`.
+      * `:page_anchor` — a stable stat identity on the current overflow page.
+        The screen advances it every five seconds; changing values does not
+        restart the reading interval.
       * `:mcp_connecting` — the MCP servers still connecting, by name.
     """
     @type t :: %__MODULE__{
@@ -160,6 +163,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
             request_cap: pos_integer() | nil,
             throughput: String.t() | nil,
             scroll_frame: non_neg_integer(),
+            page_anchor: atom() | nil,
             mcp_connecting: [String.t()]
           }
 
@@ -191,6 +195,7 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
               request_cap: nil,
               throughput: nil,
               scroll_frame: 0,
+              page_anchor: nil,
               mcp_connecting: []
 
     @doc """
@@ -285,7 +290,9 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     any. `Lemieux.Conversation.status/1` says why the context position leads:
     a bare ratio behind three labelled numbers read as the window to nobody.
     Costs keep compact measured, estimated and unknown labels. On narrow
-    terminals, overflow scrolls behind the stationary permission mode.
+    terminals, complete stats rotate in stationary pages every five seconds,
+    beside the fixed permission mode. An individually over-wide stat uses an
+    explicit ellipsis; clipping arbitrary character windows hid labels/values.
     """
     @spec render(status :: t(), area :: Rect.t()) :: [{term(), Rect.t()}]
     def render(%__MODULE__{} = status, %Rect{} = area) do
@@ -302,20 +309,33 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     end
 
     defp responsive_text(status, width) do
-      text = " " <> Enum.join(segments(status), " · ")
+      pages = pages(status, width)
+      pages |> Enum.at(page_index(pages, status.page_anchor)) |> elem(1)
+    end
+
+    @doc false
+    @spec page_index(pages :: [{[atom()], String.t()}], anchor :: atom() | nil) ::
+            non_neg_integer()
+    def page_index(pages, anchor),
+      do: Enum.find_index(pages, fn {keys, _text} -> anchor in keys end) || 0
+
+    @doc false
+    @spec pages(status :: t(), width :: non_neg_integer()) :: [{[atom()], String.t()}]
+    def pages(status, width) do
+      items = items(status)
+      text = " " <> Enum.map_join(items, " · ", &elem(&1, 1))
 
       if Width.of(text) <= width do
-        text
+        [{Keyword.keys(items), text}]
       else
-        fixed = if status.permission, do: permission(status) <> " · ", else: ""
-        rest = segments(status) |> Enum.reject(&(&1 == permission(status))) |> Enum.join(" · ")
+        metrics = Keyword.delete(items, :permission)
+        budget = max(width - min(12, div(width, 2)) - 3, 0)
+        fixed = if status.permission, do: Responsive.fit(permission(status), budget), else: ""
+        fixed = if fixed == "", do: "", else: fixed <> " · "
 
-        fixed <>
-          Responsive.scroll(
-            rest,
-            max(width - Width.of(fixed), 0),
-            status.scroll_frame
-          )
+        metrics
+        |> Responsive.pages(max(width - Width.of(fixed), 0))
+        |> Enum.map(fn {keys, text} -> {keys, fixed <> text} end)
       end
     end
 
@@ -329,18 +349,20 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
     to put one more thing on the end of it, should not have to reassemble it.
     """
     @spec segments(status :: t()) :: [String.t()]
-    def segments(%__MODULE__{} = status) do
+    def segments(%__MODULE__{} = status), do: Enum.map(items(status), &elem(&1, 1))
+
+    defp items(status) do
       Enum.reject(
         [
-          screen(status),
-          mcp(status),
-          permission(status),
-          requests(status),
-          status.throughput,
-          compaction_warning(status),
-          conversation_status(status)
+          {:screen, screen(status)},
+          {:mcp, mcp(status)},
+          {:permission, permission(status)},
+          {:requests, requests(status)},
+          {:throughput, status.throughput},
+          {:compaction, compaction_warning(status)}
+          | conversation_items(status)
         ],
-        &is_nil/1
+        fn {_key, text} -> is_nil(text) end
       )
     end
 
@@ -401,12 +423,14 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
 
     def compaction_warning(_status), do: nil
 
-    defp conversation_status(%__MODULE__{conversation: nil}), do: nil
+    defp conversation_items(%__MODULE__{conversation: nil}), do: []
 
-    defp conversation_status(%__MODULE__{conversation: conversation}),
-      do:
-        Conversation.status(conversation.context) <>
-          " · " <> Cost.format(conversation)
+    defp conversation_items(%__MODULE__{conversation: conversation}) do
+      # This producer emits exactly two stats. Split its known format here,
+      # rather than splitting arbitrary activity text or a host's labels.
+      [context, session] = String.split(Conversation.status(conversation.context), " · ")
+      [context: context, session: session, cost: Cost.format(conversation)]
+    end
 
     @doc """
     What the *screen* is doing, which is the only activity the shipped row says.

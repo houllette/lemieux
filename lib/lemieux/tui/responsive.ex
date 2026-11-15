@@ -57,6 +57,28 @@ defmodule Lemieux.TUI.Responsive do
     end
   end
 
+  @doc "Packs complete labelled values in order; an individually over-wide value gets an ellipsis."
+  @spec pages(items :: [{atom(), String.t()}], width :: non_neg_integer()) :: [
+          {[atom()], String.t()}
+        ]
+  def pages(_items, width) when width <= 0, do: [{[], ""}]
+
+  def pages(items, width) do
+    {finished, keys, text} =
+      Enum.reduce(items, {[], [], ""}, fn {key, value}, {finished, keys, text} ->
+        value = fit(value, width)
+        combined = if keys == [], do: value, else: text <> " · " <> value
+
+        if Width.of(combined) <= width do
+          {finished, [key | keys], combined}
+        else
+          {[{Enum.reverse(keys), text} | finished], [key], value}
+        end
+      end)
+
+    Enum.reverse([{Enum.reverse(keys), text} | finished])
+  end
+
   @doc "Shows a cell-width window, advancing one column per screen-clock frame."
   @spec scroll(text :: String.t(), width :: non_neg_integer(), frame :: non_neg_integer()) ::
           String.t()

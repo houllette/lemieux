@@ -565,6 +565,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {" " <> identity, metadata}
     end
 
+    @doc false
+    @spec status_pages(state :: TUI.t()) :: [{[atom()], String.t()}]
+    def status_pages(%TUI{overlay: overlay}) when not is_nil(overlay), do: []
+
+    def status_pages(state) do
+      if status_line(state) == Status do
+        area = panes(state).status
+
+        if area.height > 0 and area.width > 0,
+          do: Status.pages(status_snapshot(state, area), area.width),
+          else: []
+      else
+        []
+      end
+    end
+
     # Short enough to leave the header room for the session and the model,
     # long enough for a typical `~/code/project`.
     @place_columns 32
@@ -900,6 +916,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           [
             width: area.width,
             scroll_frame: Chrome.frame(state),
+            page_anchor: state.terminal.status_rotation.anchor,
             height: area.height,
             theme: theme(state),
             accent: accent(state),

@@ -76,6 +76,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           cursor_blink: %{visible?: true, tick: nil},
           chrome_since: clock.(),
           chrome_timer: nil,
+          status_rotation: %{anchor: nil, next_at: nil},
           link_press: nil,
           hover: %{
             enabled?: transport == :cell_session and Keyword.get(opts, :hover_pointer, false),

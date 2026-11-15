@@ -9,7 +9,7 @@ defmodule Lemieux.TUI.FeedbackRegressionsTest do
   alias Lemieux.TUI.TranscriptSpacing
   alias Lemieux.TUI.Turn
 
-  test "overflow scrolls slowly while the permission mode stays stationary" do
+  test "header overflow scrolls while status pages keep the permission mode stationary" do
     alias ExRatatui.Layout.Rect
     alias Lemieux.TUI.{Responsive, Status, Width}
     assert Responsive.scroll("short", 20, 99) == "short"
@@ -31,7 +31,7 @@ defmodule Lemieux.TUI.FeedbackRegressionsTest do
 
     area = %Rect{x: 0, y: 0, width: 30, height: 1}
     [{first, _}] = Status.render(status, area)
-    [{next, _}] = Status.render(%{status | scroll_frame: 8}, area)
+    [{next, _}] = Status.render(%{status | page_anchor: :cost}, area)
     assert first.text != next.text
     assert String.starts_with?(first.text, "⏵ auto · ")
     assert String.starts_with?(next.text, "⏵ auto · ")

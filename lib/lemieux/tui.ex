@@ -380,8 +380,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
               height: non_neg_integer(),
               cursor_blink: %{visible?: boolean(), tick: reference() | nil},
               chrome_since: integer(),
-              chrome_timer:
-                %{timer: reference(), token: reference(), interval: pos_integer()} | nil,
+              chrome_timer: %{timer: reference(), token: reference(), deadline: integer()} | nil,
+              status_rotation: %{anchor: atom() | nil, next_at: integer() | nil},
               link_press: {String.t(), {non_neg_integer(), non_neg_integer()}} | nil,
               hover: %{enabled?: boolean(), shape: :pointer | :restore, event: term()},
               feedback: %{text: String.t(), token: reference()} | nil,
