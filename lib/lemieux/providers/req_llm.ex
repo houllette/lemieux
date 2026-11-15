@@ -404,12 +404,9 @@ defmodule Lemieux.Providers.ReqLLM do
   @impl Lemieux.Provider
   def run(%State{route: route, options: options} = state, %Request{} = request, emit)
       when not is_nil(route) do
-    with {:ok, {target, options}} <-
-           Route.target(
-             route,
-             %{request | params: Keyword.delete(request.params, :fast_mode)},
-             options |> Keyword.merge(request.params) |> Keyword.delete(:fast_mode)
-           ) do
+    with :ok <- routed_fast_mode(route, request),
+         {:ok, {target, options}} <-
+           Route.target(route, request, Keyword.merge(options, request.params)) do
       stream_at(
         request,
         target,
@@ -443,9 +440,18 @@ defmodule Lemieux.Providers.ReqLLM do
           do: Enum.filter(["fast", "ultrafast"], &(not is_nil(fast_tier(spec, &1)))),
           else: []
 
-      _routed ->
-        []
+      %State{route: route} ->
+        Route.fast_modes(route, spec)
     end
+  end
+
+  defp routed_fast_mode(route, request) do
+    mode = Keyword.get(request.params, :fast_mode, "off")
+    supported = Route.fast_modes(route, request.model)
+
+    if mode in ["off" | supported],
+      do: :ok,
+      else: {:error, {:fast_mode_unsupported, request.model, mode, supported}}
   end
 
   defp fast_tier(spec, mode) do

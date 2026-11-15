@@ -121,6 +121,17 @@ defmodule Lemieux.Provider.Route do
   @callback reasoning_efforts(state :: term(), model :: String.t()) :: [String.t()]
 
   @doc """
+  Faster-service modes accepted by this model through this route.
+
+  Optional; absent means none. Return logical names such as `"fast"` and
+  `"ultrafast"` only when the route can translate them to a supported wire
+  setting. `c:target/3` receives `:fast_mode` in the request and options and
+  owns that translation; `"off"` means ordinary service. Model names alone
+  cannot establish a gateway's capabilities or the caller's entitlement.
+  """
+  @callback fast_modes(state :: term(), model :: String.t()) :: [String.t()]
+
+  @doc """
   Readies the route to answer: discovery, a catalogue refresh, a policy read.
 
   Optional. A host runs it for the route the start model is on — before the
@@ -194,7 +205,8 @@ defmodule Lemieux.Provider.Route do
   @callback annotate_message(state :: term(), message :: map(), response :: ReqLLM.Response.t()) ::
               map()
 
-  @optional_callbacks model_metadata: 1,
+  @optional_callbacks fast_modes: 2,
+                      model_metadata: 1,
                       ready: 1,
                       default_model: 1,
                       prompt_cache_key?: 2,
@@ -231,12 +243,30 @@ defmodule Lemieux.Provider.Route do
   def reasoning_efforts({module, state}, model) when is_atom(module) and is_binary(model),
     do: module.reasoning_efforts(state, model)
 
+  @doc "The route's optional faster-service vocabulary; empty when absent."
+  @spec fast_modes(route :: t(), model :: String.t()) :: [String.t()]
+  def fast_modes({module, state}, model) when is_atom(module) and is_binary(model) do
+    if implements?(module, :fast_modes, 2), do: module.fast_modes(state, model), else: []
+  end
+
   @doc "Resolves the wire target for `request` through `route`; see `c:target/3`."
   @spec target(route :: t(), request :: Request.t(), options :: keyword()) ::
           {:ok, target()} | {:error, term()}
   def target({module, state}, %Request{} = request, options)
-      when is_atom(module) and is_list(options),
-      do: module.target(state, request, options)
+      when is_atom(module) and is_list(options) do
+    # Before routes could opt into fast service, the adapter consumed this
+    # parameter itself. Preserve that contract for older routes, including
+    # an explicit off carried over from another connection during resume.
+    {request, options} =
+      if implements?(module, :fast_modes, 2) do
+        {request, options}
+      else
+        {%{request | params: Keyword.delete(request.params, :fast_mode)},
+         Keyword.delete(options, :fast_mode)}
+      end
+
+    module.target(state, request, options)
+  end
 
   @doc "Whether the route opts this request into session-derived cache keys; false when absent."
   @spec prompt_cache_key?(route :: t(), request :: Request.t()) :: boolean()

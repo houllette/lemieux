@@ -270,6 +270,9 @@ it explicitly. `/fast ultrafast` is offered only when the model catalog and
 active transport support that tier. The choice is saved with the session and
 cleared when switching to an unsupported model or connection. Capability is
 not subscription entitlement: the provider still authorizes each request.
+Ixway connections use the gateway's `ixway_fast_modes` catalogue metadata;
+older gateways that do not publish it keep `/fast` hidden. Update Ixway to
+enable discovery and forwarding of fast service through Codex routes.
 With the pinned provider library, supported direct OpenAI and Codex models
 expose service tiers; Anthropic and gateways without a declared transport
 contract do not.

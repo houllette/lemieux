@@ -846,3 +846,17 @@ counts that do not add up, which ReqLLM records as `usage_reported` and
 and a capped session stops rather than spending against a wrong total
 (`Lemieux.Providers.ReqLLM.price_at_list_rates/2` is the rule). Routed
 requests are left as the route priced them.
+
+### Faster service through a route
+
+Routes may implement the optional `c:Lemieux.Provider.Route.fast_modes/2`
+callback to advertise logical modes. Existing implementations need no change
+and continue to offer none. For an advertised mode, `target/3` now receives
+`:fast_mode` in the request parameters and merged options; translate it to a
+wire setting and consume it before returning options. Unsupported selections
+fail before transport. `"off"` requests ordinary service. Never infer gateway
+support or account entitlement from a model name.
+
+`Lemieux.Ixway` uses `ixway_fast_modes`, a map from `fast`/`ultrafast` to the
+gateway's corresponding `service_tier`. It sends explicit `default` for off
+and keeps credentials, destination and headers under the host's control.

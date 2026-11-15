@@ -337,6 +337,49 @@ defmodule Lemieux.Ixway do
     end
   end
 
+  @doc "Faster-service modes explicitly advertised for every target of this entry."
+  @impl Lemieux.Provider.Route
+  @spec fast_modes(connection :: t(), spec :: String.t()) :: [String.t()]
+  def fast_modes(connection, spec) do
+    tiers = fast_tiers(connection, spec)
+    Enum.filter(["fast", "ultrafast"], &Map.has_key?(tiers, &1))
+  end
+
+  defp fast_tiers(connection, spec) do
+    with {:ok, entry} <- entry(connection, spec),
+         modes when is_map(modes) <- entry["ixway_fast_modes"] do
+      Map.filter(modes, fn
+        {"fast", tier} -> tier in ["priority", "fast"]
+        {"ultrafast", "ultrafast"} -> true
+        _ -> false
+      end)
+    else
+      _ -> %{}
+    end
+  end
+
+  defp fast_options(connection, request, options) do
+    options = Keyword.delete(options, :service_tier)
+
+    case Keyword.get(options, :fast_mode) do
+      nil ->
+        {:ok, options}
+
+      "off" ->
+        {:ok, Keyword.put(options, :service_tier, "default")}
+
+      mode ->
+        case Map.fetch(fast_tiers(connection, request.model), mode) do
+          {:ok, tier} ->
+            {:ok, Keyword.put(options, :service_tier, tier)}
+
+          :error ->
+            {:error,
+             {:fast_mode_unsupported, request.model, mode, fast_modes(connection, request.model)}}
+        end
+    end
+  end
+
   # Prices cannot be inferred from an alias or the requested concrete model,
   # because policy can route elsewhere. `nil` is the honest answer, and a local
   # cost cap fails closed on it rather than counting the request as free.
@@ -349,6 +392,7 @@ defmodule Lemieux.Ixway do
           {:ok, {LLMDB.Model.t(), keyword()}} | {:error, term()}
   def target(connection, request, options) do
     with :ok <- validate_model(connection, request.model, request.tools),
+         {:ok, options} <- fast_options(connection, request, options),
          :ok <- protect_logs(),
          {:ok, model} <-
            ReqLLM.model(%{
@@ -361,6 +405,7 @@ defmodule Lemieux.Ixway do
       options =
         Keyword.take(options, [
           :temperature,
+          :service_tier,
           :max_tokens,
           :top_p,
           :reasoning_effort,

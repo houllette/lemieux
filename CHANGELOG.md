@@ -11,6 +11,8 @@ API.
 
 ### Fixes and workflow improvements
 
+- Enable `/fast` on routes that explicitly advertise it, including Ixway, and preserve the selected service tier through gateway requests. Existing routes without the optional capability callback remain unchanged.
+
 - Add F5 and title-click access to a full, scrollable Todo List; Alt-M minimizes its pinned preview to one summary row without losing the draft.
 
 - Keep header scrolling progress tied to screen time across transcript additions. (#178)
