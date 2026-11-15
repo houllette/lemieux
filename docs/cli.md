@@ -297,7 +297,8 @@ endpoint contract differs from the public [Sign in with ChatGPT catalog](https:/
 | Ctrl-R | Search input history across sessions; Enter or Tab takes an entry, Esc restores the draft |
 | Ctrl-G | Edit the draft in `$VISUAL` or `$EDITOR` (`vi` when neither is set); not on native Windows yet |
 | Ctrl-V | Attach the image on the clipboard as an `@path` reference |
-| Shift-Up, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls |
+| Shift-Up, F6, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls; in a multiline draft use F6 or the badge |
+| Shift-Up / Shift-Down in a multiline draft | Extend or shrink the text selection across visible lines, including soft-wrapped lines |
 | Shift-Down / Esc in Tasks | Close the task list or output inspector and return to the draft; nested forms keep their editing keys, with Esc going back |
 | Ctrl-O | Page through the full output of recent tool calls (less-style keys, ←/→ between outputs, q or Esc to close) |
 | Page Up / Page Down | Scroll the transcript a page |

@@ -65,7 +65,8 @@ defmodule Lemieux.TUI.Keys do
     * `:toggle_notifications` — turn the finished/waiting notifications off
       or back on for the sitting. `alt-n`.
     * `:tasks` — toggle the native Tasks tray above the composer.
-      `shift-up`; `f6` remains an alternate binding.
+      `shift-up` outside multiline draft editing; `f6` remains available
+      while Shift+Up/Down extend the editor selection.
 
   `:forward` is not an action: it is the answer for every key the table does
   not claim, and it hands the key to the input box. The editing vocabulary —

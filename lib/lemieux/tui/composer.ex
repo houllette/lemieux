@@ -56,8 +56,33 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     @doc false
     @spec key(ExRatatui.Event.Key.t(), TUI.t()) :: reply()
-    def key(event, state),
-      do: act(Keys.action(state.status.keys, event), event, reveal_cursor(state))
+    def key(event, state) do
+      action = Keys.action(state.status.keys, event)
+      state = reveal_cursor(state)
+
+      if draft_selection?(event, state, action),
+        do: edit(event, state),
+        else: act(action, event, state)
+    end
+
+    # Shift+Up opens Tasks only outside multiline editing. At the draft's
+    # boundaries it remains an editing key too, rather than falling through
+    # to a panel or transcript action when the caret cannot move farther.
+    # Rebound actions and other Tasks bindings retain their host meaning.
+    defp draft_selection?(
+           %ExRatatui.Event.Key{code: code, modifiers: ["shift"]} = event,
+           state,
+           action
+         )
+         when code in ["up", "down"],
+         do: action == Keys.action(event) and multiline_draft?(state)
+
+    defp draft_selection?(_event, _state, _action), do: false
+
+    @doc false
+    @spec multiline_draft?(state :: TUI.t()) :: boolean()
+    def multiline_draft?(state),
+      do: Layout.input_height(typed_value(state), Screen.panes(state).input.width) > 3
 
     @doc false
     @spec reveal_cursor(TUI.t()) :: TUI.t()

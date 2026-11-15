@@ -21,6 +21,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Conversation
     alias Lemieux.TUI
     alias Lemieux.TUI.Activity
+    alias Lemieux.TUI.Composer
 
     alias Lemieux.TUI.{
       Choices,
@@ -255,11 +256,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       running = Enum.count(cache(state).rows, &active?/1)
       count = if running > 0, do: " #{running}", else: ""
 
-      shortcut =
-        if width >= 40 and
-             Keys.action(state.status.keys, %{code: "up", modifiers: ["shift"]}) == :tasks,
-           do: " · Shift+Up",
-           else: ""
+      shortcut = shortcut(state, width)
 
       spinner =
         if running > 0,
@@ -282,6 +279,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def title(_state, _width), do: []
+
+    defp shortcut(_state, width) when width < 40, do: ""
+
+    defp shortcut(state, _width) do
+      cond do
+        Keys.action(state.status.keys, %{code: "up", modifiers: ["shift"]}) == :tasks and
+            not Composer.multiline_draft?(state) ->
+          " · Shift+Up"
+
+        Keys.action(state.status.keys, %{code: "f6", modifiers: []}) == :tasks ->
+          " · F6"
+
+        true ->
+          ""
+      end
+    end
 
     @doc false
     @spec badge_at?(state :: TUI.t(), event :: Mouse.t()) :: boolean()
