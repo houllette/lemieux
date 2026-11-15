@@ -272,6 +272,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             mcp_ready?: boolean(),
             mcp_announced?: boolean(),
             plan: [map()] | nil,
+            plan_collapsed?: boolean(),
             plan_progress: {:model_art, term(), String.t()} | nil,
             requests: non_neg_integer(),
             request_cap: pos_integer() | nil,

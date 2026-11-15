@@ -11,6 +11,8 @@ API.
 
 ### Fixes and workflow improvements
 
+- Add F5 and title-click access to a full, scrollable Todo List; Alt-M minimizes its pinned preview to one summary row without losing the draft.
+
 - Keep header scrolling progress tied to screen time across transcript additions. (#178)
 - Keep the version, working directory and session name fixed beside scrolling header metadata. (#179)
 - Move overflowing header metadata one terminal column every 250 ms on an independent clock; stop its timer when it fits. (#180)

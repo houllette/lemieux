@@ -13,6 +13,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     Drawn only while some task is not completed — a finished plan has said
     what it had to — and never taller than a third of the screen; a longer
     plan shows the tasks around the one in progress.
+
+    F5 or a title click opens the full, wrapped list in `PlanInspector`.
+    Alt-M minimizes this preview to one summary row; that screen-local choice
+    survives plan revisions but resets when attaching to another session.
     """
 
     alias ExRatatui.Layout.Rect
@@ -24,6 +28,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Extensions.Planning
     alias Lemieux.TUI
     alias Lemieux.TUI.Art
+    alias Lemieux.TUI.Flash
+    alias Lemieux.TUI.Responsive
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.TodoText
     alias Lemieux.TUI.ToolText
@@ -60,19 +66,56 @@ if Code.ensure_loaded?(ExRatatui.App) do
       entries
       |> Enum.filter(&match?(%{type: :extension_state}, &1))
       |> Enum.reduce(put_plan(state, [], 0), &observe(&2, &1))
+      |> put_in([Access.key!(:session_view), :plan_collapsed?], false)
+    end
+
+    @doc false
+    @spec open(state :: TUI.t()) :: TUI.t()
+    def open(%{session_view: %{plan: [_ | _]}} = state),
+      do: %{state | modal: %{kind: :plan, offset: 0}}
+
+    def open(state), do: Flash.show(state, "no Todo List to inspect yet")
+
+    @doc false
+    @spec toggle(state :: TUI.t()) :: TUI.t()
+    def toggle(state), do: update_in(state.session_view.plan_collapsed?, &not/1)
+
+    @doc false
+    @spec title_at?(state :: TUI.t(), event :: map()) :: boolean()
+    def title_at?(state, %{x: x, y: y}) do
+      case Screen.plan_area(state, Screen.panes(state)) do
+        %Rect{x: left, y: ^y, width: width} -> x >= left and x < left + width
+        _ -> false
+      end
     end
 
     @doc "How many rows the panel wants: `0` when there is nothing to draw."
     @spec rows(TUI.t(), non_neg_integer()) :: non_neg_integer()
     def rows(state, available) do
       case visible(state) do
-        [] -> 0
-        tasks -> min(length(tasks) + 3, max(div(available, 3), 3))
+        [] ->
+          0
+
+        tasks ->
+          if state.session_view.plan_collapsed?,
+            do: 1,
+            else: min(length(tasks) + 3, max(div(available, 3), 3))
       end
     end
 
     @doc false
     @spec render(TUI.t(), Rect.t()) :: [{term(), Rect.t()}]
+    def render(state, %Rect{height: 1} = area) do
+      tasks = visible(state)
+      roots = Enum.filter(tasks, &is_nil(&1["parent_id"]))
+      done = Enum.count(roots, &(&1["status"] == "completed"))
+
+      text =
+        " Todo List · r#{state.session_view.plan_revision} · #{done}/#{length(roots)} · F5 inspect · Alt-M expand"
+
+      [{%Paragraph{text: Responsive.fit(text, area.width)}, area}]
+    end
+
     def render(state, %Rect{height: height} = area) when height >= 3 do
       tasks = visible(state)
       progress? = height >= 5 and area.width >= 28
@@ -114,6 +157,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         block: %Block{
           title:
             title(state.session_view.plan_revision, done, length(roots), area.width, progress),
+          titles: [%Block.Title{content: " F5 inspect · Alt-M minimize ", position: :bottom}],
           borders: [:all],
           border_type: :rounded,
           border_style: %Style{fg: theme.text.muted},

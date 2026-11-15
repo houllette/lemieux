@@ -103,7 +103,9 @@ defmodule Lemieux.TUI.KeysTest do
                "back_tab" => "cycle_mode",
                "shift-back_tab" => "cycle_mode",
                "alt-n" => "toggle_notifications",
-               "f6" => "tasks"
+               "f6" => "tasks",
+               "f5" => "todos",
+               "alt-m" => "toggle_todos"
              }
     end
 
@@ -138,7 +140,9 @@ defmodule Lemieux.TUI.KeysTest do
                :paste_image,
                :cycle_mode,
                :toggle_notifications,
-               :tasks
+               :tasks,
+               :todos,
+               :toggle_todos
              ]
 
       assert Keys.names() == Enum.map(Keys.actions(), &Atom.to_string/1) ++ ["forward"]

@@ -357,10 +357,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    defp plan_area(%{tools: %{question_flow: flow}}, _panes) when not is_nil(flow), do: nil
-    defp plan_area(%{modal: modal}, _panes) when not is_nil(modal), do: nil
+    @doc false
+    @spec plan_area(state :: TUI.t(), panes :: map()) :: Rect.t() | nil
+    def plan_area(%{tools: %{question_flow: flow}}, _panes) when not is_nil(flow), do: nil
+    def plan_area(%{modal: modal}, _panes) when not is_nil(modal), do: nil
 
-    defp plan_area(state, panes) do
+    def plan_area(state, panes) do
       bottom =
         case queued_area(state, panes) do
           nil -> panes.input.y
@@ -369,7 +371,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       rows = PlanPanel.rows(state, bottom - panes.transcript.y)
 
-      if rows >= 3 and bottom - rows - panes.transcript.y >= 3,
+      if rows > 0 and bottom - rows - panes.transcript.y >= 3,
         do: %Rect{x: panes.input.x, y: bottom - rows, width: panes.input.width, height: rows}
     end
 
