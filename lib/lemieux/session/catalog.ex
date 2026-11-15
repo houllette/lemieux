@@ -122,6 +122,7 @@ defmodule Lemieux.Session.Catalog do
       :ok ->
         previous = state.model
         previous_effort = reasoning_effort(state)
+        previous_fast = Keyword.get(state.params, :fast_mode, "off")
 
         params =
           state
@@ -140,6 +141,7 @@ defmodule Lemieux.Session.Catalog do
           |> Core.emit({:model_changed, previous, model})
 
         state = maybe_emit_effort_change(state, previous_effort, reasoning_effort(state))
+        state = maybe_emit_fast_change(state, previous_fast)
 
         state = Setup.notice_unknown_window(state)
         state = Core.emit(state, {:context, Compacting.context(state)})
@@ -216,9 +218,18 @@ defmodule Lemieux.Session.Catalog do
           state
           |> Map.update!(:params, &Keyword.put(&1, :fast_mode, mode))
           |> Setup.record_config()
+          |> Core.emit({:fast_mode_changed, current, mode})
 
         {:reply, {:ok, mode}, state}
     end
+  end
+
+  defp maybe_emit_fast_change(state, previous) do
+    current = Keyword.get(state.params, :fast_mode, "off")
+
+    if current == previous,
+      do: state,
+      else: Core.emit(state, {:fast_mode_changed, previous, current})
   end
 
   defp fast_choice("on", _current), do: "fast"

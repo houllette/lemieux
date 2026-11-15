@@ -28,6 +28,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.Notify
     alias Lemieux.TUI.Pager
+    alias Lemieux.TUI.PlanPanel
     alias Lemieux.TUI.Pointer
     alias Lemieux.TUI.Policy
     alias Lemieux.TUI.ResourceIndex
@@ -171,6 +172,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
       :ok = ExRatatui.textarea_insert_str(state.input, "\n")
       {:noreply, edited(state)}
     end
+
+    defp act(:todos, _event, state), do: {:noreply, PlanPanel.open(state)}
+    defp act(:toggle_todos, _event, state), do: {:noreply, PlanPanel.toggle(state)}
 
     defp act(:tasks, _event, state), do: {:noreply, TaskPanel.open(state)}
 

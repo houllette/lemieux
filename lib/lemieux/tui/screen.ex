@@ -357,10 +357,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    defp plan_area(%{tools: %{question_flow: flow}}, _panes) when not is_nil(flow), do: nil
-    defp plan_area(%{modal: modal}, _panes) when not is_nil(modal), do: nil
+    @doc false
+    @spec plan_area(state :: TUI.t(), panes :: map()) :: Rect.t() | nil
+    def plan_area(%{tools: %{question_flow: flow}}, _panes) when not is_nil(flow), do: nil
+    def plan_area(%{modal: modal}, _panes) when not is_nil(modal), do: nil
 
-    defp plan_area(state, panes) do
+    def plan_area(state, panes) do
       bottom =
         case queued_area(state, panes) do
           nil -> panes.input.y
@@ -369,7 +371,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       rows = PlanPanel.rows(state, bottom - panes.transcript.y)
 
-      if rows >= 3 and bottom - rows - panes.transcript.y >= 3,
+      if rows > 0 and bottom - rows - panes.transcript.y >= 3,
         do: %Rect{x: panes.input.x, y: bottom - rows, width: panes.input.width, height: rows}
     end
 
@@ -531,8 +533,35 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp header(state, width) do
       {identity, metadata} = header_parts(state)
-      Responsive.header(identity, metadata, width, Chrome.frame(state))
+      badge = fast_badge(state, width)
+
+      text =
+        Responsive.header(
+          identity,
+          metadata,
+          max(width - Width.of(badge), 0),
+          Chrome.frame(state)
+        )
+
+      if badge == "" do
+        text
+      else
+        Line.new([
+          Span.new(text),
+          Span.new(badge, style: %Style{fg: theme(state).children.fail, modifiers: [:bold]})
+        ])
+      end
     end
+
+    # Reserve the qualifier before the ticker's viewport is measured: otherwise
+    # the service setting disappears while the metadata scrolls past it.
+    defp fast_badge(%{conversation: %{fast_mode: mode}}, width)
+         when mode in ["fast", "ultrafast"] do
+      text = " · #{mode} "
+      if Width.of(text) <= width, do: text, else: Responsive.fit(mode, width)
+    end
+
+    defp fast_badge(_state, _width), do: ""
 
     @doc false
     @spec chrome_interval(state :: TUI.t()) :: pos_integer() | nil
@@ -542,6 +571,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {identity, metadata} = header_parts(state)
       area = panes(state).transcript
       width = max(area.width - 2, 0)
+      width = max(width - Width.of(fast_badge(state, width)), 0)
       if area.height > 0 and Responsive.header_scrolling?(identity, metadata, width), do: 250
     end
 

@@ -64,6 +64,8 @@ defmodule Lemieux.TUI.Keys do
       those tabs instead.
     * `:toggle_notifications` — turn the finished/waiting notifications off
       or back on for the sitting. `alt-n`.
+    * `:todos` — inspect the complete Todo List. `f5`.
+    * `:toggle_todos` — minimize or expand the pinned Todo List. `alt-m`.
     * `:tasks` — toggle the native Tasks tray above the composer.
       `shift-up` outside multiline draft editing; `f6` remains available
       while Shift+Up/Down extend the editor selection.
@@ -140,7 +142,9 @@ defmodule Lemieux.TUI.Keys do
     :paste_image,
     :cycle_mode,
     :toggle_notifications,
-    :tasks
+    :tasks,
+    :todos,
+    :toggle_todos
   ]
 
   @typedoc "What a key does to the screen. The moduledoc says what each means."
@@ -167,6 +171,8 @@ defmodule Lemieux.TUI.Keys do
           | :cycle_mode
           | :toggle_notifications
           | :tasks
+          | :todos
+          | :toggle_todos
 
   @typedoc """
   A key event as the table sees it: the code and the modifiers held.
@@ -248,6 +254,8 @@ defmodule Lemieux.TUI.Keys do
     {[], "back_tab"} => :cycle_mode,
     {["shift"], "back_tab"} => :cycle_mode,
     {[], "f6"} => :tasks,
+    {[], "f5"} => :todos,
+    {["alt"], "m"} => :toggle_todos,
     {["alt"], "n"} => :toggle_notifications
   }
 

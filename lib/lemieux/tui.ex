@@ -153,6 +153,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.MCPInteraction
     alias Lemieux.TUI.Modal
     alias Lemieux.TUI.Notices
+    alias Lemieux.TUI.PlanInspector
     alias Lemieux.TUI.Pointer
     alias Lemieux.TUI.QuestionInteraction
     alias Lemieux.TUI.QuestionSelection
@@ -809,6 +810,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
            %{tools: %{mcp_flow: %{mode: mode}}} = state
          )
          when mode in [:tools, :tool], do: MCPInteraction.mouse(event, state)
+
+    defp route_event(%ExRatatui.Event.Mouse{} = event, %{modal: %{kind: :plan}} = state),
+      do: PlanInspector.mouse(event, state)
 
     defp route_event(%ExRatatui.Event.Mouse{} = event, state), do: Pointer.mouse(event, state)
 

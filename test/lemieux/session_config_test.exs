@@ -355,6 +355,7 @@ defmodule Lemieux.SessionConfigTest do
       id = Session.id(session)
       assert Session.fast_modes(session) == ["fast", "ultrafast"]
       assert {:ok, "fast"} = Session.set_fast_mode(session, "toggle")
+      assert_receive {:lemieux, ^id, {:fast_mode_changed, "off", "fast"}}
       assert {:ok, "ultrafast"} = Session.set_fast_mode(session, "ultrafast")
       assert Session.snapshot(session).fast_mode == "ultrafast"
       assert :ok = Session.prompt(session, "hello")
@@ -367,6 +368,7 @@ defmodule Lemieux.SessionConfigTest do
       assert {:ok, "off"} = Session.set_fast_mode(resumed, "toggle")
       assert {:ok, "fast"} = Session.set_fast_mode(resumed, "on")
       assert {:ok, "test:other"} = Session.set_model(resumed, "test:other")
+      assert_receive {:lemieux, ^id, {:fast_mode_changed, "fast", "off"}}
       assert Session.snapshot(resumed).fast_mode == "off"
 
       assert {:error, {:fast_mode_unsupported, "test:other", "fast", []}} =

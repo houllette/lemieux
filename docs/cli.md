@@ -209,7 +209,10 @@ Besides the conversation, the terminal UI gives you:
   preferred and recent models first, then the rest by release date, with
   deprecated models marked near the end;
 - a Todo List above the input while a task is open, with its revision and
-  completion count; `todo` receipts use colored Completed, In progress and
+  completion count; F5 or its title opens the full wrapped list, and Alt-M
+  minimizes or expands the pinned view. The inspector scrolls with arrows,
+  PgUp/PgDn and Home/End; M toggles the pinned view and Esc returns to the
+  draft. Completed lists stay available through F5. `todo` receipts use colored Completed, In progress and
   Pending labels, and separate tool groups have a blank row between them;
 - edits, writes and patches drawn as numbered diffs, and the full output of
   any recent tool call a Ctrl-O away;
@@ -265,8 +268,14 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 **Fast service.** `/fast` toggles fast mode; `/fast on` and `/fast off` select
 it explicitly. `/fast ultrafast` is offered only when the model catalog and
 active transport support that tier. The choice is saved with the session and
-cleared when switching to an unsupported model or connection. Capability is
+cleared when switching to an unsupported model or connection. An active
+`fast` or `ultrafast` qualifier stays visible in red in the header, beside the
+scrolling metadata. It shows the requested mode; upstream may downgrade a
+request. Capability is
 not subscription entitlement: the provider still authorizes each request.
+Ixway connections use the gateway's `ixway_fast_modes` catalogue metadata;
+older gateways that do not publish it keep `/fast` hidden. Update Ixway to
+enable discovery and forwarding of fast service through Codex routes.
 With the pinned provider library, supported direct OpenAI and Codex models
 expose service tiers; Anthropic and gateways without a declared transport
 contract do not.
@@ -300,6 +309,8 @@ endpoint contract differs from the public [Sign in with ChatGPT catalog](https:/
 | Shift-Up, F6, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls; in a multiline draft use F6 or the badge |
 | Shift-Up / Shift-Down in a multiline draft | Extend or shrink the text selection across visible lines, including soft-wrapped lines |
 | Shift-Down / Esc in Tasks | Close the task list or output inspector and return to the draft; nested forms keep their editing keys, with Esc going back |
+| F5 or click Todo List | Inspect all Todo items, including wrapped titles and subtasks; Esc closes |
+| Alt-M | Minimize or expand the pinned Todo List to a one-row summary |
 | Ctrl-O | Page through the full output of recent tool calls (less-style keys, ←/→ between outputs, q or Esc to close) |
 | Page Up / Page Down | Scroll the transcript a page |
 | Ctrl-Shift-Up / Ctrl-Shift-Down | Scroll the transcript three rows |

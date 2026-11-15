@@ -11,6 +11,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Flash
     alias Lemieux.TUI.Links
     alias Lemieux.TUI.Notices
+    alias Lemieux.TUI.PlanPanel
     alias Lemieux.TUI.QuestionPanel
     alias Lemieux.TUI.RichText
     alias Lemieux.TUI.Screen
@@ -116,6 +117,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     def mouse(_event, state), do: {:noreply, state}
 
+    defp click(state, _event, :plan), do: {:noreply, PlanPanel.open(state)}
     defp click(state, _event, :tasks), do: {:noreply, TaskPanel.open(state)}
     defp click(state, _event, :latest), do: {:noreply, %{state | scroll: 0, selection: nil}}
 
@@ -157,6 +159,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
       cond do
         input_at?(state, event) ->
           nil
+
+        PlanPanel.title_at?(state, event) ->
+          :plan
 
         TaskPanel.badge_at?(state, event) ->
           :tasks

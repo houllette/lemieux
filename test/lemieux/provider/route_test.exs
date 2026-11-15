@@ -29,6 +29,7 @@ defmodule Lemieux.Provider.RouteTest do
     @impl Route
     def target(%{owner: owner}, request, options) do
       send(owner, {:target, request.model, options})
+      send(owner, {:target_params, request.params})
       {:error, {:gateway, :refused}}
     end
   end
@@ -82,6 +83,20 @@ defmodule Lemieux.Provider.RouteTest do
     end
 
     assert_raise ArgumentError, ~r/:route must be/, fn -> Adapter.new(route: :nope) end
+  end
+
+  test "fast off retains legacy parameter delivery for routes without the optional callback" do
+    provider = Adapter.new(route: gateway())
+    request = Request.new("gw:a", params: [fast_mode: "off", temperature: 0.1])
+
+    assert Provider.fast_modes(provider, "gw:a") == []
+    assert {:error, {:gateway, :refused}} = Provider.run(provider, request, fn _ -> :ok end)
+    assert_receive {:target, "gw:a", options}
+    assert_receive {:target_params, params}
+    refute Keyword.has_key?(options, :fast_mode)
+    refute Keyword.has_key?(params, :fast_mode)
+    assert options[:temperature] == 0.1
+    assert params[:temperature] == 0.1
   end
 
   # Unknown options are forwarded to req_llm on every request, so an `:ixway`

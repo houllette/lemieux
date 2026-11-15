@@ -65,6 +65,61 @@ defmodule Lemieux.IxwayTest do
     end
   end
 
+  test "fast modes come from the route catalogue and reach the gateway wire" do
+    parent = self()
+
+    config =
+      stream_fixture(parent, [
+        %{
+          "choices" => [
+            %{"index" => 0, "delta" => %{"content" => "ok"}, "finish_reason" => "stop"}
+          ]
+        }
+      ])
+
+    config = %{
+      config
+      | models: [
+          Map.put(catalogue_entry(), "ixway_fast_modes", %{
+            "fast" => "priority",
+            "ultrafast" => "ultrafast"
+          })
+        ]
+    }
+
+    provider = Ixway.provider(config)
+    assert Provider.fast_modes(provider, "ixway:team/coding") == ["fast", "ultrafast"]
+    assert Provider.fast_modes(Ixway.provider(connection()), "ixway:team/coding") == []
+    assert Provider.fast_modes(provider, "ixway:missing") == []
+    request = Request.new("ixway:team/coding", params: [fast_mode: "fast"])
+    assert {:ok, {_target, options}} = Ixway.target(config, request, request.params)
+    assert options[:service_tier] == "priority"
+    assert :ok = Provider.run(provider, request, fn _ -> :ok end)
+    assert_receive {:wire, body}
+    assert body["service_tier"] == "priority"
+  end
+
+  test "routed fast mode fails closed for old, malformed or unsupported catalogues" do
+    for value <- [nil, [], %{"fast" => "ultrafast"}, %{"turbo" => "priority"}, %{"fast" => ""}] do
+      provider = Ixway.provider(connection(%{"ixway_fast_modes" => value}))
+      assert Provider.fast_modes(provider, "ixway:team/coding") == []
+      request = Request.new("ixway:team/coding", params: [fast_mode: "fast"])
+
+      assert {:error, {:fast_mode_unsupported, "ixway:team/coding", "fast", []}} =
+               Provider.run(provider, request, fn _ -> flunk("must not stream") end)
+    end
+
+    config = connection(%{"ixway_fast_modes" => %{"fast" => "priority"}})
+    request = Request.new("ixway:team/coding")
+    assert {:ok, {_, options}} = Ixway.target(config, request, service_tier: "ultrafast")
+    refute Keyword.has_key?(options, :service_tier)
+
+    assert {:ok, {_, options}} =
+             Ixway.target(config, request, fast_mode: "off", service_tier: "priority")
+
+    assert options[:service_tier] == "default"
+  end
+
   test "uses only compatible gateway models and conservative limits" do
     provider = Ixway.provider(connection())
     assert Provider.available_models(provider) == ["ixway:team/coding"]

@@ -11,6 +11,12 @@ API.
 
 ### Fixes and workflow improvements
 
+- Show active fast or ultrafast service in red in the TUI header, retain it during metadata scrolling and restore it with the session.
+
+- Enable `/fast` on routes that explicitly advertise it, including Ixway, and preserve the selected service tier through gateway requests. Existing routes without the optional capability callback remain unchanged.
+
+- Add F5 and title-click access to a full, scrollable Todo List; Alt-M minimizes its pinned preview to one summary row without losing the draft.
+
 - Keep header scrolling progress tied to screen time across transcript additions. (#178)
 - Keep the version, working directory and session name fixed beside scrolling header metadata. (#179)
 - Move overflowing header metadata one terminal column every 250 ms on an independent clock; stop its timer when it fits. (#180)

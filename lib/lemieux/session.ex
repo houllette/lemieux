@@ -124,6 +124,8 @@ defmodule Lemieux.Session do
       `current` is the local catalog's names after the change.
     * `{:model_changed, previous, current}` — `set_model/2` or
       `set_provider/2` took effect for future requests.
+    * `{:fast_mode_changed, previous, current}` — requested service mode,
+      including `"off"` when a model switch clears an unsupported selection.
     * `{:reasoning_effort_changed, previous, current}` — as strings, with
       `"default"` standing for none.
     * `{:mcp_error, {:invalid_tool_catalog, reason}}` — an MCP server offered
