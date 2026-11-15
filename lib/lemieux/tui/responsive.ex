@@ -2,7 +2,7 @@ defmodule Lemieux.TUI.Responsive do
   @moduledoc "Width-aware chrome: static when it fits, slowly looping when it does not."
   alias Lemieux.TUI.Width
 
-  @doc "Shows a cell-width window, advancing one grapheme per second on the blink clock."
+  @doc "Shows a cell-width window, advancing one grapheme per two screen-clock frames."
   @spec scroll(text :: String.t(), width :: non_neg_integer(), frame :: non_neg_integer()) ::
           String.t()
   def scroll(_text, width, _frame) when width <= 0, do: ""

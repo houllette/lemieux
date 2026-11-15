@@ -553,8 +553,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
       # `Lemieux.version/0` comes from mix.exs but still works in a release
       # where Mix itself is absent.
       |> then(&(" " <> Enum.join(["lemieux (v#{Lemieux.version()})" | &1], " · ") <> " "))
-      |> Responsive.scroll(width, Map.get(state.terminal.cursor_blink, :frame, 0))
+      |> Responsive.scroll(width, chrome_frame(state))
     end
+
+    # Screen time survives transcript replacement, cursor interaction and
+    # session hydration. Counting blink callbacks ties progress to delivery
+    # order instead, so incoming work can change the animation's cadence.
+    defp chrome_frame(state), do: div(max(state.clock.() - state.terminal.chrome_since, 0), 500)
 
     # Short enough to leave the header room for the session and the model,
     # long enough for a typical `~/code/project`.
@@ -890,7 +895,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         Map.to_list(activity(state)) ++
           [
             width: area.width,
-            scroll_frame: Map.get(state.terminal.cursor_blink, :frame, 0),
+            scroll_frame: chrome_frame(state),
             height: area.height,
             theme: theme(state),
             accent: accent(state),

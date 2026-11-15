@@ -7,6 +7,11 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Fixes and workflow improvements
+- Keep header scrolling progress tied to screen time across transcript additions. (#178)
+
 ## 1.1.2 — 2026-11-14
 
 Restart `lmx` after updating from 1.1.1 on every platform, then resume with
