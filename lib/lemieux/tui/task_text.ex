@@ -1,6 +1,14 @@
 if Code.ensure_loaded?(ExRatatui.Text.Line) do
   defmodule Lemieux.TUI.TaskText do
-    @moduledoc "Semantic typography for the task inspector; shell source and process output remain literal."
+    @moduledoc """
+    Typography for the task inspector; shell source and process output remain literal.
+
+    Output uses the theme's muted neutral colour and italics to distinguish it
+    from task identities and controls. Apply that treatment to every rendered
+    span: a paragraph-level colour alone loses to Markdown and output styles.
+    Error emphasis and inline-code backgrounds remain, with the same neutral
+    foreground. Expanded shell source keeps its separate literal-code style.
+    """
     alias ExRatatui.Style
     alias ExRatatui.Text.{Line, Span}
     alias Lemieux.TUI.{RichText, Theme}
@@ -79,7 +87,11 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     def lines(text, content, kind, width, theme)
         when content == :instructions or kind == :agent do
-      text |> String.trim("\n") |> String.split("\n") |> Enum.flat_map(&prose(&1, width, theme))
+      text
+      |> String.trim("\n")
+      |> String.split("\n")
+      |> Enum.flat_map(&prose(&1, width, theme))
+      |> secondary(theme)
     end
 
     def lines(text, _content, _kind, width, theme) do
@@ -88,7 +100,18 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
       |> Enum.flat_map(fn line ->
         RichText.literal(line, width, output_style(line, theme))
       end)
+      |> secondary(theme)
     end
+
+    defp secondary(lines, theme) do
+      Enum.map(lines, fn line ->
+        spans = Enum.map(line.spans, &%{&1 | style: secondary_style(&1.style, theme)})
+        %{line | style: secondary_style(line.style, theme), spans: spans}
+      end)
+    end
+
+    defp secondary_style(style, theme),
+      do: %{style | fg: theme.text.muted, modifiers: Enum.uniq([:italic | style.modifiers])}
 
     defp prose(text, width, theme) do
       case Regex.run(~r/^\s*\#{1,6}\s+(.+)$/, text) do

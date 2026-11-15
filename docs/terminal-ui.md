@@ -662,7 +662,11 @@ highlighted completion, the follow-up hint, or a queued message while busy),
 take back the waiting steer, as `/unsteer` does), `dismiss`, `newline`,
 `pager` (Ctrl-O), `history_search` (Ctrl-R), `external_editor` (Ctrl-G),
 `paste_image` (Ctrl-V), `cycle_mode` (Shift-Tab: the permission mode) and
-`toggle_notifications` (Alt-N), and `tasks` (Shift-Up, with F6 as an alternate).
+`toggle_notifications` (Alt-N), and `tasks` (Shift-Up outside multiline draft
+editing, with F6 available while editing). In a multiline draft the default
+Shift-Up/Down bindings extend the textarea selection, including at its first
+and last line. An explicitly different action in a custom key map keeps its
+meaning. The Tasks badge shows F6 while multiline editing owns Shift-Up.
 `forward` is the one other word a map may use: it releases a key to the input
 box, which is what every key the table
 does not claim already gets, so the editing vocabulary (cursor, word motion,

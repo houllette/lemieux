@@ -3,6 +3,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @moduledoc """
     Native session task list and live log inspector, opened by Shift+Up or its composer badge.
 
+    Shift+Down closes either inspector pane; Esc remains available. Nested
+    forms retain their own editing keys and Esc returns to the inspector,
+    so extending a selection there cannot accidentally dismiss the tray.
+
     Rendering reads only cached state. Metadata, logs and human controls run in
     host tasks, with session and request tokens fencing late replies. Monitoring
     is independent of whether this panel is open, and opening it never invokes a
@@ -17,6 +21,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Conversation
     alias Lemieux.TUI
     alias Lemieux.TUI.Activity
+    alias Lemieux.TUI.Composer
 
     alias Lemieux.TUI.{
       Choices,
@@ -251,11 +256,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       running = Enum.count(cache(state).rows, &active?/1)
       count = if running > 0, do: " #{running}", else: ""
 
-      shortcut =
-        if width >= 40 and
-             Keys.action(state.status.keys, %{code: "up", modifiers: ["shift"]}) == :tasks,
-           do: " · Shift+Up",
-           else: ""
+      shortcut = shortcut(state, width)
 
       spinner =
         if running > 0,
@@ -278,6 +279,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     def title(_state, _width), do: []
+
+    defp shortcut(_state, width) when width < 40, do: ""
+
+    defp shortcut(state, _width) do
+      cond do
+        Keys.action(state.status.keys, %{code: "up", modifiers: ["shift"]}) == :tasks and
+            not Composer.multiline_draft?(state) ->
+          " · Shift+Up"
+
+        Keys.action(state.status.keys, %{code: "f6", modifiers: []}) == :tasks ->
+          " · F6"
+
+        true ->
+          ""
+      end
+    end
 
     @doc false
     @spec badge_at?(state :: TUI.t(), event :: Mouse.t()) :: boolean()
@@ -309,6 +326,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp panel_key(event, %{modal: %{form: form}} = state) when not is_nil(form),
       do: TaskForm.key(event, state)
+
+    defp panel_key(%Key{code: "down", modifiers: ["shift"]}, state),
+      do: {:noreply, Modal.close(state)}
 
     defp panel_key(
            %Key{code: code, modifiers: []},
@@ -785,8 +805,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
             style: %Style{fg: TaskText.colour(row, theme)}
           },
           %Span{
-            content: " · #{Map.get(row, :elapsed, "")} · #{Map.get(row, :description, "")}",
+            content: " · #{Map.get(row, :elapsed, "")} · ",
             style: %Style{fg: theme.text.muted}
+          },
+          %Span{
+            content: Map.get(row, :description, ""),
+            style: %Style{fg: theme.text.muted, modifiers: [:italic]}
           }
         ]
       }
@@ -858,8 +882,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp notice(state),
       do:
         if(state.modal.focus == :logs,
-          do: "Output focused · ↑↓ scroll · Home/End · Tab task list",
-          else: "Task list focused · ↑↓ select · v toggle details · Tab output"
+          do: "Output focused · ↑↓ scroll · Home/End · Tab task list · Shift+↓ / Esc close",
+          else:
+            "Task list focused · ↑↓ select · v toggle details · Tab output · Shift+↓ / Esc close"
         )
 
     defp geometry(state, panes) do

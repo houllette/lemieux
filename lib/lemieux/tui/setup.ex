@@ -30,6 +30,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       transport = Keyword.get(opts, :transport, :local)
       # ExRatatui's headless test terminal: see `effect/4`.
       headless? = Keyword.has_key?(opts, :test_mode)
+      clock = Keyword.get(opts, :clock, &Callbacks.clock/0)
       # Both raise: a theme or a renderer that cannot be used came from a
       # host's code, and a screen that quietly started without it would hide
       # the mistake. The config file is checked before it gets this far.
@@ -73,6 +74,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
           width: 80,
           height: 20,
           cursor_blink: %{visible?: true, tick: nil},
+          chrome_since: clock.(),
+          chrome_timer: nil,
+          status_rotation: %{anchor: nil, next_at: nil},
           link_press: nil,
           hover: %{
             enabled?: transport == :cell_session and Keyword.get(opts, :hover_pointer, false),
@@ -173,7 +177,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           |> Enum.reject(fn {_key, value} -> is_nil(value) end),
         elixir_mode?: Keyword.get(opts, :elixir_mode?, false),
         turn: Turn.idle_turn(),
-        clock: Keyword.get(opts, :clock, &Callbacks.clock/0),
+        clock: clock,
         history:
           opts
           |> Keyword.get(:history_file)

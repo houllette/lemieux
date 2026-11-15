@@ -182,6 +182,15 @@ are on, and `req N/M` when a request cap is set. A live row at the foot of
 the transcript says what the turn is doing right now: `thinking (40s)`,
 `running bash (2m)`, `waiting for your approval of bash`.
 
+In a narrow window, the version, directory and session name stay fixed while
+metadata to their right scrolls one terminal column every 250 ms. A very long
+identity is shortened with an ellipsis. The status line uses stationary groups
+of complete stats: each group stays for five seconds, then the next group
+appears, repeating after every stat has been shown. A stat too wide for its
+own page is explicitly shortened with an ellipsis. The permission mode stays
+fixed, incoming transcript additions preserve progress, and a wide enough
+window shows everything statically.
+
 **When it ends.** On a clean exit, `lmx` prints where the conversation went:
 ``lmx: session NAME is saved · `lmx --resume NAME` resumes it`` (with `-C DIR`
 when the session worked in another directory). This names the session you just
@@ -288,7 +297,9 @@ endpoint contract differs from the public [Sign in with ChatGPT catalog](https:/
 | Ctrl-R | Search input history across sessions; Enter or Tab takes an entry, Esc restores the draft |
 | Ctrl-G | Edit the draft in `$VISUAL` or `$EDITOR` (`vi` when neither is set); not on native Windows yet |
 | Ctrl-V | Attach the image on the clipboard as an `@path` reference |
-| Shift-Up, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls |
+| Shift-Up, F6, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls; in a multiline draft use F6 or the badge |
+| Shift-Up / Shift-Down in a multiline draft | Extend or shrink the text selection across visible lines, including soft-wrapped lines |
+| Shift-Down / Esc in Tasks | Close the task list or output inspector and return to the draft; nested forms keep their editing keys, with Esc going back |
 | Ctrl-O | Page through the full output of recent tool calls (less-style keys, ←/→ between outputs, q or Esc to close) |
 | Page Up / Page Down | Scroll the transcript a page |
 | Ctrl-Shift-Up / Ctrl-Shift-Down | Scroll the transcript three rows |
@@ -328,6 +339,10 @@ Shift-Page Up / Shift-Page Down (Shift-Fn-Up / Shift-Fn-Down on a laptop) or
 the mouse wheel to scroll the conversation. Terminal.app also sends
 Shift-Up / Shift-Down as plain arrows, which browse history there. Use the
 clickable Tasks badge or F6 to open Tasks when Shift-Up is not reported.
+
+In Tasks, each list row's descriptive summary and the Result/Output body use
+muted grey italics. Task names, states, elapsed times, headings and controls
+keep their existing appearance; expanded shell source keeps its code styling.
 
 ### Steering and the queue
 

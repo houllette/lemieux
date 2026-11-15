@@ -251,6 +251,38 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert :ok = Tasks.action(ctx.session, fixture.id, :cancel)
   end
 
+  test "Shift+Down and Esc close either pane and preserve the draft selection with custom bindings",
+       ctx do
+    for focus <- [:list, :logs],
+        keys <- [nil, %{"shift-up" => "scroll_up", "f7" => "tasks"}],
+        close <- [{"down", ["shift"]}, {"esc", []}] do
+      state = tui(session: ctx.session, id: Session.id(ctx.session), keys: keys)
+      state = state |> type("keep this draft") |> press("left", ["shift"])
+      cursor = ExRatatui.textarea_cursor(state.input)
+      state = state |> press(if(keys, do: "f7", else: "f6")) |> loaded()
+      state = put_in(state.modal.focus, focus)
+      assert screen(state) =~ "Esc close"
+      {code, modifiers} = close
+      state = press(state, code, modifiers)
+      assert state.modal == nil
+      assert typed(state) == "keep this draft"
+      assert ExRatatui.textarea_cursor(state.input) == cursor
+      assert typed(type(state, "X")) == "keep this drafX"
+      assert {:ok, %{rows: [%{running?: true}]}} = Tasks.snapshot(ctx.session)
+    end
+
+    form = ctx.state |> press("f6") |> loaded() |> press("a")
+    assert form.modal.form != nil
+    assert press(form, "down", ["shift"]).modal.form != nil
+    inspector = press(form, "esc")
+    assert inspector.modal.form == nil
+    assert press(inspector, "down", ["shift"]).modal == nil
+
+    assert length(Scripted.requests(ctx.provider)) == 2
+    {:ok, %{rows: [fixture]}} = Tasks.snapshot(ctx.session)
+    assert :ok = Tasks.action(ctx.session, fixture.id, :cancel)
+  end
+
   test "human stop, resume and cancellation controls do not invoke the model", ctx do
     state = ctx.state |> press("f6") |> loaded()
     state = state |> press("s") |> updated()
@@ -443,6 +475,66 @@ defmodule Lemieux.TUI.TaskPanelTest do
     end
 
     assert :ok = Tasks.action(ctx.session, TaskPanel.cache(state).detail.id, :cancel)
+  end
+
+  test "only task-list descriptions gain italics and all output text is muted", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    state = %{state | terminal: %{state.terminal | width: 120, height: 45}}
+    state = put_in(state.session_view.tasks.detail.logs, "READY\nWARNING: slow")
+    row = hd(TaskPanel.cache(state).rows)
+    second = %{row | id: "second-task", name: "second-task", description: "Second description"}
+    state = put_in(state.session_view.tasks.rows, [row, second])
+
+    for theme <- [Theme.dark(), Theme.light(), Theme.mono()],
+        view <- [:active, :history] do
+      rows =
+        if view == :active,
+          do: [row, second],
+          else:
+            Enum.map(
+              [row, second],
+              &Map.merge(&1, %{active?: false, running?: false, watching?: false})
+            )
+
+      themed = state |> put_in([Access.key!(:appearance), :theme], theme)
+      themed = put_in(themed.session_view.tasks.rows, rows)
+      themed = put_in(themed.modal.view, view)
+      themed = put_in(themed.session_view.tasks.detail.active?, view == :active)
+      widgets = TaskPanel.render(themed, TUI.Screen.panes(themed))
+
+      [list] =
+        for {%ExRatatui.Widgets.Paragraph{block: %{title: " Task list" <> _}} = list, _} <-
+              widgets,
+            do: list
+
+      assert length(list.text) == 2
+
+      for {line, task} <- Enum.zip(list.text, rows) do
+        [description] = Enum.filter(line.spans, &(&1.content == task.description))
+        assert description.style.fg == theme.text.muted
+        assert :italic in description.style.modifiers
+
+        for span <- Enum.reject(line.spans, &(&1 == description)) do
+          refute :italic in span.style.modifiers
+        end
+      end
+
+      [output] =
+        for {%ExRatatui.Widgets.Paragraph{block: %{title: title}} = output, _} <- widgets,
+            String.starts_with?(title, [" Output", " Result"]),
+            do: output
+
+      assert Enum.any?(output.text, fn line ->
+               Enum.any?(line.spans, &String.contains?(&1.content, "READY"))
+             end)
+
+      for line <- output.text, span <- line.spans do
+        assert span.style.fg == theme.text.muted
+        assert :italic in span.style.modifiers
+      end
+    end
+
+    assert :ok = Tasks.action(ctx.session, row.id, :cancel)
   end
 
   test "expanded details adapt between commands and agents without blanking cached output", ctx do

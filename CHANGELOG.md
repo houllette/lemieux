@@ -7,6 +7,18 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+### Fixes and workflow improvements
+
+- Keep header scrolling progress tied to screen time across transcript additions. (#178)
+- Keep the version, working directory and session name fixed beside scrolling header metadata. (#179)
+- Move overflowing header metadata one terminal column every 250 ms on an independent clock; stop its timer when it fits. (#180)
+- Rotate complete status stats in viewport-sized pages every five seconds, preserving the current stat and reading interval across live updates. (#181)
+- Allow Shift-Down to close either Tasks inspector pane while retaining Esc and the draft selection. (#182)
+- Distinguish task-list descriptions and Result/Output text with muted grey italics while retaining names, states and controls. (#183)
+- Let Shift-Up/Down select across multiline drafts, including soft-wrapped rows; retain F6 and the Tasks badge while editing. (#184)
+
 ## 1.1.2 — 2026-11-14
 
 Restart `lmx` after updating from 1.1.1 on every platform, then resume with

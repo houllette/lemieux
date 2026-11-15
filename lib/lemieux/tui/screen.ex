@@ -19,6 +19,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Activity
     alias Lemieux.TUI.Art
     alias Lemieux.TUI.Boot
+    alias Lemieux.TUI.Chrome
     alias Lemieux.TUI.Colour
     alias Lemieux.TUI.Followup
     alias Lemieux.TUI.Layout
@@ -529,6 +530,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp header(state, width) do
+      {identity, metadata} = header_parts(state)
+      Responsive.header(identity, metadata, width, Chrome.frame(state))
+    end
+
+    @doc false
+    @spec chrome_interval(state :: TUI.t()) :: pos_integer() | nil
+    def chrome_interval(%TUI{overlay: overlay}) when not is_nil(overlay), do: nil
+
+    def chrome_interval(state) do
+      {identity, metadata} = header_parts(state)
+      area = panes(state).transcript
+      width = max(area.width - 2, 0)
+      if area.height > 0 and Responsive.header_scrolling?(identity, metadata, width), do: 250
+    end
+
+    defp header_parts(state) do
       provider = ModelSpec.provider(state.conversation.model) || "unknown"
 
       model =
@@ -536,24 +553,32 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       effort = state.conversation.reasoning_effort
 
-      # The session's name goes here now, where its id deliberately did not.
-      # An opaque ULID in a permanently visible header was noise nobody could
-      # act on; a shorthand is the argument you give `--resume` tomorrow, so
-      # it earns the space that the id did not.
-      #
-      # The working directory goes first after the version, because it is the
-      # one thing here that says what the agent can change: it edits and runs
-      # commands there without asking unless permissions are on, and nothing
-      # on the screen used to say where "there" was — `-C DIR` and the
-      # directory lmx was started in were indistinguishable once it was open.
-      # A header too long for the terminal loses its end, so the effort goes
-      # before the directory does.
-      [place(state), name(state), provider, model, "effort #{effort}"]
-      |> Enum.reject(&is_nil/1)
-      # `Lemieux.version/0` comes from mix.exs but still works in a release
-      # where Mix itself is absent.
-      |> then(&(" " <> Enum.join(["lemieux (v#{Lemieux.version()})" | &1], " · ") <> " "))
-      |> Responsive.scroll(width, Map.get(state.terminal.cursor_blink, :frame, 0))
+      # Identity answers where the agent can act and which session to resume.
+      # Keep it stationary: sending it through the metadata ticker hid that
+      # context precisely when the terminal had the least room for it.
+      identity =
+        ["lemieux (v#{Lemieux.version()})", place(state), name(state)]
+        |> Enum.reject(&is_nil/1)
+        |> Enum.join(" · ")
+
+      metadata = Enum.join([provider, model, "effort #{effort}"], " · ")
+      {" " <> identity, metadata}
+    end
+
+    @doc false
+    @spec status_pages(state :: TUI.t()) :: [{[atom()], String.t()}]
+    def status_pages(%TUI{overlay: overlay}) when not is_nil(overlay), do: []
+
+    def status_pages(state) do
+      if status_line(state) == Status do
+        area = panes(state).status
+
+        if area.height > 0 and area.width > 0,
+          do: Status.pages(status_snapshot(state, area), area.width),
+          else: []
+      else
+        []
+      end
     end
 
     # Short enough to leave the header room for the session and the model,
@@ -890,7 +915,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
         Map.to_list(activity(state)) ++
           [
             width: area.width,
-            scroll_frame: Map.get(state.terminal.cursor_blink, :frame, 0),
+            scroll_frame: Chrome.frame(state),
+            page_anchor: state.terminal.status_rotation.anchor,
             height: area.height,
             theme: theme(state),
             accent: accent(state),

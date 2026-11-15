@@ -13,7 +13,7 @@ defmodule Lemieux.TUI.TaskTextTest do
     end
   end
 
-  test "warnings errors and success have distinct semantic styles and monochrome emphasis" do
+  test "command output uses muted italics and retains error emphasis in every theme" do
     for theme <- [Theme.dark(), Theme.light(), Theme.mono()] do
       [info, warning, error, success] =
         TaskText.lines(
@@ -24,9 +24,11 @@ defmodule Lemieux.TUI.TaskTextTest do
           theme
         )
 
-      assert hd(warning.spans).style.fg == theme.children.warn
-      assert hd(error.spans).style.fg == theme.children.fail
-      assert hd(success.spans).style.fg == theme.children.ok
+      for line <- [info, warning, error, success], span <- line.spans do
+        assert span.style.fg == theme.text.muted
+        assert :italic in span.style.modifiers
+      end
+
       assert :bold in hd(error.spans).style.modifiers
       refute hd(info.spans).style == hd(warning.spans).style
       assert text(error) == "ERROR: missing"
@@ -41,6 +43,11 @@ defmodule Lemieux.TUI.TaskTextTest do
       assert Enum.map(lines, &text/1) == ["Result", "", "Verified using git status"]
       spans = Enum.flat_map(lines, & &1.spans)
       assert Enum.any?(spans, &(:bold in &1.style.modifiers))
+
+      for span <- spans do
+        assert span.style.fg == theme.text.muted
+        assert :italic in span.style.modifiers
+      end
 
       unless is_nil(theme.blocks.code_bg) do
         assert Enum.any?(
