@@ -141,6 +141,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Boot
     alias Lemieux.TUI.CatalogState
     alias Lemieux.TUI.Choices
+    alias Lemieux.TUI.Chrome
     alias Lemieux.TUI.Composer
     alias Lemieux.TUI.DiffPanel
     alias Lemieux.TUI.Effects
@@ -379,6 +380,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
               height: non_neg_integer(),
               cursor_blink: %{visible?: boolean(), tick: reference() | nil},
               chrome_since: integer(),
+              chrome_timer:
+                %{timer: reference(), token: reference(), interval: pos_integer()} | nil,
               link_press: {String.t(), {non_neg_integer(), non_neg_integer()}} | nil,
               hover: %{enabled?: boolean(), shape: :pointer | :restore, event: term()},
               feedback: %{text: String.t(), token: reference()} | nil,
@@ -700,10 +703,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @impl ExRatatui.App
     def handle_event(event, %{status: %{update: %{phase: phase}}} = state)
         when phase in [:apply, :restarting] and not is_struct(event, ExRatatui.Event.Resize),
-        do: Hover.transition({:noreply, Updates.interact(state, event)}, event)
+        do: Hover.transition(Chrome.transition({:noreply, Updates.interact(state, event)}), event)
 
     def handle_event(event, state),
-      do: Hover.transition(route_event(event, Updates.interact(state, event)), event)
+      do:
+        Hover.transition(
+          Chrome.transition(route_event(event, Updates.interact(state, event))),
+          event
+        )
 
     defp route_event(event, state)
 
@@ -868,7 +875,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # handled, and the startup task's reply is recognised by its reference
     # before a later clause could mistake it for another task's.
     @impl ExRatatui.App
-    def handle_info(message, state), do: Hover.transition(route_info(message, state))
+    def handle_info(message, state),
+      do: Hover.transition(Chrome.transition(route_info(message, state)))
 
     defp route_info(message, state)
 
@@ -1054,6 +1062,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp route_info({:ctrl_c_expired, token}, state), do: Composer.exit_expired(state, token)
     defp route_info({:cursor_blink, tick}, state), do: Composer.blink(state, tick)
+    defp route_info({:chrome_tick, token}, state), do: Chrome.tick(state, token)
     defp route_info({:habs_tick, token}, state), do: Lifecycle.habs_tick(state, token)
 
     defp route_info({:startup_step, id, text, status}, state),

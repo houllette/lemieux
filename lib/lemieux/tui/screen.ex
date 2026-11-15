@@ -19,6 +19,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Activity
     alias Lemieux.TUI.Art
     alias Lemieux.TUI.Boot
+    alias Lemieux.TUI.Chrome
     alias Lemieux.TUI.Colour
     alias Lemieux.TUI.Followup
     alias Lemieux.TUI.Layout
@@ -529,6 +530,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp header(state, width) do
+      {identity, metadata} = header_parts(state)
+      Responsive.header(identity, metadata, width, Chrome.frame(state))
+    end
+
+    @doc false
+    @spec chrome_interval(state :: TUI.t()) :: pos_integer() | nil
+    def chrome_interval(%TUI{overlay: overlay}) when not is_nil(overlay), do: nil
+
+    def chrome_interval(state) do
+      {identity, metadata} = header_parts(state)
+      area = panes(state).transcript
+      width = max(area.width - 2, 0)
+      if area.height > 0 and Responsive.header_scrolling?(identity, metadata, width), do: 250
+    end
+
+    defp header_parts(state) do
       provider = ModelSpec.provider(state.conversation.model) || "unknown"
 
       model =
@@ -545,13 +562,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> Enum.join(" · ")
 
       metadata = Enum.join([provider, model, "effort #{effort}"], " · ")
-      Responsive.header(" " <> identity, metadata, width, chrome_frame(state))
+      {" " <> identity, metadata}
     end
-
-    # Screen time survives transcript replacement, cursor interaction and
-    # session hydration. Counting blink callbacks ties progress to delivery
-    # order instead, so incoming work can change the animation's cadence.
-    defp chrome_frame(state), do: div(max(state.clock.() - state.terminal.chrome_since, 0), 500)
 
     # Short enough to leave the header room for the session and the model,
     # long enough for a typical `~/code/project`.
@@ -887,7 +899,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         Map.to_list(activity(state)) ++
           [
             width: area.width,
-            scroll_frame: chrome_frame(state),
+            scroll_frame: Chrome.frame(state),
             height: area.height,
             theme: theme(state),
             accent: accent(state),

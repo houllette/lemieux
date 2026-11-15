@@ -1,10 +1,56 @@
 defmodule Lemieux.TUI.ChromeTest do
   use ExUnit.Case, async: true
 
+  alias ExRatatui.Event.Resize
   alias ExRatatui.Frame
   alias ExRatatui.Widgets.Paragraph
   alias Lemieux.TUI
   alias Lemieux.TUI.{Responsive, Width}
+
+  test "overflow gets a quarter-second clock independent of cursor blinking and stops when it fits" do
+    clock = :atomics.new(1, [])
+
+    state =
+      TUI.new(
+        id: "01SESSION",
+        model: "test:" <> String.duplicate("long-model-", 12),
+        test_mode: {80, 24},
+        clock: fn -> :atomics.get(clock, 1) end
+      )
+
+    assert {:noreply, state} = TUI.handle_event(%Resize{width: 80, height: 24}, state)
+    assert %{timer: timer, token: token} = Map.get(state.terminal, :chrome_timer)
+    assert Process.read_timer(timer) <= 250
+    initial = header(state)
+    blink = state.terminal.cursor_blink
+    Process.cancel_timer(timer)
+    :atomics.put(clock, 1, 250)
+    assert {:noreply, state} = TUI.handle_info({:chrome_tick, token}, state)
+    assert header(state) != initial
+    assert state.terminal.cursor_blink == blink
+
+    timer = state.terminal.chrome_timer.timer
+    assert {:noreply, state} = TUI.handle_event(%Resize{width: 2_000, height: 24}, state)
+    assert state.terminal.chrome_timer == nil
+    assert Process.read_timer(timer) == false
+    assert {:noreply, ^state, render?: false} = TUI.handle_info({:chrome_tick, token}, state)
+
+    assert {:noreply, hidden} = TUI.handle_event(%Resize{width: 80, height: 1}, state)
+    assert hidden.terminal.chrome_timer == nil
+  end
+
+  test "ticker moves one terminal column at a time without cutting wide graphemes" do
+    assert Responsive.scroll("中🙂abc", 3, 0) == "中"
+    assert Responsive.scroll("中🙂abc", 3, 1) == " 🙂"
+    assert Responsive.scroll("中🙂abc", 3, 2) == "🙂a"
+    assert Responsive.scroll("中🙂abc", 3, 3) == " ab"
+
+    for width <- 0..8, frame <- 0..30 do
+      text = Responsive.scroll("中🙂long source", width, frame)
+      assert Width.of(text) <= width
+      assert String.valid?(text)
+    end
+  end
 
   test "the identity stays stationary while only header metadata scrolls" do
     state =
