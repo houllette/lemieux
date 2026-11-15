@@ -339,6 +339,10 @@ the mouse wheel to scroll the conversation. Terminal.app also sends
 Shift-Up / Shift-Down as plain arrows, which browse history there. Use the
 clickable Tasks badge or F6 to open Tasks when Shift-Up is not reported.
 
+In Tasks, each list row's descriptive summary and the Result/Output body use
+muted grey italics. Task names, states, elapsed times, headings and controls
+keep their existing appearance; expanded shell source keeps its code styling.
+
 ### Steering and the queue
 
 While a turn runs, typing in the input box shows `Enter steer · Tab queue`

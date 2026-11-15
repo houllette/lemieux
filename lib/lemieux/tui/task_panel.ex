@@ -792,8 +792,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
             style: %Style{fg: TaskText.colour(row, theme)}
           },
           %Span{
-            content: " · #{Map.get(row, :elapsed, "")} · #{Map.get(row, :description, "")}",
+            content: " · #{Map.get(row, :elapsed, "")} · ",
             style: %Style{fg: theme.text.muted}
+          },
+          %Span{
+            content: Map.get(row, :description, ""),
+            style: %Style{fg: theme.text.muted, modifiers: [:italic]}
           }
         ]
       }
