@@ -298,6 +298,7 @@ endpoint contract differs from the public [Sign in with ChatGPT catalog](https:/
 | Ctrl-G | Edit the draft in `$VISUAL` or `$EDITOR` (`vi` when neither is set); not on native Windows yet |
 | Ctrl-V | Attach the image on the clipboard as an `@path` reference |
 | Shift-Up, or click Tasks | Open native background tasks: status, live logs, cancellation and observation controls |
+| Shift-Down / Esc in Tasks | Close the task list or output inspector and return to the draft; nested forms keep their editing keys, with Esc going back |
 | Ctrl-O | Page through the full output of recent tool calls (less-style keys, ←/→ between outputs, q or Esc to close) |
 | Page Up / Page Down | Scroll the transcript a page |
 | Ctrl-Shift-Up / Ctrl-Shift-Down | Scroll the transcript three rows |

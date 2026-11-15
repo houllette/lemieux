@@ -3,6 +3,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @moduledoc """
     Native session task list and live log inspector, opened by Shift+Up or its composer badge.
 
+    Shift+Down closes either inspector pane; Esc remains available. Nested
+    forms retain their own editing keys and Esc returns to the inspector,
+    so extending a selection there cannot accidentally dismiss the tray.
+
     Rendering reads only cached state. Metadata, logs and human controls run in
     host tasks, with session and request tokens fencing late replies. Monitoring
     is independent of whether this panel is open, and opening it never invokes a
@@ -309,6 +313,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp panel_key(event, %{modal: %{form: form}} = state) when not is_nil(form),
       do: TaskForm.key(event, state)
+
+    defp panel_key(%Key{code: "down", modifiers: ["shift"]}, state),
+      do: {:noreply, Modal.close(state)}
 
     defp panel_key(
            %Key{code: code, modifiers: []},
@@ -858,8 +865,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp notice(state),
       do:
         if(state.modal.focus == :logs,
-          do: "Output focused · ↑↓ scroll · Home/End · Tab task list",
-          else: "Task list focused · ↑↓ select · v toggle details · Tab output"
+          do: "Output focused · ↑↓ scroll · Home/End · Tab task list · Shift+↓ / Esc close",
+          else:
+            "Task list focused · ↑↓ select · v toggle details · Tab output · Shift+↓ / Esc close"
         )
 
     defp geometry(state, panes) do

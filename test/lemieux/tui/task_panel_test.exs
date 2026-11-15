@@ -251,6 +251,38 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert :ok = Tasks.action(ctx.session, fixture.id, :cancel)
   end
 
+  test "Shift+Down and Esc close either pane and preserve the draft selection with custom bindings",
+       ctx do
+    for focus <- [:list, :logs],
+        keys <- [nil, %{"shift-up" => "scroll_up", "f7" => "tasks"}],
+        close <- [{"down", ["shift"]}, {"esc", []}] do
+      state = tui(session: ctx.session, id: Session.id(ctx.session), keys: keys)
+      state = state |> type("keep this draft") |> press("left", ["shift"])
+      cursor = ExRatatui.textarea_cursor(state.input)
+      state = state |> press(if(keys, do: "f7", else: "f6")) |> loaded()
+      state = put_in(state.modal.focus, focus)
+      assert screen(state) =~ "Esc close"
+      {code, modifiers} = close
+      state = press(state, code, modifiers)
+      assert state.modal == nil
+      assert typed(state) == "keep this draft"
+      assert ExRatatui.textarea_cursor(state.input) == cursor
+      assert typed(type(state, "X")) == "keep this drafX"
+      assert {:ok, %{rows: [%{running?: true}]}} = Tasks.snapshot(ctx.session)
+    end
+
+    form = ctx.state |> press("f6") |> loaded() |> press("a")
+    assert form.modal.form != nil
+    assert press(form, "down", ["shift"]).modal.form != nil
+    inspector = press(form, "esc")
+    assert inspector.modal.form == nil
+    assert press(inspector, "down", ["shift"]).modal == nil
+
+    assert length(Scripted.requests(ctx.provider)) == 2
+    {:ok, %{rows: [fixture]}} = Tasks.snapshot(ctx.session)
+    assert :ok = Tasks.action(ctx.session, fixture.id, :cancel)
+  end
+
   test "human stop, resume and cancellation controls do not invoke the model", ctx do
     state = ctx.state |> press("f6") |> loaded()
     state = state |> press("s") |> updated()
