@@ -217,13 +217,14 @@ defmodule Lemieux.TUI.HoverTest do
 
     state = :sys.get_state(runtime).user_state
     event = target_event(state, :link)
-    before = ExRatatui.Runtime.snapshot(runtime).render_count
 
+    # The callback tests assert render?: false. Whole-runtime frame counts
+    # also include the independent caret/chrome timers, so a slow motion
+    # burst must not mistake one of those frames for a hover redraw.
     for _n <- 1..100, do: ExRatatui.Runtime.inject_event(runtime, event)
     assert_receive {:pointer, :pointer}
     refute_receive {:pointer, _}, 20
     assert ExRatatui.Runtime.snapshot(runtime).pointer == :pointer
-    assert ExRatatui.Runtime.snapshot(runtime).render_count == before
     assert :sys.get_state(runtime).user_state.selection == nil
 
     :ok = ExRatatui.Runtime.inject_event(runtime, key("g", ["ctrl"]))
@@ -287,7 +288,7 @@ defmodule Lemieux.TUI.HoverTest do
     %Mouse{kind: "moved", x: x, y: y}
   end
 
-  test "the supported cell transport delivers intents without redrawing for motion" do
+  test "the cell transport delivers deduplicated pointer and stopping intents through injected events" do
     owner = self()
 
     entry =
@@ -319,13 +320,11 @@ defmodule Lemieux.TUI.HoverTest do
         match?({:link, _, _}, Pointer.target_at(state, %Mouse{x: x, y: y}))
       end)
 
-    before = ExRatatui.Runtime.snapshot(runtime).render_count
     event = %Mouse{kind: "moved", x: x, y: y}
     :ok = ExRatatui.Runtime.inject_event(runtime, event)
     assert :sys.get_state(runtime).user_state.terminal.hover.shape == :pointer
     assert_receive {:intent, {:mouse_pointer, :pointer}}
     :ok = ExRatatui.Runtime.inject_event(runtime, event)
-    assert ExRatatui.Runtime.snapshot(runtime).render_count == before
     refute_receive {:intent, _}, 20
     key = %ExRatatui.Event.Key{code: "c", modifiers: ["ctrl"]}
     monitor = Process.monitor(runtime)
