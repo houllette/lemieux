@@ -9,6 +9,13 @@ API.
 
 ## Unreleased
 
+- Update ExRatatui to 0.21.0 in the library and standalone host. Opt-in native
+  hover pointers (`LMX_HOVER_POINTER=1`, or `hover_pointer: true` for local
+  embedders) follow visible click targets and reset before editor handoff and
+  during runtime cleanup. Terminal support must be declared; reset means the
+  default arrow, not restoration of a prior override. Cell hosts keep their
+  existing pointer/restore intents.
+
 - Add Zed setup instructions, standard ACP model/reasoning selectors, form
   questions, tool locations and file diffs. V1 editor text access includes
   unsaved buffers while preserving host filesystem policy and approvals.

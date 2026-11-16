@@ -179,7 +179,7 @@ defmodule Lemieux.MixProject do
       # `Lemieux.TUI` is the only module that references it, nothing in the
       # core references `Lemieux.TUI`. The standalone host under `dist/lmx`
       # packages its NIF in a real release `priv` directory.
-      {:ex_ratatui, "~> 0.20", optional: true},
+      {:ex_ratatui, "~> 0.21", optional: true},
       {:ascii, "~> 0.4.1", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

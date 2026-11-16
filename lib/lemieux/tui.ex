@@ -185,6 +185,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     parsed action is dispatched. The action is an effect such as
     `{:mcp_add, path}` or `{:attach, target}`, never terminal text.
 
+    `:hover_pointer`, off by default, declares OSC 22 pointer support on a
+    local terminal. ExRatatui owns pointer writes and resets the default arrow
+    on cleanup; it does not restore a prior override. Cell hosts receive
+    pointer/restore intents instead. Remote and unknown transports remain
+    inert. See `Lemieux.TUI.Hover` for the capability and lifecycle contract.
+
     `:theme` names the `Lemieux.TUI.Theme` a sitting starts in — `"dark"`,
     `"light"` or `"mono"`, a name from `:themes`, or a theme struct — and
     `/theme` changes it after. `:themes` is a map of name to theme, as a
@@ -391,7 +397,13 @@ if Code.ensure_loaded?(ExRatatui.App) do
               chrome_timer: %{timer: reference(), token: reference(), deadline: integer()} | nil,
               status_rotation: %{anchor: atom() | nil, next_at: integer() | nil},
               link_press: {String.t(), {non_neg_integer(), non_neg_integer()}} | nil,
-              hover: %{enabled?: boolean(), shape: :pointer | :restore, event: term()},
+              hover: %{
+                enabled?: boolean(),
+                native?: boolean(),
+                suspended?: boolean(),
+                shape: :pointer | :restore,
+                event: term()
+              },
               feedback: %{text: String.t(), token: reference()} | nil,
               notices: Lemieux.TUI.Notices.t(),
               row_cache: %{width: pos_integer(), theme: Theme.t(), rows: map()} | nil,
@@ -906,6 +918,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp route_info(message, %{terminal: %{scroll_pending: %{}}} = state),
       do: handle_info(message, Pointer.flush_scroll(state))
+
+    defp route_info(:external_edit, state), do: {:noreply, Composer.external_edit(state)}
 
     defp route_info(
            {ref, {:ok, details, ready_opts}},

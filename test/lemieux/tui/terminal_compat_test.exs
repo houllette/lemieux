@@ -355,6 +355,8 @@ defmodule Lemieux.TUI.TerminalCompatTest do
     test "the draft is left in the box and the reason flashed" do
       editor = fn text -> ExternalEditor.edit(text, sh: nil) end
       state = tui(editor: editor) |> type("keep this") |> press("g", ["ctrl"])
+      assert_receive :external_edit
+      assert {:noreply, state} = TUI.handle_info(:external_edit, state)
 
       # The frame after a handoff is the full repaint; the one after that is
       # the screen again.

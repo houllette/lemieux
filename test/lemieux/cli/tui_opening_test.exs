@@ -25,6 +25,16 @@ defmodule Lemieux.CLI.TUIOpeningTest do
     options
   end
 
+  test "native hover requires an explicit terminal capability and mouse capture", %{tmp_dir: dir} do
+    options = configured(dir, %{})
+    refute opened(options, env: %{}).terminal.hover.enabled?
+    refute opened(options, env: %{"LMX_HOVER_POINTER" => "0"}).terminal.hover.enabled?
+    assert opened(options, env: %{"LMX_HOVER_POINTER" => "1"}).terminal.hover.enabled?
+
+    options = put_in(options.host.mouse, false)
+    refute opened(options, env: %{"LMX_HOVER_POINTER" => "1"}).terminal.hover.enabled?
+  end
+
   test "session status titles are an optional boolean that reaches the running screen", %{
     tmp_dir: dir
   } do

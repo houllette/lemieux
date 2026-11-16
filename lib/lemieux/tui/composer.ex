@@ -180,7 +180,21 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp act(:pager, _event, state), do: {:noreply, Pager.open(state)}
     defp act(:history_search, _event, state), do: {:noreply, HistorySearch.open(state)}
-    defp act(:external_editor, _event, state), do: {:noreply, external_edit(state)}
+
+    defp act(:external_editor, _event, %TUI{terminal: %{editor: nil}} = state),
+      do: {:noreply, external_edit(state)}
+
+    defp act(:external_editor, _event, %{terminal: %{hover: %{suspended?: true}}} = state),
+      do: {:noreply, state}
+
+    defp act(:external_editor, _event, state) do
+      # The runtime must apply Hover's reset before the blocking handoff.
+      # A self-message keeps terminal polling in this process paused while
+      # the editor runs, but lets this transition finish first.
+      send(self(), :external_edit)
+      {:noreply, put_in(state.terminal.hover.suspended?, true)}
+    end
+
     defp act(:paste_image, _event, state), do: {:noreply, ImageAttachment.request(state)}
     defp act(:cycle_mode, _event, state), do: {:noreply, Policy.cycle(state)}
     defp act(:toggle_notifications, _event, state), do: {:noreply, Notify.toggle(state)}
@@ -435,10 +449,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # exits, deliberately: the terminal is the editor's until then, and this
     # process is also the one that would otherwise be reading its keys. See
     # `Lemieux.TUI.ExternalEditor`.
-    defp external_edit(%TUI{terminal: %{editor: nil}} = state),
+    @doc false
+    @spec external_edit(state :: TUI.t()) :: TUI.t()
+    def external_edit(%TUI{terminal: %{editor: nil}} = state),
       do: Flash.show(state, "an external editor needs a local terminal")
 
-    defp external_edit(state) do
+    def external_edit(state) do
+      state = edit_externally(state)
+      put_in(state.terminal.hover, %{state.terminal.hover | suspended?: false, event: nil})
+    end
+
+    defp edit_externally(state) do
       case state.terminal.editor.(typed_value(state)) do
         # An editor saves whatever encoding it was set to, and the input box
         # raises on bytes that are not UTF-8 — after `Editor.replace/2` has

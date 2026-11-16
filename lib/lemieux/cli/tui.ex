@@ -965,6 +965,10 @@ defmodule Lemieux.CLI.TUI do
         # The CLI captures by default for wheel scrolling, link clicks and
         # drag selection; --no-mouse returns selection to the terminal.
         mouse_capture: options.host.mouse,
+        # OSC 22 support is declared by the person owning this terminal.
+        # Environment names such as TERM cannot establish safe restoration.
+        hover_pointer:
+          Map.get(Keyword.get_lazy(opts, :env, &System.get_env/0), "LMX_HOVER_POINTER") == "1",
         mcp_config: options.mcp_config,
         # The feedback ledger sits beside the sessions directory, so the flag
         # that moved one moves the other.
@@ -1252,7 +1256,7 @@ defmodule Lemieux.CLI.TUI do
     default because it is a Rust NIF and not something to impose on a project
     that only wanted the library. Add it:
 
-        {:ex_ratatui, "~> 0.20"}
+        {:ex_ratatui, "~> 0.21"}
 
     then `mix deps.get`. A path dependency on lemieux was compiled without
     it, so compile it again: `mix deps.compile lemieux --force`.
