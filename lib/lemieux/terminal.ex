@@ -2,8 +2,8 @@ defmodule Lemieux.Terminal do
   @moduledoc """
   Terminal control sequences that are not about drawing.
 
-  Two things: the window and tab title, through OSC 0, and a desktop
-  notification, through OSC 9 and the bell. Both are the same shape as
+  Window and tab titles (OSC 0), desktop notifications (OSC 9 and the bell),
+  and program status (OSC 7501). All have the same transport ownership as
   `Lemieux.Clipboard` and for the same reason — they belong to the terminal
   *displaying* the interface, not to the machine running the session, so a
   byte-stream transport writes through its own writer and a transport with
@@ -67,6 +67,39 @@ defmodule Lemieux.Terminal do
   @doc false
   @spec notification(text :: String.t()) :: String.t()
   def notification(text) when is_binary(text), do: "\e]9;" <> sanitized(text) <> "\a\a"
+
+  @typedoc "A root program-status record; blocked records say what the user must supply."
+  @type program_status ::
+          :idle | :working | :done | :error | :clear | {:blocked, :permission | :question | :auth}
+
+  @doc """
+  Reports the host's state through OSC 7501, using `app=lemieux`.
+
+  Reports replace the root record, so every report repeats the app identity.
+  Only fixed protocol values are written: prompts, tool arguments, credentials
+  and model output never enter these sequences. No capability query is needed;
+  the protocol permits unsolicited reports and unknown OSCs are ignored.
+
+  The host owns when to report. Importing Lemieux or starting an embedded
+  session emits nothing. `:clear` removes the terminal's records when an
+  interactive host relinquishes it; a one-shot host leaves `:done` or `:error`.
+  See the [Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status).
+  """
+  @spec program_status(status :: program_status(), transport :: transport()) ::
+          :ok | {:error, term()}
+  def program_status(status, :local),
+    do: write(fn bytes -> IO.binwrite(:stdio, bytes) end, status_sequence(status))
+
+  def program_status(status, {:session, _session, writer}) when is_function(writer, 1),
+    do: write(writer, status_sequence(status))
+
+  def program_status(_status, _transport), do: {:error, :unsupported_transport}
+
+  defp status_sequence({:blocked, kind}) when kind in [:permission, :question, :auth],
+    do: "\e]7501;state=blocked:kind=#{kind}:app=lemieux\e\\"
+
+  defp status_sequence(state) when state in [:idle, :working, :done, :error, :clear],
+    do: "\e]7501;state=#{state}:app=lemieux\e\\"
 
   # OSC 0 rather than OSC 2: it sets the icon name as well as the window title, and
   # the icon name is what several terminals put on the tab. The text reaches here

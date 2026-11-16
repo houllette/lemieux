@@ -51,7 +51,12 @@ defmodule Lemieux.TUI.DiffPanelTest do
     repository(dir)
     File.write!(Path.join(dir, "lib/a.ex"), "after\n")
     tasks = start_supervised!({Task.Supervisor, []})
-    state = TUI.new(cwd: dir, task_supervisor: tasks) |> sized() |> command("/diff")
+
+    state =
+      TUI.new(test_mode: {80, 24}, cwd: dir, task_supervisor: tasks)
+      |> sized()
+      |> command("/diff")
+
     assert %{kind: :diff, token: token, loading?: true} = state.modal
     assert_receive {:diff_files, ^token, {:ok, _result}} = reply
     assert {:noreply, state} = TUI.handle_info(reply, state)

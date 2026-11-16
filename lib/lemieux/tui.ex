@@ -155,6 +155,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Notices
     alias Lemieux.TUI.PlanInspector
     alias Lemieux.TUI.Pointer
+    alias Lemieux.TUI.ProgramStatus
     alias Lemieux.TUI.QuestionInteraction
     alias Lemieux.TUI.QuestionSelection
     alias Lemieux.TUI.Renderer
@@ -397,6 +398,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
               on_exit: (map() -> term()),
               notify: (String.t() -> :ok | {:error, term()}),
               notifications?: boolean(),
+              program_status: (Lemieux.Terminal.program_status() -> term()),
+              last_program_status: Lemieux.Terminal.program_status() | nil,
               editor: (String.t() -> {:ok, String.t()} | {:error, term()}) | nil,
               paste_image: (-> {:ok, binary()} | {:error, term()}) | nil,
               repaint: non_neg_integer()
@@ -676,7 +679,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def new(opts \\ []), do: Setup.new(opts)
 
     @impl ExRatatui.App
-    def mount(opts), do: Lifecycle.mount(opts)
+    def mount(opts), do: opts |> Lifecycle.mount() |> ProgramStatus.mounted()
 
     # Three panes: transcript, status, input. Where each goes is
     # `Lemieux.TUI.Layout`'s answer, computed once here and threaded to every
@@ -704,7 +707,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @impl ExRatatui.App
     def handle_event(event, %{status: %{update: %{phase: phase}}} = state)
         when phase in [:apply, :restarting] and not is_struct(event, ExRatatui.Event.Resize),
-        do: Hover.transition(Chrome.transition({:noreply, Updates.interact(state, event)}), event)
+        do:
+          Hover.transition(Chrome.transition({:noreply, Updates.interact(state, event)}), event)
+          |> ProgramStatus.transition(state, event)
 
     def handle_event(event, state),
       do:
@@ -712,6 +717,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           Chrome.transition(route_event(event, Updates.interact(state, event))),
           event
         )
+        |> ProgramStatus.transition(state, event)
 
     defp route_event(event, state)
 
@@ -880,7 +886,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # before a later clause could mistake it for another task's.
     @impl ExRatatui.App
     def handle_info(message, state),
-      do: Hover.transition(Chrome.transition(route_info(message, state)))
+      do:
+        Hover.transition(Chrome.transition(route_info(message, state)))
+        |> ProgramStatus.transition(state, message)
 
     defp route_info(message, state)
 
@@ -1084,6 +1092,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp route_info(_message, state), do: {:noreply, state}
 
     @impl ExRatatui.App
-    def terminate(reason, state), do: Lifecycle.terminate(reason, state)
+    def terminate(reason, state) do
+      ProgramStatus.terminate(reason, state)
+      Lifecycle.terminate(reason, state)
+    end
   end
 end

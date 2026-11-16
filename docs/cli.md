@@ -223,6 +223,11 @@ Besides the conversation, the terminal UI gives you:
 - a desktop notification (OSC 9 and the bell) when a long turn ends or a turn
   waits for you; Alt-N turns it off until you quit, `"notifications": false`
   for good;
+- program status ([OSC 7501](https://www.superlogical.com/rex/docs/build/program-status))
+  for terminals and multiplexers that display agent activity: working, waiting
+  for permission or an answer, finished, or failed. Reports use `app=lemieux`
+  and stay enabled when desktop notifications are off. Cancellation reports
+  idle; quitting clears the screen's status. Unsupported terminals ignore it;
 - a follow-up hint in the empty input box after a turn, taken with Tab. It is
   guessed from what the turn's tools did, never by a model call;
 - the repository's instructions, skills and legacy slash commands, and the

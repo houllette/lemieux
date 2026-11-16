@@ -101,6 +101,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
           # is the transport's, so the default speaks through it.
           notify: effect(opts, :notify, headless?, fn -> Callbacks.notify(transport) end),
           notifications?: Keyword.get(opts, :notifications, true) != false,
+          program_status:
+            effect(opts, :program_status, headless?, fn -> Callbacks.program_status(transport) end),
+          last_program_status: nil,
           # Handing the terminal to `$EDITOR` and back, and reading an image off
           # the clipboard, are effects on the local machine only; a transport
           # showing this screen elsewhere gets neither unless its host supplies
