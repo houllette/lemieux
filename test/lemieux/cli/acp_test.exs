@@ -9,7 +9,7 @@ defmodule Lemieux.CLI.ACPTest do
 
   @moduletag :tmp_dir
 
-  defp connect(dir, script, version \\ 1, flags \\ [], questions? \\ true) do
+  defp connect(dir, script, version \\ 1, flags \\ [], questions? \\ true, capabilities \\ %{}) do
     runtime = :"acp_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
     provider = Scripted.new(script)
@@ -32,7 +32,8 @@ defmodule Lemieux.CLI.ACPTest do
 
     request(server, 1, "initialize", %{
       "protocolVersion" => version,
-      "clientCapabilities" => %{"_meta" => %{"lemieux" => %{"question" => questions?}}}
+      "clientCapabilities" =>
+        Map.put(capabilities, "_meta", %{"lemieux" => %{"question" => questions?}})
     })
 
     assert_receive {:wire, %{"id" => 1, "result" => %{"protocolVersion" => ^version}}}
@@ -369,7 +370,7 @@ defmodule Lemieux.CLI.ACPTest do
     {server, provider, store} = connect(dir, [[{:error, :fixture_failure}]])
     id = open(server, dir)
     prompt(server, id)
-    assert_receive {:wire, %{"id" => 3, "error" => %{"code" => -32_000}}}
+    assert_receive {:wire, %{"id" => 3, "error" => %{"code" => -32_603}}}
     assert {:ok, entries} = Store.read(store, id)
     assert Enum.any?(entries, &(&1.type == :error))
     assert length(Scripted.requests(provider)) == 1
@@ -393,5 +394,366 @@ defmodule Lemieux.CLI.ACPTest do
 
     assert_receive {:wire, %{"id" => 8, "error" => %{"code" => -32_602}}}
     assert Scripted.requests(provider) == []
+  end
+
+  for version <- [1, 2] do
+    test "v#{version} exposes and validates standard configuration options", %{tmp_dir: dir} do
+      version = unquote(version)
+      {server, provider, _store} = connect(dir, [[{:delay, 60_000}]], version)
+      request(server, 2, "session/new", %{"cwd" => dir, "mcpServers" => []})
+
+      assert_receive {:wire,
+                      %{"id" => 2, "result" => %{"sessionId" => id, "configOptions" => options}}}
+
+      key = if version == 1, do: "id", else: "configId"
+      model = Enum.find(options, &(&1[key] == "model"))
+      assert model["category"] == "model"
+      assert Enum.any?(model["options"], &(&1["value"] == model["currentValue"]))
+
+      params = %{"sessionId" => id, "configId" => "model", "value" => model["currentValue"]}
+      params = if version == 2, do: Map.put(params, "type", "id"), else: params
+      request(server, 7, "session/set_config_option", params)
+      assert_receive {:wire, %{"id" => 7, "result" => %{"configOptions" => ^options}}}
+
+      request(server, 8, "session/set_config_option", %{params | "value" => "test:not-offered"})
+      assert_receive {:wire, %{"id" => 8, "error" => %{"code" => -32_602}}}
+      assert Scripted.requests(provider) == []
+
+      prompt(server, id)
+
+      assert_receive {:wire, %{"params" => %{"update" => %{"sessionUpdate" => update}}}}
+                     when update in ["user_message_chunk", "state_update"]
+
+      request(server, 9, "session/set_config_option", params)
+      assert_receive {:wire, %{"id" => 9, "error" => %{"code" => -32_602}}}
+      request(server, 10, "session/cancel", %{"sessionId" => id})
+      assert_receive {:wire, %{"id" => 10, "result" => %{}}}
+    end
+  end
+
+  test "editor reads and writes carry real tool ids and preserve unsaved text", %{tmp_dir: dir} do
+    path = Path.join(dir, "file.txt")
+    File.write!(path, "disk")
+
+    {server, _provider, store} =
+      connect(
+        dir,
+        [
+          Scripted.tool_call("read", "read", %{"path" => "file.txt"}),
+          Scripted.tool_call("write", "write", %{"path" => "file.txt", "content" => "changed"}),
+          Scripted.complete("done")
+        ],
+        1,
+        ["--permission-mode", "full_auto"],
+        false,
+        %{"fs" => %{"readTextFile" => true, "writeTextFile" => true}}
+      )
+
+    id = open(server, dir)
+    prompt(server, id)
+
+    assert_receive {:wire,
+                    %{
+                      "params" => %{
+                        "update" => %{
+                          "toolCallId" => "read",
+                          "kind" => "read",
+                          "locations" => [%{"path" => ^path}]
+                        }
+                      }
+                    }}
+
+    for _read <- 1..3 do
+      assert_receive {:wire,
+                      %{
+                        "id" => rpc_id,
+                        "method" => "fs/read_text_file",
+                        "params" => %{"sessionId" => ^id, "path" => ^path}
+                      }}
+
+      Server.receive_message(server, %{
+        "jsonrpc" => "2.0",
+        "id" => rpc_id,
+        "result" => %{"content" => "unsaved"}
+      })
+    end
+
+    assert_receive {:wire,
+                    %{
+                      "id" => rpc_id,
+                      "method" => "fs/write_text_file",
+                      "params" => %{"path" => ^path, "content" => "changed"}
+                    }}
+
+    Server.receive_message(server, %{"jsonrpc" => "2.0", "id" => rpc_id, "result" => %{}})
+
+    assert_receive {:wire,
+                    %{
+                      "params" => %{
+                        "update" => %{
+                          "toolCallId" => "write",
+                          "content" => [
+                            %{"type" => "diff", "oldText" => "unsaved", "newText" => "changed"}
+                          ]
+                        }
+                      }
+                    }}
+
+    assert_receive {:wire, %{"id" => 3, "result" => %{"stopReason" => "end_turn"}}}
+    assert File.read!(path) == "disk"
+
+    assert_receive {:wire,
+                    %{
+                      "params" => %{
+                        "update" => %{
+                          "toolCallId" => "write",
+                          "status" => "completed",
+                          "content" => [
+                            %{"type" => "diff", "oldText" => "unsaved", "newText" => "changed"},
+                            %{"type" => "content"}
+                          ]
+                        }
+                      }
+                    }}
+
+    assert {:ok, entries} = Store.read(store, id)
+    assert Enum.any?(entries, &(&1.type == :tool_result and &1.payload["output"] =~ "unsaved"))
+    assert :sys.get_state(server).pending == %{}
+  end
+
+  test "cancelling a pending editor read discards late replies", %{tmp_dir: dir} do
+    File.write!(Path.join(dir, "file.txt"), "original")
+
+    {server, provider, _store} =
+      connect(dir, [Scripted.tool_call("read", "read", %{"path" => "file.txt"})], 1, [], false, %{
+        "fs" => %{"readTextFile" => true}
+      })
+
+    id = open(server, dir)
+    prompt(server, id)
+    assert_receive {:wire, %{"id" => rpc_id, "method" => "fs/read_text_file"}}
+    request(server, 4, "session/cancel", %{"sessionId" => id})
+    assert_receive {:wire, %{"id" => 3, "result" => %{"stopReason" => "cancelled"}}}
+
+    Server.receive_message(server, %{
+      "jsonrpc" => "2.0",
+      "id" => rpc_id,
+      "result" => %{"content" => "late"}
+    })
+
+    assert :sys.get_state(server).pending == %{}
+    assert length(Scripted.requests(provider)) == 1
+  end
+
+  test "standard form elicitation answers a native questionnaire", %{tmp_dir: dir} do
+    {server, _provider, store} =
+      connect(
+        dir,
+        [
+          Scripted.tool_call("question", "ask_user", %{
+            "questions" => [
+              %{
+                "id" => "choice",
+                "question" => "Which?",
+                "type" => "single_choice",
+                "options" => [%{"id" => "a", "label" => "A"}, %{"id" => "b", "label" => "B"}]
+              }
+            ]
+          }),
+          Scripted.complete("answered")
+        ],
+        1,
+        [],
+        false,
+        %{"elicitation" => %{"form" => %{}}}
+      )
+
+    id = open(server, dir)
+    prompt(server, id)
+
+    assert_receive {:wire,
+                    %{
+                      "id" => rpc_id,
+                      "method" => "elicitation/create",
+                      "params" => %{
+                        "sessionId" => ^id,
+                        "mode" => "form",
+                        "requestedSchema" => %{"required" => ["choice"]}
+                      }
+                    }}
+
+    Server.receive_message(server, %{
+      "jsonrpc" => "2.0",
+      "id" => rpc_id,
+      "result" => %{"action" => "accept", "content" => %{"choice" => "2"}}
+    })
+
+    assert_receive {:wire, %{"id" => 3, "result" => %{"stopReason" => "end_turn"}}}
+    assert {:ok, entries} = Store.read(store, id)
+    result = Enum.find(entries, &(&1.type == :tool_result))
+
+    assert result.payload["structured_content"]["answers"] == [
+             %{
+               "question_id" => "choice",
+               "status" => "answered",
+               "kind" => "selection",
+               "selected" => ["b"]
+             }
+           ]
+  end
+
+  test "load and resume reuse an idle session and close is idempotent", %{tmp_dir: dir} do
+    {server, provider, _store} = connect(dir, [Scripted.complete("retained")])
+    id = open(server, dir)
+    prompt(server, id)
+    assert_receive {:wire, %{"id" => 3, "result" => %{}}}
+    pid = :sys.get_state(server).sessions[id].pid
+
+    for {method, rpc_id} <- [{"session/load", 4}, {"session/resume", 5}] do
+      request(server, rpc_id, method, %{"sessionId" => id, "cwd" => dir, "mcpServers" => []})
+      assert_receive {:wire, %{"id" => ^rpc_id, "result" => %{"sessionId" => ^id}}}
+      assert :sys.get_state(server).sessions[id].pid == pid
+    end
+
+    for rpc_id <- 6..7 do
+      request(server, rpc_id, "session/close", %{"sessionId" => id})
+      assert_receive {:wire, %{"id" => ^rpc_id, "result" => %{}}}
+    end
+
+    request(server, 8, "session/prompt", %{
+      "sessionId" => id,
+      "prompt" => [%{"type" => "text", "text" => "hello"}]
+    })
+
+    assert_receive {:wire,
+                    %{"id" => 8, "error" => %{"code" => -32_002, "data" => %{"sessionId" => ^id}}}}
+
+    assert length(Scripted.requests(provider)) == 1
+  end
+
+  test "v2 holds busy prompts and cancels them without inserting another message", %{tmp_dir: dir} do
+    owner = self()
+
+    {server, provider, store} =
+      connect(
+        dir,
+        [
+          fn _request ->
+            send(owner, :acp_provider_started)
+            [{:delay, 60_000}]
+          end
+        ],
+        2
+      )
+
+    id = open(server, dir)
+    prompt(server, id)
+    assert_receive {:wire, %{"id" => 3, "result" => %{"messageId" => _}}}
+    assert_receive :acp_provider_started
+
+    request(server, 4, "session/prompt", %{
+      "sessionId" => id,
+      "prompt" => [%{"type" => "text", "text" => "queued"}]
+    })
+
+    assert [{4, "queued"}] = :sys.get_state(server).sessions[id].queued
+    request(server, 5, "session/cancel", %{"sessionId" => id})
+    assert_receive {:wire, %{"id" => 4, "error" => %{"code" => -32_800}}}
+    assert {:ok, entries} = Store.read(store, id)
+    assert Enum.count(entries, &(&1.type == :user)) == 1
+    assert length(Scripted.requests(provider)) == 1
+  end
+
+  test "invalid workspace filters and duplicate MCP names fail before execution", %{tmp_dir: dir} do
+    {server, provider, _store} = connect(dir, [])
+    request(server, 4, "session/list", %{"cwd" => "relative"})
+    assert_receive {:wire, %{"id" => 4, "error" => %{"code" => -32_602}}}
+    mcp = %{"name" => "duplicate", "command" => "must-not-start", "args" => [], "env" => []}
+    request(server, 5, "session/new", %{"cwd" => dir, "mcpServers" => [mcp, mcp]})
+    assert_receive {:wire, %{"id" => 5, "error" => %{"code" => -32_602}}}
+    assert :sys.get_state(server).sessions == %{}
+    assert Scripted.requests(provider) == []
+  end
+
+  test "v2 inserts a held prompt only after the current turn completes", %{tmp_dir: dir} do
+    owner = self()
+
+    first = fn _request ->
+      send(owner, {:held_acp_request, self()})
+
+      receive do
+        :release -> Scripted.complete("first")
+      after
+        60_000 -> Scripted.error(:fixture_expired)
+      end
+    end
+
+    # The interactive host also makes its one session-label request after
+    # two exchanges. Give that auxiliary request its own scripted response.
+    {server, provider, store} =
+      connect(
+        dir,
+        [first, Scripted.complete("second"), Scripted.complete("Queued ACP session")],
+        2
+      )
+
+    id = open(server, dir)
+    prompt(server, id)
+    assert_receive {:held_acp_request, worker}
+    assert_receive {:wire, %{"id" => 3, "result" => %{"messageId" => first_id}}}
+
+    request(server, 4, "session/prompt", %{
+      "sessionId" => id,
+      "prompt" => [%{"type" => "text", "text" => "next"}]
+    })
+
+    assert [{4, "next"}] = :sys.get_state(server).sessions[id].queued
+    send(worker, :release)
+    assert_receive {:wire, %{"params" => %{"update" => %{"state" => "idle"}}}}
+    assert_receive {:wire, %{"id" => 4, "result" => %{"messageId" => second_id}}}
+    assert first_id != second_id
+
+    assert_receive {:wire,
+                    %{
+                      "params" => %{
+                        "update" => %{
+                          "sessionUpdate" => "agent_message",
+                          "content" => [%{"text" => "second"}]
+                        }
+                      }
+                    }}
+
+    assert_receive {:wire, %{"params" => %{"update" => %{"state" => "idle"}}}}
+    assert {:ok, entries} = Store.read(store, id)
+    assert Enum.map(Enum.filter(entries, &(&1.type == :user)), & &1.id) == [first_id, second_id]
+    assert [_, _, summary] = Scripted.requests(provider)
+    assert summary.tools == []
+  end
+
+  test "closed session reconstruction retains its native tool catalog", %{tmp_dir: dir} do
+    {server, provider, _store} = connect(dir, [])
+    id = open(server, dir)
+    before = Lemieux.Session.info(:sys.get_state(server).sessions[id].pid).tools
+    assert "read" in before
+    assert "write" in before
+    request(server, 4, "session/close", %{"sessionId" => id})
+    assert_receive {:wire, %{"id" => 4, "result" => %{}}}
+    request(server, 5, "session/load", %{"sessionId" => id, "cwd" => dir, "mcpServers" => []})
+    assert_receive {:wire, %{"id" => 5, "result" => %{"sessionId" => ^id}}}
+    assert Lemieux.Session.info(:sys.get_state(server).sessions[id].pid).tools == before
+    assert Scripted.requests(provider) == []
+  end
+
+  test "a rejected repeated v2 initialization preserves the initialized connection", %{
+    tmp_dir: dir
+  } do
+    {server, _provider, _store} = connect(dir, [], 2)
+    request(server, 2, "initialize", %{"protocolVersion" => 2})
+    assert_receive {:wire, %{"id" => 2, "result" => %{"protocolVersion" => 2}}}
+    request(server, 3, "initialize", %{"protocolVersion" => "invalid"})
+    assert_receive {:wire, %{"id" => 3, "error" => %{"code" => -32_602}}}
+    request(server, 4, "unknown", %{})
+    assert_receive {:wire, %{"id" => 4, "error" => %{"code" => -32_601}}}
+    assert :sys.get_state(server).version == 2
   end
 end

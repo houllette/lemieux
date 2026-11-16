@@ -9,17 +9,20 @@ defmodule Lemieux.CLI.ACP do
   """
 
   alias Lemieux.CLI.ACP.Server
+  alias Lemieux.CLI.ACP.Setup
   alias Lemieux.CLI.Options
 
   @max_line 1_048_576
 
   @doc "Runs the ACP connection until its input closes."
   @spec main(argv :: [String.t()], opts :: keyword()) :: :ok | {:error, integer()}
+  def main(["setup" | argv], opts), do: Setup.main(argv, opts)
+
   def main(argv, opts) do
     with {:ok, options} <- Options.parse(argv, command: :acp),
          true <- options.argv == [],
          {:ok, server} <-
-           Server.start_link(options: options, host: opts, emit: &emit/1) do
+           Server.start_link(options: options, argv: argv, host: opts, emit: &emit/1) do
       try do
         read(server, "")
       after

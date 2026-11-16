@@ -552,6 +552,7 @@ defmodule Lemieux.CLI.Help do
   defp text("acp") do
     """
     Usage: lmx acp [agent options]
+           lmx acp setup [agent options]
 
     Serves ACP versions 1 and 2 over newline-delimited JSON-RPC on stdio.
     Configure your editor to launch lmx with args ["acp"]. Credentials,
@@ -559,10 +560,12 @@ defmodule Lemieux.CLI.Help do
     Standard output is reserved for protocol packets. Disconnecting cancels
     active work and releases session locks.
 
-    Supports text/resource links, streaming, tool approval, session list,
-    load/resume/close and cancellation. Images, audio, additional workspace
-    roots and client file/terminal delegation are unsupported. See docs/acp.md
-    for the versioned contract and optional question/steering extensions.
+    Setup saves model/provider configuration in a terminal without a model
+    request. Editors supporting terminal authentication can offer it directly.
+    Supports streaming, approvals, session history, cancellation, standard
+    model/reasoning controls, forms and v1 editor text access. Images, audio,
+    additional roots and client terminal delegation are unsupported.
+    See docs/acp.md for Zed setup and the versioned capability contract.
     """
   end
 

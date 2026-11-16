@@ -2,7 +2,14 @@ defmodule Lemieux.CLI.ACP.Server do
   @moduledoc false
   use GenServer
 
+  alias Lemieux.CLI.ACP.ConfigOptions
+  alias Lemieux.CLI.ACP.Questions
+  alias Lemieux.CLI.ACP.Setup
+  alias Lemieux.CLI.ACP.Tool
   alias Lemieux.CLI.ACP.Wire
+  alias Lemieux.CLI.Config, as: CLIConfig
+  alias Lemieux.CLI.Models
+  alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
   alias Lemieux.CLI.SessionIndex
   alias Lemieux.Harness
@@ -15,15 +22,39 @@ defmodule Lemieux.CLI.ACP.Server do
   def receive_line(server, line), do: GenServer.cast(server, {:line, line})
   def receive_message(server, message), do: GenServer.cast(server, {:message, message})
 
+  @spec client_request(
+          server :: pid(),
+          session_id :: String.t(),
+          method :: String.t(),
+          params :: map()
+        ) ::
+          {:ok, map()} | {:error, atom()}
+  def client_request(server, session_id, method, params),
+    do: GenServer.call(server, {:client_request, session_id, method, params}, :infinity)
+
+  @spec tool_event(
+          server :: pid(),
+          session_id :: String.t(),
+          call_id :: String.t(),
+          event :: tuple()
+        ) :: :ok
+  def tool_event(server, session_id, call_id, event),
+    do: GenServer.call(server, {:tool_event, session_id, call_id, event}, :infinity)
+
   @impl true
   def init(opts) do
     {:ok,
      %{
        options: Keyword.fetch!(opts, :options),
+       argv: Keyword.get(opts, :argv),
        host: Keyword.fetch!(opts, :host),
        emit: Keyword.fetch!(opts, :emit),
        version: nil,
+       used?: false,
        questions?: false,
+       filesystem: %{},
+       elicitation?: false,
+       auth_methods: [],
        sessions: %{},
        pending: %{},
        serial: 0
@@ -40,6 +71,39 @@ defmodule Lemieux.CLI.ACP.Server do
 
   def handle_cast({:message, message}, state), do: {:noreply, dispatch(message, state)}
 
+  @impl true
+  def handle_call({:client_request, session_id, method, params}, from, state) do
+    if Map.has_key?(state.sessions, session_id) do
+      request_id = "lmx-#{state.serial + 1}"
+      monitor = Process.monitor(elem(from, 0))
+      timer = Process.send_after(self(), {:client_timeout, request_id}, 30_000)
+      params = Map.put(params, "sessionId", session_id)
+
+      state.emit.(%{
+        "jsonrpc" => "2.0",
+        "id" => request_id,
+        "method" => method,
+        "params" => params
+      })
+
+      pending = %{
+        kind: :filesystem,
+        session_id: session_id,
+        from: from,
+        monitor: monitor,
+        timer: timer
+      }
+
+      {:noreply,
+       %{state | serial: state.serial + 1, pending: Map.put(state.pending, request_id, pending)}}
+    else
+      {:reply, {:error, :ecanceled}, state}
+    end
+  end
+
+  def handle_call({:tool_event, id, call_id, event}, _from, state),
+    do: {:reply, :ok, tool_update(state, id, call_id, event)}
+
   defp dispatch(%{"jsonrpc" => "2.0", "method" => method} = message, state)
        when is_binary(method) do
     params = Map.get(message, "params", %{})
@@ -52,6 +116,11 @@ defmodule Lemieux.CLI.ACP.Server do
         failure(state, nil, -32_600, "Invalid request id")
 
       is_map(params) ->
+        state =
+          if method != "initialize" and state.version != nil,
+            do: %{state | used?: true},
+            else: state
+
         request(method, params, message["id"], state)
 
       true ->
@@ -82,40 +151,96 @@ defmodule Lemieux.CLI.ACP.Server do
          id,
          %{version: nil} = state
        )
-       when is_integer(requested) and requested >= 1 do
+       when is_integer(requested) and requested >= 1 and requested <= 65_535 do
     version = if requested == 1, do: 1, else: 2
-    capabilities = params["capabilities"] || params["clientCapabilities"] || %{}
+    supplied = params["capabilities"] || params["clientCapabilities"]
+    capabilities = if is_map(supplied), do: supplied, else: %{}
     questions? = match?(%{"_meta" => %{"lemieux" => %{"question" => true}}}, capabilities)
-    state = %{state | version: version, questions?: questions?}
-    reply(state, id, Wire.initialize(version))
+
+    filesystem = filesystem(version, capabilities)
+
+    state = %{
+      state
+      | version: version,
+        questions?: questions?,
+        filesystem: filesystem,
+        elicitation?:
+          match?(%{"elicitation" => %{"form" => form}} when is_map(form), capabilities)
+    }
+
+    methods =
+      if CLIConfig.path(state.options.config),
+        do: Setup.methods(version, state.argv || [], capabilities),
+        else: []
+
+    state = %{state | auth_methods: methods}
+    reply(state, id, Wire.initialize(version, methods))
   end
 
+  defp request("initialize", params, id, %{version: 2, used?: false} = state) do
+    initialized = request("initialize", params, id, %{state | version: nil})
+    if is_nil(initialized.version), do: %{initialized | version: 2}, else: initialized
+  end
+
+  defp request("initialize", %{"protocolVersion" => 0}, id, %{version: nil} = state),
+    do:
+      failure(state, id, -32_022, "Unsupported protocol version", %{
+        "requested" => 0,
+        "supported" => [1, 2]
+      })
+
   defp request("initialize", _params, id, %{version: nil} = state),
-    do: failure(state, id, -32_602, "protocolVersion must be a positive integer")
+    do: failure(state, id, -32_602, "protocolVersion must be an integer from 0 to 65535")
+
+  defp request("initialize", _params, id, state),
+    do: failure(state, id, -32_600, "Initialization is already complete")
 
   defp request(_method, _params, id, %{version: nil} = state),
-    do: failure(state, id, -32_000, "Initialize first")
+    do: failure(state, id, -32_600, "Initialize first")
 
   defp request(method, params, id, state)
        when method in ["session/new", "session/load", "session/resume"] do
-    with :ok <- workspace(params),
+    with {:ok, state} <- refresh(state),
+         :ok <- workspace(params),
          :ok <- replay_cursor(params),
-         true <- map_size(state.sessions) < 16,
+         :ok <- credentials(state),
+         true <-
+           Map.has_key?(state.sessions, params["sessionId"]) or map_size(state.sessions) < 16,
          {:ok, servers} <- servers(params),
          {:ok, state, session_id} <- open_session(method, params, servers, state) do
       replay? = method == "session/load" or params["replayFrom"] == %{"type" => "start"}
       if replay?, do: replay(state, session_id)
-      reply(state, id, %{"sessionId" => session_id})
+      if state.version == 2 and method == "session/resume", do: resume_updates(state, session_id)
+      session = state.sessions[session_id]
+      options = ConfigOptions.list(session.pid, state.version)
+      state = put_session(state, session_id, %{session | config_options: options})
+
+      reply(state, id, %{
+        "sessionId" => session_id,
+        "configOptions" => options
+      })
     else
-      false -> failure(state, id, -32_000, "Connection session limit reached")
-      {:error, reason} -> failure(state, id, -32_602, safe_reason(reason))
+      false ->
+        failure(state, id, -32_603, "Connection session limit reached")
+
+      {:error, :authentication_required} ->
+        if state.auth_methods == [],
+          do: failure(state, id, -32_602, "Configure provider credentials with lmx acp setup"),
+          else:
+            failure(state, id, -32_000, "Configure Lemieux to continue", %{
+              "authMethods" => state.auth_methods
+            })
+
+      {:error, reason} ->
+        operation_error(state, id, reason)
     end
   end
 
   defp request("session/list", params, id, state) do
     store = Runtime.store(state.options, state.host)
 
-    with {:ok, offset} <- cursor(params["cursor"]),
+    with :ok <- list_workspace(params["cwd"]),
+         {:ok, offset} <- cursor(params["cursor"]),
          {:ok, items} <- SessionIndex.recent(store, limit: offset + 51, cwd: params["cwd"]) do
       page = items |> Enum.drop(offset) |> Enum.take(50)
       result = %{"sessions" => Enum.map(page, &descriptor/1)}
@@ -133,12 +258,23 @@ defmodule Lemieux.CLI.ACP.Server do
 
   defp request("session/prompt", params, id, state) do
     with {:ok, session} <- session(state, params),
-         {:ok, text} <- prompt_text(params["prompt"]),
-         :ok <- Session.prompt(session.pid, text) do
-      update(state, params["sessionId"], running(state.version))
-      put_session(state, params["sessionId"], %{session | prompt: id})
+         {:ok, text} <- prompt_text(params["prompt"]) do
+      case Session.prompt(session.pid, text) do
+        :ok ->
+          update(state, params["sessionId"], running(state.version))
+          put_session(state, params["sessionId"], %{session | prompt: id})
+
+        {:error, :busy} when state.version == 2 and length(session.queued) < 16 ->
+          put_session(state, params["sessionId"], %{
+            session
+            | queued: [{id, text} | session.queued]
+          })
+
+        {:error, reason} ->
+          operation_error(state, id, reason)
+      end
     else
-      {:error, reason} -> failure(state, id, -32_602, safe_reason(reason))
+      {:error, reason} -> operation_error(state, id, reason)
     end
   end
 
@@ -146,7 +282,7 @@ defmodule Lemieux.CLI.ACP.Server do
     with {:ok, session} <- session(state, params), :ok <- Session.cancel(session.pid) do
       reply(state, id, %{})
     else
-      {:error, reason} -> failure(state, id, -32_602, safe_reason(reason))
+      {:error, reason} -> operation_error(state, id, reason)
     end
   end
 
@@ -159,8 +295,11 @@ defmodule Lemieux.CLI.ACP.Server do
         state = %{state | sessions: Map.delete(state.sessions, params["sessionId"])}
         reply(state, id, %{})
 
+      {:error, {:unknown_session, _id}} ->
+        reply(state, id, %{})
+
       {:error, reason} ->
-        failure(state, id, -32_602, safe_reason(reason))
+        operation_error(state, id, reason)
     end
   end
 
@@ -214,8 +353,28 @@ defmodule Lemieux.CLI.ACP.Server do
     end
   end
 
+  defp request("session/set_config_option", params, id, state) do
+    with {:ok, session} <- session(state, params),
+         :ok <- ConfigOptions.set(session.pid, params, state.version) do
+      state = config_update(state, params["sessionId"])
+      reply(state, id, %{"configOptions" => state.sessions[params["sessionId"]].config_options})
+    else
+      {:error, {:unknown_session, _id} = reason} -> operation_error(state, id, reason)
+      _error -> failure(state, id, -32_602, "Unsupported or busy session configuration")
+    end
+  end
+
   defp request(_method, _params, id, state),
     do: failure(state, id, -32_601, "Method not supported")
+
+  defp filesystem(1, capabilities) do
+    %{
+      read: match?(%{"fs" => %{"readTextFile" => true}}, capabilities),
+      write: match?(%{"fs" => %{"writeTextFile" => true}}, capabilities)
+    }
+  end
+
+  defp filesystem(_version, _capabilities), do: %{}
 
   defp configure(pid, %{"model" => model} = values)
        when map_size(values) == 1 and is_binary(model),
@@ -242,6 +401,14 @@ defmodule Lemieux.CLI.ACP.Server do
 
   defp workspace(_params), do: {:error, "cwd is required"}
 
+  defp list_workspace(nil), do: :ok
+
+  defp list_workspace(cwd) when is_binary(cwd) do
+    if Path.type(cwd) == :absolute, do: :ok, else: {:error, :invalid_cwd}
+  end
+
+  defp list_workspace(_cwd), do: {:error, :invalid_cwd}
+
   defp replay_cursor(%{"replayFrom" => cursor}) when cursor not in [nil, %{"type" => "start"}],
     do: {:error, "Unsupported replay cursor"}
 
@@ -250,9 +417,14 @@ defmodule Lemieux.CLI.ACP.Server do
   defp servers(params) do
     values = Map.get(params, "mcpServers", [])
 
-    if is_list(values) and Enum.all?(values, &stdio_server?/1),
+    if is_list(values) and Enum.all?(values, &stdio_server?/1) and unique_servers?(values),
       do: {:ok, Enum.flat_map(values, &server_config/1)},
       else: {:error, "Only valid stdio MCP servers are supported"}
+  end
+
+  defp unique_servers?(servers) do
+    names = Enum.map(servers, & &1["name"])
+    length(names) == length(Enum.uniq(names))
   end
 
   defp stdio_server?(%{"name" => name, "command" => command} = server) do
@@ -266,6 +438,22 @@ defmodule Lemieux.CLI.ACP.Server do
   end
 
   defp stdio_server?(_server), do: false
+
+  defp refresh(%{argv: nil} = state), do: {:ok, state}
+
+  defp refresh(state) do
+    with {:ok, options} <- Options.parse(state.argv, command: :acp),
+         do: {:ok, %{state | options: options}}
+  end
+
+  defp credentials(state) do
+    if Keyword.has_key?(state.host, :provider) or state.options.base_url != nil or
+         state.options.ixway != nil or state.options.host.route != nil or
+         Models.credential(Lemieux.ModelSpec.provider(state.options.model), state.options.config) !=
+           :missing,
+       do: :ok,
+       else: {:error, :authentication_required}
+  end
 
   defp server_config(server) do
     env = Map.new(Map.get(server, "env", []), &{&1["name"], &1["value"]})
@@ -282,6 +470,19 @@ defmodule Lemieux.CLI.ACP.Server do
     )
   end
 
+  defp open_session(method, %{"sessionId" => id, "cwd" => cwd}, servers, state)
+       when method != "session/new" and is_map_key(state.sessions, id) do
+    session = state.sessions[id]
+
+    case Session.info(session.pid) do
+      %{status: :idle, cwd: ^cwd} when session.servers == servers ->
+        {:ok, state, id}
+
+      _busy_or_different ->
+        {:error, "Session is busy or has a different workspace/MCP configuration"}
+    end
+  end
+
   defp open_session(method, params, servers, state) do
     resume = if method == "session/new", do: nil, else: params["sessionId"]
     options = %{state.options | resume: resume}
@@ -290,10 +491,21 @@ defmodule Lemieux.CLI.ACP.Server do
     with :ok <- resume_workspace(method, resume, params["cwd"], state),
          {:ok, prepared} <- Runtime.prepare(options, host),
          harness = Harness.append_mcp_servers(prepared.harness, servers),
+         harness = %{harness | tools: Tool.attach(harness.tools, self(), state.filesystem)},
          {:ok, pid} <- Runtime.start(%{prepared | harness: harness}, subscriber: self()) do
       info = Session.info(pid)
       Process.monitor(pid)
-      session = %{pid: pid, prompt: nil, streamed: MapSet.new()}
+
+      session = %{
+        pid: pid,
+        prompt: nil,
+        queued: [],
+        streamed: MapSet.new(),
+        servers: servers,
+        config_options: nil,
+        diffs: %{}
+      }
+
       {:ok, put_session(state, info.id, session), info.id}
     end
   end
@@ -307,7 +519,8 @@ defmodule Lemieux.CLI.ACP.Server do
          true <- entry.payload["cwd"] == cwd do
       :ok
     else
-      _invalid -> {:error, "Session is absent, open, or belongs to another workspace"}
+      {:error, _reason} -> {:error, {:unknown_session, id}}
+      _invalid -> {:error, "Session is open or belongs to another workspace"}
     end
   end
 
@@ -333,6 +546,16 @@ defmodule Lemieux.CLI.ACP.Server do
     end)
   end
 
+  defp resume_updates(state, id) do
+    entry = state.sessions[id].pid |> Session.snapshot() |> Map.fetch!(:entries) |> List.last()
+    update(state, id, %{"sessionUpdate" => "state_update", "state" => "idle"})
+
+    update(state, id, %{
+      "sessionUpdate" => "session_info_update",
+      "updatedAt" => DateTime.to_iso8601(entry.at)
+    })
+  end
+
   defp prompt_text(blocks) when is_list(blocks) and blocks != [] do
     if Enum.all?(blocks, &text_block?/1),
       do: {:ok, Enum.map_join(blocks, "\n", &block_text/1)},
@@ -356,7 +579,29 @@ defmodule Lemieux.CLI.ACP.Server do
       else: {:noreply, state}
   end
 
-  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+  def handle_info({:acp_tool, id, call_id, event}, state) do
+    {:noreply, tool_update(state, id, call_id, event)}
+  end
+
+  def handle_info({:client_timeout, request_id}, state) do
+    {pending, remaining} = Map.pop(state.pending, request_id)
+    if pending, do: release(pending, {:error, :etimedout})
+    {:noreply, %{state | pending: remaining}}
+  end
+
+  def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
+    pending =
+      Map.reject(state.pending, fn {_id, pending} ->
+        if Map.get(pending, :monitor) == ref do
+          release(pending, {:error, :ecanceled})
+          true
+        else
+          false
+        end
+      end)
+
+    state = %{state | pending: pending}
+
     case Enum.find(state.sessions, fn {_id, session} -> session.pid == pid end) do
       {id, _session} ->
         state = finish(state, id, :error)
@@ -386,12 +631,19 @@ defmodule Lemieux.CLI.ACP.Server do
       state.version == 1 and entry.type == :assistant and
         MapSet.member?(session.streamed, entry.id)
 
-    unless duplicate?, do: update(state, id, Wire.entry(state.version, entry))
-    state
+    unless duplicate?, do: update(state, id, entry_update(state, id, entry))
+
+    if entry.type == :tool_result,
+      do:
+        put_session(state, id, %{
+          session
+          | diffs: Map.delete(session.diffs, entry.payload["call_id"])
+        }),
+      else: state
   end
 
   defp event(state, id, {:tool_call, call}) do
-    update(state, id, Wire.tool(state.version, call))
+    update(state, id, Wire.tool(state.version, call, Session.info(state.sessions[id].pid).cwd))
     state
   end
 
@@ -403,6 +655,17 @@ defmodule Lemieux.CLI.ACP.Server do
       :approval,
       "session/request_permission",
       Wire.permission(state.version, id, call)
+    )
+  end
+
+  defp event(%{elicitation?: true} = state, id, {:question, question}) do
+    ask_client(
+      state,
+      id,
+      question.call_id,
+      {:elicitation, question},
+      "elicitation/create",
+      Questions.request(id, question)
     )
   end
 
@@ -424,7 +687,50 @@ defmodule Lemieux.CLI.ACP.Server do
   end
 
   defp event(state, id, {:finished, reason}), do: finish(state, id, reason)
+
+  defp event(state, id, {changed, _previous, _current})
+       when changed in [:model_changed, :reasoning_effort_changed] do
+    config_update(state, id)
+  end
+
   defp event(state, _id, _event), do: state
+
+  defp entry_update(state, id, %{type: :tool_result} = entry) do
+    packet = Wire.entry(state.version, entry)
+    diffs = Map.get(state.sessions[id].diffs, entry.payload["call_id"], [])
+    Map.update!(packet, "content", &(diffs ++ &1))
+  end
+
+  defp entry_update(state, _id, entry), do: Wire.entry(state.version, entry)
+
+  defp tool_update(state, id, call_id, event) do
+    case state.sessions do
+      %{^id => session} ->
+        packet = Wire.tool_event(call_id, event, state.version)
+        update(state, id, packet)
+        diffs = remember_diff(session.diffs, call_id, event, packet)
+        put_session(state, id, %{session | diffs: diffs})
+
+      _closed ->
+        state
+    end
+  end
+
+  defp remember_diff(diffs, call_id, {:diff, _path, _old, _new}, packet),
+    do: Map.update(diffs, call_id, packet["content"], &Enum.take(&1 ++ packet["content"], 64))
+
+  defp remember_diff(diffs, _call_id, _event, _packet), do: diffs
+
+  defp config_update(state, id) do
+    session = state.sessions[id]
+    options = ConfigOptions.list(session.pid, state.version)
+
+    if options != session.config_options,
+      do:
+        update(state, id, %{"sessionUpdate" => "config_option_update", "configOptions" => options})
+
+    put_session(state, id, %{session | config_options: options})
+  end
 
   defp accepted(%{version: 2} = state, id, %{type: :user, id: message_id}) do
     case state.sessions[id].prompt do
@@ -452,8 +758,50 @@ defmodule Lemieux.CLI.ACP.Server do
           "stopReason" => if(reason == :error, do: "error", else: Wire.stop_reason(reason))
         })
 
-    pending = Map.reject(state.pending, fn {_key, pending} -> pending.session_id == id end)
-    put_session(%{state | pending: pending}, id, %{session | prompt: nil, streamed: MapSet.new()})
+    pending =
+      Map.reject(state.pending, fn {_key, pending} ->
+        if pending.session_id == id do
+          release(pending, {:error, :ecanceled})
+          true
+        else
+          false
+        end
+      end)
+
+    state =
+      put_session(%{state | pending: pending}, id, %{
+        session
+        | prompt: nil,
+          queued: [],
+          streamed: MapSet.new(),
+          diffs: %{}
+      })
+
+    next_prompt(state, id, Enum.reverse(session.queued), reason)
+  end
+
+  defp next_prompt(state, _id, [], _reason), do: state
+
+  defp next_prompt(state, _id, queued, reason) when reason in [:cancelled, :error] do
+    Enum.each(queued, fn {request_id, _text} ->
+      failure(state, request_id, -32_800, "Prompt cancelled before insertion")
+    end)
+
+    state
+  end
+
+  defp next_prompt(state, id, [{request_id, text} | rest], _reason) do
+    session = state.sessions[id]
+
+    case Session.prompt(session.pid, text) do
+      :ok ->
+        update(state, id, running(state.version))
+        put_session(state, id, %{session | prompt: request_id, queued: Enum.reverse(rest)})
+
+      {:error, reason} ->
+        state = operation_error(state, request_id, reason)
+        next_prompt(state, id, rest, :error)
+    end
   end
 
   defp terminal_reply(_state, nil, _reason), do: :ok
@@ -463,12 +811,12 @@ defmodule Lemieux.CLI.ACP.Server do
       failure(
         state,
         request_id,
-        -32_000,
+        -32_603,
         "Agent request failed; inspect the local transcript or log"
       )
 
   defp terminal_reply(%{version: 2} = state, request_id, _reason),
-    do: failure(state, request_id, -32_000, "Prompt ended before its user message was committed")
+    do: failure(state, request_id, -32_800, "Prompt ended before its user message was committed")
 
   defp terminal_reply(state, request_id, reason),
     do: reply(state, request_id, %{"stopReason" => Wire.stop_reason(reason)})
@@ -495,6 +843,16 @@ defmodule Lemieux.CLI.ACP.Server do
       {nil, _pending} ->
         state
 
+      {%{kind: :filesystem} = pending, remaining} ->
+        result =
+          case message do
+            %{"result" => result} when is_map(result) -> {:ok, result}
+            _invalid -> {:error, :eio}
+          end
+
+        release(pending, result)
+        %{state | pending: remaining}
+
       {pending, remaining} ->
         pid = state.sessions[pending.session_id].pid
         resolve(pid, pending, message["result"])
@@ -502,6 +860,14 @@ defmodule Lemieux.CLI.ACP.Server do
         %{state | pending: remaining}
     end
   end
+
+  defp release(%{kind: :filesystem} = pending, result) do
+    Process.cancel_timer(pending.timer)
+    Process.demonitor(pending.monitor, [:flush])
+    GenServer.reply(pending.from, result)
+  end
+
+  defp release(_pending, _result), do: :ok
 
   defp resolve(pid, %{kind: :approval, call_id: call}, result) do
     decision =
@@ -511,6 +877,9 @@ defmodule Lemieux.CLI.ACP.Server do
 
     Session.resolve_tool(pid, call, decision)
   end
+
+  defp resolve(pid, %{kind: {:elicitation, question}, call_id: call}, result),
+    do: Session.answer(pid, call, Questions.answer(question, result))
 
   defp resolve(pid, %{kind: :question, call_id: call}, %{"answer" => answer})
        when is_binary(answer) or is_map(answer),
@@ -535,10 +904,10 @@ defmodule Lemieux.CLI.ACP.Server do
   defp running(2), do: %{"sessionUpdate" => "state_update", "state" => "running"}
   defp running(_version), do: nil
 
-  defp session(state, %{"sessionId" => id}) do
+  defp session(state, %{"sessionId" => id}) when is_binary(id) do
     case Map.fetch(state.sessions, id) do
       {:ok, session} -> {:ok, session}
-      :error -> {:error, "Unknown session"}
+      :error -> {:error, {:unknown_session, id}}
     end
   end
 
@@ -587,11 +956,19 @@ defmodule Lemieux.CLI.ACP.Server do
     state
   end
 
-  defp failure(state, id, code, message) do
+  defp operation_error(state, id, {:unknown_session, session_id}),
+    do: failure(state, id, -32_002, "Unknown session", %{"sessionId" => session_id})
+
+  defp operation_error(state, id, reason), do: failure(state, id, -32_602, safe_reason(reason))
+
+  defp failure(state, id, code, message, data \\ nil) do
+    error = %{"code" => code, "message" => message}
+    error = if data, do: Map.put(error, "data", data), else: error
+
     state.emit.(%{
       "jsonrpc" => "2.0",
       "id" => id,
-      "error" => %{"code" => code, "message" => message}
+      "error" => error
     })
 
     state
@@ -605,5 +982,7 @@ defmodule Lemieux.CLI.ACP.Server do
         Runtime.stop_session(session.pid)
       end
     end)
+
+    Enum.each(state.pending, fn {_id, pending} -> release(pending, {:error, :ecanceled}) end)
   end
 end
