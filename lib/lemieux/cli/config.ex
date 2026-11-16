@@ -135,7 +135,7 @@ defmodule Lemieux.CLI.Config do
              auto_compaction compaction_price_tiers keep_recent_tokens summary_model systemone_compaction
              systemone_providers max_turns max_requests max_cost_usd max_total_requests max_total_cost_usd scrub_credentials credential_allowlist hooks
              permissions sandbox mcp_servers mcp_discovery plugin_dirs marketplaces plugins
-             extension_options scout_model verify continuation input_modalities notifications
+             extension_options scout_model verify continuation input_modalities notifications program_status_title
              skills capture watches learning)
   # A misspelling of one of these is refused rather than ignored: ignoring it
   # could send a request somewhere other than where the file meant, or
@@ -1084,6 +1084,7 @@ defmodule Lemieux.CLI.Config do
   defp valid_field?("disabled_extensions", value), do: is_list(value)
   defp valid_field?("scrub_credentials", value), do: is_boolean(value)
   defp valid_field?("notifications", value), do: is_boolean(value)
+  defp valid_field?("program_status_title", value), do: is_boolean(value)
   # What the object holds is checked after the field pass: `validate_skills/1`.
   defp valid_field?("skills", value), do: is_map(value)
 

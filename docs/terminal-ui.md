@@ -30,8 +30,9 @@ turn reports `done`, a failed turn reports `error`, and cancellation reports
 the record, including when SIGTERM is handled by the host. Abrupt process death
 cannot run cleanup; terminals expire active records according to the protocol.
 
-Reports are sent only on state changes, never from rendering or spinner ticks.
-They contain no prompts, answers, tool arguments or credentials. There is no
+Reports are sent only when state or enabled title metadata changes, never from
+rendering or spinner ticks.
+By default they contain no session text. There is no
 capability query or startup wait: the protocol allows unsolicited reports, and
 terminals that do not implement it ignore the sequence. Existing notification
 bells and their settings remain independent.
@@ -43,6 +44,25 @@ transports without a writer emit nothing. A host may supply
 `:idle`, `:working`, `:done`, `:error`, `:clear`, or
 `{:blocked, :permission | :question | :auth}`. Importing the library or starting
 an embedded session alone does not report terminal state.
+
+To include the displayed session name as structured metadata, add
+`"program_status_title": true` to your `lmx` configuration and restart the TUI.
+An embedding host uses `program_status_title: true`. This opt-in publishes only
+the label shown in the header: the derived session name or the current `/name`
+caption. It follows renames and session switches, repeats on each status
+report, and is omitted when clearing. It does not include the directory,
+prompts, answers, tool arguments or credentials. The label is sanitized,
+limited to 192 UTF-8 bytes and base64 encoded as OSC 7501 `title`.
+
+Hosts that want metadata can pass a two-argument callback,
+`program_status: fn status, metadata -> ... end`, where `metadata` is `[]` or
+`[title: label]`. It is called when either the status or label changes.
+Existing one-argument callbacks keep receiving state changes only.
+
+This is portable terminal metadata. Herdr Core exposes it as `status.title`;
+its desktop sidebar currently uses the existing OSC 0 terminal title, which
+already contains the session name and directory. The program identity stays
+`app=lemieux`, and the root record keeps its existing lifecycle.
 
 `lmx run` also reports `working` and its final `done`, `error`, or cancelled
 `idle` state when stderr is a terminal. A completed one-shot run leaves its

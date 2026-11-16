@@ -247,6 +247,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     (`Lemieux.TUI.History.hold/2`). It is how `lmx --prompt TEXT` opens an
     interactive session with a task.
 
+    `:program_status_title`, off by default, includes the displayed session
+    label in OSC 7501 reports. `:program_status` can replace the transport's
+    writer: a one-argument function receives state changes, and a two-argument
+    function receives the state and `[]` or `[title: label]` when either
+    changes. Headless test screens default to an inert callback.
+
     `:on_exit` is an optional host callback taking the final screen's
     `%{id: session_id, name: local_caption, cwd: directory, restart?: boolean}`
     when the app terminates. `restart?` is true only after the host prepared an
@@ -398,8 +404,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
               on_exit: (map() -> term()),
               notify: (String.t() -> :ok | {:error, term()}),
               notifications?: boolean(),
-              program_status: (Lemieux.Terminal.program_status() -> term()),
+              program_status:
+                (Lemieux.Terminal.program_status() -> term())
+                | (Lemieux.Terminal.program_status(), keyword() -> term()),
+              program_status_title?: boolean(),
               last_program_status: Lemieux.Terminal.program_status() | nil,
+              last_program_status_title: String.t() | nil,
               editor: (String.t() -> {:ok, String.t()} | {:error, term()}) | nil,
               paste_image: (-> {:ok, binary()} | {:error, term()}) | nil,
               repaint: non_neg_integer()

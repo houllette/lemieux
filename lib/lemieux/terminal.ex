@@ -76,8 +76,9 @@ defmodule Lemieux.Terminal do
   Reports the host's state through OSC 7501, using `app=lemieux`.
 
   Reports replace the root record, so every report repeats the app identity.
-  Only fixed protocol values are written: prompts, tool arguments, credentials
-  and model output never enter these sequences. No capability query is needed;
+  State and app identity are fixed protocol values. The optional `:title` is
+  a single-line label, sanitized and bounded to 192 UTF-8 bytes before base64
+  encoding. No session content is read. No capability query is needed;
   the protocol permits unsolicited reports and unknown OSCs are ignored.
 
   The host owns when to report. Importing Lemieux or starting an embedded
@@ -85,21 +86,42 @@ defmodule Lemieux.Terminal do
   interactive host relinquishes it; a one-shot host leaves `:done` or `:error`.
   See the [Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status).
   """
-  @spec program_status(status :: program_status(), transport :: transport()) ::
+  @spec program_status(
+          status :: program_status(),
+          transport :: transport(),
+          opts :: [title: String.t()]
+        ) ::
           :ok | {:error, term()}
-  def program_status(status, :local),
-    do: write(fn bytes -> IO.binwrite(:stdio, bytes) end, status_sequence(status))
+  def program_status(status, transport, opts \\ [])
 
-  def program_status(status, {:session, _session, writer}) when is_function(writer, 1),
-    do: write(writer, status_sequence(status))
+  def program_status(status, :local, opts),
+    do: write(fn bytes -> IO.binwrite(:stdio, bytes) end, status_sequence(status, opts))
 
-  def program_status(_status, _transport), do: {:error, :unsupported_transport}
+  def program_status(status, {:session, _session, writer}, opts) when is_function(writer, 1),
+    do: write(writer, status_sequence(status, opts))
 
-  defp status_sequence({:blocked, kind}) when kind in [:permission, :question, :auth],
-    do: "\e]7501;state=blocked:kind=#{kind}:app=lemieux\e\\"
+  def program_status(_status, _transport, _opts), do: {:error, :unsupported_transport}
 
-  defp status_sequence(state) when state in [:idle, :working, :done, :error, :clear],
-    do: "\e]7501;state=#{state}:app=lemieux\e\\"
+  defp status_sequence(status, opts) do
+    title = if status == :clear, do: "", else: status_title(opts[:title])
+    "\e]7501;" <> status_fields(status) <> ":app=lemieux" <> title <> "\e\\"
+  end
+
+  defp status_fields({:blocked, kind}) when kind in [:permission, :question, :auth],
+    do: "state=blocked:kind=#{kind}"
+
+  defp status_fields(state) when state in [:idle, :working, :done, :error, :clear],
+    do: "state=#{state}"
+
+  defp status_title(title) when title in [nil, ""], do: ""
+
+  defp status_title(title) do
+    text = sanitized(title)
+    # Slicing bytes can end inside a multibyte character. Drop that partial
+    # character so the decoded label is valid UTF-8 and never exceeds the cap.
+    bounded = binary_part(text, 0, min(byte_size(text), 192)) |> String.replace_invalid("")
+    ":title=" <> Base.encode64(bounded)
+  end
 
   # OSC 0 rather than OSC 2: it sets the icon name as well as the window title, and
   # the icon name is what several terminals put on the tab. The text reaches here

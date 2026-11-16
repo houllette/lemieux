@@ -25,6 +25,22 @@ defmodule Lemieux.CLI.TUIOpeningTest do
     options
   end
 
+  test "session status titles are an optional boolean that reaches the running screen", %{
+    tmp_dir: dir
+  } do
+    options = configured(dir, %{"program_status_title" => true})
+    assert opening(options)[:program_status_title] == true
+    assert opened(options).terminal.program_status_title?
+
+    path = Path.join(dir, "config.json")
+    File.write!(path, ~s({"program_status_title":"session"}))
+    assert {:error, reason} = Options.parse(["--config", path])
+    assert reason =~ "program_status_title"
+    assert {:ok, default} = Options.parse(["--config", "none"])
+    assert opening(default)[:program_status_title] == false
+    refute opened(default).terminal.program_status_title?
+  end
+
   defp opening(options, opts \\ []),
     do: TUI.opening_app(options, opts, size: {80, 24}, title: fn _text -> :ok end)
 

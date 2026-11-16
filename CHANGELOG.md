@@ -11,6 +11,10 @@ API.
 
 ### Fixes and workflow improvements
 
+- Add opt-in OSC 7501 session-title metadata with `"program_status_title": true`.
+  Follow the displayed session name and `/name` caption without changing session
+  identity, default status reports or existing host callbacks.
+
 - Report agent activity to terminals and multiplexers with OSC 7501: working,
   waiting for permission, answers or credentials, completed, failed and
   cancelled states. Keep reports independent of desktop notifications and
