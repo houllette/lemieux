@@ -7,6 +7,19 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+- Add Zed setup instructions, standard ACP model/reasoning selectors, form
+  questions, tool locations and file diffs. V1 editor text access includes
+  unsaved buffers while preserving host filesystem policy and approvals.
+- Add `lmx acp setup` for bounded terminal credential/model configuration,
+  offline editor/TCK fixtures, packaged-launcher ACP smoke checks, and registry
+  metadata preparation. Registry publication follows release qualification.
+- Correct ACP load/resume reuse, idempotent close, error codes and draft v2
+  configuration/capability shapes. Draft v2 holds busy prompts until insertion;
+  cancellation rejects uninserted prompts. Its extension advertisement now uses
+  `_meta["com.github.houllette.lemieux/capabilities"]`; v1 retains `_meta.lemieux`.
+
 ## 1.1.3 — 2026-11-15
 
 Restart `lmx` after updating from 1.1.2 on every platform, then resume with

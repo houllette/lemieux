@@ -63,6 +63,26 @@ def main():
         assert (scratch / "stdin-received").read_text() == EXPECTED
         print("verified the installed launcher passes standard input to the release")
 
+        for version in (1, 2):
+            packets = [
+                {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                 "params": {"protocolVersion": version,
+                            "info": {"name": "release-smoke", "version": "1"}}},
+                {"jsonrpc": "2.0", "id": 2, "method": "_release_smoke_unknown", "params": {}},
+            ]
+            result = subprocess.run(
+                [str(binary), "acp", "--config", "none", "--no-user-extensions"],
+                env=env, cwd=scratch,
+                input="".join(json.dumps(packet) + "\n" for packet in packets),
+                capture_output=True, text=True, timeout=120,
+            )
+            assert result.returncode == 0, "ACP launcher failed"
+            replies = [json.loads(line) for line in result.stdout.splitlines()]
+            assert len(replies) == 2, "ACP stdout contains unexpected output"
+            assert replies[0]["id"] == 1 and replies[0]["result"]["protocolVersion"] == version
+            assert replies[1]["id"] == 2 and replies[1]["error"]["code"] == -32601
+        print("verified packaged ACP framing, version negotiation and EOF without a model request")
+
 
 if __name__ == "__main__":
     main()

@@ -132,6 +132,8 @@ behind the examples.
 
 ## Integrations
 
+- [Editor connections with ACP](acp.md): Zed setup, session controls, editor
+  filesystem access, offline qualification and registry distribution.
 - [Providers](providers.md): ReqLLM routes, model discovery, streaming,
   failures, caching and accounting.
 - [Ixway](ixway.md): optional inference gateway routing.
