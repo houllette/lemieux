@@ -117,6 +117,35 @@ Optional subtasks add `parent_id` and weighted progress; see
 without frame decorations, and turn summaries show measured average throughput
 and compact cost labels. Accounting and budget precision are unchanged.
 
+## Upgrading from 1.1.2 to 1.1.3
+
+This patch requires restarting `lmx` on every platform. The independent chrome
+clock, paged status stats, Todo inspector, terminal status reporting and retained
+conversation/TUI callbacks have no supported live migration. No hot update or
+live downgrade is declared.
+
+Save unsent drafts, stage the signed update with `lmx update` or `/update`,
+then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
+installer-managed TUI restart preserves its exact session. Personal config
+version 1, extension API 1, existing plans and supported 1.x contracts remain
+compatible. Consumed request and spending accounting stays attached to the
+resumed session.
+
+F5 or a click on the Todo List title opens its scrollable inspector; Alt-M
+minimizes the pinned preview. F6 opens Tasks, Shift-Down or Esc closes it, and
+Shift-Up/Down selects across multiline drafts. Header metadata keeps scrolling
+across transcript updates while overflowing status stats rotate in complete
+pages every five seconds.
+
+OSC 7501 reports agent activity automatically to supporting terminals and
+multiplexers. Session labels are optional: set `"program_status_title": true`
+in your [personal configuration](configuration.md#personal-configuration). The ordinary
+window title remains available. `/fast` requires a model and route that
+advertise faster service; a gateway must expose that capability. Active fast
+or ultrafast service appears in red in the header. See
+[the terminal UI](terminal-ui.md) and
+[providers](providers.md#faster-service-through-a-route).
+
 ## Install a release
 
 On macOS and Linux:
