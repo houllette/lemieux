@@ -1,54 +1,50 @@
-# Lemieux 1.1.2
+# Lemieux 1.1.3
 
-Lemieux 1.1.2 fixes live permission changes, snippet copying and terminal
-layout, adds optional todo subtasks, and refreshes the guides while retaining
-the supported 1.x library, CLI and extension contracts.
+Lemieux 1.1.3 makes narrow terminal layouts easier to read, adds an inspectable
+Todo List, restores routed fast mode and reports agent activity through OSC
+7501. The supported 1.x library, CLI and extension contracts remain compatible.
 
 ## What changed
 
-- **Live full-auto switching.** `/permissions full-auto` disables the CLI's
-  implicit sandbox for subsequent operations; leaving that mode restores it.
-  Commands already started keep their original policy. Explicitly configured
-  and host-required sandboxes retain their authority, and the mode-change
-  message reports the effective state. Lowercase and chunked permission-denial
-  output receives the sandbox hint.
-- **Todo subtasks.** Optional one-level subtasks keep stable IDs, derive their
-  parent's status and divide each top-level task's share of plan progress.
-  Existing flat plans retain their version-1 document format.
-- **Source-aware snippet copying.** Click and release to copy a whole code
-  block, including an unfinished block, or drag to select a range. Frames and
-  fence labels stay out of the clipboard; tabs, Unicode, blank lines and
-  source spacing are retained, and visual wraps are rejoined. Links keep
-  their click-to-open action.
-- **Readable terminal layout.** Wrapped input retains its first row and
-  boundary spaces. Header and status overflow scroll slowly while permission
-  mode stays stationary. Transcript gaps stay consistent, `/habs` replay
-  omits startup milestones, and the pale-yellow Tasks badge animates while
-  work is running, including between turns.
-- **Compact cost and throughput reporting.** Costs round the session total
-  up to cents, retain estimate/unknown labels and preserve accounting and
-  budget precision. Per-request throughput decorations give way to a measured,
-  duration-weighted turn average that resets each turn; the session average
-  remains available.
-- **Code and guide cleanup.** Remove unused internal helpers and obsolete
-  request-row formatting after a Reacher audit. Guides now describe the
-  current approval defaults, snippet copying and completed UI work.
+- **Stable, readable header and status.** The version, directory and session
+  label stay fixed while overflowing header metadata scrolls on its own clock.
+  Transcript updates preserve scrolling progress. Status stats rotate as
+  complete, viewport-sized pages every five seconds, and permission mode stays
+  visible.
+- **Todo navigation.** Press F5 or click the Todo List title to inspect the
+  complete plan, including items hidden by the pinned preview's height limit.
+  Navigate and scroll without losing the composer draft. Alt-M minimizes the
+  pinned preview to a summary row and restores it when pressed again.
+- **Tasks and selection.** Shift-Down closes either Tasks pane alongside Esc.
+  Task descriptions and result/output text use muted grey italics. Shift-Up
+  and Shift-Down select across multiline drafts, including soft wraps; F6 and
+  the Tasks badge remain available while editing.
+- **Routed fast mode.** `/fast` is available when the model and route explicitly
+  advertise faster service, including supporting Ixway gateways. Preserve the
+  chosen service tier through gateway requests, restore it with the session,
+  and show active fast or ultrafast service in red in the header.
+- **Terminal agent status.** OSC 7501 reports working, waiting, completed,
+  failed and cancelled states to supporting terminals and multiplexers.
+  Reports are independent of desktop notifications, and redirected CLI output
+  stays free of status sequences. Optional `"program_status_title": true`
+  adds the displayed session label and follows `/name` and session switches;
+  it is off by default and leaves the ordinary window title intact.
 
-The [changelog](https://github.com/houllette/lemieux/blob/v1.1.2/CHANGELOG.md)
+The [changelog](https://github.com/houllette/lemieux/blob/v1.1.3/CHANGELOG.md)
 has the detailed changes.
 
-## Update from 1.1.1
+## Update from 1.1.2
 
 **Restart on every platform. No hot update or live downgrade is declared.**
-The sandbox activation closure, retained TUI state/callbacks and new TUI
-modules require fresh initialization.
+Retained conversation/TUI state, callbacks and new chrome, Todo inspector and
+terminal-status modules require fresh initialization.
 
 Save unsent drafts, stage the signed update with `lmx update` or `/update`,
 then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
 installer-managed TUI restart preserves its exact session. Personal config
-version 1, extension API 1, existing flat plans and supported 1.x contracts
-remain compatible. Consumed budgets remain attached to the resumed session.
-See the [upgrade steps](https://github.com/houllette/lemieux/blob/v1.1.2/docs/releases.md#upgrading-from-111-to-112).
+version 1, extension API 1, existing plans and supported 1.x contracts remain
+compatible. Consumed budgets remain attached to the resumed session.
+See the [upgrade steps](https://github.com/houllette/lemieux/blob/v1.1.3/docs/releases.md#upgrading-from-112-to-113).
 
 ## Install
 
@@ -69,14 +65,14 @@ checksums, and installs per user under `~/.local`. Add `~/.local/bin` to PATH.
 | Linux arm64 or musl | Use a source checkout; no native archive |
 
 The release-signing public key is `X7aGNLOgOV+bz13CuG4x4AVnhKmsPIH8eYvBrajsiG8=`.
-[Verification and installation details](https://github.com/houllette/lemieux/blob/v1.1.2/docs/releases.md)
+[Verification and installation details](https://github.com/houllette/lemieux/blob/v1.1.3/docs/releases.md)
 explain the signature/checksum chain and platform limits.
 
 For an embedding application, use `{:lemieux, "~> 1.1"}`. The library requires
 Elixir 1.19 or newer and OTP 27 or newer, starts no Lemieux processes on its
 own, and retains explicit host ownership of credentials, storage and policy.
 Update constrained provider-stack locks together; start with
-[First embedded agent](https://hexdocs.pm/lemieux/1.1.2/first-embedded-agent.html).
+[First embedded agent](https://hexdocs.pm/lemieux/1.1.3/first-embedded-agent.html).
 
 ## Trust and experimental scope
 
@@ -84,10 +80,10 @@ Update constrained provider-stack locks together; start with
 only inside an available OS sandbox, otherwise they ask. MCP, web and eval
 tools ask either way. Instructions, skills and optional answers grant no new
 authority. The installed binary never loads a working directory's `.env`.
-See [the trust model](https://github.com/houllette/lemieux/blob/v1.1.2/SECURITY.md#what-lmx-trusts-by-default).
+See [the trust model](https://github.com/houllette/lemieux/blob/v1.1.3/SECURITY.md#what-lmx-trusts-by-default).
 
 Windows, browser automation and experimental learning/benchmarking APIs retain
 their existing status. This patch makes no claim of live provider/model
 quality, hosted cache effectiveness or improved learning outcomes. Native
 local terminal pointer feedback remains dependent on upstream capability and
-lifecycle support; see the [roadmap](https://github.com/houllette/lemieux/blob/v1.1.2/docs/roadmap.md).
+lifecycle support; see the [roadmap](https://github.com/houllette/lemieux/blob/v1.1.3/docs/roadmap.md).

@@ -1,6 +1,6 @@
 # Roadmap
 
-Lemieux is at 1.1.2; its workflow and terminal fixes are listed in the
+Lemieux is at 1.1.3; its workflow and terminal fixes are listed in the
 [changelog](../CHANGELOG.md). This page lists the work that is
 still open, so that a contributor can see where help is useful and what
 "done" means for each item.

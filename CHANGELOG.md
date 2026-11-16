@@ -7,25 +7,30 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 1.1.3 — 2026-11-15
+
+Restart `lmx` after updating from 1.1.2 on every platform, then resume with
+`lmx -c` or `lmx --resume SESSION`. TUI and conversation state, retained
+callbacks and new presentation/status modules require fresh initialization;
+no hot update or live downgrade is declared. Supported 1.x contracts,
+personal config version 1, extension API 1 and existing plans remain compatible.
 
 ### Fixes and workflow improvements
 
 - Add opt-in OSC 7501 session-title metadata with `"program_status_title": true`.
   Follow the displayed session name and `/name` caption without changing session
   identity, default status reports or existing host callbacks.
-
 - Report agent activity to terminals and multiplexers with OSC 7501: working,
   waiting for permission, answers or credentials, completed, failed and
   cancelled states. Keep reports independent of desktop notifications and
   keep redirected CLI output free of status sequences.
-
-- Show active fast or ultrafast service in red in the TUI header, retain it during metadata scrolling and restore it with the session.
-
-- Enable `/fast` on routes that explicitly advertise it, including Ixway, and preserve the selected service tier through gateway requests. Existing routes without the optional capability callback remain unchanged.
-
-- Add F5 and title-click access to a full, scrollable Todo List; Alt-M minimizes its pinned preview to one summary row without losing the draft.
-
+- Show active fast or ultrafast service in red in the TUI header, retain it
+  during metadata scrolling and restore it with the session.
+- Enable `/fast` on routes that explicitly advertise it, including Ixway, and
+  preserve the selected service tier through gateway requests. Existing routes
+  without the optional capability callback remain unchanged.
+- Add F5 and title-click access to a full, scrollable Todo List; Alt-M minimizes
+  its pinned preview to one summary row without losing the draft.
 - Keep header scrolling progress tied to screen time across transcript additions. (#178)
 - Keep the version, working directory and session name fixed beside scrolling header metadata. (#179)
 - Move overflowing header metadata one terminal column every 250 ms on an independent clock; stop its timer when it fits. (#180)
@@ -33,6 +38,9 @@ API.
 - Allow Shift-Down to close either Tasks inspector pane while retaining Esc and the draft selection. (#182)
 - Distinguish task-list descriptions and Result/Output text with muted grey italics while retaining names, states and controls. (#183)
 - Let Shift-Up/Down select across multiline drafts, including soft-wrapped rows; retain F6 and the Tasks badge while editing. (#184)
+- Refresh committed example locks to the published Lemieux 1.1.2 package.
+  Library, release-host and bundled-extension dependency versions remain
+  unchanged after resolving current upstream constraints.
 
 ## 1.1.2 — 2026-11-14
 
