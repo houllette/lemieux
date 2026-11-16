@@ -96,6 +96,7 @@ preflight](compaction.md) for the options and an Ixway timing-signal example.
 | `startup_animation` | Habs marquee | `false` disables the decoration; a data object customizes the piece, text, speed, colours and duration ([Startup animation](terminal-ui.md#startup-animation)) |
 | `mouse` | `true` | `false` gives the mouse back to the terminal |
 | `notifications` | `true` | `false` stops the notification when a turn ends or needs you |
+| `program_status_title` | `false` | `true` includes the displayed session name in OSC 7501 status reports for terminals and other consumers. Follows `/name`, `/new` and `/resume`; does not change session identity |
 
 ## Personal configuration
 

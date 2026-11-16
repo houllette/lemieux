@@ -808,6 +808,7 @@ defmodule Lemieux.CLI.TUI do
       before_prompt: &ConfigReload.before_prompt/1,
       history_file: options.host.state_dir && Path.join(options.host.state_dir, "history.jsonl"),
       notifications: Config.get(options.config, "notifications", true),
+      program_status_title: Config.get(options.config, "program_status_title", false),
       discover: rediscovery(options, opts)
     ]
   end

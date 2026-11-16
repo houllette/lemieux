@@ -36,9 +36,10 @@ defmodule Lemieux.TUI.Callbacks do
   def notify(transport), do: fn text -> Lemieux.Terminal.notify(text, transport) end
 
   @doc false
-  @spec program_status(transport :: term()) :: (Lemieux.Terminal.program_status() -> term())
+  @spec program_status(transport :: term()) :: (Lemieux.Terminal.program_status(), keyword() ->
+                                                  term())
   def program_status(transport),
-    do: fn status -> Lemieux.Terminal.program_status(status, transport) end
+    do: fn status, metadata -> Lemieux.Terminal.program_status(status, transport, metadata) end
 
   # Only the local transport has a terminal this process can hand to an
   # editor: a session transport draws on somebody else's screen, where

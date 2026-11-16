@@ -103,7 +103,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
           notifications?: Keyword.get(opts, :notifications, true) != false,
           program_status:
             effect(opts, :program_status, headless?, fn -> Callbacks.program_status(transport) end),
+          program_status_title?: Keyword.get(opts, :program_status_title, false) == true,
           last_program_status: nil,
+          last_program_status_title: nil,
           # Handing the terminal to `$EDITOR` and back, and reading an image off
           # the clipboard, are effects on the local machine only; a transport
           # showing this screen elsewhere gets neither unless its host supplies

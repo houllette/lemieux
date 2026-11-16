@@ -45,4 +45,25 @@ defmodule Lemieux.TerminalProgramStatusTest do
     assert {:error, "closed"} =
              Terminal.program_status(:working, {:session, nil, fn _ -> raise "closed" end})
   end
+
+  test "optional titles are base64 UTF-8 single-line labels within the protocol byte limit" do
+    title = "Review: 日本!\n\t\e\u009b" <> String.duplicate("é", 120)
+    bytes = capture_io(fn -> Terminal.program_status(:working, :local, title: title) end)
+    assert "\e]7501;state=working:app=lemieux:title=" <> encoded = bytes
+    assert String.ends_with?(encoded, "\e\\")
+    decoded = encoded |> String.trim_trailing("\e\\") |> Base.decode64!()
+    assert String.starts_with?(decoded, "Review: 日本!")
+    assert String.valid?(decoded)
+    assert byte_size(decoded) <= 192
+    refute decoded =~ ~r/[\x{00}-\x{1f}\x{7f}-\x{9f}]/u
+    assert byte_size(bytes) < 4096
+
+    invalid =
+      capture_io(fn -> Terminal.program_status(:idle, :local, title: <<"a", 255, "b">>) end)
+
+    assert invalid == "\e]7501;state=idle:app=lemieux:title=" <> Base.encode64("a�b") <> "\e\\"
+
+    clear = capture_io(fn -> Terminal.program_status(:clear, :local, title: "Caption") end)
+    assert clear == "\e]7501;state=clear:app=lemieux\e\\"
+  end
 end

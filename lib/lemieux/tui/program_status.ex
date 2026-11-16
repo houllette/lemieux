@@ -8,9 +8,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     work resumed while another still needs the user. Completion survives ticks
     until input acknowledges it; retries and queued turns become working again.
     Deduplication is independent of rendering and desktop notification settings.
+    Optional title metadata follows the displayed session label. It is a host
+    presentation detail: it changes neither session identity nor execution.
     """
 
     alias Lemieux.TUI
+    alias Lemieux.TUI.Screen
 
     @doc false
     @spec mounted(result :: {:ok, TUI.t()} | term()) :: term()
@@ -72,12 +75,38 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp acknowledged?(_event), do: false
 
     defp report(state, nil), do: state
-    defp report(%{terminal: %{last_program_status: status}} = state, status), do: state
 
     defp report(state, status) do
-      _ignored = state.terminal.program_status.(status)
-      put_in(state.terminal.last_program_status, status)
+      previous = state.terminal
+      title = report_title(state, status)
+
+      if previous.last_program_status == status and previous.last_program_status_title == title do
+        state
+      else
+        emit(previous.program_status, status, title, previous.last_program_status != status)
+
+        put_in(state.terminal, %{
+          previous
+          | last_program_status: status,
+            last_program_status_title: title
+        })
+      end
     end
+
+    defp report_title(_state, :clear), do: nil
+
+    defp report_title(%{terminal: %{program_status_title?: true}} = state, _status),
+      do: Screen.name(state)
+
+    defp report_title(_state, _status), do: nil
+
+    defp emit(callback, status, title, _changed?) when is_function(callback, 2),
+      do: callback.(status, if(is_nil(title), do: [], else: [title: title]))
+
+    # Existing host callbacks keep their state-only contract and are not called
+    # again for a metadata-only rename they cannot represent.
+    defp emit(callback, status, _title, true), do: callback.(status)
+    defp emit(_callback, _status, _title, false), do: :ok
 
     @doc false
     @spec terminate(reason :: term(), state :: TUI.t()) :: :ok

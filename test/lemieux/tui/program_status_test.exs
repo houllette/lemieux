@@ -7,6 +7,7 @@ defmodule Lemieux.TUI.ProgramStatusTest do
   alias Lemieux.Providers.Scripted
   alias Lemieux.Store.JSONL
   alias Lemieux.TUI
+  alias Lemieux.TUI.Screen
 
   defp reporting(opts \\ []) do
     owner = self()
@@ -19,6 +20,75 @@ defmodule Lemieux.TUI.ProgramStatusTest do
       end)
     )
     |> sized()
+  end
+
+  defp metadata_reporting(opts \\ []) do
+    owner = self()
+
+    TUI.new(
+      Keyword.merge(
+        [
+          test_mode: {80, 24},
+          id: "status-test",
+          model: "test:model",
+          program_status: fn status, metadata -> send(owner, {:report, status, metadata}) end
+        ],
+        opts
+      )
+    )
+    |> sized()
+  end
+
+  test "session title metadata is opt-in and follows the displayed name without changing status" do
+    default = metadata_reporting() |> info({:finished, :stop})
+    assert_received {:report, :done, []}
+    assert default.terminal.last_program_status == :done
+
+    state = metadata_reporting(program_status_title: true)
+    name = Screen.name(state)
+    state = put_in(state.conversation.busy?, true) |> info({:text_delta, "working"})
+    assert_received {:report, :working, [title: ^name]}
+    renamed = %{state | appearance: %{state.appearance | name: "Review: 日本"}}
+    assert {:noreply, renamed} = TUI.handle_info(:unrelated, renamed)
+    assert_received {:report, :working, [title: "Review: 日本"]}
+    assert {:noreply, renamed} = TUI.handle_info(:unrelated, renamed)
+    refute_received {:report, _, _}
+    renamed = info(renamed, {:finished, :stop})
+    assert_received {:report, :done, [title: "Review: 日本"]}
+    TUI.terminate(:normal, renamed)
+    assert_received {:report, :clear, []}
+  end
+
+  test "name commands publish the caption and default restores the session's derived label" do
+    state = metadata_reporting(program_status_title: true)
+    name = Screen.name(state)
+    state = command(state, "/name Review build")
+    assert_received {:report, :idle, [title: ^name]}
+    assert_received {:report, :idle, [title: "Review build"]}
+    state = command(state, "/name default")
+    assert_received {:report, :idle, [title: ^name]}
+    assert Screen.name(state) == name
+  end
+
+  test "one-argument host callbacks keep receiving states without metadata-only repeats" do
+    state = reporting(program_status_title: true)
+    state = put_in(state.conversation.busy?, true) |> info({:text_delta, "work"})
+    assert_received {:status, :working}
+    renamed = %{state | appearance: %{state.appearance | name: "Caption"}}
+    assert {:noreply, _} = TUI.handle_info(:unrelated, renamed)
+    refute_received {:status, _}
+  end
+
+  test "switching sessions replaces the metadata label without retaining a caption" do
+    state = metadata_reporting(program_status_title: true)
+    state = %{state | appearance: %{state.appearance | name: "Old caption"}}
+    state = info(state, {:finished, :stop})
+    assert_received {:report, :done, [title: "Old caption"]}
+    next = %{state | id: "other-session", appearance: %{state.appearance | name: nil}}
+    name = Screen.name(next)
+    assert {:noreply, next} = TUI.ProgramStatus.transition({:noreply, next}, state, :switched)
+    assert_received {:report, :idle, [title: ^name]}
+    assert next.terminal.last_program_status_title == name
   end
 
   test "mount reports idle and ticks and redraws do not repeat reports" do
