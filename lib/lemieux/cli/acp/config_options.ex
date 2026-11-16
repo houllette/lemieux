@@ -55,7 +55,7 @@ defmodule Lemieux.CLI.ACP.ConfigOptions do
         "reasoning_effort",
         "Reasoning",
         "thought_level",
-        current || "default",
+        current,
         Enum.uniq(["default" | efforts])
       )
     ]

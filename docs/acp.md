@@ -43,8 +43,9 @@ reads no `.env` file. Separate named entries can select different configurations
 with `"args": ["acp", "--config", "/absolute/path/to/config.json"]`.
 
 For a source checkout, compile before connecting an editor. A launcher script
-can change to the checkout and execute `mix lmx acp`; keep compilation output
-off stdout and forward arguments with `"$@"`. Recompiling the same build while
+should change to the checkout and execute `mix lmx "$@"`; keep the editor's
+arguments as `["acp"]` so terminal setup can replace them with `["acp", "setup"]`.
+Keep compilation output off stdout. Recompiling the same build while
 an editor starts it can temporarily remove a beam. Use a separate build for
 interactive qualification or wait for compilation to finish before reconnecting.
 
