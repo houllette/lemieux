@@ -25,13 +25,61 @@ defmodule Lemieux.CLI.TUIOpeningTest do
     options
   end
 
-  test "native hover requires an explicit terminal capability and mouse capture", %{tmp_dir: dir} do
+  test "native hover defaults on in known terminals and falls back in unknown or multiplexed ones",
+       %{
+         tmp_dir: dir
+       } do
     options = configured(dir, %{})
-    refute opened(options, env: %{}).terminal.hover.enabled?
-    refute opened(options, env: %{"LMX_HOVER_POINTER" => "0"}).terminal.hover.enabled?
+
+    for term <- ["xterm-ghostty", "xterm-kitty"] do
+      env = %{"TERM" => term}
+      assert opened(options, env: env).terminal.hover.enabled?
+
+      for key <- ["TMUX", "STY", "ZELLIJ"] do
+        value = if key == "ZELLIJ", do: "0", else: "active"
+        refute opened(options, env: Map.put(env, key, value)).terminal.hover.enabled?
+      end
+    end
+
+    for env <- [
+          %{},
+          %{"TERM" => "dumb"},
+          %{"TERM" => "xterm-256color"},
+          %{"TERM" => "screen-256color", "TERM_PROGRAM" => "ghostty"},
+          %{"TERM" => "tmux-256color", "KITTY_WINDOW_ID" => "1"},
+          %{"TERM" => "xterm-256color", "TERM_PROGRAM" => "ghostty"},
+          %{"TERM" => "xterm-256color", "TERM_PROGRAM" => "iTerm.app"}
+        ] do
+      refute opened(options, env: env).terminal.hover.enabled?
+    end
+  end
+
+  test "native hover can be disabled or explicitly declared for another terminal", %{tmp_dir: dir} do
+    options = configured(dir, %{})
+    env = %{"TERM" => "xterm-ghostty"}
+    assert opened(options, env: env).terminal.hover.enabled?
+
+    for value <- ["0", "false", "", "invalid"] do
+      refute opened(options, env: Map.put(env, "LMX_HOVER_POINTER", value)).terminal.hover.enabled?
+    end
+
     assert opened(options, env: %{"LMX_HOVER_POINTER" => "1"}).terminal.hover.enabled?
 
+    assert opened(options, env: Map.merge(env, %{"TMUX" => "active", "LMX_HOVER_POINTER" => "1"})).terminal.hover.enabled?
+  end
+
+  test "automatic hover requires mouse capture and a local CLI transport", %{tmp_dir: dir} do
+    options = configured(dir, %{})
+    env = %{"TERM" => "xterm-ghostty"}
+    assert opened(options, env: env).terminal.hover.enabled?
+
+    for transport <- [:ssh, :session, :distributed, :cell_session, :unknown] do
+      app = opening(options, [env: env], transport: transport)
+      refute app[:hover_pointer]
+    end
+
     options = put_in(options.host.mouse, false)
+    refute opened(options, env: env).terminal.hover.enabled?
     refute opened(options, env: %{"LMX_HOVER_POINTER" => "1"}).terminal.hover.enabled?
   end
 
@@ -51,8 +99,13 @@ defmodule Lemieux.CLI.TUIOpeningTest do
     refute opened(default).terminal.program_status_title?
   end
 
-  defp opening(options, opts \\ []),
-    do: TUI.opening_app(options, opts, size: {80, 24}, title: fn _text -> :ok end)
+  defp opening(options, opts \\ [], runtime \\ []),
+    do:
+      TUI.opening_app(
+        options,
+        opts,
+        Keyword.merge([size: {80, 24}, title: fn _text -> :ok end], runtime)
+      )
 
   # The screen as `lmx` opens it, before any session: `test_mode` draws to
   # a buffer, so no terminal is needed.

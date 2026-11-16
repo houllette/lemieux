@@ -1,15 +1,18 @@
 if Code.ensure_loaded?(ExRatatui.App) do
   defmodule Lemieux.TUI.Hover do
     @moduledoc """
-    Mouse-pointer feedback for explicitly capable hosts.
+    Mouse-pointer feedback for capable hosts.
 
     A local host opts in with `hover_pointer: true` after establishing that its
-    terminal supports OSC 22 (`LMX_HOVER_POINTER=1` in the CLI). Transitions
-    return ExRatatui 0.21's `pointer:` option; the runtime owns deduplicated
-    writes and cleanup, independently of rendering. `:restore` maps to
-    `:default`: upstream resets the arrow, without queries or stack restoration.
-    The editor handoff clears the remembered hover before its queued callback,
-    so the reset reaches the terminal before the editor starts.
+    terminal supports OSC 22. The CLI selects that option automatically for
+    direct Ghostty/Kitty terminal identities, with `LMX_HOVER_POINTER=0` as
+    its opt-out and `=1` as an explicit capability declaration for other paths.
+    Transitions return ExRatatui 0.21's `pointer:` option; the runtime owns
+    deduplicated writes and cleanup, independently of rendering. `:restore`
+    maps to `:default`: upstream resets the arrow, without queries or stack
+    restoration.
+    The editor handoff suspends hover before its queued callback, so the reset
+    reaches the terminal before the editor starts.
 
     A host opts in with `hover_pointer: true` and a four-tuple ExRatatui
     `:cell_session` transport with an intent writer. It consumes
@@ -18,10 +21,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
     cleanup as well, including abrupt disconnection. No terminal I/O occurs
     here and no capability query can block an input callback.
 
-    No terminal is guessed or queried. Without opt-in, and on remote or unknown
-    transports, pointer feedback is inert. Headless local tests record shapes
-    in the runtime snapshot without terminal I/O. Actual pointer appearance
-    still needs a visual check in a supporting emulator.
+    No capability query runs here. Without a host selecting the capability,
+    and on remote or unknown transports, pointer feedback is inert. The CLI's
+    terminal allowlist is host policy, outside this module. Headless local
+    tests record shapes in the runtime snapshot without terminal I/O. Actual
+    pointer appearance still needs a visual check in a supporting emulator.
     """
 
     alias ExRatatui.Event.Mouse

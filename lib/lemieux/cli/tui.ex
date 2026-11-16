@@ -965,10 +965,9 @@ defmodule Lemieux.CLI.TUI do
         # The CLI captures by default for wheel scrolling, link clicks and
         # drag selection; --no-mouse returns selection to the terminal.
         mouse_capture: options.host.mouse,
-        # OSC 22 support is declared by the person owning this terminal.
-        # Environment names such as TERM cannot establish safe restoration.
         hover_pointer:
-          Map.get(Keyword.get_lazy(opts, :env, &System.get_env/0), "LMX_HOVER_POINTER") == "1",
+          Keyword.get(runtime, :transport, :local) == :local and
+            hover_pointer?(Keyword.get_lazy(opts, :env, &System.get_env/0)),
         mcp_config: options.mcp_config,
         # The feedback ledger sits beside the sessions directory, so the flag
         # that moved one moves the other.
@@ -985,6 +984,21 @@ defmodule Lemieux.CLI.TUI do
         feedback_dir: Keyword.get(opts, :feedback_dir)
       ]
   end
+
+  # These terminals document the CSS `pointer` and `default` names used by
+  # ExRatatui's OSC 22 API. The dedicated TERM names identify the immediate
+  # terminal more narrowly than inherited TERM_PROGRAM or window IDs. A
+  # multiplexer can still retain the outer TERM, so its own markers veto the
+  # automatic path. No capability query consumes input or delays startup.
+  # https://ghostty.org/docs/vt/osc/22
+  # https://sw.kovidgoyal.net/kitty/pointer-shapes/
+  defp hover_pointer?(%{"LMX_HOVER_POINTER" => "1"}), do: true
+  defp hover_pointer?(%{"LMX_HOVER_POINTER" => value}) when not is_nil(value), do: false
+
+  defp hover_pointer?(%{"TERM" => term} = env) when term in ["xterm-ghostty", "xterm-kitty"],
+    do: Enum.all?(~w(TMUX STY ZELLIJ), &(Map.get(env, &1) in [nil, ""]))
+
+  defp hover_pointer?(_env), do: false
 
   # Discovered once, here, and handed to every session this screen starts
   # (`Lemieux.CLI.Runtime.discover_workspace/2`).

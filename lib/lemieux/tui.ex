@@ -185,8 +185,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     parsed action is dispatched. The action is an effect such as
     `{:mcp_add, path}` or `{:attach, target}`, never terminal text.
 
-    `:hover_pointer`, off by default, declares OSC 22 pointer support on a
-    local terminal. ExRatatui owns pointer writes and resets the default arrow
+    `:hover_pointer`, off by default for embedders, declares OSC 22 pointer
+    support on a local terminal. The CLI selects it automatically for direct
+    Ghostty/Kitty terminal identities, with `LMX_HOVER_POINTER=0` as its opt-out.
+    ExRatatui owns pointer writes and resets the default arrow
     on cleanup; it does not restore a prior override. Cell hosts receive
     pointer/restore intents instead. Remote and unknown transports remain
     inert. See `Lemieux.TUI.Hover` for the capability and lifecycle contract.
