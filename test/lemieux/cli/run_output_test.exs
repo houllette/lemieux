@@ -49,7 +49,50 @@ defmodule Lemieux.CLI.RunOutputTest do
   # lines, a compiler warning in colour. A refutation reads only the lines
   # this command could have written.
   defp lmx_lines(stderr) do
-    stderr |> String.split("\n") |> Enum.filter(&String.starts_with?(&1, "lmx: "))
+    stderr
+    |> String.replace(~r/\e\]7501;[^\e]*\e\\/, "")
+    |> String.split("\n")
+    |> Enum.filter(&String.starts_with?(&1, "lmx: "))
+  end
+
+  test "terminal stderr reports work and completion without altering stdout", context do
+    result =
+      lmx(
+        ["run", "go"],
+        context,
+        scripted([[{:text_delta, "answer"}, {:done, :stop}]]) ++ [terminal?: true]
+      )
+
+    assert result.status == :ok
+    assert result.stdout == "answer\n"
+    assert result.stderr =~ "\e]7501;state=working:app=lemieux\e\\"
+    assert result.stderr =~ "\e]7501;state=done:app=lemieux\e\\"
+  end
+
+  test "redirected stderr receives no program status bytes", context do
+    result =
+      lmx(
+        ["run", "go"],
+        context,
+        scripted([[{:text_delta, "answer"}, {:done, :stop}]]) ++ [terminal?: false]
+      )
+
+    assert result.status == :ok
+    assert result.stdout == "answer\n"
+    refute result.stderr =~ "\e]7501;"
+  end
+
+  test "a failed terminal run leaves an error record", context do
+    result =
+      lmx(
+        ["run", "go"],
+        context,
+        scripted([[{:error, :provider_unavailable}]]) ++ [terminal?: true]
+      )
+
+    assert {:error, _} = result.status
+    assert result.stderr =~ "\e]7501;state=error:app=lemieux\e\\"
+    refute result.stderr =~ "\e]7501;state=done:"
   end
 
   describe "text mode on a terminal" do

@@ -11,6 +11,11 @@ API.
 
 ### Fixes and workflow improvements
 
+- Report agent activity to terminals and multiplexers with OSC 7501: working,
+  waiting for permission, answers or credentials, completed, failed and
+  cancelled states. Keep reports independent of desktop notifications and
+  keep redirected CLI output free of status sequences.
+
 - Show active fast or ultrafast service in red in the TUI header, retain it during metadata scrolling and restore it with the session.
 
 - Enable `/fast` on routes that explicitly advertise it, including Ixway, and preserve the selected service tier through gateway requests. Existing routes without the optional capability callback remain unchanged.

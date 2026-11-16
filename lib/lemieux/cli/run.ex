@@ -85,6 +85,7 @@ defmodule Lemieux.CLI.Run do
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Session
   alias Lemieux.StructuredResult
+  alias Lemieux.Terminal
   alias Lemieux.Usage
 
   @formats %{"text" => :text, "json" => :json, "stream-json" => :stream_json}
@@ -426,6 +427,7 @@ defmodule Lemieux.CLI.Run do
     announce(out, info, id, startup_notices)
     out = Map.put(out, :undo, undo_watch(out.checkpoints, info))
 
+    program_status(out, :working)
     result = Session.await(session, prompt, on_event: &progress(out, &1))
     outcome = Map.put(outcome(id, result), :verification, verification(session))
     outcome = validate_result(outcome, session, Map.get(out, :contract))
@@ -436,7 +438,23 @@ defmodule Lemieux.CLI.Run do
     # `terminate/2`. See `Runtime.stop_session/1`.
     Runtime.stop_session(session)
 
+    program_status(out, completed_status(outcome.category))
     status(outcome.category)
+  end
+
+  defp completed_status(:ok), do: :done
+  defp completed_status(:cancelled), do: :idle
+  defp completed_status(_category), do: :error
+
+  # Keep stdout's answer/JSON contract exact, including when only stdout is
+  # redirected. A terminal on stderr can still observe the run. A pipe or
+  # file on stderr receives no terminal protocol bytes.
+  defp program_status(out, state) do
+    if Sanitize.terminal?(:stderr, out.opts[:terminal?]) do
+      Terminal.program_status(state, {:session, nil, &IO.binwrite(:stderr, &1)})
+    end
+
+    :ok
   end
 
   defp validate_result(outcome, _session, nil), do: outcome
@@ -852,6 +870,7 @@ defmodule Lemieux.CLI.Run do
   # JSON formats, the same result object a finished run ends with — so a
   # script reads one shape whichever way the command stopped.
   defp fail(out, category, message) do
+    program_status(out, :error)
     say(out, message)
 
     if out.format in [:json, :stream_json] do

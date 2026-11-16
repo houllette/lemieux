@@ -24,7 +24,7 @@ defmodule Lemieux.TUI.Callbacks do
   # clipboard. A headless screen gets this default instead; a test that
   # wants the real effect passes its own callback.
   @doc false
-  @spec inert(text :: String.t()) :: :ok
+  @spec inert(value :: term()) :: :ok
   def inert(_text), do: :ok
 
   @doc false
@@ -34,6 +34,11 @@ defmodule Lemieux.TUI.Callbacks do
   @doc false
   @spec notify(transport :: term()) :: (String.t() -> term())
   def notify(transport), do: fn text -> Lemieux.Terminal.notify(text, transport) end
+
+  @doc false
+  @spec program_status(transport :: term()) :: (Lemieux.Terminal.program_status() -> term())
+  def program_status(transport),
+    do: fn status -> Lemieux.Terminal.program_status(status, transport) end
 
   # Only the local transport has a terminal this process can hand to an
   # editor: a session transport draws on somebody else's screen, where

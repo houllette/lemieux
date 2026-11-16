@@ -18,6 +18,37 @@ a terminal](#testing-it-without-a-terminal) covers how to check those changes.
 
 ## What it is
 
+### Program status for terminals and multiplexers
+
+The screen reports its state through the
+[Program Status Protocol (OSC 7501)](https://www.superlogical.com/rex/docs/build/program-status),
+using one root record with `app=lemieux`. Starting or running a turn reports
+`working`; pending approvals report `blocked` with `kind=permission`, questions
+use `kind=question`, and the credential setup panel uses `kind=auth`. A finished
+turn reports `done`, a failed turn reports `error`, and cancellation reports
+`idle`. Input acknowledges completion; new work replaces it. Quitting clears
+the record, including when SIGTERM is handled by the host. Abrupt process death
+cannot run cleanup; terminals expire active records according to the protocol.
+
+Reports are sent only on state changes, never from rendering or spinner ticks.
+They contain no prompts, answers, tool arguments or credentials. There is no
+capability query or startup wait: the protocol allows unsolicited reports, and
+terminals that do not implement it ignore the sequence. Existing notification
+bells and their settings remain independent.
+
+The default writes through the screen's byte-stream transport. Cell and other
+transports without a writer emit nothing. A host may supply
+`program_status: fn status -> ... end` to handle the state itself, or
+`program_status: fn _ -> :ok end` to disable reporting. The callback receives
+`:idle`, `:working`, `:done`, `:error`, `:clear`, or
+`{:blocked, :permission | :question | :auth}`. Importing the library or starting
+an embedded session alone does not report terminal state.
+
+`lmx run` also reports `working` and its final `done`, `error`, or cancelled
+`idle` state when stderr is a terminal. A completed one-shot run leaves its
+record for the terminal to display. Redirected stderr receives no status
+sequences; stdout's answer and JSON formats remain unchanged.
+
 ### Hover pointers and transport capability
 
 A host using ExRatatui's four-tuple `:cell_session` transport can opt in with
@@ -1324,9 +1355,10 @@ wiring and cannot assert on the picture; asserting on the picture is what
 calling `render/2` directly is for.
 
 A screen started with `test_mode` has no person looking at it, so its local
-effects default to inert: the desktop notification, the clipboard write, the
-external editor and the clipboard image read do nothing unless the test passes
-its own callback (`:notify`, `:clipboard`, `:editor`, `:paste_image`). Without
+effects default to inert: program status, the desktop notification, the clipboard
+write, the external editor and the clipboard image read do nothing unless the
+test passes its own callback (`:program_status`, `:notify`, `:clipboard`,
+`:editor`, `:paste_image`). Without
 that, a test that reached an approval would print an OSC 9 notification into
 the test run, and a copy would overwrite the developer's clipboard.
 
