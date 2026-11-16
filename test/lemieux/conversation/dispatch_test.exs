@@ -955,6 +955,9 @@ defmodule Lemieux.Conversation.DispatchTest do
       assert Enum.any?(said(acc), &(&1 =~ "asking the agent to write"))
       assert {:react, :turn_started} in calls(acc)
       assert acc.conversation.busy?
+
+      id = Session.id(session)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "/memory appends to the personal file and tells this session now", context do
