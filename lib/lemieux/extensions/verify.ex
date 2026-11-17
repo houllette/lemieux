@@ -62,6 +62,12 @@ defmodule Lemieux.Extensions.Verify do
   machine. The check is bounded by `:timeout_ms` (default five minutes) and
   can be cancelled with the turn.
 
+  `Lemieux.Extensions.Verify.Work` owns each running check so the host can
+  inspect bounded output and stop verification independently through Tasks.
+  It publishes a running document before execution and a terminal record even
+  when the stop-hook caller is cancelled. The answer remains saved throughout;
+  only the end of verification (and any repair) finishes the user turn.
+
   ## Under the session's permission policy
 
   The check is a command the repository chose — `tests/run.sh` and
@@ -124,6 +130,7 @@ defmodule Lemieux.Extensions.Verify do
   alias Lemieux.Environment
   alias Lemieux.Extensions.Verify.Check
   alias Lemieux.Extensions.Verify.Discovery
+  alias Lemieux.Extensions.Verify.Work
   alias Lemieux.Harness
   alias Lemieux.Hooks
   alias Lemieux.Session
@@ -395,8 +402,18 @@ defmodule Lemieux.Extensions.Verify do
   defp execute_check(config, document, context, cwd, discovery, evidence, used) do
     case permitted(discovery.command, cwd, context) do
       {:ok, command} ->
-        result = check(config, command, cwd, context)
-        record(context.session, document, Map.merge(result, evidence), discovery)
+        result =
+          Work.run(
+            context,
+            command,
+            fn progress ->
+              check(config, command, cwd, Map.put(context, :verification_progress, progress))
+            end,
+            fn result ->
+              record(context.session, document, Map.merge(result, evidence), discovery)
+            end
+          )
+
         decide(config, result, discovery, used + 1)
 
       {:deny, reason} ->
@@ -475,7 +492,8 @@ defmodule Lemieux.Extensions.Verify do
     Check.run(command, cwd,
       environment: Map.get(context, :environment) || config.environment,
       timeout_ms: config.timeout_ms,
-      max_output_bytes: config.max_output_bytes
+      max_output_bytes: config.max_output_bytes,
+      progress: Map.get(context, :verification_progress)
     )
   end
 
@@ -592,21 +610,42 @@ defmodule Lemieux.Extensions.Verify do
 
   defp passing_run_of?(_entry, _command), do: false
 
-  defp record(session, document, result, discovery) do
+  defp record(session, _document, result, discovery) do
     last =
       result
       |> Map.take(
-        ~w(status exit_status duration_ms command reason changes prompt_id through_seq source)
+        ~w(status exit_status duration_ms command reason changes prompt_id through_seq source task_id started_at finished_at output)
       )
       |> Map.put("discovered_from", discovery.discovered_from)
+      |> Map.update("output", nil, fn output ->
+        if is_binary(output), do: Check.excerpt(output, 8_000), else: nil
+      end)
 
-    value = Map.put(document.value || %{"version" => 1}, "last", last)
-
-    # A toggle that landed while the check ran wins; the result is only a
-    # display, and the transcript already carries the message the model got.
-    _recorded = Session.put_document(session, @namespace, document.revision, value)
+    record_latest(session, last)
     :ok
   end
+
+  defp record_latest(session, last) do
+    with {:ok, document} <- Session.document(session, @namespace) do
+      value = document.value || %{"version" => 1}
+      previous_seq = get_in(value, ["last", "through_seq"]) || -1
+
+      # A toggle keeps its value, and a late cancellation cannot replace a
+      # newer prompt's check. Only the extension owns these lifecycle records.
+      if previous_seq <= last["through_seq"] do
+        commit_latest(session, document.revision, Map.put(value, "last", last), last)
+      end
+    end
+  end
+
+  defp commit_latest(session, revision, value, last) do
+    case Session.put_document(session, @namespace, revision, value) do
+      {:error, {:conflict, _current}} -> record_latest(session, last)
+      result -> result
+    end
+  end
+
+  defp decide(_config, %{"status" => "cancelled"}, _discovery, _check), do: :allow
 
   defp decide(_config, %{"status" => "passed"}, _discovery, _check), do: :allow
 

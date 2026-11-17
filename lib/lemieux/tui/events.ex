@@ -88,6 +88,19 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp sync_event(state, {:tools_changed, _old, names}), do: Choices.elixir_mode(state, names)
 
+    defp sync_event(
+           state,
+           {:entry,
+            %{
+              type: :extension_state,
+              payload: %{
+                "namespace" => "lemieux.verify",
+                "value" => %{"last" => %{"status" => "running", "command" => command}}
+              }
+            }}
+         ),
+         do: phase(state, :verification, %{command: command})
+
     defp sync_event(state, {:entry, %{type: :user, payload: %{"source" => "notification"}}}),
       do: Turn.start_processing(state)
 
@@ -539,6 +552,26 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> Notify.result()
 
       {state, effects}
+    end
+
+    defp present_event(
+           state,
+           {:entry,
+            %{
+              type: :extension_state,
+              payload: %{
+                "namespace" => "lemieux.verify",
+                "value" => %{"last" => %{"task_id" => _id} = last}
+              }
+            }},
+           effects
+         ) do
+      text =
+        if last["status"] == "running",
+          do: "Answer received · verifying #{last["command"]} · F6 Tasks to inspect or stop",
+          else: "Verification #{last["status"]}: #{last["command"] || last["reason"]}"
+
+      {Transcript.say(state, :lmx, text), effects}
     end
 
     defp present_event(state, {:entry, %{type: :extension_state} = entry}, effects),

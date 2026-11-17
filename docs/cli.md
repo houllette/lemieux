@@ -370,6 +370,15 @@ menus. Cancellation shows progress, refreshes the task state and keeps retained
 output. Completed tasks cannot be stopped; external sources support observation
 only. **[s Pause tracking]** pauses observation while the underlying work continues.
 
+An answer can be followed by automatic verification. The activity row says
+`verifying COMMAND`; the turn stays busy and queued questions wait until the
+check and any bounded repair turn finish. **Post-answer verification** in Tasks
+shows elapsed time and bounded output. **Stop task** cancels that check, keeps
+the answer and ends verification without requesting a repair. Cancelling the
+whole turn also stops the check and records its cancellation. Required delegate
+results are collected before their tool returns; intentional later background
+results are labeled **Follow-up · new results** when they start a fresh response.
+
 ### Steering and the queue
 
 While a turn runs, typing in the input box shows `Enter steer · Tab queue`

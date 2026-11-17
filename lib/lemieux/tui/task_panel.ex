@@ -449,6 +449,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
              "Agent assignments expose instructions, output, steering and cancellation."
            )
 
+    defp choose_row(state, action, %{kind: :verification})
+         when action in [:watch, :stop, :follow_up, :clear],
+         do:
+           put_in(
+             state.modal.notice,
+             "Verification belongs to this turn. Stop task cancels the check; tracking cannot be paused."
+           )
+
     defp choose_row(state, action, %{managed?: true})
          when action in [:watch, :stop, :follow_up, :clear],
          do:
@@ -485,6 +493,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp cancel_prompt(%{agent_type: :writer} = row),
       do: "Stop task #{row.name}? This cancels all writers in this batch."
+
+    defp cancel_prompt(%{kind: :verification}),
+      do: "Stop task Post-answer verification? The answer is kept and no repair request starts."
 
     defp cancel_prompt(row),
       do: "Stop task #{Map.get(row, :name, row.id)}? Its retained output is kept."
@@ -1093,8 +1104,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     # First in the footer so narrow/short trays cannot clip the human stop
     # control behind navigation and observation controls.
-    defp stop_button(%{running?: true, kind: kind}) when kind in [:command, :agent],
-      do: [{:cancel, "[c Stop task]"}]
+    defp stop_button(%{running?: true, kind: kind})
+         when kind in [:command, :agent, :verification],
+         do: [{:cancel, "[c Stop task]"}]
 
     defp stop_button(_row), do: []
 

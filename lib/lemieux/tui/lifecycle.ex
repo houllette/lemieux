@@ -730,8 +730,28 @@ if Code.ensure_loaded?(ExRatatui.App) do
           _other -> state
         end
 
+      state = restore_verification_phase(state, details.snapshot.entries)
       restore_approval_cards(state, state.conversation.approvals)
     end
+
+    defp restore_verification_phase(%{conversation: %{busy?: true}} = state, entries) do
+      latest =
+        entries
+        |> Enum.reverse()
+        |> Enum.find(fn entry ->
+          entry.type == :extension_state and entry.payload["namespace"] == "lemieux.verify"
+        end)
+
+      case latest do
+        %{payload: %{"value" => %{"last" => %{"status" => "running", "command" => command}}}} ->
+          Events.phase(state, :verification, %{command: command})
+
+        _other ->
+          state
+      end
+    end
+
+    defp restore_verification_phase(state, _entries), do: state
 
     # What the session has already said about itself: its MCP servers and
     # request count (from `info/2`, when it answered), its plan, and the full

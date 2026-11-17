@@ -9,6 +9,10 @@ API.
 
 ## Unreleased
 
+- Show post-answer verification as an explicit phase and Tasks entry with bounded
+  output, elapsed time and Stop task. Persist cancellation evidence, preserve
+  queued follow-ups and label later authorized results as new follow-ups. (#195)
+
 - Put `[c Stop task]` first in Tasks for running commands and agents, retain
   confirmation and logs, and distinguish stopping work from pausing tracking. (#194)
 

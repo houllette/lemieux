@@ -28,6 +28,7 @@ defmodule Lemieux.Extensions.Verify.Check do
   """
 
   alias Lemieux.Environment
+  alias Lemieux.Tool.Escapes
 
   @default_timeout_ms 300_000
   @default_output_bytes 16_384
@@ -44,7 +45,8 @@ defmodule Lemieux.Extensions.Verify.Check do
 
   Options: `:timeout_ms` (default #{@default_timeout_ms}),
   `:max_output_bytes` (default #{@default_output_bytes}) and
-  `:environment` (default the local environment).
+  `:environment` (default the local environment). `:progress` receives bounded,
+  sanitized output at most four times a second, beginning with the first data.
   """
   @spec run(command :: String.t(), cwd :: Path.t(), opts :: keyword()) :: result()
   def run(command, cwd, opts \\ []) when is_binary(command) and is_binary(cwd) do
@@ -52,10 +54,11 @@ defmodule Lemieux.Extensions.Verify.Check do
     cap = Keyword.get(opts, :max_output_bytes, @default_output_bytes)
     environment = Keyword.get(opts, :environment) || Environment.local()
     started = System.monotonic_time(:millisecond)
+    progress = {Keyword.get(opts, :progress), started}
 
     result =
       case Environment.run(environment, command, cwd: cwd, timeout_ms: timeout) do
-        {:ok, events} -> collect(events, cap, started + timeout + @teardown_grace_ms)
+        {:ok, events} -> collect(events, cap, started + timeout + @teardown_grace_ms, progress)
         {:error, reason} -> failed_to_run(reason, buffer())
       end
 
@@ -92,7 +95,7 @@ defmodule Lemieux.Extensions.Verify.Check do
   # here with `receive ... after`, which a blocking enumeration of the stream
   # could not offer. Killing the pump is what ends a stream that has outlived
   # its deadline: the environment monitors its consumer and tears down.
-  defp collect(events, cap, deadline) do
+  defp collect(events, cap, deadline, progress) do
     parent = self()
     ref = make_ref()
 
@@ -102,23 +105,49 @@ defmodule Lemieux.Extensions.Verify.Check do
         send(parent, {ref, :done})
       end)
 
-    result = receive_events(ref, cap, deadline, buffer())
+    result = receive_events(ref, cap, deadline, buffer(), progress)
     Task.shutdown(pump, :brutal_kill)
     result
   end
 
-  defp receive_events(ref, cap, deadline, buffer) do
+  defp receive_events(ref, cap, deadline, buffer, progress) do
     remaining = max(deadline - System.monotonic_time(:millisecond), 0)
 
     receive do
-      {^ref, {:data, data}} -> receive_events(ref, cap, deadline, keep(buffer, data, cap))
-      {^ref, {:exit_status, status}} -> exited(status, buffer)
-      {^ref, {:timeout, _ms}} -> finish("timed_out", buffer)
-      {^ref, {:output_limit, _bytes}} -> finish("output_limit", buffer)
-      {^ref, {:failed, reason}} -> failed_to_run(reason, buffer)
-      {^ref, :done} -> failed_to_run(:no_terminal_event, buffer)
+      {^ref, {:data, data}} ->
+        buffer = keep(buffer, data, cap)
+        progress = publish_progress(buffer, progress)
+        receive_events(ref, cap, deadline, buffer, progress)
+
+      {^ref, {:exit_status, status}} ->
+        exited(status, buffer)
+
+      {^ref, {:timeout, _ms}} ->
+        finish("timed_out", buffer)
+
+      {^ref, {:output_limit, _bytes}} ->
+        finish("output_limit", buffer)
+
+      {^ref, {:failed, reason}} ->
+        failed_to_run(reason, buffer)
+
+      {^ref, :done} ->
+        failed_to_run(:no_terminal_event, buffer)
     after
       remaining -> finish("timed_out", buffer)
+    end
+  end
+
+  defp publish_progress(_buffer, {nil, _next} = progress), do: progress
+
+  defp publish_progress(buffer, {callback, next} = progress) do
+    now = System.monotonic_time(:millisecond)
+
+    if now >= next do
+      callback.(finish("running", buffer)["output"])
+      {callback, now + 250}
+    else
+      progress
     end
   end
 
@@ -172,6 +201,7 @@ defmodule Lemieux.Extensions.Verify.Check do
   # whatever the code under test printed. The record has to survive JSON
   # encoding either way.
   defp sanitize(binary) do
-    if String.valid?(binary), do: binary, else: String.replace_invalid(binary)
+    binary = if String.valid?(binary), do: binary, else: String.replace_invalid(binary)
+    Escapes.strip(binary)
   end
 end

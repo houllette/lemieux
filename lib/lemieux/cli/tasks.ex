@@ -10,7 +10,9 @@ defmodule Lemieux.CLI.Tasks do
   alias Lemieux.Background
   alias Lemieux.CLI.Tasks.Activity
   alias Lemieux.CLI.Tasks.Agents
+  alias Lemieux.CLI.Tasks.Verification
   alias Lemieux.CLI.Watches, as: Host
+  alias Lemieux.Extensions.Verify.Work
   alias Lemieux.Extensions.Watches
   alias Lemieux.Extensions.Watches.Record
   alias Lemieux.ID.Shorthand
@@ -32,7 +34,7 @@ defmodule Lemieux.CLI.Tasks do
     agents = Agents.rows(info.session)
     rows = rows(tasks, watches)
     rows = Enum.map(rows, &scope(&1, tasks, info))
-    rows = hierarchy(agents, rows)
+    rows = Verification.rows(info) ++ hierarchy(agents, rows)
     selected = Enum.find(rows, &(&1.id == selected)) || List.first(rows)
 
     {:ok,
@@ -321,6 +323,7 @@ defmodule Lemieux.CLI.Tasks do
   end
 
   defp detail(nil, _info, _watches), do: nil
+  defp detail(%{kind: :verification} = row, _info, _watches), do: row
   defp detail(%{kind: :agent} = row, info, _watches), do: Agents.detail(info.session, row)
 
   defp detail(%{task_id: id} = row, info, _watches) when is_binary(id) do
@@ -343,6 +346,9 @@ defmodule Lemieux.CLI.Tasks do
 
   defp perform(:cancel, %{running?: false, kind: kind}, _info, _manager) when kind != :agent,
     do: {:error, :already_finished}
+
+  defp perform(:cancel, %{kind: :verification} = row, info, _manager),
+    do: Work.cancel(info.supervisor, info.id, row.work_id)
 
   defp perform(:cancel, %{kind: :agent} = row, info, _manager),
     do: Agents.cancel(info.session, row)

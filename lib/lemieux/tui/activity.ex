@@ -49,6 +49,7 @@ defmodule Lemieux.TUI.Activity do
             | :approval
             | :delegating
             | :retrying
+            | :verification
             | :connecting,
           detail: term(),
           for: non_neg_integer(),
@@ -128,6 +129,9 @@ defmodule Lemieux.TUI.Activity do
 
   defp wording(%{kind: :thinking}, for, _activity), do: "thinking (#{for})"
   defp wording(%{kind: :answering}, _for, _activity), do: "answering"
+
+  defp wording(%{kind: :verification, detail: %{command: command}}, for, _activity),
+    do: "verifying #{command} (#{for}) · F6 Tasks to inspect or stop"
 
   defp wording(%{kind: :composing, detail: %{name: name, target: target, bytes: bytes}}, _f, _a),
     do: "composing #{name}#{target(target)} (#{bytes(bytes)})"
