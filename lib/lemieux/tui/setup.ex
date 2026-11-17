@@ -79,7 +79,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
           status_rotation: %{anchor: nil, next_at: nil},
           link_press: nil,
           hover: %{
-            enabled?: transport == :cell_session and Keyword.get(opts, :hover_pointer, false),
+            enabled?:
+              transport in [:local, :cell_session] and
+                Keyword.get(opts, :hover_pointer, false) == true and
+                Keyword.get(opts, :mouse_capture, true) == true,
+            native?: transport == :local,
+            suspended?: false,
             shape: :restore,
             event: nil
           },

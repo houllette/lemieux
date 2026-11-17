@@ -9,6 +9,14 @@ API.
 
 ## Unreleased
 
+- Update ExRatatui to 0.21.0 in the library and standalone host. Native hover
+  pointers follow visible click targets by default in direct Ghostty and Kitty
+  sessions; `LMX_HOVER_POINTER=0` disables them. Unknown terminals and detected
+  multiplexers receive no pointer controls unless support is explicitly declared
+  with `LMX_HOVER_POINTER=1`. Embedders opt in with `hover_pointer: true`. Editor
+  handoff and runtime cleanup reset the default arrow. Cell hosts keep their
+  existing pointer/restore intents.
+
 - Add Zed setup instructions, standard ACP model/reasoning selectors, form
   questions, tool locations and file diffs. V1 editor text access includes
   unsaved buffers while preserving host filesystem policy and approvals.

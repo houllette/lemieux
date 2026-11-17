@@ -71,28 +71,74 @@ sequences; stdout's answer and JSON formats remain unchanged.
 
 ### Hover pointers and transport capability
 
-A host using ExRatatui's four-tuple `:cell_session` transport can opt in with
-`hover_pointer: true`. Its intent writer receives
-`{:mouse_pointer, :pointer}` when the visible click action is enabled and
-`{:mouse_pointer, :restore}` when leaving it, covering it, selecting text,
-returning to the latest transcript or stopping. The host applies these through
-its own surface API, preserving and restoring the prior pointer. It also owns
-cleanup on suspension and abrupt disconnection. Repeated motion over one
-target emits no duplicate intent and requests no frame. Links retain their
-existing release-to-open gesture; no Super mouse event is assumed.
+Hover pointers are enabled by default in direct Ghostty and Kitty sessions
+using their standard `TERM` values, `xterm-ghostty` and `xterm-kitty`. Start
+`lmx` normally; source runs use `mise exec -- mix lmx`, including from
+`dist/lmx`.
 
-The installed local `lmx` does **not** yet change the operating system mouse
-pointer. ExRatatui 0.20 has no supported local mouse-pointer control API.
-Its text-cursor and title APIs do not supply one. Local, SSH, distributed,
-headless and unknown transports keep working without pointer escapes or probes.
-Completing issue #148 requires upstream capability detection and runtime-owned
-OSC 22 set/restore and suspension cleanup, followed by a manual terminal check
-of the actual pointer. [Kitty's protocol](https://sw.kovidgoyal.net/kitty/pointer-shapes/)
-supports queries and a pointer stack;
-[Ghostty documents differing shape support](https://ghostty.org/docs/vt/osc/22).
-No terminal-name guess or raw write from a render callback substitutes for that
-contract. Snippet copy regions emit the same host pointer intents as links;
-a link inside a snippet retains precedence over copying the block.
+To disable hover pointers:
+
+```sh
+LMX_HOVER_POINTER=0 lmx
+# From a source checkout:
+LMX_HOVER_POINTER=0 mise exec -- mix lmx
+```
+
+Unknown terminals and detected tmux, screen or Zellij sessions receive no
+pointer controls by default. Automatic selection uses the dedicated `TERM`
+names and checks `TMUX`, `STY` and `ZELLIJ`; inherited `TERM_PROGRAM` or window
+IDs alone do not establish support for the immediate terminal. This is an
+allowlist, without capability probes or protocol version detection. The OSC 22
+CSS pointer names are documented by
+[Ghostty](https://ghostty.org/docs/vt/osc/22) and
+[Kitty](https://sw.kovidgoyal.net/kitty/pointer-shapes/).
+
+`LMX_HOVER_POINTER=1` explicitly declares support when using a custom terminal
+name or another verified terminal/transport path. `--no-mouse` disables hover
+along with click capture, including when forced on. `dist/lmx` and the installed
+binary read the variable from the environment, not a checkout's `.env`.
+
+An embedding local host still opts in with `hover_pointer: true`; the CLI's
+automatic selection is its own host policy. SSH, distributed and unknown
+transports remain inert in Lemieux even though upstream supports remote pointer
+delivery. Headless local tests record the shape without writing controls.
+
+Visible links, snippet copy regions, tabs, panel controls and the scrollback
+“click for latest” marker use the same hit-testing as clicking. Leaving a
+target, covering it, dragging to select text or returning to the latest
+transcript resets the pointer. Hover alone performs no click action. Repeated
+motion over one target requests no frame or duplicate pointer change. Links
+retain their existing release-to-open gesture; no Super mouse event is assumed,
+and terminals may handle their own modified link hover. A link inside a snippet
+retains precedence over copying the block.
+
+The runtime applies pointer changes independently of redraws and resets the
+arrow on cleanup, including a local runtime crash. Ctrl-G completes a reset
+transition before handing the terminal to the external editor; a fresh mouse
+event establishes hover when editing ends. ExRatatui 0.21 resets to `default`:
+it does **not** query capabilities or restore a previously stacked override.
+[Kitty's protocol](https://sw.kovidgoyal.net/kitty/pointer-shapes/) supports
+queries and a pointer stack; [Ghostty's OSC 22 support](https://ghostty.org/docs/vt/osc/22)
+has different guarantees. The upstream
+[0.21 release](https://github.com/mcass19/ex_ratatui/releases/tag/v0.21.0)
+and [pointer API discussion](https://github.com/mcass19/ex_ratatui/issues/120)
+describe that scope.
+
+A host using ExRatatui's four-tuple `:cell_session` transport can also opt in
+with `hover_pointer: true`. Its intent writer receives
+`{:mouse_pointer, :pointer}` over a clickable region and
+`{:mouse_pointer, :restore}` when leaving it or stopping. The host applies
+these through its own surface API, preserving and restoring the prior pointer,
+and owns cleanup on suspension and abrupt disconnection.
+
+Before closing [issue #148](https://github.com/houllette/lemieux/issues/148),
+visually confirm the actual OS pointer in a supporting terminal: enter and
+leave a link, snippet and scrollback marker; cover a target with a modal;
+drag to select; use Ctrl-G; and exit while hovering. The arrow should return
+at each handoff or exit. Repeat with `LMX_HOVER_POINTER=0` and an unknown
+terminal identity to check the harmless fallback. Runtime snapshots and PTY
+escape capture verify delivery and ordering, but cannot establish the pointer's
+visible appearance.
 
 ### Runtime
 

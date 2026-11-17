@@ -54,6 +54,8 @@ defmodule Lemieux.Conversation.ShellInvalidUTF8Test do
     editor = fn _draft -> {:ok, <<"caf", 0xE9>>} end
     state = tui(editor: editor) |> type("draft") |> press("g", ["ctrl"])
 
+    assert_receive :external_edit
+    assert {:noreply, state} = TUI.handle_info(:external_edit, state)
     assert typed(state) == "caf�"
   end
 end

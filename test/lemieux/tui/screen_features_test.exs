@@ -122,6 +122,9 @@ defmodule Lemieux.TUI.ScreenFeaturesTest do
     test "ctrl-g hands the text to the editor and takes back what was saved" do
       editor = fn text -> {:ok, text <> " edited"} end
       state = built(editor: editor) |> type("draft") |> press("g", ["ctrl"])
+      assert typed(state) == "draft"
+      assert_receive :external_edit
+      assert {:noreply, state} = TUI.handle_info(:external_edit, state)
 
       assert typed(state) == "draft edited"
       assert state.terminal.repaint == 1
