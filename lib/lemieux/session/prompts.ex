@@ -329,7 +329,16 @@ defmodule Lemieux.Session.Prompts do
     |> Recovery.maybe_follow_up()
   end
 
-  def finish_hook(state, {:prepare_next_turn, _original}, {:ok, %Request{} = request}) do
+  def finish_hook(state, {:prepare_next_turn, original}, {:ok, %Request{} = request}) do
+    # A held preparation hook owns its request copy. A service-mode change
+    # accepted while it ran must reach this not-yet-dispatched request too.
+    current_mode = Keyword.get(state.params, :fast_mode, "off")
+
+    request =
+      if current_mode != Keyword.get(original.params, :fast_mode, "off"),
+        do: %{request | params: Keyword.put(request.params, :fast_mode, current_mode)},
+        else: request
+
     case Tool.validate_all(request.tools) do
       :ok -> Requests.dispatch_request(state, request)
       {:error, reason} -> Requests.request_hook_failed(state, {:invalid_tool_catalog, reason})

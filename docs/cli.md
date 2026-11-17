@@ -273,8 +273,11 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 **Fast service.** `/fast` toggles fast mode; `/fast on` and `/fast off` select
 it explicitly. `/fast ultrafast` is offered only when the model catalog and
 active transport support that tier. The choice is saved with the session and
-cleared when switching to an unsupported model or connection. An active
-`fast` or `ultrafast` qualifier stays visible in red in the header, beside the
+cleared when switching to an unsupported model or connection. Changes are
+accepted during a turn and apply to the next model request, including the
+continuation after a tool; an in-flight request keeps its original settings.
+Changing Fast mode starts no extra request. An active
+`FAST` or `ULTRAFAST` qualifier stays visible in red in the header, beside the
 scrolling metadata. It shows the requested mode; upstream may downgrade a
 request. Capability is
 not subscription entitlement: the provider still authorizes each request.

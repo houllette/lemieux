@@ -10,7 +10,6 @@ defmodule Lemieux.Conversation.Command.Fast do
   @behaviour Lemieux.Conversation.Command
 
   alias Lemieux.Conversation
-  alias Lemieux.Conversation.Command
   alias Lemieux.Conversation.Dispatch
   alias Lemieux.Session
 
@@ -26,8 +25,6 @@ defmodule Lemieux.Conversation.Command.Fast do
   end
 
   @impl Lemieux.Conversation.Command
-  def parse(_mode, %Conversation{busy?: true}), do: Command.wait()
-
   def parse(mode, _conversation) do
     mode = String.trim(mode)
     [{:set_fast_mode, if(mode == "", do: "toggle", else: mode)}]
@@ -42,7 +39,8 @@ defmodule Lemieux.Conversation.Command.Fast do
         Dispatch.say(
           acc,
           host,
-          "fast: #{mode}" <> if(mode == "off", do: "", else: " · faster service may cost more")
+          "fast: #{mode} · applies to the next model request" <>
+            if(mode == "off", do: "", else: " · faster service may cost more")
         )
 
       {:error, {:fast_mode_unsupported, model, _mode, supported}} ->

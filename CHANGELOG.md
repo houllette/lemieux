@@ -9,6 +9,10 @@ API.
 
 ## Unreleased
 
+- Allow `/fast` and `Session.set_fast_mode/2` during active turns. Apply changes
+  to the next model request, including same-turn tool continuations, while
+  preserving in-flight requests and capability validation. (#201)
+
 - Run highlighted `/usage` with one Enter, acknowledge fetching, and display
   asynchronous reports or failures while clearing pending requests for retries. (#192)
 
