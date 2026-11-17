@@ -9,6 +9,9 @@ API.
 
 ## Unreleased
 
+- Put `[c Stop task]` first in Tasks for running commands and agents, retain
+  confirmation and logs, and distinguish stopping work from pausing tracking. (#194)
+
 - Allow `/fast` and `Session.set_fast_mode/2` during active turns. Apply changes
   to the next model request, including same-turn tool continuations, while
   preserving in-flight requests and capability validation. (#201)

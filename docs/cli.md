@@ -363,6 +363,13 @@ In Tasks, each list row's descriptive summary and the Result/Output body use
 muted grey italics. Task names, states, elapsed times, headings and controls
 keep their existing appearance; expanded shell source keeps its code styling.
 
+Select a running command or agent and click **[c Stop task]**, or press **c**
+then **y** to confirm. The confirmation names the selected task and says when
+the action stops an entire writer batch. The control stays first in compact
+menus. Cancellation shows progress, refreshes the task state and keeps retained
+output. Completed tasks cannot be stopped; external sources support observation
+only. **[s Pause tracking]** pauses observation while the underlying work continues.
+
 ### Steering and the queue
 
 While a turn runs, typing in the input box shows `Enter steer · Tab queue`

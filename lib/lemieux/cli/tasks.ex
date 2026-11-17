@@ -338,6 +338,12 @@ defmodule Lemieux.CLI.Tasks do
     Map.put(row, :logs, Record.text(get_in(watch, ["result", "logs"]), 8000))
   end
 
+  defp perform(:cancel, %{kind: :external}, _info, _manager),
+    do: {:error, :external_job_cannot_be_cancelled}
+
+  defp perform(:cancel, %{running?: false, kind: kind}, _info, _manager) when kind != :agent,
+    do: {:error, :already_finished}
+
   defp perform(:cancel, %{kind: :agent} = row, info, _manager),
     do: Agents.cancel(info.session, row)
 
