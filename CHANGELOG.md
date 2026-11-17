@@ -9,6 +9,9 @@ API.
 
 ## Unreleased
 
+- Display the fast-service header badge as `FAST` or `ULTRAFAST`, with a single
+  space before its separator in wide headers and uppercase narrow fallbacks. (#193)
+
 - Update ExRatatui to 0.21.0 in the library and standalone host. Native hover
   pointers follow visible click targets by default in direct Ghostty and Kitty
   sessions; `LMX_HOVER_POINTER=0` disables them. Unknown terminals and detected

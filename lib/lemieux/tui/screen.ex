@@ -547,7 +547,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         text
       else
         Line.new([
-          Span.new(text),
+          Span.new(String.trim_trailing(text)),
           Span.new(badge, style: %Style{fg: theme(state).children.fail, modifiers: [:bold]})
         ])
       end
@@ -557,8 +557,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # the service setting disappears while the metadata scrolls past it.
     defp fast_badge(%{conversation: %{fast_mode: mode}}, width)
          when mode in ["fast", "ultrafast"] do
-      text = " · #{mode} "
-      if Width.of(text) <= width, do: text, else: Responsive.fit(mode, width)
+      label = String.upcase(mode)
+      text = " · #{label} "
+      if Width.of(text) <= width, do: text, else: Responsive.fit(label, width)
     end
 
     defp fast_badge(_state, _width), do: ""

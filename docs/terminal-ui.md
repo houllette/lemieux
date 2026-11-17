@@ -18,6 +18,9 @@ a terminal](#testing-it-without-a-terminal) covers how to check those changes.
 
 ## What it is
 
+Enabled fast service appears as a red `FAST` or `ULTRAFAST` header badge. It
+stays visible while model metadata scrolls; `/fast off` removes it.
+
 ### Program status for terminals and multiplexers
 
 The screen reports its state through the
