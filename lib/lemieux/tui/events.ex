@@ -101,6 +101,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
          ),
          do: phase(state, :verification, %{command: command})
 
+    defp sync_event(state, {:question_continuation, :started}),
+      do:
+        state
+        |> put_in([Access.key!(:conversation), Access.key!(:busy?)], true)
+        |> Turn.start_processing()
+
     defp sync_event(state, {:entry, %{type: :user, payload: %{"source" => "notification"}}}),
       do: Turn.start_processing(state)
 
@@ -309,15 +315,26 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       elapsed = Screen.elapsed(state)
 
-      state =
-        state
-        |> Turn.finish_processing()
-        |> Notify.finished(elapsed)
-
-      if reason in [:stop, :ok], do: Submission.continue_queued(state), else: {:noreply, state}
+      state = Turn.finish_processing(state)
+      finish_attention(state, reason, elapsed)
     end
 
     defp finish_event(result, _event), do: result
+
+    defp finish_attention(
+           %{tools: %{question_flow: %{deferred?: true}}} = state,
+           reason,
+           _elapsed
+         )
+         when reason in [:stop, :ok] do
+      state = Transcript.say(state, :lmx, "Independent work finished · awaiting your answers")
+      {:noreply, Notify.waiting(state, "your answers")}
+    end
+
+    defp finish_attention(state, reason, elapsed) do
+      state = Notify.finished(state, elapsed)
+      if reason in [:stop, :ok], do: Submission.continue_queued(state), else: {:noreply, state}
+    end
 
     # A call is announced once. The event can arrive twice — a host that
     # attaches mid-turn is sent the pending call and then the live one — and

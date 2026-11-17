@@ -5,11 +5,12 @@ defmodule Lemieux.Session.Questions do
   alias Lemieux.Contract
   alias Lemieux.Session.Approvals
   alias Lemieux.Session.Core
+  alias Lemieux.Session.Prompts
 
   # One attention surface per session. A pending receipt answers the provider
   # tool call immediately; the eventual human input is a separate, identified
-  # user entry at the next request boundary. Never spin a model to poll, and
-  # never start an idle turn merely because an optional answer arrived.
+  # user entry at the next request boundary. Only an explicit host-authorized
+  # submission can continue an idle task.
   def defer(state, call_id, payload) do
     cond do
       occupied?(state) ->
@@ -41,7 +42,9 @@ defmodule Lemieux.Session.Questions do
       state.deferred_question != nil or
         Enum.any?(state.parked, fn {_, w} -> w.kind == :question end)
 
-  def answer(%{deferred_question: %{id: id} = question} = state, id, answer) do
+  def answer(state, id, answer, mode \\ :queue)
+
+  def answer(%{deferred_question: %{id: id} = question} = state, id, answer, mode) do
     cond do
       expired?(question.deadline, state.clock) ->
         {:reply, {:error, :unknown_call}, expire(state, id)}
@@ -50,8 +53,46 @@ defmodule Lemieux.Session.Questions do
         {:reply, {:error, :invalid_answer}, state}
 
       true ->
-        accept_answer(state, id, question, answer)
+        state |> accept_answer(id, question, answer) |> after_answer(mode)
     end
+  end
+
+  def answer(state, _id, _answer, _mode), do: {:reply, {:error, :unknown_call}, state}
+
+  defp after_answer(state, :queue), do: {:reply, :ok, %{state | deferred_resume: nil}}
+
+  defp after_answer(state, :continue) do
+    cond do
+      Core.busy?(state) and not is_nil(state.evidence.current_run) ->
+        {:reply, {:ok, :queued}, %{state | deferred_resume: :requested}}
+
+      resumable?(state) ->
+        {:waiting, used} = state.deferred_resume
+        {:reply, {:ok, :continuing}, Prompts.resume_question_answer(%{state | turns_taken: used})}
+
+      true ->
+        {:reply, {:ok, :saved}, %{state | deferred_resume: nil}}
+    end
+  end
+
+  defp resumable?(%{deferred_resume: {:waiting, used}} = state),
+    do: used < state.max_turns and not Core.busy?(state)
+
+  defp resumable?(_state), do: false
+
+  def answered?(state), do: Enum.any?(state.deferred_answers, &(&1["status"] == "answered"))
+
+  def continue_at_stop?(state, stop_reason) do
+    state.deferred_resume == :requested and stop_reason in [:stop, :ok] and
+      is_nil(state.aside) and state.turns_taken < state.max_turns
+  end
+
+  def stopped(state, stop_reason) do
+    waiting =
+      stop_reason in [:stop, :ok] and not is_nil(state.deferred_question) and
+        is_nil(state.aside)
+
+    %{state | deferred_resume: if(waiting, do: {:waiting, state.turns_taken})}
   end
 
   defp expired?(deadline, clock) when is_integer(deadline), do: deadline <= Clock.now_ms(clock)
@@ -67,11 +108,8 @@ defmodule Lemieux.Session.Questions do
       "detail" => %{"answer" => answer, "deferred" => true, "session_id" => state.id}
     }
 
-    state =
-      %{state | deferred_question: nil, deferred_answers: state.deferred_answers ++ [payload]}
-      |> Core.append({:approval, payload, nil})
-
-    {:reply, :ok, state}
+    %{state | deferred_question: nil, deferred_answers: state.deferred_answers ++ [payload]}
+    |> Core.append({:approval, payload, nil})
   end
 
   def expire(%{deferred_question: %{id: id}} = state, id), do: close(state, id, "timed_out")
@@ -92,7 +130,7 @@ defmodule Lemieux.Session.Questions do
 
     # Already accepted answers stay durable, but cancellation must not queue
     # an automatic continuation. They are read only on an explicit next run.
-    %{state | deferred_question: nil}
+    %{state | deferred_question: nil, deferred_resume: nil}
   end
 
   defp close(state, id, status) do
@@ -109,7 +147,12 @@ defmodule Lemieux.Session.Questions do
       }
     }
 
-    %{state | deferred_question: nil, deferred_answers: state.deferred_answers ++ [payload]}
+    %{
+      state
+      | deferred_question: nil,
+        deferred_resume: nil,
+        deferred_answers: state.deferred_answers ++ [payload]
+    }
     |> Core.append({:approval, payload, nil})
   end
 
@@ -119,7 +162,7 @@ defmodule Lemieux.Session.Questions do
     do: [%{call_id: id, kind: :question, payload: payload}]
 
   def drain(state) do
-    Enum.reduce(state.deferred_answers, %{state | deferred_answers: []}, fn answer, state ->
+    Enum.reduce(state.deferred_answers, clear_answers(state), fn answer, state ->
       data = %{"question_id" => answer["call_id"], "answer" => answer["detail"]["answer"]}
 
       Core.append(
@@ -137,6 +180,11 @@ defmodule Lemieux.Session.Questions do
     end)
   end
 
+  defp clear_answers(%{deferred_resume: :requested} = state),
+    do: %{state | deferred_answers: [], deferred_resume: nil}
+
+  defp clear_answers(state), do: %{state | deferred_answers: []}
+
   # A fork cannot inherit the source session's human attention or a queued
   # response. Resume restores data and deadlines, never an execution task.
   def restore(state) do
@@ -144,6 +192,7 @@ defmodule Lemieux.Session.Questions do
       Enum.reduce(Core.entries(state), {nil, []}, fn
         %{
           type: :approval,
+          seq: seq,
           payload:
             %{
               "kind" => "question",
@@ -153,7 +202,7 @@ defmodule Lemieux.Session.Questions do
         },
         {_q, answers}
         when owner == state.id ->
-          {p |> Map.put("presentation", detail["presentation"]), answers}
+          {Map.merge(p, %{"presentation" => detail["presentation"], "seq" => seq}), answers}
 
         %{
           type: :approval,
@@ -211,7 +260,26 @@ defmodule Lemieux.Session.Questions do
         }
     }
 
-    if remaining == 0, do: expire(state, id), else: state
+    if remaining == 0, do: expire(state, id), else: restore_continuation(state, pending["seq"])
+  end
+
+  # Resume can offer a new authorized continuation only if the transcript
+  # establishes a successful stop after the question and its request budget.
+  # The intent to continue after an already accepted answer stays in memory.
+  defp restore_continuation(state, question_seq) do
+    last_stop =
+      Enum.find(state.reversed_entries, fn entry ->
+        entry.seq > question_seq and entry.type in [:run_evidence, :error, :cancelled]
+      end)
+
+    case last_stop do
+      %{type: :run_evidence, payload: %{"stop_reason" => reason, "requests" => requests}}
+      when reason in ["stop", "ok"] and is_list(requests) ->
+        %{state | deferred_resume: {:waiting, length(requests)}}
+
+      _other ->
+        state
+    end
   end
 
   defp atom_keys(map) when is_map(map) do

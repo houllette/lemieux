@@ -1081,9 +1081,25 @@ defmodule Lemieux.Session do
   def answer(session, call_id, text) when is_binary(call_id) and is_binary(text),
     do: GenServer.call(session, {:resolve, call_id, {:answer, text}})
 
-  def answer(session, call_id, %{} = answer) when is_binary(call_id) do
+  def answer(session, call_id, %{} = answer) when is_binary(call_id),
+    do: submit_question_answer(session, {:resolve, call_id, {:answer, answer}}, answer)
+
+  @doc """
+  Answers a deferred question with host authorization to continue its task.
+
+  If work is active, the answer joins the next request. A successful idle
+  task may continue within its existing budget. The authorization applies
+  only to this submission and is never replayed from the transcript.
+  """
+  @spec answer(session(), String.t(), String.t() | map(), :continue) ::
+          {:ok, :queued | :continuing | :saved} | {:error, :unknown_call | :invalid_answer}
+  def answer(session, call_id, answer, :continue)
+      when is_binary(call_id) and (is_binary(answer) or is_map(answer)),
+      do: submit_question_answer(session, {:answer_deferred, call_id, answer}, answer)
+
+  defp submit_question_answer(session, message, answer) do
     Entry.new(:approval, %{"answer" => answer})
-    GenServer.call(session, {:resolve, call_id, {:answer, answer}})
+    GenServer.call(session, message)
   rescue
     ArgumentError -> {:error, :invalid_answer}
   end
@@ -1103,7 +1119,8 @@ defmodule Lemieux.Session do
   For questions, `deferred: true` returns `{:deferred, question_id}` immediately
   and keeps one optional question answerable while the agent works. The answer
   is recorded as separate identified human input at the next request boundary.
-  An idle answer starts no model request; the next explicit prompt delivers it.
+  An idle answer submitted through `answer/3` waits for the next prompt.
+  A host can authorize continuation for that submission with `answer/4`.
   Pending questions survive resume of the same session until their original
   deadline, but forks do not inherit the source session's attention. Cancellation
   closes outstanding questions; late and duplicate answers are refused.

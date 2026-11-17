@@ -522,10 +522,12 @@ question opens a panel with suggestions, an Other answer and a review step.
 answerable. A pending receipt completes the tool call; the later answer is
 identified and delivered once at the next request boundary. Required decisions
 keep blocking, and an unanswered question grants no approval. Only one batch
-can await an answer. If independent work ends first, answering starts no model
-request: an explicit next prompt delivers the answer. Timeouts and cancellation
-remain explicit outcomes. Pending attention survives resume until its original
-deadline, while forks inherit neither pending questions nor undelivered answers.
+can await an answer. If independent work finishes first, the panel stays open
+and lmx continues the task when you submit the batch, within the original turn
+budget. Embedded hosts can opt into that behavior with `Session.answer/4`.
+Timeouts and cancellation never start a request. Pending attention survives
+resume until its original deadline, while forks inherit neither pending
+questions nor undelivered answers.
 
 **`/resume`** skips sessions that were opened and left without a prompt. A
 session already open in another `lmx` cannot be resumed; the message names

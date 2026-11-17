@@ -384,8 +384,25 @@ defmodule Lemieux.Session.Prompts do
     end
   end
 
-  def finish_stop(state, stop_reason) do
+  def resume_question_answer(state) do
     state
+    |> begin_run()
+    |> Instrumentation.start_prompt_telemetry()
+    |> Core.emit({:question_continuation, :started})
+    |> Compacting.continue()
+  end
+
+  def finish_stop(state, stop_reason) do
+    if Questions.continue_at_stop?(state, stop_reason) do
+      Compacting.continue(state)
+    else
+      finalize_stop(state, stop_reason)
+    end
+  end
+
+  defp finalize_stop(state, stop_reason) do
+    state
+    |> Questions.stopped(stop_reason)
     |> Core.put_compaction(:preflight_attempted?, false)
     |> Core.put_compaction(:trigger, nil)
     |> Core.put_compaction(:forecast, nil)

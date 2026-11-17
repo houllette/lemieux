@@ -85,7 +85,7 @@ defmodule Lemieux.Tools.AskUser do
     Do not poll. Use the default `blocking` mode before dependent work or \
     required decisions. An unanswered question never grants approval. At most \
     one question batch can await an answer. If independent work ends first, \
-    finish honestly; an idle answer waits for an explicit next prompt.
+    say that you are awaiting the answer. Interactive lmx can continue the     task when the person submits it; other hosts may deliver it on a later prompt.
     """
   end
 

@@ -6,11 +6,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Session
     alias Lemieux.TUI.Composer
     alias Lemieux.TUI.Editor
+    alias Lemieux.TUI.Flash
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.QuestionFlow
     alias Lemieux.TUI.QuestionPanel
     alias Lemieux.TUI.QuestionSelection
     alias Lemieux.TUI.Screen
+    alias Lemieux.TUI.Transcript
+    alias Lemieux.TUI.Turn
 
     @doc false
     @spec key(ExRatatui.Event.Key.t(), map(), map()) :: tuple()
@@ -242,16 +245,47 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {:noreply, %{state | exit_armed: nil}}
     end
 
+    defp submit_questions(state, %{deferred?: true} = flow, _ctx) do
+      case Session.answer(state.session, flow.call_id, QuestionFlow.response(flow), :continue) do
+        {:ok, disposition} ->
+          state = clear_submitted(state, flow)
+
+          state =
+            if disposition == :continuing,
+              do:
+                state
+                |> put_in([Access.key!(:conversation), Access.key!(:busy?)], true)
+                |> Turn.start_processing(),
+              else: state
+
+          {:noreply, Transcript.say(state, :lmx, answer_status(disposition))}
+
+        {:error, :unknown_call} ->
+          {:noreply,
+           Flash.show(clear_submitted(state, flow), "that question is no longer pending")}
+
+        {:error, :invalid_answer} ->
+          {:noreply, Flash.show(state, "answer could not be saved · revise it and try again")}
+      end
+    end
+
     defp submit_questions(state, flow, ctx) do
+      ctx.run.(clear_submitted(state, flow), [
+        {:answer, flow.call_id, QuestionFlow.response(flow)}
+      ])
+    end
+
+    defp answer_status(:queued), do: "Answer received · waiting for the next model request"
+    defp answer_status(:continuing), do: "Answer received · continuing the task"
+    defp answer_status(:saved), do: "Answer saved · send a prompt to use it"
+
+    defp clear_submitted(state, flow) do
       :ok = Editor.replace(state.input, flow.draft)
       conversation = %{state.conversation | asking: nil, question: nil}
 
-      state =
-        state
-        |> put_in([Access.key!(:tools), :question_flow], nil)
-        |> Map.put(:conversation, conversation)
-
-      ctx.run.(state, [{:answer, flow.call_id, QuestionFlow.response(flow)}])
+      state
+      |> put_in([Access.key!(:tools), :question_flow], nil)
+      |> Map.put(:conversation, conversation)
     end
   end
 end

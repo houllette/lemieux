@@ -707,6 +707,9 @@ defmodule Lemieux.Session.Calls do
   def call({:resolve, call_id, resolution}, _from, state),
     do: Approvals.resolve_legacy(state, call_id, resolution)
 
+  def call({:answer_deferred, call_id, answer}, _from, state),
+    do: Questions.answer(state, call_id, answer, :continue)
+
   def call({:steer, text}, _from, state) do
     {:reply, :ok, %{state | reversed_steers: [text | state.reversed_steers]}}
   end
