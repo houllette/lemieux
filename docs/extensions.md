@@ -377,7 +377,7 @@ reasoning; this is the shape.
   "name": "audit",
   "module": "MyApp.Audit",
   "ebin": ["lib/my_app/ebin", "lib/jason/ebin"],
-  "versions": {"lemieux": "1.1.0", "elixir": "1.20.4", "otp": "29"},
+  "versions": {"lemieux": "1.2.0", "elixir": "1.20.4", "otp": "29"},
   "extension_api": 1,
   "options": {"log": "/var/log/agents.log"}
 }
