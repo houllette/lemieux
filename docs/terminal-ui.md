@@ -18,6 +18,11 @@ a terminal](#testing-it-without-a-terminal) covers how to check those changes.
 
 ## What it is
 
+The CLI mutes standard console log handlers while the screen owns the terminal,
+including handlers a host installed after CLI logging setup. Captured MCP
+stderr remains in the bounded file log at debug level. Console levels return
+when the screen closes; redirected stderr keeps its logging behavior.
+
 Enabled fast service appears as a red `FAST` or `ULTRAFAST` header badge. It
 stays visible while model metadata scrolls; `/fast off` removes it.
 

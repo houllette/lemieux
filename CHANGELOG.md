@@ -9,6 +9,10 @@ API.
 
 ## Unreleased
 
+- Mute every installed standard console logger while the TUI owns the terminal,
+  so a second handler cannot print captured MCP timeout diagnostics over it.
+  Keep file diagnostics and restore console levels after closing. (#190)
+
 - Show post-answer verification as an explicit phase and Tasks entry with bounded
   output, elapsed time and Stop task. Persist cancellation evidence, preserve
   queued follow-ups and label later authorized results as new follow-ups. (#195)
