@@ -146,6 +146,37 @@ or ultrafast service appears in red in the header. See
 [the terminal UI](terminal-ui.md) and
 [providers](providers.md#faster-service-through-a-route).
 
+## Upgrading from 1.1.3 to 1.2.0
+
+This minor release requires restarting `lmx` on every platform. New ACP and
+verification modules, retained server/TUI state, local callbacks and the
+ExRatatui native update have no supported live migration. No hot update or
+live downgrade is declared.
+
+Save unsent drafts, stage the signed update with `lmx update` or `/update`,
+then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
+installer-managed TUI restart preserves its exact session. Personal config
+version 1, extension API 1, existing transcripts and supported 1.x contracts
+remain compatible; no config or transcript migration is required. Consumed
+request and spending accounting stays attached to the resumed session.
+
+Use `lmx acp setup` before connecting an editor; see [ACP](acp.md) for Zed
+configuration, selectors, unsaved-buffer access and permission boundaries.
+Experimental draft v2 clients must adopt the updated configuration shapes and
+`_meta["com.github.houllette.lemieux/capabilities"]` namespace. ACP v1 keeps
+`_meta.lemieux`. Registry metadata preparation does not mean registry publication.
+
+Direct Ghostty and Kitty sessions show native hover pointers by default.
+`LMX_HOVER_POINTER=0` disables them; `LMX_HOVER_POINTER=1` explicitly declares
+support in another terminal. Detected multiplexers and unknown terminals do
+not enable pointers automatically. See [the terminal UI](terminal-ui.md).
+
+Post-answer verification appears in Tasks with output and Stop task. `/fast`
+can change during a turn; the next undispatched model request uses the new
+setting, while in-flight requests retain theirs. Faster service still needs
+model/route support and may cost more. `/usage` and highlighted completions
+work with one Enter while work is active.
+
 ## Install a release
 
 On macOS and Linux:

@@ -1,50 +1,59 @@
-# Lemieux 1.1.3
+# Lemieux 1.2.0
 
-Lemieux 1.1.3 makes narrow terminal layouts easier to read, adds an inspectable
-Todo List, restores routed fast mode and reports agent activity through OSC
-7501. The supported 1.x library, CLI and extension contracts remain compatible.
+Lemieux 1.2.0 expands editor integration through ACP, adds native hover pointers
+in supporting terminals, and makes active work easier to inspect and stop.
+The supported 1.x library, CLI and extension contracts remain compatible.
 
 ## What changed
 
-- **Stable, readable header and status.** The version, directory and session
-  label stay fixed while overflowing header metadata scrolls on its own clock.
-  Transcript updates preserve scrolling progress. Status stats rotate as
-  complete, viewport-sized pages every five seconds, and permission mode stays
-  visible.
-- **Todo navigation.** Press F5 or click the Todo List title to inspect the
-  complete plan, including items hidden by the pinned preview's height limit.
-  Navigate and scroll without losing the composer draft. Alt-M minimizes the
-  pinned preview to a summary row and restores it when pressed again.
-- **Tasks and selection.** Shift-Down closes either Tasks pane alongside Esc.
-  Task descriptions and result/output text use muted grey italics. Shift-Up
-  and Shift-Down select across multiline drafts, including soft wraps; F6 and
-  the Tasks badge remain available while editing.
-- **Routed fast mode.** `/fast` is available when the model and route explicitly
-  advertise faster service, including supporting Ixway gateways. Preserve the
-  chosen service tier through gateway requests, restore it with the session,
-  and show active fast or ultrafast service in red in the header.
-- **Terminal agent status.** OSC 7501 reports working, waiting, completed,
-  failed and cancelled states to supporting terminals and multiplexers.
-  Reports are independent of desktop notifications, and redirected CLI output
-  stays free of status sequences. Optional `"program_status_title": true`
-  adds the displayed session label and follows `/name` and session switches;
-  it is off by default and leaves the ordinary window title intact.
+- **Editor integration.** Use `lmx acp setup` to configure credentials and a
+  model before connecting Zed. ACP exposes model/reasoning selectors, form
+  questions, tool locations and file diffs. V1 editor text access includes
+  unsaved buffers while preserving host filesystem policy and approvals.
+  Session load/resume and repeated close are corrected. Experimental draft v2
+  clients must adopt the updated configuration/capability shapes and
+  `_meta["com.github.houllette.lemieux/capabilities"]` namespace; v1 keeps
+  `_meta.lemieux`. Registry metadata is prepared; registry publication follows
+  separate qualification.
+- **Native hover pointers.** Direct Ghostty and Kitty sessions show a pointer
+  over visible click targets through ExRatatui 0.21.0. `LMX_HOVER_POINTER=0`
+  disables it; `LMX_HOVER_POINTER=1` explicitly declares support elsewhere.
+  Unknown terminals and multiplexers stay conservative. Editor handoff and
+  shutdown restore the arrow; embedding hosts opt in explicitly.
+- **Visible verification and cancellation.** Post-answer verification has an
+  explicit phase and Tasks entry with bounded output, elapsed time and Stop
+  task. Cancellation is recorded, queued follow-ups survive, and later results
+  are labelled as new follow-ups. Tasks puts `[c Stop task]` first for running
+  commands and agents while retaining confirmation and logs.
+- **Responsive commands.** `/fast` can change during a turn and takes effect
+  on the next model request, including tool continuations; requests already
+  in flight retain their parameters. Faster service still requires route/model
+  support and may cost more. `/usage` executes with one Enter and reports
+  asynchronous fetching, results or failures. Highlighted autocomplete choices
+  work on Enter and Tab during active turns.
+- **Terminal fixes.** Startup notices stay in one temporary box and dismiss
+  completely. FAST and ULTRAFAST badges use consistent spacing and case.
+  Standard console log handlers are muted while the TUI owns the terminal,
+  while file diagnostics remain available.
+- **Dependency refresh.** NimblePool moves to 1.2.0 and Telemetry to 1.4.3;
+  committed example locks are refreshed.
 
-The [changelog](https://github.com/houllette/lemieux/blob/v1.1.3/CHANGELOG.md)
-has the detailed changes.
+The [changelog](https://github.com/houllette/lemieux/blob/v1.2.0/CHANGELOG.md)
+has the detailed changes. See [ACP setup](https://github.com/houllette/lemieux/blob/v1.2.0/docs/acp.md)
+for editor configuration and protocol scope.
 
-## Update from 1.1.2
+## Update from 1.1.3
 
 **Restart on every platform. No hot update or live downgrade is declared.**
-Retained conversation/TUI state, callbacks and new chrome, Todo inspector and
-terminal-status modules require fresh initialization.
+New ACP and verification modules, retained server/TUI state and the native
+terminal dependency update require fresh initialization.
 
 Save unsent drafts, stage the signed update with `lmx update` or `/update`,
 then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
 installer-managed TUI restart preserves its exact session. Personal config
-version 1, extension API 1, existing plans and supported 1.x contracts remain
-compatible. Consumed budgets remain attached to the resumed session.
-See the [upgrade steps](https://github.com/houllette/lemieux/blob/v1.1.3/docs/releases.md#upgrading-from-112-to-113).
+version 1, extension API 1, existing transcripts and supported 1.x contracts
+remain compatible. Consumed budgets remain attached to the resumed session.
+See the [upgrade steps](https://github.com/houllette/lemieux/blob/v1.2.0/docs/releases.md#upgrading-from-113-to-120).
 
 ## Install
 
@@ -65,14 +74,14 @@ checksums, and installs per user under `~/.local`. Add `~/.local/bin` to PATH.
 | Linux arm64 or musl | Use a source checkout; no native archive |
 
 The release-signing public key is `X7aGNLOgOV+bz13CuG4x4AVnhKmsPIH8eYvBrajsiG8=`.
-[Verification and installation details](https://github.com/houllette/lemieux/blob/v1.1.3/docs/releases.md)
+[Verification and installation details](https://github.com/houllette/lemieux/blob/v1.2.0/docs/releases.md)
 explain the signature/checksum chain and platform limits.
 
-For an embedding application, use `{:lemieux, "~> 1.1"}`. The library requires
+For an embedding application, use `{:lemieux, "~> 1.2"}`. The library requires
 Elixir 1.19 or newer and OTP 27 or newer, starts no Lemieux processes on its
 own, and retains explicit host ownership of credentials, storage and policy.
 Update constrained provider-stack locks together; start with
-[First embedded agent](https://hexdocs.pm/lemieux/1.1.3/first-embedded-agent.html).
+[First embedded agent](https://hexdocs.pm/lemieux/1.2.0/first-embedded-agent.html).
 
 ## Trust and experimental scope
 
@@ -80,10 +89,8 @@ Update constrained provider-stack locks together; start with
 only inside an available OS sandbox, otherwise they ask. MCP, web and eval
 tools ask either way. Instructions, skills and optional answers grant no new
 authority. The installed binary never loads a working directory's `.env`.
-See [the trust model](https://github.com/houllette/lemieux/blob/v1.1.3/SECURITY.md#what-lmx-trusts-by-default).
+See [the trust model](https://github.com/houllette/lemieux/blob/v1.2.0/SECURITY.md#what-lmx-trusts-by-default).
 
-Windows, browser automation and experimental learning/benchmarking APIs retain
-their existing status. This patch makes no claim of live provider/model
-quality, hosted cache effectiveness or improved learning outcomes. Native
-local terminal pointer feedback remains dependent on upstream capability and
-lifecycle support; see the [roadmap](https://github.com/houllette/lemieux/blob/v1.1.3/docs/roadmap.md).
+Windows, browser automation, ACP draft v2 and experimental learning/benchmarking
+APIs retain their experimental status. This release makes no claim of live
+provider/model quality, hosted cache effectiveness or improved learning outcomes.
