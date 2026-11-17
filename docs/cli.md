@@ -618,6 +618,10 @@ only; prior successful data may remain visible with a `STALE` label. Results
 are cached for up to one minute; `/usage refresh` fetches again. There is no
 background polling.
 
+Enter on the highlighted `/usage` runs it immediately. A fetching acknowledgement
+appears while the report runs; failures and timeouts appear in the transcript,
+and `/usage refresh` can retry them without interrupting the active turn.
+
 - OpenRouter reports spend for the configured API key's daily, weekly and
   monthly windows, plus its reported remaining key allowance. Other keys in
   the account are outside that scope.

@@ -117,7 +117,7 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
         # These bare commands act immediately; their arguments are optional.
         accepts_arguments? =
           Map.fetch!(by_name, command.name).accepts_arguments? and
-            command.name not in ~w(mcp copy tools fast)
+            command.name not in ~w(mcp copy tools fast usage)
 
         suffix = if accepts_arguments?, do: " ", else: ""
 

@@ -9,6 +9,9 @@ API.
 
 ## Unreleased
 
+- Run highlighted `/usage` with one Enter, acknowledge fetching, and display
+  asynchronous reports or failures while clearing pending requests for retries. (#192)
+
 - Honor highlighted autocomplete choices on Enter and Tab during active turns;
   ordinary drafts retain Enter-to-steer and Tab-to-queue behavior. (#202)
 

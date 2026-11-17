@@ -45,6 +45,8 @@ defmodule Lemieux.Conversation.Command.Usage do
       )
 
   def perform(acc, host, {:account_usage, id, previous}) do
+    acc = Dispatch.say(acc, host, "Fetching provider account usage…")
+
     Dispatch.run(acc, host, fn ->
       {:account_usage_result, id, fetch(host.account_usage, previous)}
     end)
