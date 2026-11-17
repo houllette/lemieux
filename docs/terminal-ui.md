@@ -21,6 +21,9 @@ a terminal](#testing-it-without-a-terminal) covers how to check those changes.
 Enabled fast service appears as a red `FAST` or `ULTRAFAST` header badge. It
 stays visible while model metadata scrolls; `/fast off` removes it.
 
+Update announcements arriving during session preparation share the setup
+notice box. Esc dismisses the whole box; expiry during preparation stays dismissed.
+
 ### Program status for terminals and multiplexers
 
 The screen reports its state through the

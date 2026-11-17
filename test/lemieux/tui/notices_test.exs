@@ -97,6 +97,12 @@ defmodule Lemieux.TUI.NoticesTest do
       assert notice_box(state) == nil
     end
 
+    test "dismissal removes every row belonging to the live notice" do
+      state = Notices.say(sized(tui()), :info, "update")
+      state = %{state | lines: state.lines ++ [{:model, "answer"}] ++ state.lines}
+      assert Notices.dismiss(state).lines == [{:model, "answer"}]
+    end
+
     test "an item the box is showing is not added again, and does not restart its time" do
       once = Notices.say(tui(), :warning, "a notice")
       twice = Notices.say(once, :warning, "a notice")

@@ -229,7 +229,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       ready =
         %{
           ready
-          | lines: previous_lines ++ ready.lines,
+          | lines: startup_lines(previous_lines, ready.lines),
             resume: %{ready.resume | startup_status: :ready}
         }
         |> Boot.observe(:screen, "Screen ready", "ok")
@@ -241,6 +241,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
       # `:prompt`, and what was typed and queued — goes now, unless an
       # opening question holds it (`Lemieux.TUI.History.hold/2`).
       Submission.continue_queued(ready)
+    end
+
+    # Hydration can republish a carried notice with new setup/MCP items under
+    # the same ID. Keep that newer row instead of restoring its loading copy.
+    defp startup_lines(previous, ready) do
+      republished = for {:notice_box, id, _items} <- ready, into: MapSet.new(), do: id
+
+      Enum.reject(previous, fn
+        {:notice_box, id, _items} -> MapSet.member?(republished, id)
+        _row -> false
+      end) ++ ready
     end
 
     # The queue staged before there was a session, which hydrating drops.

@@ -159,7 +159,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {newer, rest} = Enum.split_while(state.lines, &(not match?({:notice_box, ^id, _items}, &1)))
 
       case rest do
-        [row | older] -> Transcript.splice(state, newer, [row], [], older)
+        [row | older] -> state |> Transcript.splice(newer, [row], [], older) |> remove_box(id)
         [] -> state
       end
     end

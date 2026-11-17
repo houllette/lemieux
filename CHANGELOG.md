@@ -9,6 +9,9 @@ API.
 
 ## Unreleased
 
+- Keep early update and setup notices in one temporary box across asynchronous
+  startup; Esc and expiry remove the complete box. (#191)
+
 - Display the fast-service header badge as `FAST` or `ULTRAFAST`, with a single
   space before its separator in wide headers and uppercase narrow fallbacks. (#193)
 
