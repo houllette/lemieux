@@ -1040,7 +1040,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # the command line it ran, an MCP prompt and the server it came from, and
     # the models `/provider NAME` found for the provider it named.
     defp route_info({tag, _first, _second} = message, state)
-         when tag in [:shell_result, :mcp_prompt_result, :provider_discovered],
+         when tag in [
+                :shell_result,
+                :mcp_prompt_result,
+                :provider_discovered,
+                :account_usage_result
+              ],
          do: {:noreply, Effects.answer(state, message)}
 
     defp route_info({:mcp_result, _action, _result, _statuses} = message, state),

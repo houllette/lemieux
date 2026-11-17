@@ -9,6 +9,33 @@ API.
 
 ## Unreleased
 
+- Mute every installed standard console logger while the TUI owns the terminal,
+  so a second handler cannot print captured MCP timeout diagnostics over it.
+  Keep file diagnostics and restore console levels after closing. (#190)
+
+- Show post-answer verification as an explicit phase and Tasks entry with bounded
+  output, elapsed time and Stop task. Persist cancellation evidence, preserve
+  queued follow-ups and label later authorized results as new follow-ups. (#195)
+
+- Put `[c Stop task]` first in Tasks for running commands and agents, retain
+  confirmation and logs, and distinguish stopping work from pausing tracking. (#194)
+
+- Allow `/fast` and `Session.set_fast_mode/2` during active turns. Apply changes
+  to the next model request, including same-turn tool continuations, while
+  preserving in-flight requests and capability validation. (#201)
+
+- Run highlighted `/usage` with one Enter, acknowledge fetching, and display
+  asynchronous reports or failures while clearing pending requests for retries. (#192)
+
+- Honor highlighted autocomplete choices on Enter and Tab during active turns;
+  ordinary drafts retain Enter-to-steer and Tab-to-queue behavior. (#202)
+
+- Keep early update and setup notices in one temporary box across asynchronous
+  startup; Esc and expiry remove the complete box. (#191)
+
+- Display the fast-service header badge as `FAST` or `ULTRAFAST`, with a single
+  space before its separator in wide headers and uppercase narrow fallbacks. (#193)
+
 - Update ExRatatui to 0.21.0 in the library and standalone host. Native hover
   pointers follow visible click targets by default in direct Ghostty and Kitty
   sessions; `LMX_HOVER_POINTER=0` disables them. Unknown terminals and detected

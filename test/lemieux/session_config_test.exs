@@ -333,7 +333,6 @@ defmodule Lemieux.SessionConfigTest do
       assert_receive {:provider_started, provider_task}
 
       assert {:error, :busy} = Session.set_model(session, "test:other")
-      assert {:error, :busy} = Session.set_fast_mode(session, "on")
       assert Session.snapshot(session).model == "test:model"
 
       send(provider_task, :finish)
@@ -373,6 +372,74 @@ defmodule Lemieux.SessionConfigTest do
 
       assert {:error, {:fast_mode_unsupported, "test:other", "fast", []}} =
                Session.set_fast_mode(resumed, "on")
+    end
+
+    test "fast changes during a request and tool wave apply to the same turn's next request",
+         context do
+      owner = self()
+
+      held = fn request ->
+        send(owner, {:provider_started, self(), request.params[:fast_mode]})
+        receive do: (:finish -> Scripted.tool_call("read", "read", %{"path" => "file.txt"}))
+      end
+
+      File.write!(Path.join(context.tmp_dir, "file.txt"), "fixture")
+
+      {session, scripted} =
+        start(context,
+          provider: model_provider([held, Scripted.complete("done")]),
+          cwd: context.tmp_dir,
+          tools: [Tools.Read],
+          hooks: [
+            before_tool_call: fn _call, _context ->
+              send(owner, {:tool_waiting, self()})
+              receive do: (:finish -> :allow)
+            end
+          ]
+        )
+
+      id = Session.id(session)
+      assert :ok = Session.prompt(session, "read")
+      assert_receive {:provider_started, provider_task, mode}
+      assert mode in [nil, "off"]
+      assert {:ok, "fast"} = Session.set_fast_mode(session, "on")
+      assert {:ok, "off"} = Session.set_fast_mode(session, "off")
+      assert {:ok, "fast"} = Session.set_fast_mode(session, "toggle")
+      assert {:ok, "off"} = Session.set_fast_mode(session, "toggle")
+      send(provider_task, :finish)
+      assert_receive {:tool_waiting, tool_task}
+      assert {:ok, "ultrafast"} = Session.set_fast_mode(session, "ultrafast")
+      assert Session.snapshot(session).fast_mode == "ultrafast"
+      send(tool_task, :finish)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      assert [first, second] = Scripted.requests(scripted)
+      assert first.params[:fast_mode] == mode
+      assert second.params[:fast_mode] == "ultrafast"
+    end
+
+    test "fast changes while request preparation is held reach the pending dispatch", context do
+      owner = self()
+
+      {session, scripted} =
+        start(context,
+          provider: model_provider([Scripted.complete("done")]),
+          hooks: [
+            prepare_next_turn: fn request, _context ->
+              send(owner, {:preparing_request, self()})
+              receive do: (:finish -> {:ok, request})
+            end
+          ]
+        )
+
+      id = Session.id(session)
+      assert :ok = Session.prompt(session, "hello")
+      assert_receive {:preparing_request, hook}
+      assert {:ok, "fast"} = Session.set_fast_mode(session, "on")
+      assert Scripted.requests(scripted) == []
+      send(hook, :finish)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      assert [request] = Scripted.requests(scripted)
+      assert request.params[:fast_mode] == "fast"
     end
 
     test "invalid fast modes do not mutate configuration", context do

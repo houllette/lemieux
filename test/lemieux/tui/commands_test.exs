@@ -186,6 +186,17 @@ defmodule Lemieux.TUI.CommandsTest do
   end
 
   describe "/fast" do
+    test "a highlighted fast command updates requested mode during work" do
+      session = fake_session(snapshot("01SESSION"), fast_modes: ["fast", "ultrafast"])
+      state = tui(session: session, fast_modes: ["fast", "ultrafast"])
+      state = put_in(state.conversation.busy?, true)
+      enabled = state |> type("/fas") |> press("enter")
+      assert_receive {:set_fast_mode, "toggle"}
+      assert enabled.conversation.fast_mode == "fast"
+      assert enabled.conversation.busy?
+      assert screen(enabled) =~ "next model request"
+    end
+
     test "unsupported models hide the command and deny explicit invocation" do
       state = tui()
       refute Enum.any?(command(state, "/help").lines, &(inspect(&1) =~ "/fast"))

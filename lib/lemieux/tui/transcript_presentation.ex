@@ -119,6 +119,9 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     @doc "Native result cards, with readable legacy notification fallback."
     @spec notification_rows(value :: map()) :: [term()]
+    def notification_rows(%{"follow_up" => true} = value),
+      do: [{:lmx, "Follow-up · new results"} | notification_rows(Map.delete(value, "follow_up"))]
+
     def notification_rows(%{"background_results" => results}) when is_list(results),
       do: Enum.map(results, &{:background_result, &1})
 

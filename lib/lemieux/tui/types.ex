@@ -134,6 +134,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               | :approval
               | :delegating
               | :retrying
+              | :verification
               | :connecting,
             detail: term(),
             since: integer()

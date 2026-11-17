@@ -104,14 +104,7 @@ defmodule Lemieux.Session.Calls do
   def call(:fast_modes, _from, state),
     do: {:reply, Provider.fast_modes(state.provider, state.model), state}
 
-  def call({:set_fast_mode, _mode}, _from, state) when not is_nil(state.turn),
-    do: {:reply, {:error, :busy}, state}
-
-  def call({:set_fast_mode, mode}, _from, state) do
-    if Core.busy?(state),
-      do: {:reply, {:error, :busy}, state},
-      else: Catalog.change_fast_mode(state, mode)
-  end
+  def call({:set_fast_mode, mode}, _from, state), do: Catalog.change_fast_mode(state, mode)
 
   def call(:request_hooks, _from, state),
     do: {:reply, Keyword.get_values(state.hooks, :prepare_next_turn), state}

@@ -97,7 +97,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     state = state |> click("[s Pause tracking]") |> updated()
     assert hd(TaskPanel.cache(state).rows).running?
     refute hd(TaskPanel.cache(state).rows).watching?
-    state = state |> click("[c Cancel command]") |> click("[y Confirm]") |> updated()
+    state = state |> click("[c Stop task]") |> click("[y Confirm]") |> updated()
     assert hd(TaskPanel.cache(state).rows).status == "cancelled"
   end
 
@@ -145,6 +145,101 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert length(Scripted.requests(provider)) == 1
   end
 
+  test "Stop task stays first and clickable in a compact viewport", ctx do
+    [task] = Lemieux.Background.list(ctx.runtime, Session.id(ctx.session))
+
+    [{pid, _}] =
+      Registry.lookup(
+        Lemieux.Supervisor.background_registry(ctx.runtime),
+        {Session.id(ctx.session), task.id}
+      )
+
+    assert :ok = LemieuxTest.Sync.state(pid, &(&1.output_bytes > 0))
+    state = ctx.state |> press("f6") |> loaded()
+    state = %{state | terminal: %{state.terminal | width: 24, height: 10}}
+
+    [{%ExRatatui.Widgets.Paragraph{text: "[c Stop task]"}, rect} | _] =
+      Enum.filter(TaskPanel.render(state, TUI.Screen.panes(state)), fn
+        {%ExRatatui.Widgets.Paragraph{text: "[" <> _}, _} -> true
+        _ -> false
+      end)
+
+    assert rect.height == 1
+    assert rect.y < 10
+    confirming = click(state, "[c Stop task]")
+    assert confirming.modal.confirm.id == TaskPanel.cache(state).selected
+    assert confirming.modal.confirm.prompt =~ "Stop task"
+    stopping = confirming |> press("y")
+    assert screen(stopping) =~ "Stopping task"
+    stopped = updated(stopping)
+    assert stopped.modal.notice =~ "Stop requested"
+    assert hd(TaskPanel.cache(stopped).rows).status == "cancelled"
+    assert TaskPanel.cache(stopped).detail.logs =~ "READY"
+    assert length(Scripted.requests(ctx.provider)) == 2
+  end
+
+  test "a task settled during confirmation keeps its terminal state and explains the race", ctx do
+    state = ctx.state |> press("f6") |> loaded() |> press("c")
+    id = state.modal.confirm.id
+    assert :ok = Tasks.action(ctx.session, id, :cancel)
+    state = press(state, "y")
+    token = state.modal.operation
+    session = ctx.session
+    assert_receive {:tasks_result, ^session, ^token, :action, {:error, :already_finished}} = reply
+    assert {:noreply, state} = TUI.handle_info(reply, state)
+    state = loaded(state)
+    assert state.modal.notice =~ "already finished"
+    assert hd(TaskPanel.cache(state).rows).status == "cancelled"
+  end
+
+  test "quiet agents and delegated commands expose Stop task and writer batch scope", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    original = TaskPanel.cache(state).detail
+
+    for changes <- [
+          %{kind: :agent, agent_type: :delegate, name: "quiet-agent", logs: ""},
+          %{kind: :agent, agent_type: :writer, name: "quiet-writer", logs: ""},
+          %{kind: :command, managed?: true, logs: ""}
+        ] do
+      row = Map.merge(original, changes)
+      selected = put_in(state.session_view.tasks.rows, [row])
+      selected = put_in(selected.session_view.tasks.detail, row)
+      assert screen(selected) =~ "[c Stop task]"
+      refute screen(selected) =~ "Pause tracking"
+      confirming = press(selected, "c")
+      assert confirming.modal.confirm.id == row.id
+      assert confirming.modal.confirm.prompt =~ row.name
+
+      if changes[:agent_type] == :writer,
+        do: assert(confirming.modal.confirm.prompt =~ "all writers in this batch")
+    end
+
+    row = Map.merge(original, %{kind: :external, running?: false})
+    state = put_in(state.session_view.tasks.rows, [row])
+    state = put_in(state.session_view.tasks.detail, row)
+    assert screen(press(state, "c")) =~ "only supports observation"
+    assert press(state, "c").modal.confirm == nil
+  end
+
+  test "a compact writer confirmation reserves enough rows to show the whole scope", ctx do
+    state = ctx.state |> press("f6") |> loaded()
+    row = Map.merge(TaskPanel.cache(state).detail, %{kind: :agent, agent_type: :writer})
+    state = put_in(state.session_view.tasks.rows, [row])
+    state = put_in(state.session_view.tasks.detail, row)
+    state = %{state | terminal: %{state.terminal | width: 24, height: 12}} |> press("c")
+    prompt = state.modal.confirm.prompt <> "  Y confirm · Esc back"
+    assert prompt =~ "all writers in this batch"
+
+    assert {%ExRatatui.Widgets.Paragraph{wrap: true}, area} =
+             Enum.find(TaskPanel.render(state, TUI.Screen.panes(state)), fn
+               {%ExRatatui.Widgets.Paragraph{text: ^prompt}, _} -> true
+               _ -> false
+             end)
+
+    assert area.height >= length(TUI.Window.wrap(prompt, area.width))
+    assert area.y + area.height <= 12
+  end
+
   defp loaded(state) do
     session = state.session
     token = TaskPanel.cache(state).token
@@ -188,7 +283,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     assert screen(state) =~ "printf READY; sleep 60"
     assert screen(state) =~ "Command · full shell source"
     state = press(state, "l")
-    assert screen(state) =~ "Cancel command"
+    assert screen(state) =~ "Stop task"
     assert typed(state) == "keep this draft"
     state = press(state, "up", ["shift"])
     assert state.modal == nil
@@ -294,7 +389,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
     state = state |> press("f") |> updated()
     refute hd(TaskPanel.cache(state).rows).follow_up?
     state = press(state, "c")
-    assert screen(state) =~ "Cancel command"
+    assert screen(state) =~ "Stop task"
     assert {:ok, %{rows: [%{running?: true}]}} = Tasks.snapshot(ctx.session)
     state = state |> press("y") |> updated()
     assert hd(TaskPanel.cache(state).rows).status == "cancelled"
@@ -712,7 +807,7 @@ defmodule Lemieux.TUI.TaskPanelTest do
              TaskPanel.cache(state).rows
 
     assert screen(state) =~ "Unavailable"
-    refute screen(state) =~ "Cancel command"
+    refute screen(state) =~ "Stop task"
     assert TaskPanel.cache(state).token == nil
     assert TaskPanel.cache(state).timer == nil
   end

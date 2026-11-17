@@ -24,7 +24,9 @@ defmodule Lemieux.CLI.TUIQuietStderrTest do
 
     on_exit(fn ->
       Logger.configure(level: level)
-      for handler <- [:lmx_file, :lmx_stderr], do: :logger.remove_handler(handler)
+
+      for handler <- [:lmx_file, :lmx_stderr, :additional_console],
+          do: :logger.remove_handler(handler)
 
       for %{id: id} = config <- handlers do
         _ = :logger.remove_handler(id)
@@ -71,6 +73,28 @@ defmodule Lemieux.CLI.TUIQuietStderrTest do
     end
 
     assert level(:lmx_stderr) == before
+  end
+
+  test "a console installed after CLI configuration cannot replay captured stderr over the TUI",
+       %{tmp_dir: dir} do
+    :ok = Logs.install(dir: dir, stderr?: true)
+
+    :ok =
+      :logger.add_handler(:additional_console, :logger_std_h, %{
+        level: :warning,
+        config: %{type: :standard_io}
+      })
+
+    before = level(:additional_console)
+
+    assert TUI.quiet_stderr(fn -> level(:additional_console) end, true) == :none
+    assert level(:additional_console) == before
+
+    assert_raise RuntimeError, fn ->
+      TUI.quiet_stderr(fn -> raise "fixture crash" end, true)
+    end
+
+    assert level(:additional_console) == before
   end
 
   # `LMX_LOG_LEVEL=debug lmx 2> lmx-debug.log`: nothing is drawn over the

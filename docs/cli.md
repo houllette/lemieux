@@ -273,8 +273,11 @@ check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 **Fast service.** `/fast` toggles fast mode; `/fast on` and `/fast off` select
 it explicitly. `/fast ultrafast` is offered only when the model catalog and
 active transport support that tier. The choice is saved with the session and
-cleared when switching to an unsupported model or connection. An active
-`fast` or `ultrafast` qualifier stays visible in red in the header, beside the
+cleared when switching to an unsupported model or connection. Changes are
+accepted during a turn and apply to the next model request, including the
+continuation after a tool; an in-flight request keeps its original settings.
+Changing Fast mode starts no extra request. An active
+`FAST` or `ULTRAFAST` qualifier stays visible in red in the header, beside the
 scrolling metadata. It shows the requested mode; upstream may downgrade a
 request. Capability is
 not subscription entitlement: the provider still authorizes each request.
@@ -302,8 +305,8 @@ endpoint contract differs from the public [Sign in with ChatGPT catalog](https:/
 
 | Key | What it does |
 | --- | --- |
-| Enter | Send the input, or take the highlighted suggestion. A suggestion that needs an argument opens its next menu. While the agent works, Enter sends a [steer](#steering-and-the-queue) |
-| Tab | Fill the highlighted suggestion; in an empty box, take the follow-up hint; while the agent works, queue the draft |
+| Enter | Take the highlighted suggestion, including while the agent works. A suggestion that needs an argument opens its next menu. With no menu, send the input, or a [steer](#steering-and-the-queue) during a turn |
+| Tab | Fill the highlighted suggestion, including while the agent works; with no menu, take the follow-up hint in an empty idle box, or queue the draft during a turn |
 | Shift-Enter | New line, where the terminal reports Shift with Enter |
 | Ctrl-J, or `\` at the end of a line then Enter | New line, in any terminal |
 | Up / Down | Move through suggestions or the lines of a draft; Up at the first line browses history, Down on the current draft moves to its end |
@@ -359,6 +362,22 @@ clickable Tasks badge or F6 to open Tasks when Shift-Up is not reported.
 In Tasks, each list row's descriptive summary and the Result/Output body use
 muted grey italics. Task names, states, elapsed times, headings and controls
 keep their existing appearance; expanded shell source keeps its code styling.
+
+Select a running command or agent and click **[c Stop task]**, or press **c**
+then **y** to confirm. The confirmation names the selected task and says when
+the action stops an entire writer batch. The control stays first in compact
+menus. Cancellation shows progress, refreshes the task state and keeps retained
+output. Completed tasks cannot be stopped; external sources support observation
+only. **[s Pause tracking]** pauses observation while the underlying work continues.
+
+An answer can be followed by automatic verification. The activity row says
+`verifying COMMAND`; the turn stays busy and queued questions wait until the
+check and any bounded repair turn finish. **Post-answer verification** in Tasks
+shows elapsed time and bounded output. **Stop task** cancels that check, keeps
+the answer and ends verification without requesting a repair. Cancelling the
+whole turn also stops the check and records its cancellation. Required delegate
+results are collected before their tool returns; intentional later background
+results are labeled **Follow-up · new results** when they start a fresh response.
 
 ### Steering and the queue
 
@@ -617,6 +636,10 @@ amounts and reset times stay `unknown`. A failed refresh affects that account
 only; prior successful data may remain visible with a `STALE` label. Results
 are cached for up to one minute; `/usage refresh` fetches again. There is no
 background polling.
+
+Enter on the highlighted `/usage` runs it immediately. A fetching acknowledgement
+appears while the report runs; failures and timeouts appear in the transcript,
+and `/usage refresh` can retry them without interrupting the active turn.
 
 - OpenRouter reports spend for the configured API key's daily, weekly and
   monthly windows, plus its reported remaining key allowance. Other keys in

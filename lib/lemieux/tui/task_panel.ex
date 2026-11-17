@@ -34,7 +34,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
       TaskSteer,
       TaskText,
       Transcript,
-      Width
+      Width,
+      Window
     }
 
     @doc false
@@ -448,6 +449,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
              "Agent assignments expose instructions, output, steering and cancellation."
            )
 
+    defp choose_row(state, action, %{kind: :verification})
+         when action in [:watch, :stop, :follow_up, :clear],
+         do:
+           put_in(
+             state.modal.notice,
+             "Verification belongs to this turn. Stop task cancels the check; tracking cannot be paused."
+           )
+
     defp choose_row(state, action, %{managed?: true})
          when action in [:watch, :stop, :follow_up, :clear],
          do:
@@ -456,8 +465,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
              "This agent manages completion. You can inspect or cancel its command."
            )
 
+    defp choose_row(state, :cancel, %{kind: :external}),
+      do: put_in(state.modal.notice, "Stop unavailable: this source only supports observation.")
+
     defp choose_row(state, :cancel, %{running?: false}),
-      do: put_in(state.modal.notice, "Only running local commands can be cancelled here.")
+      do: put_in(state.modal.notice, "Stop unavailable: this task has already finished.")
 
     defp choose_row(state, :follow_up, row) when not row.watching? or row.delivered?,
       do: put_in(state.modal.notice, "Auto-resume can be changed while tracking is active.")
@@ -479,15 +491,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp choose_row(state, action, row), do: act(state, action, row.id)
 
-    defp cancel_prompt(%{agent_type: :writer}), do: "Cancel all writers in this batch?"
+    defp cancel_prompt(%{agent_type: :writer} = row),
+      do: "Stop task #{row.name}? This cancels all writers in this batch."
+
+    defp cancel_prompt(%{kind: :verification}),
+      do: "Stop task Post-answer verification? The answer is kept and no repair request starts."
 
     defp cancel_prompt(row),
-      do: "#{Map.get(row, :cancel_label, "Cancel command")} #{Map.get(row, :name, "")}?"
+      do: "Stop task #{Map.get(row, :name, row.id)}? Its retained output is kept."
 
     defp act(state, action, id) do
       case decision(state, action) do
         :allow ->
-          operation(state, action_work(state, action, id))
+          notice =
+            if action == :cancel, do: "Stop requested; refreshing task status.", else: "Updated."
+
+          operation(state, action_work(state, action, id), notice)
 
         {:deny, reason} ->
           put_in(state.modal.notice, reason)
@@ -760,7 +779,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           g.logs
         ) ++
         draw(
-          %Paragraph{text: notice, wrap: false, style: %Style{fg: theme.voices.activity}},
+          %Paragraph{text: notice, wrap: true, style: %Style{fg: theme.voices.activity}},
           g.notice
         ) ++
         Enum.flat_map(g.buttons, fn {_action, label, rect} ->
@@ -874,18 +893,30 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp notice(%{modal: %{confirm: %{prompt: prompt}}}), do: "#{prompt}  Y confirm · Esc back"
 
+    defp notice(%{modal: %{operation: operation, operation_notice: "Stop requested" <> _}})
+         when not is_nil(operation),
+         do: "Stopping task…"
+
     defp notice(%{modal: %{operation: operation}}) when not is_nil(operation),
       do: "Updating task…"
 
     defp notice(%{modal: %{notice: notice}}) when is_binary(notice), do: notice
 
-    defp notice(state),
-      do:
+    defp notice(state) do
+      unavailable =
+        case selected(state) do
+          %{kind: :external} -> "Stop unavailable: observation only · "
+          %{running?: false} -> "Stop unavailable: task finished · "
+          _row -> ""
+        end
+
+      unavailable <>
         if(state.modal.focus == :logs,
           do: "Output focused · ↑↓ scroll · Home/End · Tab task list · Shift+↓ / Esc close",
           else:
             "Task list focused · ↑↓ select · v toggle details · Tab output · Shift+↓ / Esc close"
         )
+    end
 
     defp geometry(state, panes) do
       data = cache(state)
@@ -907,11 +938,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       log_height = log_height(empty?, log_lines, state.modal.content)
 
-      notice_height = if empty?, do: 0, else: 1
+      notice_height = notice_height(state, width, empty?)
+
       gap = if empty?, do: 0, else: 2
 
+      # A confirmation must show its scope before accepting Y, even when a
+      # compact tray has no room left beside its footer.
+      takeover = if state.modal.confirm, do: &Takeover.area/2, else: &Takeover.tray/2
+
       area =
-        Takeover.tray(
+        takeover.(
           panes,
           2 + list_height + gap + detail_height + command_height + log_height + notice_height +
             footer
@@ -965,6 +1001,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
         preview_rows: preview
       }
     end
+
+    defp notice_height(_state, _width, true), do: 0
+    defp notice_height(%{modal: %{confirm: nil}}, _width, false), do: 1
+    defp notice_height(state, width, false), do: length(Window.wrap(notice(state), width))
 
     defp body_layout(height, _rows, _details, _preview, _logs, true),
       do: %{
@@ -1054,12 +1094,21 @@ if Code.ensure_loaded?(ExRatatui.App) do
       active = Enum.count(cache(state).rows, &active?/1)
       history = length(cache(state).rows) - active
 
-      ([{:active, "[1 Active #{active}]"}, {:history, "[2 History #{history}]"}] ++
+      (stop_button(selected(state)) ++
+         [{:active, "[1 Active #{active}]"}, {:history, "[2 History #{history}]"}] ++
          inspector_button(selected(state), state.modal.content) ++
          row_controls(selected(state), cache(state).monitoring?))
       |> maybe(cache(state).sources != [], {:add, "[a Add watch]"})
       |> Kernel.++([{:close, "[Esc Close]"}])
     end
+
+    # First in the footer so narrow/short trays cannot clip the human stop
+    # control behind navigation and observation controls.
+    defp stop_button(%{running?: true, kind: kind})
+         when kind in [:command, :agent, :verification],
+         do: [{:cancel, "[c Stop task]"}]
+
+    defp stop_button(_row), do: []
 
     defp inspector_button(%{command: command}, :output) when is_binary(command),
       do: [{:inspect, "[v Expand command]"}]
@@ -1077,14 +1126,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do:
         []
         |> maybe(row[:steerable?], {:steer, "[t Steer agent]"})
-        |> maybe(row.running?, {:cancel, "[c #{row.cancel_label}]"})
 
-    defp row_controls(%{managed?: true} = row, _monitoring?),
-      do: maybe([], row.running?, {:cancel, "[c Cancel command]"})
+    defp row_controls(%{managed?: true}, _monitoring?), do: []
 
     defp row_controls(row, monitoring?) do
       []
-      |> maybe(row.running?, {:cancel, "[c Cancel command]"})
       |> maybe(row.watching?, {:stop, "[s Pause tracking]"})
       |> maybe(
         resumable?(row, monitoring?),
@@ -1140,6 +1186,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do: "External jobs expose observation controls only."
 
     defp describe(:session_disconnected), do: "This session is disconnected."
+    defp describe(:already_finished), do: "This task has already finished; its output is kept."
+    defp describe(:not_running), do: "This task is no longer running; its output is kept."
     defp describe(:native_tasks_unavailable), do: "This host does not expose native tasks."
     defp describe(reason), do: "Could not update task: #{inspect(reason)}"
   end

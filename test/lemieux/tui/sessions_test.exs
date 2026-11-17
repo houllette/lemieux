@@ -460,7 +460,13 @@ defmodule Lemieux.TUI.SessionsTest do
           :finish_preparing -> :ok
         end
 
-        {:ok, session, [status_line: HostStatus, processing: ["Deking"], welcome: "ready"]}
+        {:ok, session,
+         [
+           status_line: HostStatus,
+           processing: ["Deking"],
+           welcome: "ready",
+           notices: ["resolved workspace notice"]
+         ]}
       end
 
       {:ok, app} =
@@ -558,9 +564,54 @@ defmodule Lemieux.TUI.SessionsTest do
       assert ready.overlay == nil
       assert screen(ready) =~ "ready"
       assert screen(ready) =~ "version 0.2.0 available"
+      assert screen(ready) =~ "resolved workspace notice"
+
+      assert [{:notice_box, notice_id, items}] =
+               Enum.filter(ready.lines, &match?({:notice_box, _, _}, &1))
+
+      assert notice_id == ready.terminal.notices.id
+      assert items == Notices.items(ready)
+      assert Enum.filter(press(ready, "esc").lines, &match?({:notice_box, _, _}, &1)) == []
+
+      assert {:noreply, expired} =
+               TUI.handle_info({:notices_expired, ready.terminal.notices.token}, ready)
+
+      refute Enum.any?(expired.lines, &match?({:notice_box, _, _}, &1))
       assert "ollama:local" in ready.catalog.discovered
       refute screen(ready) =~ "Starting session"
       assert {:noreply, ^ready} = TUI.handle_info({:habs_tick, loading.overlay.tick}, ready)
+    end
+
+    test "an update notice expired during preparation is not restored on hydration" do
+      tasks = start_supervised!({Task.Supervisor, []})
+      owner = self()
+      session = fake_session(snapshot("02EXPIREDSTART"))
+
+      {:ok, app} =
+        TUI.start_link(
+          test_mode: {80, 24},
+          name: nil,
+          task_supervisor: tasks,
+          start_async: fn _app ->
+            send(owner, {:preparing, self()})
+            receive do: (:ready -> :ok)
+            {:ok, session, [notices: ["workspace ready"]]}
+          end
+        )
+
+      assert_receive {:preparing, starter}
+      send(app, {:version_notice, "early update"})
+      assert :ok = LemieuxTest.Sync.state(app, &(&1.user_state.terminal.notices.id != nil))
+      token = :sys.get_state(app).user_state.terminal.notices.token
+      send(app, {:notices_expired, token})
+      assert :ok = LemieuxTest.Sync.state(app, &(&1.user_state.terminal.notices.id == nil))
+      send(starter, :ready)
+      assert :ok = LemieuxTest.Sync.state(app, &(&1.user_state.id == "02EXPIREDSTART"))
+      ready = :sys.get_state(app).user_state
+      assert [%{text: "workspace ready"}] = Notices.items(ready)
+      refute screen(ready) =~ "early update"
+      assert [{:notice_box, _, _}] = ready.lines
+      GenServer.stop(app)
     end
 
     test "shows preparation errors without accepting a prompt into a missing session" do

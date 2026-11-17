@@ -270,12 +270,9 @@ defmodule Lemieux.CLI.TUI do
     {:left, outcome, receipt}
   end
 
-  # The handler `Lemieux.CLI.Logs` adds when `LMX_LOG_LEVEL` is set.
-  @stderr_handler :lmx_stderr
-
   @doc """
-  Runs `fun` with `lmx`'s standard-error log handler muted while standard
-  error is the terminal, and gives the handler its level back afterwards,
+  Runs `fun` with console log handlers muted while standard error is the
+  terminal, and gives each handler its level back afterwards,
   however `fun` ends.
 
   `LMX_LOG_LEVEL` also prints log lines on standard error
@@ -291,6 +288,10 @@ defmodule Lemieux.CLI.TUI do
   or a pipe; taken to be one where there is no `/dev/stderr` to ask
   (Windows), since muting a redirected one there loses only lines the log
   file records too, and not muting a terminal draws them over the frame.
+  All standard console handlers present when the screen opens are muted:
+  a dependency or host can add one after CLI logging was configured, and a
+  captured MCP diagnostic logged at debug level must not be printed back over
+  the screen by that second handler. File handlers keep recording it.
   `lmx help environment` says so. Public, and `terminal?` an argument, so
   a test can choose either way without a terminal.
   """
@@ -300,18 +301,18 @@ defmodule Lemieux.CLI.TUI do
   def quiet_stderr(fun, false = _redirected) when is_function(fun, 0), do: fun.()
 
   def quiet_stderr(fun, true = _terminal) when is_function(fun, 0) do
-    case :logger.get_handler_config(@stderr_handler) do
-      {:ok, %{level: level}} ->
-        :ok = :logger.update_handler_config(@stderr_handler, :level, :none)
+    consoles =
+      for %{id: id, module: :logger_std_h, config: %{type: type}, level: level} <-
+            :logger.get_handler_config(),
+          type in [:standard_io, :standard_error],
+          do: {id, level}
 
-        try do
-          fun.()
-        after
-          _ = :logger.update_handler_config(@stderr_handler, :level, level)
-        end
+    for {id, _level} <- consoles, do: :logger.update_handler_config(id, :level, :none)
 
-      {:error, _no_handler} ->
-        fun.()
+    try do
+      fun.()
+    after
+      for {id, level} <- consoles, do: :logger.update_handler_config(id, :level, level)
     end
   end
 

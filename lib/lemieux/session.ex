@@ -908,8 +908,11 @@ defmodule Lemieux.Session do
 
   @doc """
   Sets `"fast"`, `"ultrafast"` or `"off"` for future requests. `"on"` selects
-  fast, and `"toggle"` switches fast on or any enabled mode off. Refused during
-  a turn; persisted for resume. Faster modes may cost more and require account access.
+  fast, and `"toggle"` switches fast on or any enabled mode off. Accepted during
+  a turn and persisted for resume. The next not-yet-dispatched model request,
+  including a continuation in this turn, uses the selection; an in-flight
+  request keeps its original parameters. Changing the setting starts no request.
+  Faster modes may cost more and require account access.
   """
   @spec set_fast_mode(session :: session(), mode :: String.t()) ::
           {:ok, String.t()} | {:error, term()}

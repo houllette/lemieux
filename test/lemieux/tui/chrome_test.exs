@@ -136,7 +136,7 @@ defmodule Lemieux.TUI.ChromeTest do
     for width <- [8, 35, 80], frame <- [0, 2_000] do
       title = header(%{state | clock: fn -> frame end}, width)
       assert %ExRatatui.Text.Line{} = title
-      assert Enum.any?(title.spans, &(&1.content =~ "fast" and &1.style.fg == :red)) or width < 6
+      assert Enum.any?(title.spans, &(&1.content =~ "FAST" and &1.style.fg == :red)) or width < 6
       assert Width.of(Enum.map_join(title.spans, & &1.content)) <= max(width - 2, 0)
     end
 
@@ -147,11 +147,21 @@ defmodule Lemieux.TUI.ChromeTest do
     assert header(state, 2) == ""
   end
 
+  test "fast badge joins fitting metadata with one space and disappears cleanly" do
+    state = TUI.new(id: "fast", model: "test:model", test_mode: {160, 24})
+    original = header(state, 160)
+    enabled = put_in(state.conversation.fast_mode, "fast")
+    title = header(enabled, 160)
+    assert Enum.map_join(title.spans, & &1.content) =~ "effort default · FAST "
+    refute Enum.map_join(title.spans, & &1.content) =~ "default  ·"
+    assert header(put_in(enabled.conversation.fast_mode, "off"), 160) == original
+  end
+
   test "resuming uses the session's active mode and older snapshots default to off" do
     session = fake_session(Map.put(snapshot("restored"), :fast_mode, "ultrafast"))
     assert {:ok, state} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
     assert state.conversation.fast_mode == "ultrafast"
-    assert Enum.any?(header(state).spans, &(&1.content =~ "ultrafast" and &1.style.fg == :red))
+    assert Enum.any?(header(state).spans, &(&1.content =~ "ULTRAFAST" and &1.style.fg == :red))
     old_session = fake_session(snapshot("older"))
     assert {:ok, old} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, old_session} end)
     assert old.conversation.fast_mode == "off"
