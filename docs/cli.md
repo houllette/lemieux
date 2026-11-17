@@ -384,12 +384,10 @@ results are labeled **Follow-up · new results** when they start a fresh respons
 While a turn runs, typing in the input box shows `Enter steer · Tab queue`
 below it.
 
-- **Enter sends a steer.** It reaches the model with its next request; the
-  steer box reads `queued for next model request · /unsteer takes it back`.
-  Only one steer waits at a time. `/unsteer` or Alt-Z takes it back until the
-  next request starts, and answers `steer revoked before the next model
-  request`, `steer already sent`, `no steer is waiting` or `the session
-  stopped before the steer was sent`. Cmd-Z does the
+- **Enter sends a steer.** The text stays visible while it waits for the
+  parent's next model request. To direct a specific child, use **Steer agent**
+  in Tasks. Only one parent steer waits at a time. `/unsteer` or Alt-Z takes it
+  back until the next request is assembled. Cmd-Z does the
   same only in a terminal that reports the Command key (the kitty keyboard
   protocol); Terminal.app, iTerm2 and VS Code keep Cmd-Z for their own Undo.
   A steer whose turn stopped first is marked `turn stopped before delivery`.

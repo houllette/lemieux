@@ -30,7 +30,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @type line ::
             {:lmx | :you | :space | :summary | :notice | :interrupted | :verify | :hook,
              String.t()}
-            | {:steer, :pending | :sent | :not_sent, String.t()}
+            | {:steer, :pending | :sent | :not_sent | :revoked, String.t()}
             | {:compacting, reference(), String.t()}
             | {:compact_space, reference()}
             | {:compact_result, String.t()}
@@ -300,10 +300,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     and splitting state that is only ever written as a unit was what had put
     it there. `approvals` is the card drawn for each parked call, by call
     id: the exact rows, so the decision can take exactly them down again
-    and leave the call's own announcement where it was. `sent_steers` is
-    the text the session was handed for each steer still drawn as waiting,
-    beside the text its row shows, which is what `/unsteer` revokes with
-    (`Lemieux.TUI.Submission`).
+    and leave the call's own announcement where it was. A pending steer carries the ID of the user entry
+    that will appear in a parent request when the session consumes it.
     """
     @type in_flight :: %{
             calls: %{optional(String.t()) => map()},
@@ -312,8 +310,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             permissions: %{optional(String.t()) => map() | nil},
             question_flow: QuestionFlow.t() | nil,
             mcp_flow: map() | nil,
-            deferred_steer: {:pending | :sent | :not_sent, String.t()} | nil,
-            sent_steers: [{shown :: String.t(), sent :: String.t()}],
+            pending_steer: %{id: String.t(), text: String.t()} | nil,
             systemone:
               %{mode: String.t(), saved: non_neg_integer() | nil, outcome: String.t() | nil} | nil
           }

@@ -378,7 +378,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       state
       |> put_in([Access.key!(:resume), :monitor], nil)
       |> put_in([Access.key!(:resume), :down], reason)
-      |> Submission.mark_steers(:not_sent)
+      |> Submission.settle_steer(:not_sent)
       |> Turn.stop_processing()
       |> put_in([Access.key!(:conversation), Access.key!(:busy?)], false)
       |> TaskPanel.disconnected()

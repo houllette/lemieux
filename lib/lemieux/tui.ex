@@ -587,8 +587,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
                 permissions: %{},
                 question_flow: nil,
                 mcp_flow: nil,
-                deferred_steer: nil,
-                sent_steers: [],
+                pending_steer: nil,
                 systemone: nil
               },
               # The `@` picker's state in one field, because its parts are read

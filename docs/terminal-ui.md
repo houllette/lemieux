@@ -833,11 +833,12 @@ the edit reaches a terminal editor only when it redraws.
 
 **Steering and the queue.** While the agent is working, a drafted message
 shows `Enter steer · Tab queue`. Enter sends it into the current turn as a
-steer: the steer box, with a muted border, appears after any running tool's
-result and reads `queued for next model request · /unsteer takes it back`.
+steer. The text stays visible under the transcript while it waits for the
+parent's next model request, including while tools and delegates are running.
+Use **Steer agent** in Tasks to send an instruction to an individual child.
 Only one steer waits at a time (a second gets `one steer is already waiting ·
 /unsteer takes it back`); `/unsteer` or Alt-Z takes it back until the next
-model request starts. A turn that stops first marks the steer `turn stopped
+model request is assembled. A turn that stops first marks the steer `turn stopped
 before delivery`. Tab stages up to nine prompts or slash commands (for
 example `/compact`), shown as numbered previews above the input and run in
 order after successful turns. Alt-1 to Alt-9 choose one; Alt-E returns it to

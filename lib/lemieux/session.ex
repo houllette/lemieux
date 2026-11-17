@@ -1015,10 +1015,15 @@ defmodule Lemieux.Session do
   @spec steer(session :: session(), text :: String.t()) :: :ok
   def steer(session, text) when is_binary(text), do: GenServer.call(session, {:steer, text})
 
-  @doc "Revokes a matching steer only while it is still waiting for the next request."
-  @spec revoke_steer(session :: session(), text :: String.t()) :: :ok | {:error, :already_sent}
-  def revoke_steer(session, text) when is_binary(text),
-    do: GenServer.call(session, {:revoke_steer, text})
+  @doc "Queues a steer for active work and returns the ID of its future transcript entry."
+  @spec steer(session(), String.t(), :while_running) :: {:ok, String.t()} | {:error, :idle}
+  def steer(session, text, :while_running) when is_binary(text),
+    do: GenServer.call(session, {:steer_running, text})
+
+  @doc "Revokes a matching steer by text or receipt ID while it is still waiting."
+  @spec revoke_steer(session :: session(), steer :: String.t() | {:id, String.t()}) ::
+          :ok | {:error, :already_sent}
+  def revoke_steer(session, steer), do: GenServer.call(session, {:revoke_steer, steer})
 
   @doc "Queues a fresh prompt after current work; starts immediately when idle."
   @spec follow_up(session(), String.t()) :: :ok | {:error, term()}

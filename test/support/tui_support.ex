@@ -455,6 +455,18 @@ defmodule Lemieux.TUI.TestSupport do
         GenServer.reply(from, :ok)
         fake_session_loop(%{state | steers: [text | state.steers]})
 
+      {:"$gen_call", from, {:steer_running, text}} ->
+        id = Lemieux.ID.generate()
+        send(state.owner, {:steered, text})
+        GenServer.reply(from, {:ok, id})
+        fake_session_loop(%{state | steers: [{id, text} | state.steers]})
+
+      {:"$gen_call", from, {:revoke_steer, {:id, id}}} ->
+        remaining = Elixir.List.keydelete(state.steers, id, 0)
+        result = if remaining == state.steers, do: {:error, :already_sent}, else: :ok
+        GenServer.reply(from, result)
+        fake_session_loop(%{state | steers: remaining})
+
       {:"$gen_call", from, {:revoke_steer, text}} ->
         remaining = Elixir.List.delete(state.steers, text)
         result = if remaining == state.steers, do: {:error, :already_sent}, else: :ok

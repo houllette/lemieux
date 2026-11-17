@@ -780,6 +780,18 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # than them, and a row appearing and vanishing at the newest end would move
     # every selection and every scroll position with it.
     defp live_rows(state, width) do
+      activity_rows(state, width) ++ steer_rows(state, width)
+    end
+
+    defp steer_rows(%{tools: %{pending_steer: nil}}, _width), do: []
+
+    defp steer_rows(%{tools: %{pending_steer: %{text: text}}} = state, width) do
+      [{:steer, :pending, text}]
+      |> RichText.lines(width, theme(state))
+      |> Enum.take(3)
+    end
+
+    defp activity_rows(state, width) do
       case Activity.line(activity(state)) do
         nil ->
           []

@@ -315,8 +315,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         permissions: %{},
         question_flow: nil,
         mcp_flow: nil,
-        deferred_steer: nil,
-        sent_steers: [],
+        pending_steer: nil,
         systemone: systemone
       }
 

@@ -15,6 +15,7 @@ defmodule Lemieux.Session.ToolWave do
   alias Lemieux.Session.Core
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.Prompts
+  alias Lemieux.Session.Recovery
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Telemetry
   alias Lemieux.Tool
@@ -99,13 +100,14 @@ defmodule Lemieux.Session.ToolWave do
     # stopped. Going idle here would leave those words in the queue until somebody
     # prompted again, which reads as having been ignored. The bound still applies: a
     # steer cannot buy more turns than the prompt was allowed.
-    if is_nil(state.aside) and (state.reversed_steers != [] or state.deferred_answers != []) and
+    if stop_reason in [:stop, :ok] and is_nil(state.aside) and
+         (state.reversed_steers != [] or state.deferred_answers != []) and
          state.turns_taken < state.max_turns do
       Compacting.continue(state)
     else
       state =
-        if state.turns_taken >= state.max_turns,
-          do: %{state | reversed_steers: []},
+        if stop_reason not in [:stop, :ok] or state.turns_taken >= state.max_turns,
+          do: Recovery.discard_steers(state),
           else: state
 
       Prompts.start_stop_hook(state, stop_reason)
