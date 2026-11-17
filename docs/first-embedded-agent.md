@@ -14,7 +14,7 @@ Add Lemieux to your dependencies and run `mix deps.get`:
 
 ```elixir
 def deps do
-  [{:lemieux, "~> 1.1"}]
+  [{:lemieux, "~> 1.2"}]
 end
 ```
 

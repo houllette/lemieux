@@ -7,7 +7,17 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 1.2.0 — 2026-11-16
+
+Restart `lmx` after updating from 1.1.3 on every platform, then resume with
+`lmx -c` or `lmx --resume SESSION`. New ACP and verification modules, retained
+TUI/server state and the ExRatatui native update require fresh initialization;
+no hot update or live downgrade is declared. Supported 1.x contracts,
+personal config version 1, extension API 1 and existing transcripts remain
+compatible. Experimental ACP draft v2 clients must use the updated capability
+namespace and configuration shapes below; ACP v1 retains its existing namespace.
+
+### Terminal and session fixes
 
 - Mute every installed standard console logger while the TUI owns the terminal,
   so a second handler cannot print captured MCP timeout diagnostics over it.
@@ -36,6 +46,8 @@ API.
 - Display the fast-service header badge as `FAST` or `ULTRAFAST`, with a single
   space before its separator in wide headers and uppercase narrow fallbacks. (#193)
 
+### Native terminal pointers
+
 - Update ExRatatui to 0.21.0 in the library and standalone host. Native hover
   pointers follow visible click targets by default in direct Ghostty and Kitty
   sessions; `LMX_HOVER_POINTER=0` disables them. Unknown terminals and detected
@@ -43,6 +55,8 @@ API.
   with `LMX_HOVER_POINTER=1`. Embedders opt in with `hover_pointer: true`. Editor
   handoff and runtime cleanup reset the default arrow. Cell hosts keep their
   existing pointer/restore intents.
+
+### Editor integration through ACP
 
 - Add Zed setup instructions, standard ACP model/reasoning selectors, form
   questions, tool locations and file diffs. V1 editor text access includes
@@ -54,6 +68,13 @@ API.
   configuration/capability shapes. Draft v2 holds busy prompts until insertion;
   cancellation rejects uninserted prompts. Its extension advertisement now uses
   `_meta["com.github.houllette.lemieux/capabilities"]`; v1 retains `_meta.lemieux`.
+
+### Dependency maintenance
+
+- Update NimblePool to 1.2.0 and Telemetry to 1.4.3 across the library,
+  release host and bundled extension. Refresh the hello and research example
+  locks to the published Lemieux 1.1.3 package and refresh the computer-use
+  example's compatible dependency resolutions.
 
 ## 1.1.3 — 2026-11-15
 
