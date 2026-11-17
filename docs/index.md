@@ -14,7 +14,7 @@ budgets. Add it to `mix.exs`:
 
 ```elixir
 def deps do
-  [{:lemieux, "~> 1.1"}]
+  [{:lemieux, "~> 1.2"}]
 end
 ```
 
