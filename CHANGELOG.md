@@ -9,6 +9,9 @@ API.
 
 ## Unreleased
 
+- Honor highlighted autocomplete choices on Enter and Tab during active turns;
+  ordinary drafts retain Enter-to-steer and Tab-to-queue behavior. (#202)
+
 - Keep early update and setup notices in one temporary box across asynchronous
   startup; Esc and expiry remove the complete box. (#191)
 

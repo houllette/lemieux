@@ -385,23 +385,23 @@ if Code.ensure_loaded?(ExRatatui.App) do
          when not is_nil(number),
          do: History.queue_draft(state)
 
-    defp complete_or_edit(_event, %{conversation: %{busy?: true}} = state) do
-      if String.trim(typed_value(state)) == "",
-        do: {:noreply, state},
-        else: History.queue_draft(state)
-    end
-
-    defp complete_or_edit(event, state), do: complete_or_edit_regular(event, state)
-
-    defp complete_or_edit_regular(event, state) do
+    defp complete_or_edit(event, state) do
       case completions(state) do
         [] ->
-          accept_followup(event, state)
+          complete_without_menu(event, state)
 
         matches ->
           complete(state, matches)
       end
     end
+
+    defp complete_without_menu(_event, %{conversation: %{busy?: true}} = state) do
+      if String.trim(typed_value(state)) == "",
+        do: {:noreply, state},
+        else: History.queue_draft(state)
+    end
+
+    defp complete_without_menu(event, state), do: accept_followup(event, state)
 
     # Tab means "take what is being offered". With nothing in the box that is
     # the follow-up hint, which is the only thing on screen it could mean —
@@ -422,8 +422,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
          when not is_nil(number),
          do: History.queue_draft(state)
 
-    defp complete_or_submit(%{conversation: %{busy?: true}} = state), do: Submission.submit(state)
-
+    # Visible choices have the same meaning while working. The command's
+    # own policy decides whether its completed value may run during a turn.
     defp complete_or_submit(state) do
       case completions(state) do
         [] -> continue_or_submit(state)
@@ -434,6 +434,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # A line ending in a backslash continues on the next one, as it does in a
     # shell: the fallback for a terminal that sends Shift+Enter as a plain
     # Enter, where the key table's `ctrl-j` is the other way to a newline.
+    defp continue_or_submit(%{conversation: %{busy?: true}} = state),
+      do: Submission.submit(state)
+
     defp continue_or_submit(state) do
       typed = typed_value(state)
 

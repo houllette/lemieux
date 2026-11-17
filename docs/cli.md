@@ -302,8 +302,8 @@ endpoint contract differs from the public [Sign in with ChatGPT catalog](https:/
 
 | Key | What it does |
 | --- | --- |
-| Enter | Send the input, or take the highlighted suggestion. A suggestion that needs an argument opens its next menu. While the agent works, Enter sends a [steer](#steering-and-the-queue) |
-| Tab | Fill the highlighted suggestion; in an empty box, take the follow-up hint; while the agent works, queue the draft |
+| Enter | Take the highlighted suggestion, including while the agent works. A suggestion that needs an argument opens its next menu. With no menu, send the input, or a [steer](#steering-and-the-queue) during a turn |
+| Tab | Fill the highlighted suggestion, including while the agent works; with no menu, take the follow-up hint in an empty idle box, or queue the draft during a turn |
 | Shift-Enter | New line, where the terminal reports Shift with Enter |
 | Ctrl-J, or `\` at the end of a line then Enter | New line, in any terminal |
 | Up / Down | Move through suggestions or the lines of a draft; Up at the first line browses history, Down on the current draft moves to its end |

@@ -1501,7 +1501,7 @@ defmodule Lemieux.TUI.InputTest do
     end
 
     test "a slash command can be queued and runs only after the active turn" do
-      queued = working() |> type("/compact") |> press("tab")
+      queued = working() |> type("/compact") |> press("tab") |> press("tab")
 
       assert queued.history.queued == ["/compact"]
       assert typed(queued) == ""
@@ -1519,6 +1519,7 @@ defmodule Lemieux.TUI.InputTest do
       queued =
         working()
         |> type("/compact")
+        |> press("tab")
         |> press("tab")
         |> type("follow-up")
         |> press("tab")
