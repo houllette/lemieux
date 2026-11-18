@@ -68,6 +68,11 @@ defmodule Lemieux.MCP.Client do
   This contains no transport error payload; sessions retain cached descriptors
   for inspection while removing that connection's tools from future requests.
 
+  For stdio connections, `info/1` reports the active requests' timing, their
+  silence budgets, and numeric framing and unmatched-response counters.
+  Debug logs correlate request ids with the client PID and record send, first
+  progress, and terminal outcomes without including server payloads.
+
   A `ping` is answered; any other request a server sends gets "method not
   found", because lemieux declares no capability a server may call back into,
   and a server waiting on an answer that never comes is a server that hangs.
@@ -88,6 +93,7 @@ defmodule Lemieux.MCP.Client do
 
   alias Lemieux.MCP.Protocol
   alias Lemieux.MCP.RemoteTool
+  alias Lemieux.MCP.Transport.Stdio
 
   @timeout :timer.seconds(30)
   @startup_timeout :timer.seconds(60)
@@ -246,6 +252,7 @@ defmodule Lemieux.MCP.Client do
       startup_notify: Keyword.get(opts, :startup_notify),
       notify: Keyword.get(opts, :notify, owner),
       pending: %{},
+      unmatched_responses: 0,
       monitors: %{},
       listed?: false,
       notices: [],
@@ -423,7 +430,8 @@ defmodule Lemieux.MCP.Client do
       failure: state.failure,
       needs_auth: state.needs_auth,
       notices: state.notices,
-      mode: state.mode
+      mode: state.mode,
+      stdio: stdio_status(state)
     }
 
     {:reply, info, state}
@@ -627,8 +635,11 @@ defmodule Lemieux.MCP.Client do
       :duplex ->
         case state.module.notify(state.transport, request) do
           {:ok, transport} ->
+            entry = entry(continue, timeout, nil)
+            trace_stdio(state, id, entry, :sent)
+
             %{state | transport: transport}
-            |> track(id, entry(continue, timeout, nil), Keyword.get(opts, :from))
+            |> track(id, entry, Keyword.get(opts, :from))
             |> arm(id)
 
           {:error, reason, transport} ->
@@ -645,7 +656,60 @@ defmodule Lemieux.MCP.Client do
   end
 
   defp entry(continue, timeout, task),
-    do: %{continue: continue, timeout: timeout, timer: nil, token: nil, task: task, caller: nil}
+    do: %{
+      continue: continue,
+      timeout: timeout,
+      timer: nil,
+      token: nil,
+      task: task,
+      caller: nil,
+      sent_at: System.monotonic_time(:millisecond),
+      last_progress_at: nil,
+      progress_count: 0
+    }
+
+  defp stdio_status(%{module: Stdio, transport: %{buffer: _buffer}} = state) do
+    now = System.monotonic_time(:millisecond)
+
+    pending =
+      state.pending
+      |> Enum.take(20)
+      |> Enum.map(fn {id, entry} ->
+        %{
+          request_id: id,
+          elapsed_ms: now - entry.sent_at,
+          silence_ms: now - (entry.last_progress_at || entry.sent_at),
+          timeout_ms: entry.timeout,
+          progress_count: entry.progress_count
+        }
+      end)
+
+    %{
+      pending: pending,
+      pending_count: map_size(state.pending),
+      unmatched_responses: state.unmatched_responses,
+      stdout_bytes: state.transport.total_bytes,
+      unframed_bytes: byte_size(state.transport.buffer),
+      diagnostic_bytes: state.transport.diagnostic_bytes
+    }
+  end
+
+  defp stdio_status(_state), do: nil
+
+  defp trace_stdio(%{module: Stdio} = state, id, entry, phase) do
+    Logger.debug(fn ->
+      now = System.monotonic_time(:millisecond)
+
+      "MCP stdio #{inspect(self())} request #{id} #{phase} " <>
+        "elapsed_ms=#{now - entry.sent_at} timeout_ms=#{entry.timeout} " <>
+        "progress_count=#{entry.progress_count} unmatched_responses=#{state.unmatched_responses} " <>
+        "stdout_bytes=#{state.transport.total_bytes} " <>
+        "unframed_bytes=#{byte_size(state.transport.buffer)} " <>
+        "diagnostic_bytes=#{state.transport.diagnostic_bytes}"
+    end)
+  end
+
+  defp trace_stdio(_state, _id, _entry, _phase), do: :ok
 
   defp progress(params, id) do
     Map.update(params, "_meta", %{"progressToken" => id}, &Map.put(&1, "progressToken", id))
@@ -753,6 +817,7 @@ defmodule Lemieux.MCP.Client do
         state
 
       {entry, state} ->
+        trace_stdio(state, id, entry, :cancelled)
         with {pid, _ref} <- entry.task, do: Process.exit(pid, :kill)
         cancel_on_wire(state, id, reason)
     end
@@ -783,9 +848,14 @@ defmodule Lemieux.MCP.Client do
   @impl GenServer
   def handle_info({:mcp_deadline, id, token}, state) do
     case Map.fetch(state.pending, id) do
-      {:ok, %{token: ^token, timeout: timeout}} ->
+      {:ok, %{token: ^token, timeout: timeout} = entry} ->
+        trace_stdio(state, id, entry, :timed_out)
         state = cancel_on_wire(state, id, "timed out")
-        message = "the MCP server #{state.server} did not answer within #{seconds(timeout)}"
+
+        message =
+          "the MCP server #{state.server} did not answer within #{duration(timeout)} " <>
+            "of silence (request #{id})"
+
         {:noreply, complete(state, id, {:error, message})}
 
       _stale ->
@@ -873,8 +943,16 @@ defmodule Lemieux.MCP.Client do
 
   # A reply to something we asked.
   defp incoming(state, %{"id" => id} = message)
-       when is_map_key(message, "result") or is_map_key(message, "error"),
-       do: complete(state, id, {:ok, message})
+       when is_map_key(message, "result") or is_map_key(message, "error") do
+    case Map.fetch(state.pending, id) do
+      {:ok, entry} ->
+        trace_stdio(state, id, entry, :response)
+        complete(state, id, {:ok, message})
+
+      :error ->
+        %{state | unmatched_responses: state.unmatched_responses + 1}
+    end
+  end
 
   # A request the server is making of us.
   defp incoming(state, %{"id" => id, "method" => "ping"}),
@@ -890,8 +968,22 @@ defmodule Lemieux.MCP.Client do
   defp incoming(state, %{
          "method" => "notifications/progress",
          "params" => %{"progressToken" => id}
-       }),
-       do: arm(state, id)
+       }) do
+    case Map.fetch(state.pending, id) do
+      {:ok, entry} ->
+        entry = %{
+          entry
+          | last_progress_at: System.monotonic_time(:millisecond),
+            progress_count: entry.progress_count + 1
+        }
+
+        if entry.progress_count == 1, do: trace_stdio(state, id, entry, :progress)
+        arm(%{state | pending: Map.put(state.pending, id, entry)}, id)
+
+      :error ->
+        state
+    end
+  end
 
   defp incoming(state, %{"method" => "notifications/tools/list_changed"}), do: refresh(state)
 
@@ -964,7 +1056,10 @@ defmodule Lemieux.MCP.Client do
 
     state.pending
     |> Map.keys()
-    |> Enum.reduce(state, &complete(&2, &1, {:error, state.failure}))
+    |> Enum.reduce(state, fn id, state ->
+      trace_stdio(state, id, Map.fetch!(state.pending, id), :closed)
+      complete(state, id, {:error, state.failure})
+    end)
   end
 
   # ---------------------------------------------------------------------------
@@ -1019,8 +1114,8 @@ defmodule Lemieux.MCP.Client do
     get_in(result, ["_meta", "io.modelcontextprotocol/serverInfo"])
   end
 
-  defp seconds(timeout) when is_integer(timeout), do: "#{div(timeout, 1000)}s"
-  defp seconds(timeout), do: inspect(timeout)
+  defp duration(timeout) when rem(timeout, 1000) == 0, do: "#{div(timeout, 1000)}s"
+  defp duration(timeout), do: "#{timeout}ms"
 
   defp message(%{"message" => message}), do: message
   defp message(error), do: inspect(error)

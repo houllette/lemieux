@@ -7,6 +7,7 @@ defmodule Lemieux.MCP.DuplexTest do
   """
 
   use ExUnit.Case, async: true
+  import ExUnit.CaptureLog
 
   alias Lemieux.MCP
   alias Lemieux.MCP.Client
@@ -80,12 +81,51 @@ defmodule Lemieux.MCP.DuplexTest do
     assert text(Client.call_tool(client, "slow", args)) =~ "slept"
   end
 
+  test "completed work and an unmatched response leave the call pending until its matching frame" do
+    log =
+      capture_log([level: :debug], fn ->
+        client = start()
+        gate = CommandGate.new()
+        {:ok, port} = :inet.port(gate.listener)
+
+        call =
+          Task.async(fn ->
+            Client.call_tool(client, "slow", %{"control_port" => port, "split_reply" => true})
+          end)
+
+        socket = CommandGate.ready(gate)
+        assert text(Client.call_tool(client, "fast", %{"text" => "probe"})) == "fast: probe"
+
+        assert %{
+                 stdio: %{
+                   pending_count: 1,
+                   pending: [%{request_id: id, progress_count: 1, timeout_ms: 10_000}],
+                   unmatched_responses: 1
+                 }
+               } = Client.info(client)
+
+        assert Task.yield(call, 0) == nil
+        assert :ok = CommandGate.release(socket)
+        assert text(Task.await(call)) == "completed " <> String.duplicate("x", 100_000)
+        assert Client.info(client).stdio.pending_count == 0
+        send(self(), {:request, id})
+      end)
+
+    assert_received {:request, id}
+    assert log =~ "request #{id} sent"
+    assert log =~ "request #{id} progress"
+    assert log =~ "request #{id} response"
+    refute log =~ "unmatched-private"
+    refute log =~ "completed xxxx"
+  end
+
   test "a silent call past its deadline fails, and is cancelled on the server" do
     client = start("duplex", tool_timeout: 300)
 
     assert {:error, message} = Client.call_tool(client, "slow", %{"seconds" => 3})
-    assert message =~ "did not answer within"
+    assert message =~ "did not answer within 300ms of silence (request "
     assert [_withdrawn] = cancelled(client)
+    assert Client.info(client).stdio.pending_count == 0
   end
 
   test "a changed tool list is listed again and announced" do

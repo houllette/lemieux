@@ -663,6 +663,21 @@ They wait for you to trust them. The terminal UI asks. From a shell, run
 Under `--config none` without `LMX_HOME` there is nowhere to remember
 trust, so only `--project-mcp` starts them.
 
+### An MCP stdio tool is waiting for a response
+
+The stdio client waits for a matching JSON-RPC response. Matching progress
+notifications renew the silence timeout, which defaults to ten minutes and
+can be set with the server's `tool_timeout` in milliseconds. Ctrl-C or
+`/cancel` withdraws the request. A timed-out call can still have completed
+work on the remote service, so check that service before repeating a mutation.
+
+With `LMX_LOG_LEVEL=debug`, the log records the client PID and local request
+ID, the silence budget, first matching progress and the final local outcome.
+Numeric stdout and framing counters help distinguish a partial frame or
+an unmatched reply from no response. Embedders can inspect active requests
+via `Lemieux.MCP.Client.info/1`. These observations describe what reached
+the client. Server-side logs are needed to establish what was emitted.
+
 ### The agent appears stuck on a question
 
 An `ask_user` question blocks by default. In the terminal UI, choose an answer (or
