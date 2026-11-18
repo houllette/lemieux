@@ -164,7 +164,9 @@ defmodule Lemieux.TUI.StatusTest do
         }
       }
 
-      assert Status.phase(status) == "provider error, retrying in 6s (2/2)"
+      assert Status.phase(status) ==
+               "provider error, retrying in 6s (2/2) · /cancel stops retries"
+
       assert Status.duration(125) == "2m"
       assert Status.bytes(2_048) == "2.0 KB"
       assert Status.investigations(3) == "3 read-only investigations"

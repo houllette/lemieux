@@ -102,7 +102,7 @@ defmodule Lemieux.Session.Recovery do
         begin_provider_retry(state, reason)
 
       true ->
-        fold(state, {:error, reason})
+        fold(state, {:error, stop_error(state, reason)})
     end
   end
 
@@ -168,8 +168,25 @@ defmodule Lemieux.Session.Recovery do
     (not progressed?(state) or state.provider_retry_policy.after_output) and
       state.retry_attempt < state.provider_retry_policy.max_attempts and
       not ProviderError.account?(reason) and
+      not delay_exceeds_policy?(state.provider_retry_policy, reason) and
       ProviderError.transient?(reason, state.provider_retry_policy.classify) and
       retry_admitted?(state)
+  end
+
+  def stop_error(%{provider_retry_policy: policy}, reason) do
+    if delay_exceeds_policy?(policy, reason) and not ProviderError.account?(reason) and
+         ProviderError.transient?(reason, policy.classify),
+       do: ProviderError.defer_retry(reason),
+       else: reason
+  end
+
+  defp delay_exceeds_policy?(nil, _reason), do: false
+
+  defp delay_exceeds_policy?(policy, reason) do
+    case ProviderError.retry_after_ms(reason) do
+      delay when is_integer(delay) -> delay > policy.max_delay_ms
+      nil -> false
+    end
   end
 
   defp progressed?(state), do: state.provider_progress? or Turn.progressed?(state.turn)

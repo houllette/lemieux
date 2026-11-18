@@ -460,8 +460,9 @@ defmodule Lemieux.Session do
       one the provider may not repeat: an HTTP 5xx, an overload, a rate limit,
       or a stream that went quiet. A keyword list with `:max_attempts` (6),
       `:base_delay_ms` (2,000, doubling per attempt), `:max_delay_ms`
-      (60,000) and `:after_output` (true); a `retry-after` the provider sends
-      wins over the backoff. `false` turns it off. A request that had already
+      (60,000) and `:after_output` (true). A provider's Retry-After takes
+      precedence over backoff. If it exceeds `:max_delay_ms`, the turn ends
+      with the provider's wait hint. `false` turns automatic retry off. A request that had already
       produced output is retried too, because nothing it produced has run:
       tool calls only run once a response is complete, so the partial answer
       is kept on the transcript as a record, marked partial and never sent,

@@ -2092,8 +2092,8 @@ defmodule Lemieux.Providers.ReqLLM do
 
           {result, metadata, reference}
 
-        {:error, _reason} = error ->
-          {error, %{}, nil}
+        {:error, reason} ->
+          {{:error, Route.request_error(route, reason)}, %{}, nil}
       end
 
     # Drained either way, so nothing is left in a caller's mailbox. A route owns

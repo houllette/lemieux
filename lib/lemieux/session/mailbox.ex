@@ -124,7 +124,7 @@ defmodule Lemieux.Session.Mailbox do
         {:noreply, Recovery.begin_provider_retry(state, reason)}
 
       true ->
-        {:noreply, Recovery.fold(state, {:error, reason})}
+        {:noreply, Recovery.fold(state, {:error, Recovery.stop_error(state, reason)})}
     end
   end
 

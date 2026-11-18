@@ -427,7 +427,7 @@ defmodule Lemieux.TUI.ViewTest do
         )
 
       assert unwrapped(%{retrying | clock: fn -> 14_000 end}) =~
-               "provider error, retrying in 6s (2/2)"
+               "provider error, retrying in 6s (2/2) · /cancel stops retries"
 
       delegating =
         fed.(state, {:subagent, ["01SESSION"], {:child_started, %{"child_id" => "01C1"}}})

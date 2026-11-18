@@ -155,7 +155,7 @@ defmodule Lemieux.TUI.Activity do
     kept =
       if Map.get(detail, :after_output, false), do: " · the partial answer was kept", else: ""
 
-    "#{kind}, retrying in #{div(remaining + 999, 1_000)}s (#{attempt}/#{max})#{kept}"
+    "#{kind}, retrying in #{div(remaining + 999, 1_000)}s (#{attempt}/#{max})#{kept} · /cancel stops retries"
   end
 
   # A prompt waits a bounded moment for MCP servers still connecting, so the

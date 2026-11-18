@@ -101,10 +101,10 @@ defmodule Lemieux.TUI.ActivityTest do
       detail = %{attempt: 2, max: 2, delay_ms: 8_000, kind: "provider error"}
 
       assert Activity.phase(turn(phase: phase(:retrying, detail, 2, 2_000))) ==
-               "provider error, retrying in 6s (2/2)"
+               "provider error, retrying in 6s (2/2) · /cancel stops retries"
 
       assert Activity.phase(turn(phase: phase(:retrying, detail, 9, 9_000))) ==
-               "provider error, retrying in 0s (2/2)"
+               "provider error, retrying in 0s (2/2) · /cancel stops retries"
     end
 
     test "says nothing between phases" do

@@ -2220,8 +2220,21 @@ defmodule Lemieux.Conversation do
   somebody to retry a missing key.
   """
   @spec error_line(conversation :: t(), reason :: term()) :: String.t()
-  def error_line(%__MODULE__{} = conversation, reason) do
-    case error_kind(reason) do
+  def error_line(%__MODULE__{} = conversation, reason),
+    do: error_line(conversation, reason, error_kind(reason))
+
+  defp error_line(conversation, reason, :quota_exhausted) do
+    "#{error_description(conversation, reason)} · #{quota_retry_hint(reason)} " <>
+      "or change route with /provider or /model"
+  end
+
+  defp error_line(conversation, reason, :retry_deferred) do
+    "#{error_description(conversation, reason)} · automatic retry deferred · " <>
+      "#{wait_hint(ProviderError.retry_after_ms(reason))} or change route with /provider or /model"
+  end
+
+  defp error_line(conversation, reason, kind) do
+    case kind do
       :missing_key ->
         missing_key(conversation, reason)
 
@@ -2306,9 +2319,10 @@ defmodule Lemieux.Conversation do
   defp error_kind({:unknown_model, _spec, _hint}), do: :unknown_model
 
   defp error_kind(reason) do
-    case account_problem(reason) do
-      nil -> category_kind(ProviderError.category(reason))
-      problem -> problem
+    cond do
+      ProviderError.quota_exhausted?(reason) -> :quota_exhausted
+      ProviderError.retry_deferred?(reason) -> :retry_deferred
+      true -> account_problem(reason) || category_kind(ProviderError.category(reason))
     end
   end
 
@@ -2336,6 +2350,12 @@ defmodule Lemieux.Conversation do
   end
 
   defp provider_name(conversation), do: ModelSpec.provider(conversation.model) || "the provider"
+
+  defp quota_retry_hint(reason) do
+    if ProviderError.reset_at(reason),
+      do: "/retry after the reset",
+      else: wait_hint(ProviderError.retry_after_ms(reason))
+  end
 
   defp wait_hint(ms) when is_integer(ms) and ms > 0, do: "/retry after #{retry_delay(ms)}"
   defp wait_hint(_unknown), do: "wait a moment, then /retry"

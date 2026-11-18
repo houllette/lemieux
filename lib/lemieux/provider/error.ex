@@ -92,7 +92,8 @@ defmodule Lemieux.Provider.Error do
                    "insufficient_quota",
                    "invalid_api_key",
                    "permission_error",
-                   "quota_exceeded"
+                   "quota_exceeded",
+                   "quota_exhausted"
                  ])
 
   # A request the provider declined to answer on policy grounds. Asked again,
@@ -389,6 +390,9 @@ defmodule Lemieux.Provider.Error do
   @spec retry_after_ms(reason :: term()) :: non_neg_integer() | nil
   def retry_after_ms({:context_limit, reason}), do: retry_after_ms(reason)
 
+  def retry_after_ms(%{reset_at: %DateTime{} = at}),
+    do: max(DateTime.diff(at, DateTime.utc_now(), :millisecond), 0)
+
   def retry_after_ms(%{retry_after: retry_after}) when not is_nil(retry_after),
     do: seconds_to_ms(retry_after)
 
@@ -399,6 +403,24 @@ defmodule Lemieux.Provider.Error do
   def retry_after_ms(%{headers: headers}), do: retry_after_header(headers)
   def retry_after_ms(%{cause: cause}) when not is_nil(cause), do: retry_after_ms(cause)
   def retry_after_ms(_reason), do: nil
+
+  @doc "The provider's absolute quota reset time, when available."
+  @spec reset_at(term()) :: DateTime.t() | nil
+  def reset_at(%{reset_at: %DateTime{} = at}), do: at
+  def reset_at(%{cause: cause}), do: reset_at(cause)
+  def reset_at(_reason), do: nil
+
+  @doc "Whether the provider has reported exhausted capacity."
+  @spec quota_exhausted?(term()) :: boolean()
+  def quota_exhausted?(reason), do: "quota_exhausted" in typed_codes(reason)
+
+  @doc "Annotates a failure whose retry hint exceeds the session's automatic wait."
+  @spec defer_retry(term()) :: map()
+  def defer_retry(reason), do: %{cause: reason, retry_deferred: true}
+
+  @doc "Whether automatic retry was deferred because of a long provider wait."
+  @spec retry_deferred?(term()) :: boolean()
+  def retry_deferred?(reason), do: match?(%{retry_deferred: true}, reason)
 
   @doc "Whether typed provider data identifies a context-window overflow."
   @spec context_limit?(reason :: term()) :: boolean()
@@ -525,7 +547,8 @@ defmodule Lemieux.Provider.Error do
   refusal its error event names is not.
   """
   @spec retryable?(reason :: term()) :: boolean()
-  def retryable?(reason), do: not refused?(reason) and typed_retryable?(reason)
+  def retryable?(reason),
+    do: not refused?(reason) and not quota_exhausted?(reason) and typed_retryable?(reason)
 
   defp typed_retryable?(%{retryable: retryable}) when is_boolean(retryable), do: retryable
 
@@ -587,7 +610,9 @@ defmodule Lemieux.Provider.Error do
   end
 
   defp default_transient?(reason),
-    do: category(reason) in [:server, :rate_limit, :timeout] or retryable?(reason)
+    do:
+      not quota_exhausted?(reason) and
+        (category(reason) in [:server, :rate_limit, :timeout] or retryable?(reason))
 
   defp rate_limit?(reason) do
     code = provider_code(reason)

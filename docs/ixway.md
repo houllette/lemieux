@@ -84,6 +84,13 @@ direct provider are that mechanism's, not special cases for this gateway;
 `Lemieux.Ixway` supplies the gateway's discovery, catalogue, default and
 routing disclosure through `Lemieux.Provider.Route`'s callbacks.
 
+If Ixway reports exhausted pooled Codex quota, lmx ends the automatic
+retry loop and shows the reset time when available. Use `/retry` when
+capacity returns, or `/provider` or `/model` to select an available route
+before retrying. The session retains completed tool results. For temporary
+overload lmx still backs off, and Ctrl-C or `/cancel` cancels the wait. A Retry-After beyond
+the session's maximum automatic wait brings the composer back immediately.
+
 ## Embedded hosts
 
 No new dependency, supervisor child, database or endpoint is required.

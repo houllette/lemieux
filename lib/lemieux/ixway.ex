@@ -48,6 +48,7 @@ defmodule Lemieux.Ixway do
   never an authorization grant.
   """
 
+  alias Lemieux.Ixway.Capacity
   alias Lemieux.Ixway.LogFilter
   alias Lemieux.Ixway.Receipt
   alias Lemieux.ModelSpec
@@ -60,18 +61,16 @@ defmodule Lemieux.Ixway do
 
   defmodule Error do
     @moduledoc """
-    A failure on the gateway side of a request — discovery, credentials,
-    selection or capability — never inference itself, which arrives as
-    `req_llm`'s own typed exceptions.
+    A failure on the gateway side of a request, such as discovery, credentials,
+    selection or capability. Inference failures arrive as `req_llm`'s typed
+    exceptions, or as `Lemieux.Ixway.Capacity` for quota admission refusals.
 
     Typed, so policy matches on `reason`; an exception, so the sentence a
     person reads comes from `message/1`. These sentences lived in
     `Lemieux.Provider.Error` before, one clause per reason, which made the
     module that is meant to know no vendor the one every new gateway reason
     had to edit. `Lemieux.Provider.Error.message/1` now renders this like any
-    other exception and classifies it as `:other`: none of these carry an
-    HTTP status or a retry-after, and a discovery request that failed is not
-    one a session would send again.
+    other exception and classifies it as `:other`.
     """
 
     defexception [:reason]
@@ -513,7 +512,19 @@ defmodule Lemieux.Ixway do
         0 -> %{}
       end
 
-    result |> sanitize_stream_error(connection) |> attach_disclosure(disclosure)
+    result
+    |> sanitize_stream_error(connection)
+    |> Capacity.normalize()
+    |> attach_disclosure(disclosure)
+  end
+
+  @impl Lemieux.Provider.Route
+  @spec request_error(t(), term()) :: term()
+  def request_error(connection, reason) do
+    {:error, normalized} =
+      {:error, reason} |> sanitize_stream_error(connection) |> Capacity.normalize()
+
+    normalized
   end
 
   defp sanitize_stream_error(
