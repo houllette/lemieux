@@ -375,6 +375,8 @@ defmodule Lemieux.Session do
           queued_steers: [String.t()],
           queued_follow_ups: [String.t()],
           request_id: String.t() | nil,
+          turns_taken: non_neg_integer(),
+          max_turns: pos_integer(),
           requests: non_neg_integer(),
           max_requests: pos_integer() | nil,
           spent_usd: number() | nil,
@@ -1204,9 +1206,9 @@ defmodule Lemieux.Session do
   read — out of the session on each call, and a status line that asked for it
   after every event was copying the whole session to learn its model name.
   This answers the same questions a screen asks, plus the ones a snapshot
-  cannot: how many requests have been made against `max_requests`, whether
-  startup MCP connections have settled, and whether the context window is
-  known. See `t:info/0`.
+  cannot: request and turn counts against their limits, whether startup MCP
+  connections have settled, and whether the context window is known. See
+  `t:info/0`.
   """
   @spec info(session :: session(), timeout :: timeout()) :: info()
   def info(session, timeout \\ 5_000), do: GenServer.call(session, :info, timeout)
@@ -1665,7 +1667,9 @@ defmodule Lemieux.Session do
   already delivered in this session returns `:duplicate` on resume as well.
   Loading receipts or recording a notification alone starts no model request.
   Bounded hosts set `preserve_turns: true` so a completion continues the same
-  task allowance. A batch may supply `receipt_ids`, a nonempty list of at most
+  task allowance. If that allowance is spent, policy-approved follow-up text
+  stays in the transcript for an explicit new prompt, and the continuation
+  ends with `:max_turns`. A batch may supply `receipt_ids`, a nonempty list of at most
   256 component identities. The single transcript receipt deduplicates each
   component across recovery; a mixture of seen and new identities returns
   `{:error, :partial_duplicate}` for the host to reconcile before dispatch.

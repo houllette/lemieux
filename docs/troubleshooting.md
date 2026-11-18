@@ -383,6 +383,21 @@ reduced to its title and first lines. Embedding hosts turn the automatic
 retries off with `provider_retry: false`, or tune them with `max_attempts:`,
 `base_delay_ms:` and `max_delay_ms:`.
 
+### `stopped after … turns`
+
+A prompt gets up to 400 model turns by default. The turn ceiling also
+applies to productive work and to late background follow-ups. When a
+follow-up reaches the ceiling, its approved results stay in the conversation
+for the next prompt. The agent makes no additional request for that
+follow-up.
+
+Send a new prompt to continue with a fresh allowance. To choose a larger
+allowance, reopen the conversation with
+`lmx --resume SESSION --max-turns 800` and ask it to finish using the recorded
+results. Request and spend budgets still apply. A `no_progress` stop comes
+from the repetition or cycle detector, which also applies with a larger
+turn allowance.
+
 ## Local models
 
 ### A local model forgets the task or answers with nothing

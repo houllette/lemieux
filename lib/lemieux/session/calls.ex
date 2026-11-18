@@ -338,6 +338,8 @@ defmodule Lemieux.Session.Calls do
       queued_steers: Recovery.queued_steers(state),
       queued_follow_ups: Enum.map(Enum.reverse(state.reversed_follow_ups), &Input.queued_text/1),
       request_id: state.current_request_id,
+      turns_taken: state.turns_taken,
+      max_turns: state.max_turns,
       requests: state.request_count,
       max_requests: state.max_requests,
       job: Lemieux.JobBudget.snapshot(state.job_budget),
