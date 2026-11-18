@@ -2,6 +2,7 @@ defmodule Lemieux.MCP.ManagedStdioTest do
   use ExUnit.Case, async: true
   alias Lemieux.MCP.Client
   alias Lemieux.MCP.ManagedStdio
+  alias Lemieux.MCP.Protocol
   alias Lemieux.MCP.StdioLifecycle
   alias Lemieux.MCP.Transport.Stdio
   alias LemieuxTest.CommandGate
@@ -102,7 +103,7 @@ defmodule Lemieux.MCP.ManagedStdioTest do
     assert {:ok, %{"result" => result}, _state} =
              Stdio.call(
                state,
-               %{"id" => 1, "method" => "server/discover", "jsonrpc" => "2.0"},
+               Protocol.request(:modern, "server/discover", %{}, id: 1),
                5000
              )
 

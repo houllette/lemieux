@@ -89,7 +89,7 @@ defmodule Lemieux.MCP.Protocol do
   # modern request that dropped it would never hear about its own progress.
   defp params(:modern, params, opts) do
     meta = %{
-      @meta_version => Keyword.get(opts, :version, @modern),
+      @meta_version => Keyword.get(opts, :version) || @modern,
       @meta_client_info => %{"name" => "lemieux", "version" => Lemieux.version()},
       # A server MUST NOT ask for input of a kind the client has not declared, so this
       # list is exactly what lemieux can satisfy. Form-mode elicitation is a question

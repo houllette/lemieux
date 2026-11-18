@@ -200,6 +200,21 @@ def dispatch(request, headers=None):
     params = request.get("params") or {}
     modern = MODE in MODERN_MODES
 
+    if modern and request_id is not None:
+        # Every modern request must say which version it is using, in the body
+        # and — over HTTP — in a header that matches it.
+        version = params.get("_meta", {}).get("io.modelcontextprotocol/protocolVersion")
+        if not version:
+            return err(request_id, -32022, "Unsupported protocol version",
+                       {"supported": ["2026-07-28"]})
+        header_version = headers.get("mcp-protocol-version")
+        if headers and header_version != version:
+            return err(request_id, -32020,
+                       "Header mismatch: MCP-Protocol-Version %r does not match body %r"
+                       % (header_version, version))
+        if headers and headers.get("mcp-method") != method:
+            return err(request_id, -32020, "Header mismatch: Mcp-Method")
+
     if method == "server/discover":
         if MODE == "legacy":
             return err(request_id, -32601, "Method not found")
@@ -260,21 +275,6 @@ def dispatch(request, headers=None):
             except OSError:
                 pass  # The released tool may already have closed its socket.
         return None
-
-    if modern:
-        # Every modern request must say which version it is using, in the body
-        # and — over HTTP — in a header that matches it.
-        version = params.get("_meta", {}).get("io.modelcontextprotocol/protocolVersion")
-        if not version:
-            return err(request_id, -32022, "Unsupported protocol version",
-                       {"supported": ["2026-07-28"]})
-        header_version = headers.get("mcp-protocol-version")
-        if headers and header_version != version:
-            return err(request_id, -32020,
-                       "Header mismatch: MCP-Protocol-Version %r does not match body %r"
-                       % (header_version, version))
-        if headers and headers.get("mcp-method") != method:
-            return err(request_id, -32020, "Header mismatch: Mcp-Method")
 
     if method == "tools/list":
         if MODE in DUPLEX_MODES:
