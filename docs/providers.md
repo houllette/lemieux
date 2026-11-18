@@ -341,6 +341,11 @@ the provider's own path, so this is a provider API base, not an HTTP proxy.
 Base URLs and credentials are runtime configuration: they are never written
 into transcripts or benchmark artifacts.
 
+For one direct provider, set `providers.<name>.base_url` in lmx or use
+`Lemieux.Providers.ReqLLM.new(base_urls: %{"openai" => "https://us.api.openai.com/v1"})`
+in an embedder. The global override takes precedence. Omitted providers keep
+their usual endpoints. See the [regional OpenAI configuration example](configuration.md#api-gateways).
+
 [Ixway](ixway.md) is an optional gateway that owns all inference for a
 session. Enable it with `--ixway`/`LMX_IXWAY_URL` or
 `Lemieux.Ixway.provider(connection)`; its models are named `ixway:ID`.

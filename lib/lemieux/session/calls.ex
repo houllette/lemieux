@@ -295,7 +295,7 @@ defmodule Lemieux.Session.Calls do
       tools: Catalog.local_tool_names(state),
       cwd: state.cwd,
       pending: Core.pending(state),
-      queued_steers: Enum.reverse(state.reversed_steers),
+      queued_steers: Recovery.queued_steers(state),
       queued_follow_ups: Enum.map(Enum.reverse(state.reversed_follow_ups), &Input.queued_text/1),
       request_id: state.current_request_id,
       spent_usd: state.spent_usd,
@@ -335,7 +335,7 @@ defmodule Lemieux.Session.Calls do
       tools: Catalog.local_tool_names(state),
       cwd: state.cwd,
       pending: Core.pending(state),
-      queued_steers: Enum.reverse(state.reversed_steers),
+      queued_steers: Recovery.queued_steers(state),
       queued_follow_ups: Enum.map(Enum.reverse(state.reversed_follow_ups), &Input.queued_text/1),
       request_id: state.current_request_id,
       requests: state.request_count,
@@ -707,12 +707,24 @@ defmodule Lemieux.Session.Calls do
   def call({:resolve, call_id, resolution}, _from, state),
     do: Approvals.resolve_legacy(state, call_id, resolution)
 
+  def call({:answer_deferred, call_id, answer}, _from, state),
+    do: Questions.answer(state, call_id, answer, :continue)
+
   def call({:steer, text}, _from, state) do
     {:reply, :ok, %{state | reversed_steers: [text | state.reversed_steers]}}
   end
 
-  def call({:revoke_steer, text}, _from, state) do
-    case List.delete(state.reversed_steers, text) do
+  def call({:steer_running, text}, _from, state) do
+    if Core.busy?(state) do
+      id = Lemieux.ID.generate()
+      {:reply, {:ok, id}, %{state | reversed_steers: [{id, text} | state.reversed_steers]}}
+    else
+      {:reply, {:error, :idle}, state}
+    end
+  end
+
+  def call({:revoke_steer, steer}, _from, state) do
+    case Recovery.remove_steer(state.reversed_steers, steer) do
       same when same == state.reversed_steers -> {:reply, {:error, :already_sent}, state}
       remaining -> {:reply, :ok, %{state | reversed_steers: remaining}}
     end

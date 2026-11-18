@@ -301,7 +301,9 @@ defmodule Lemieux.CLI.Run do
   defp error_context(options, opts) do
     [
       model: if(is_nil(options.ixway), do: options.model),
-      base_url: options.base_url,
+      base_url:
+        options.base_url ||
+          Config.provider_base_urls(options.config)[ModelSpec.provider(options.model)],
       resume: options.resume,
       program: CLI.program(opts)
     ]

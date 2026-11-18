@@ -24,9 +24,38 @@ defmodule Lemieux.Session.Recovery do
   def drain_steers(state) do
     state.reversed_steers
     |> Enum.reverse()
-    |> Enum.reduce(%{state | reversed_steers: []}, fn text, state ->
-      state |> Input.begin(:queued_steer, text) |> Core.append({:user, %{"text" => text}, nil})
-    end)
+    |> Enum.reduce(%{state | reversed_steers: []}, &append_steer/2)
+  end
+
+  def queued_steers(state), do: state.reversed_steers |> Enum.reverse() |> Enum.map(&steer_text/1)
+
+  def remove_steer(steers, {:id, id}), do: List.keydelete(steers, id, 0)
+
+  def remove_steer(steers, text) do
+    found = Enum.find(steers, &(steer_text(&1) == text))
+    List.delete(steers, found)
+  end
+
+  defp steer_text({_id, text}), do: text
+  defp steer_text(text), do: text
+
+  defp append_steer({id, text}, state), do: append_steer(state, text, id: id)
+  defp append_steer(text, state), do: append_steer(state, text, [])
+
+  defp append_steer(state, text, opts) do
+    state
+    |> Input.begin(:queued_steer, text)
+    |> Core.append({:user, %{"text" => text}, nil}, opts)
+  end
+
+  def discard_steers(state) do
+    case Enum.flat_map(state.reversed_steers, fn
+           {id, _text} -> [id]
+           _text -> []
+         end) do
+      [] -> %{state | reversed_steers: []}
+      ids -> Core.emit(%{state | reversed_steers: []}, {:steers_discarded, ids})
+    end
   end
 
   def maybe_follow_up(%{reversed_follow_ups: []} = state), do: state
@@ -73,7 +102,7 @@ defmodule Lemieux.Session.Recovery do
         begin_provider_retry(state, reason)
 
       true ->
-        fold(state, {:error, reason})
+        fold(state, {:error, stop_error(state, reason)})
     end
   end
 
@@ -139,8 +168,25 @@ defmodule Lemieux.Session.Recovery do
     (not progressed?(state) or state.provider_retry_policy.after_output) and
       state.retry_attempt < state.provider_retry_policy.max_attempts and
       not ProviderError.account?(reason) and
+      not delay_exceeds_policy?(state.provider_retry_policy, reason) and
       ProviderError.transient?(reason, state.provider_retry_policy.classify) and
       retry_admitted?(state)
+  end
+
+  def stop_error(%{provider_retry_policy: policy}, reason) do
+    if delay_exceeds_policy?(policy, reason) and not ProviderError.account?(reason) and
+         ProviderError.transient?(reason, policy.classify),
+       do: ProviderError.defer_retry(reason),
+       else: reason
+  end
+
+  defp delay_exceeds_policy?(nil, _reason), do: false
+
+  defp delay_exceeds_policy?(policy, reason) do
+    case ProviderError.retry_after_ms(reason) do
+      delay when is_integer(delay) -> delay > policy.max_delay_ms
+      nil -> false
+    end
   end
 
   defp progressed?(state), do: state.provider_progress? or Turn.progressed?(state.turn)

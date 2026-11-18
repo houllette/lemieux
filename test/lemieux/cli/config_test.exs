@@ -1,9 +1,11 @@
 defmodule Lemieux.CLI.ConfigTest do
   use ExUnit.Case, async: true
 
+  alias Lemieux.CLI.CodexProvider
   alias Lemieux.CLI.Config
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
+  alias Lemieux.Providers.ReqLLM, as: ReqLLMProvider
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store.JSONL
@@ -32,6 +34,57 @@ defmodule Lemieux.CLI.ConfigTest do
     assert {:ok, config} = Config.load_default(path, Options.default_model())
     assert Config.get(config, "model") == "ixway:my-choice"
     assert File.read!(path) == ~s({"model":"ixway:my-choice"})
+  end
+
+  test "a regional endpoint follows the selected provider and keeps the startup model", %{
+    tmp_dir: dir
+  } do
+    path =
+      write_config(dir, %{
+        "model" => "openai_codex:gpt-6-sol",
+        "providers" => %{"openai" => %{"base_url" => "https://us.api.openai.com/v1"}}
+      })
+
+    assert {:ok, options} = Options.parse(["--config", path])
+    assert options.model == "openai_codex:gpt-6-sol"
+    {CodexProvider, {provider, _opts}} = Runtime.provider(options, [])
+
+    for {spec, endpoint} <- [
+          {"openai:gpt-6-sol", "https://us.api.openai.com/v1"},
+          {"openai:gpt-4o", "https://us.api.openai.com/v1"},
+          {"openai_codex:gpt-6-sol", "https://chatgpt.com/backend-api"},
+          {"ollama:gemma4:12b", "http://localhost:11434/v1"}
+        ] do
+      assert {:ok, {^spec, params}} = ReqLLMProvider.request_target(spec, provider)
+      assert {:ok, model} = ReqLLM.model(spec)
+      assert {:ok, module} = ReqLLM.provider(model.provider)
+      assert ReqLLM.Provider.Options.effective_base_url(module, model, params) == endpoint
+    end
+
+    assert {:ok, global} =
+             Options.parse(["--config", path, "--base-url", "https://gateway.example/v1"])
+
+    {CodexProvider, {provider, _opts}} = Runtime.provider(global, [])
+    assert {:ok, {_, params}} = ReqLLMProvider.request_target("openai:gpt-6-sol", provider)
+
+    assert params[:base_url] == "https://gateway.example/v1"
+
+    plain_path = write_config(dir, %{"model" => "openai:gpt-6-sol"})
+    assert {:ok, plain} = Options.parse(["--config", plain_path])
+
+    {CodexProvider, {provider, _opts}} = Runtime.provider(plain, [])
+    assert {:ok, {_, params}} = ReqLLMProvider.request_target(plain.model, provider)
+
+    assert params[:base_url] == nil
+  end
+
+  test "invalid scoped base URLs report the configuration field", %{tmp_dir: dir} do
+    for invalid <- ["/v1", "ftp://provider.example/v1", "https://", 123] do
+      path = write_config(dir, %{"providers" => %{"openai" => %{"base_url" => invalid}}})
+      assert {:error, message} = Options.parse(["--config", path])
+      assert message =~ "providers.openai.base_url"
+      assert message =~ "absolute http(s) URL"
+    end
   end
 
   test "concurrent first startups share one complete config", %{tmp_dir: dir} do

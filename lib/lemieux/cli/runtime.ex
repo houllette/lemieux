@@ -1976,6 +1976,7 @@ defmodule Lemieux.CLI.Runtime do
 
     []
     |> maybe_put(:base_url, options.base_url)
+    |> Keyword.put(:base_urls, Config.provider_base_urls(options.config))
     |> maybe_put(:api_key_defaults, if(map_size(keys) == 0, do: nil, else: keys))
     |> Keyword.merge(
       ModelCatalog.provider_options() ++

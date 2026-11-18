@@ -1540,13 +1540,16 @@ defmodule Lemieux.TUI.InputTest do
     test "Enter steers now; Tab queues and submits only after a successful finish" do
       state = working() |> type("steer now") |> press("enter")
       assert_receive {:steered, "steer now"}
-      assert Enum.any?(state.lines, &(&1 == {:steer, :pending, "steer now"}))
-      assert screen(state) =~ "Steer · queued for next model request"
+      assert %{text: "steer now"} = state.tools.pending_steer
+      assert screen(state) =~ "Steer · queued for parent’s next request"
       refute screen(state) =~ "noted, will pass it on"
 
-      delivered = info(state, {:entry, %{type: :request}})
+      id = state.tools.pending_steer.id
+      stale = info(state, {:entry, %{type: :request, payload: %{"entry_ids" => []}}})
+      assert stale.tools.pending_steer == state.tools.pending_steer
+      delivered = info(stale, {:entry, %{type: :request, payload: %{"entry_ids" => [id]}}})
       assert Enum.any?(delivered.lines, &(&1 == {:steer, :sent, "steer now"}))
-      assert screen(delivered) =~ "Steer · included in model request"
+      assert screen(delivered) =~ "Steer · included in parent model request"
 
       queued = delivered |> type("next prompt") |> press("tab")
       refute_receive {:prompted, "next prompt"}, 20
@@ -1643,37 +1646,58 @@ defmodule Lemieux.TUI.InputTest do
 
       revoked = press(blocked, "z", ["super"])
       assert status_row(revoked) =~ "steer revoked"
-      refute Enum.any?(revoked.lines, &match?({:steer, :pending, _}, &1))
+      refute revoked.tools.pending_steer
       assert typed(revoked) == "another steer"
 
       sent = press(revoked, "enter")
       assert_receive {:steered, "another steer"}
-      assert Enum.any?(sent.lines, &(&1 == {:steer, :pending, "another steer"}))
+      assert %{text: "another steer"} = sent.tools.pending_steer
     end
 
-    test "a steer appears after the active tool's result" do
-      state = working()
-      call = %{id: "bash-1", name: "bash", arguments: %{"command" => "sleep 30"}}
-      called = info(state, {:tool_call, call})
-      steered = called |> type("use the queued path") |> press("enter")
-      assert steered.tools.deferred_steer == {:pending, "use the queued path"}
-      refute screen(steered) =~ "Steer · queued for next model request"
+    test "a parent steer stays visible through multiple tool results until its request" do
+      state =
+        working()
+        |> info({:tool_call, %{id: "delegate-1", name: "delegate", arguments: %{}}})
+        |> info({:tool_call, %{id: "delegate-2", name: "delegate", arguments: %{}}})
+        |> type("use the queued path")
+        |> press("enter")
 
-      result =
-        info(
-          steered,
-          {:entry,
-           %{
-             type: :tool_result,
-             payload: %{"call_id" => "bash-1", "name" => "bash", "output" => "done"}
-           }}
-        )
+      assert_receive {:steered, "use the queued path"}
+      assert %{id: id, text: "use the queued path"} = state.tools.pending_steer
+      assert screen(state) =~ "Steer · queued for parent’s next request"
+      assert screen(state) =~ "use the queued path"
 
-      assert result.tools.deferred_steer == nil
-      assert screen(result) =~ "Steer · queued for next model request"
+      blocked = state |> type("another instruction") |> press("enter")
+      assert typed(blocked) == "another instruction"
+      assert screen(blocked) =~ "use the queued path"
 
-      assert Enum.find_index(result.lines, &match?({:steer, _, _}, &1)) <
-               Enum.find_index(result.lines, &match?({:tool_heading, _, _, _, _}, &1))
+      state =
+        Enum.reduce(["delegate-2", "delegate-1"], blocked, fn call_id, state ->
+          settled =
+            info(
+              state,
+              {:entry,
+               %{
+                 type: :tool_result,
+                 payload: %{
+                   "call_id" => call_id,
+                   "name" => "delegate",
+                   "output" => "done"
+                 }
+               }}
+            )
+
+          assert screen(settled) =~ "use the queued path"
+          assert %{id: ^id} = settled.tools.pending_steer
+          settled
+        end)
+
+      delivered = info(state, {:entry, %{type: :request, payload: %{"entry_ids" => [id]}}})
+      assert delivered.tools.pending_steer == nil
+      assert Enum.count(delivered.lines, &(&1 == {:steer, :sent, "use the queued path"})) == 1
+
+      assert Enum.find_index(delivered.lines, &match?({:steer, _, _}, &1)) <
+               Enum.find_index(delivered.lines, &match?({:tool_heading, _, _, _, _}, &1))
     end
 
     test "a stopped turn holds its queued message for revision" do
@@ -1718,8 +1742,72 @@ defmodule Lemieux.TUI.InputTest do
       pending = working() |> type("do this first") |> press("enter")
       stopped = info(pending, {:finished, :stop})
 
-      assert Enum.any?(stopped.lines, &(&1 == {:steer, :pending, "do this first"}))
+      assert %{text: "do this first"} = stopped.tools.pending_steer
     end
+  end
+
+  defmodule HeldDelegate do
+    @moduledoc false
+    @behaviour Lemieux.Tool
+    def name, do: "delegate"
+    def description, do: "A local delegate fixture"
+    def schema, do: %{"type" => "object"}
+    def run(_arguments, _context), do: {:ok, "child result"}
+  end
+
+  @tag :tmp_dir
+  test "a held delegate passes the visible steer exactly once to the parent", %{tmp_dir: dir} do
+    runtime = Module.concat(__MODULE__, "SteerRuntime")
+    start_supervised!({Lemieux.Supervisor, name: runtime})
+    owner = self()
+
+    hold = fn _call, _context ->
+      send(owner, {:delegate_waiting, self()})
+
+      receive do
+        :release -> :allow
+      end
+    end
+
+    provider =
+      Scripted.new([
+        Scripted.tool_call("delegate-1", "delegate", %{}),
+        Scripted.complete("Finished")
+      ])
+
+    {:ok, session} =
+      Lemieux.start_session(
+        supervisor: runtime,
+        store: JSONL.new(dir),
+        provider: provider,
+        subscriber: self(),
+        model: "test:model",
+        tools: [HeldDelegate],
+        hooks: [before_tool_call: hold]
+      )
+
+    id = Lemieux.Session.id(session)
+    started = command(tui(session: session, id: id) |> sized(), "Do the task")
+    assert_receive {:delegate_waiting, task}
+    assert_receive {:lemieux, ^id, {:tool_call, call}}
+
+    waiting = info(started, {:tool_call, call}) |> command("Change approach")
+    assert Lemieux.Session.info(session).queued_steers == ["Change approach"]
+    assert screen(waiting) =~ "Steer · queued for parent’s next request"
+    assert screen(waiting) =~ "Change approach"
+
+    send(task, :release)
+    delivered = settle(waiting)
+    assert delivered.tools.pending_steer == nil
+    assert screen(delivered) =~ "Steer · included in parent model request"
+    assert [_first, parent] = Scripted.requests(provider)
+    assert Enum.count(parent.entries, &(&1.payload["text"] == "Change approach")) == 1
+
+    # A key can reach the screen before the already-ended session's finish event.
+    stale = started |> command("Keep this draft")
+    assert typed(stale) == "Keep this draft"
+    assert status_row(stale) =~ "turn ended"
+    assert Lemieux.Session.info(session).queued_steers == []
   end
 
   describe "pressing enter" do

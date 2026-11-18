@@ -243,6 +243,13 @@ defmodule Lemieux.Turn do
     }
     |> put_present("http_status", ProviderError.http_status(reason))
     |> put_present("code", ProviderError.code(reason))
+    |> put_present("reset_at", reset_time(reason))
+    |> put_present("retry_after_ms", ProviderError.retry_after_ms(reason))
+    |> put_present("retry_deferred", if(ProviderError.retry_deferred?(reason), do: true))
+  end
+
+  defp reset_time(reason) do
+    if at = ProviderError.reset_at(reason), do: DateTime.to_iso8601(at)
   end
 
   defp put_present(payload, _key, nil), do: payload

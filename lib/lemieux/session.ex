@@ -460,8 +460,9 @@ defmodule Lemieux.Session do
       one the provider may not repeat: an HTTP 5xx, an overload, a rate limit,
       or a stream that went quiet. A keyword list with `:max_attempts` (6),
       `:base_delay_ms` (2,000, doubling per attempt), `:max_delay_ms`
-      (60,000) and `:after_output` (true); a `retry-after` the provider sends
-      wins over the backoff. `false` turns it off. A request that had already
+      (60,000) and `:after_output` (true). A provider's Retry-After takes
+      precedence over backoff. If it exceeds `:max_delay_ms`, the turn ends
+      with the provider's wait hint. `false` turns automatic retry off. A request that had already
       produced output is retried too, because nothing it produced has run:
       tool calls only run once a response is complete, so the partial answer
       is kept on the transcript as a record, marked partial and never sent,
@@ -1015,10 +1016,15 @@ defmodule Lemieux.Session do
   @spec steer(session :: session(), text :: String.t()) :: :ok
   def steer(session, text) when is_binary(text), do: GenServer.call(session, {:steer, text})
 
-  @doc "Revokes a matching steer only while it is still waiting for the next request."
-  @spec revoke_steer(session :: session(), text :: String.t()) :: :ok | {:error, :already_sent}
-  def revoke_steer(session, text) when is_binary(text),
-    do: GenServer.call(session, {:revoke_steer, text})
+  @doc "Queues a steer for active work and returns the ID of its future transcript entry."
+  @spec steer(session(), String.t(), :while_running) :: {:ok, String.t()} | {:error, :idle}
+  def steer(session, text, :while_running) when is_binary(text),
+    do: GenServer.call(session, {:steer_running, text})
+
+  @doc "Revokes a matching steer by text or receipt ID while it is still waiting."
+  @spec revoke_steer(session :: session(), steer :: String.t() | {:id, String.t()}) ::
+          :ok | {:error, :already_sent}
+  def revoke_steer(session, steer), do: GenServer.call(session, {:revoke_steer, steer})
 
   @doc "Queues a fresh prompt after current work; starts immediately when idle."
   @spec follow_up(session(), String.t()) :: :ok | {:error, term()}
@@ -1076,9 +1082,25 @@ defmodule Lemieux.Session do
   def answer(session, call_id, text) when is_binary(call_id) and is_binary(text),
     do: GenServer.call(session, {:resolve, call_id, {:answer, text}})
 
-  def answer(session, call_id, %{} = answer) when is_binary(call_id) do
+  def answer(session, call_id, %{} = answer) when is_binary(call_id),
+    do: submit_question_answer(session, {:resolve, call_id, {:answer, answer}}, answer)
+
+  @doc """
+  Answers a deferred question with host authorization to continue its task.
+
+  If work is active, the answer joins the next request. A successful idle
+  task may continue within its existing budget. The authorization applies
+  only to this submission and is never replayed from the transcript.
+  """
+  @spec answer(session(), String.t(), String.t() | map(), :continue) ::
+          {:ok, :queued | :continuing | :saved} | {:error, :unknown_call | :invalid_answer}
+  def answer(session, call_id, answer, :continue)
+      when is_binary(call_id) and (is_binary(answer) or is_map(answer)),
+      do: submit_question_answer(session, {:answer_deferred, call_id, answer}, answer)
+
+  defp submit_question_answer(session, message, answer) do
     Entry.new(:approval, %{"answer" => answer})
-    GenServer.call(session, {:resolve, call_id, {:answer, answer}})
+    GenServer.call(session, message)
   rescue
     ArgumentError -> {:error, :invalid_answer}
   end
@@ -1098,7 +1120,8 @@ defmodule Lemieux.Session do
   For questions, `deferred: true` returns `{:deferred, question_id}` immediately
   and keeps one optional question answerable while the agent works. The answer
   is recorded as separate identified human input at the next request boundary.
-  An idle answer starts no model request; the next explicit prompt delivers it.
+  An idle answer submitted through `answer/3` waits for the next prompt.
+  A host can authorize continuation for that submission with `answer/4`.
   Pending questions survive resume of the same session until their original
   deadline, but forks do not inherit the source session's attention. Cancellation
   closes outstanding questions; late and duplicate answers are refused.

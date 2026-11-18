@@ -6,6 +6,7 @@ defmodule Lemieux.IxwayTest do
   alias Lemieux.CLI.Runtime
   alias Lemieux.Ixway
   alias Lemieux.Provider
+  alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Provider.Route
   alias Lemieux.Providers.ReqLLM, as: Adapter
   alias Lemieux.Request
@@ -62,6 +63,81 @@ defmodule Lemieux.IxwayTest do
 
     assert_raise ArgumentError, fn ->
       Ixway.provider([endpoint: "https://gateway.example"], api_key: "vendor-key")
+    end
+  end
+
+  describe "pooled quota refusal" do
+    @legacy_quota_message "No pooled Codex account could take this request: the account has used 100% of a quota window (resets 2026-11-19 19:22 UTC). Retry shortly, or ask your ixway operator to check the account."
+
+    test "recognizes structured exhaustion from direct and stream-wrapped errors" do
+      reset = ~U[2026-11-19 19:22:00Z]
+
+      request =
+        ReqLLM.Error.API.Request.exception(
+          status: 503,
+          response_body: %{
+            "error" => %{
+              "type" => "overloaded_error",
+              "code" => "quota_exhausted",
+              "reset_at" => DateTime.to_unix(reset)
+            }
+          }
+        )
+
+      direct = Ixway.request_error(connection(), request)
+      wrapped = ReqLLM.Error.API.Stream.exception(reason: "Stream failed", cause: request)
+
+      assert {:error, ^direct} = Ixway.finish_stream(connection(), {:error, wrapped}, make_ref())
+      assert %Ixway.Capacity{reset_at: ^reset} = direct
+      assert ProviderError.account?(direct)
+      refute ProviderError.transient?(direct)
+    end
+
+    test "a streamed HTTP 503 from a deployed gateway retains the actual quota reset" do
+      {endpoint, listener, server} =
+        LemieuxTest.HTTPFixture.server(fn _headers, _body, _socket ->
+          %{
+            status: 503,
+            headers: [{"content-type", "application/json"}, {"retry-after", "3600"}],
+            body:
+              JSON.encode!(%{
+                "error" => %{"type" => "overloaded_error", "message" => @legacy_quota_message}
+              })
+          }
+        end)
+
+      on_exit(fn ->
+        Process.exit(server, :kill)
+        :gen_tcp.close(listener)
+      end)
+
+      provider = Ixway.provider(%{connection() | endpoint: endpoint}, max_retries: 0)
+      request = Request.new("ixway:team/coding")
+
+      assert {:error, reason} = Provider.run(provider, request, fn _ -> :ok end)
+      assert ProviderError.http_status(reason) == 503
+      assert ProviderError.quota_exhausted?(reason)
+      assert ProviderError.reset_at(reason) == ~U[2026-11-19 19:22:00Z]
+    end
+
+    test "an overload and a pending account check keep their ordinary retry behavior" do
+      for message <- [
+            "Gateway is overloaded.",
+            "No pooled Codex account could take this request: the account is still being checked."
+          ] do
+        request =
+          ReqLLM.Error.API.Request.exception(
+            status: 503,
+            reason: message,
+            response_body: %{"error" => %{"type" => "overloaded_error", "message" => message}},
+            headers: [{"retry-after", "5"}]
+          )
+
+        reason = Ixway.request_error(connection(), request)
+        refute ProviderError.account?(reason)
+        assert ProviderError.transient?(reason)
+        assert ProviderError.retry_after_ms(reason) == 5_000
+      end
     end
   end
 

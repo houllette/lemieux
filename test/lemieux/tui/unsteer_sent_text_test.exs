@@ -20,7 +20,7 @@ defmodule Lemieux.TUI.UnsteerSentTextTest do
     %{state | conversation: %{state.conversation | busy?: true}}
   end
 
-  defp pending?(state), do: Enum.any?(state.lines, &match?({:steer, :pending, _text}, &1))
+  defp pending?(state), do: state.tools.pending_steer != nil
 
   test "a steer typed with trailing whitespace is revoked" do
     pending = working() |> type("do this first ") |> press("enter")
@@ -55,7 +55,7 @@ defmodule Lemieux.TUI.UnsteerSentTextTest do
 
     refute pending?(revoked)
     assert screen(revoked) =~ "steer revoked before the next model request"
-    assert revoked.tools.sent_steers == []
+    assert revoked.tools.pending_steer == nil
 
     # Nothing is left with the session to deliver: a second revoke finds
     # nothing waiting rather than a steer already sent.
@@ -68,11 +68,11 @@ defmodule Lemieux.TUI.UnsteerSentTextTest do
 
     deferred = called |> type("use the other path ") |> press("enter")
     assert_receive {:steered, "use the other path"}
-    assert deferred.tools.deferred_steer == {:pending, "use the other path "}
+    assert %{text: "use the other path "} = deferred.tools.pending_steer
 
     revoked = command(deferred, "/unsteer")
 
-    assert revoked.tools.deferred_steer == nil
+    assert revoked.tools.pending_steer == nil
     assert screen(revoked) =~ "steer revoked before the next model request"
   end
 end

@@ -101,6 +101,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
          ),
          do: phase(state, :verification, %{command: command})
 
+    defp sync_event(state, {:question_continuation, :started}),
+      do:
+        state
+        |> put_in([Access.key!(:conversation), Access.key!(:busy?)], true)
+        |> Turn.start_processing()
+
     defp sync_event(state, {:entry, %{type: :user, payload: %{"source" => "notification"}}}),
       do: Turn.start_processing(state)
 
@@ -164,13 +170,17 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # the live row's clause; events that say nothing about that leave it.
     defp sync_event(
            %TUI{turn: %{started_at: started}} = state,
-           {:entry, %{type: :request}}
+           {:entry, %{type: :request, payload: payload}}
          )
          when is_integer(started),
-         do: state |> counted() |> Submission.mark_steers(:sent) |> phase(:waiting)
+         do: state |> counted() |> Submission.deliver_steer(payload) |> phase(:waiting)
 
-    defp sync_event(state, {:entry, %{type: :request}}),
-      do: state |> counted() |> Submission.mark_steers(:sent)
+    defp sync_event(state, {:entry, %{type: :request} = entry}),
+      do: state |> counted() |> Submission.deliver_steer(Map.get(entry, :payload, %{}))
+
+    defp sync_event(%{tools: %{pending_steer: %{id: id}}} = state, {:steers_discarded, ids}) do
+      if id in ids, do: Submission.settle_steer(state, :not_sent), else: state
+    end
 
     # The prompt is waiting a bounded moment for MCP servers still
     # connecting; the live row says which, so the pause is not a mystery.
@@ -300,19 +310,31 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp finish_event({:noreply, state}, {:finished, reason}) do
       # An aside can finish normally with a steer still queued for the next
       # prompt. Cancellation and other stops discard it at the session layer.
-      state = if reason in [:stop, :ok], do: state, else: Submission.mark_steers(state, :not_sent)
+      state =
+        if reason in [:stop, :ok], do: state, else: Submission.settle_steer(state, :not_sent)
+
       elapsed = Screen.elapsed(state)
 
-      state =
-        state
-        |> Submission.flush_deferred_steer()
-        |> Turn.finish_processing()
-        |> Notify.finished(elapsed)
-
-      if reason in [:stop, :ok], do: Submission.continue_queued(state), else: {:noreply, state}
+      state = Turn.finish_processing(state)
+      finish_attention(state, reason, elapsed)
     end
 
     defp finish_event(result, _event), do: result
+
+    defp finish_attention(
+           %{tools: %{question_flow: %{deferred?: true}}} = state,
+           reason,
+           _elapsed
+         )
+         when reason in [:stop, :ok] do
+      state = Transcript.say(state, :lmx, "Independent work finished · awaiting your answers")
+      {:noreply, Notify.waiting(state, "your answers")}
+    end
+
+    defp finish_attention(state, reason, elapsed) do
+      state = Notify.finished(state, elapsed)
+      if reason in [:stop, :ok], do: Submission.continue_queued(state), else: {:noreply, state}
+    end
 
     # A call is announced once. The event can arrive twice — a host that
     # attaches mid-turn is sent the pending call and then the live one — and
@@ -421,11 +443,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
         |> present_result(id, call, payload)
         |> Pager.remember(id, field(call, :name, "name", "tool"), output_text(payload["output"]))
         |> WriteDiff.request(id, call, payload)
-
-      state =
-        if map_size(state.tools.calls) == 0,
-          do: Submission.flush_deferred_steer(state),
-          else: state
 
       state = clear_question_flow(state, id)
       {state, without(effects, :say)}

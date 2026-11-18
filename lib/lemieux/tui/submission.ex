@@ -72,7 +72,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp sending_ordinary(typed, %{conversation: %{busy?: true}} = state) do
-      if pending_steer_text(state) && not String.starts_with?(String.trim_leading(typed), "/"),
+      if state.tools.pending_steer && not String.starts_with?(String.trim_leading(typed), "/"),
         do:
           {:noreply, Flash.show(state, "one steer is already waiting · /unsteer takes it back")},
         else: send_input(typed, state)
@@ -111,16 +111,43 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp send_input("/mcp " <> _arguments, state), do: send_input("/mcp", state)
 
     defp send_input(typed, state) do
-      # Cleared through the widget rather than by replacing the handle: the
-      # editor's state is one buffer behind a reference, so a fresh reference
-      # would leave the old one being drawn until the next frame rebuilt it.
-      :ok = ExRatatui.textarea_set_value(state.input, "")
-
-      # Echoed, because nothing else will: a terminal echoes what you type and
-      # a widget does not, so without this the transcript is one side of the
-      # conversation.
       {conversation, effects} = conversation_input(state, typed)
       effects = command_effects(typed, effects)
+
+      case Enum.find(effects, &match?({:steer, _text}, &1)) do
+        {:steer, text} ->
+          queue_steer(state, conversation, typed, text)
+
+        nil ->
+          state
+          |> record_input(conversation, typed)
+          |> echo_input(typed, effects)
+          |> Effects.run(effects)
+      end
+    end
+
+    defp queue_steer(state, conversation, typed, text) do
+      case enqueue_steer(state.session, text) do
+        {:ok, id} ->
+          state = record_input(state, conversation, typed)
+          {:noreply, put_in(state.tools.pending_steer, %{id: id, text: typed})}
+
+        {:error, :idle} ->
+          {:noreply, Flash.show(state, "turn ended · Enter sends your draft as a new prompt")}
+
+        {:error, :not_running} ->
+          {:noreply, Flash.show(state, "session stopped before the steer was queued")}
+      end
+    end
+
+    defp enqueue_steer(session, text) do
+      Session.steer(session, text, :while_running)
+    catch
+      :exit, _gone -> {:error, :not_running}
+    end
+
+    defp record_input(state, conversation, typed) do
+      :ok = ExRatatui.textarea_set_value(state.input, "")
 
       %{
         state
@@ -132,8 +159,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
           command_tab: "Commands",
           history: state.history |> History.record(typed) |> History.browsing(nil)
       }
-      |> echo_input(typed, effects)
-      |> Effects.run(suppress_steer_ack(effects))
     end
 
     # While startup connections run, asking the session waits for the
@@ -144,12 +169,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
       do: MCPStatus.statuses(state)
 
     defp mcp_statuses(state), do: Session.mcp_status(state.session)
-
-    defp suppress_steer_ack(effects) do
-      if Enum.any?(effects, &match?({:steer, _text}, &1)),
-        do: Enum.reject(effects, &(&1 == {:say, "… noted, will pass it on"})),
-        else: effects
-    end
 
     defp conversation_input(%TUI{conversation: %{busy?: true}} = state, typed) do
       case invoked_skill(state, typed) do
@@ -219,16 +238,6 @@ if Code.ensure_loaded?(ExRatatui.App) do
           {:answer, call_id, value} = answer
           Transcript.append_rows(state, ToolText.answer_rows(call_id, value))
 
-        steer = Enum.find(effects, &match?({:steer, _text}, &1)) ->
-          {:steer, sent} = steer
-          state = sent_steer(state, typed, sent)
-
-          if map_size(state.tools.calls) > 0 do
-            put_in(state.tools.deferred_steer, {:pending, typed})
-          else
-            Transcript.append_rows(state, [{:space, ""}, {:steer, :pending, typed}, {:space, ""}])
-          end
-
         true ->
           Transcript.say(state, :you, typed)
       end
@@ -257,73 +266,30 @@ if Code.ensure_loaded?(ExRatatui.App) do
           effect -> effect
         end)
 
+    # A request already in the mailbox may predate the steer. The request
+    # snapshot identifies the exact entries the parent was given.
     @doc false
-    @spec mark_steers(TUI.t(), :sent | :not_sent) :: TUI.t()
-    def mark_steers(state, status) do
-      lines =
-        Enum.map(state.lines, fn
-          {:steer, :pending, text} -> {:steer, status, text}
-          row -> row
-        end)
-
-      state = %{state | lines: lines, tools: %{state.tools | sent_steers: []}}
-
-      case state.tools.deferred_steer do
-        {:pending, text} -> put_in(state.tools.deferred_steer, {status, text})
-        _other -> state
-      end
+    @spec deliver_steer(TUI.t(), map()) :: TUI.t()
+    def deliver_steer(%{tools: %{pending_steer: %{id: id}}} = state, payload) do
+      if id in Map.get(payload, "entry_ids", []), do: settle_steer(state, :sent), else: state
     end
 
-    # What the session was handed for a steer is not what its row shows:
-    # `Lemieux.Conversation.input/2` trims the line and puts any note a
-    # `!command` or `/memory` left ahead of it, and `Lemieux.Session` takes a
-    # steer back only by its exact text. Revoking with the row's text — a
-    # line pasted with its newline, or one that carried a note — never
-    # matched, so `/unsteer` said "already sent" and the steer went out with
-    # the next request anyway. So the sent text is kept beside the row's,
-    # newest first, for as long as the row is drawn as waiting.
-    defp sent_steer(state, shown, sent),
-      do: put_in(state.tools.sent_steers, [{shown, sent} | state.tools.sent_steers])
+    def deliver_steer(state, _payload), do: state
 
-    defp pending_steer_text(state) do
-      case pending_steer(state) do
-        nil -> nil
-        {_where, shown, _sent} -> shown
-      end
+    @doc false
+    @spec settle_steer(TUI.t(), :sent | :not_sent | :revoked) :: TUI.t()
+    def settle_steer(%{tools: %{pending_steer: nil}} = state, _status), do: state
+
+    def settle_steer(%{tools: %{pending_steer: %{text: text}}} = state, status) do
+      state
+      |> put_in([Access.key!(:tools), :pending_steer], nil)
+      |> Transcript.append_rows([{:space, ""}, {:steer, status, text}, {:space, ""}])
     end
 
-    # The waiting steer `/unsteer` would take back: where it is drawn (the
-    # deferred slot under running tool calls, or a row), the text shown, and
-    # the text the session holds. A row put there some other way — a host's
-    # own `:lines` — has no sent text recorded, and is revoked by its own.
-    defp pending_steer(state) do
-      found =
-        case state.tools.deferred_steer do
-          {:pending, shown} ->
-            {:deferred, shown}
-
-          _other ->
-            Enum.find_value(state.lines, fn
-              {:steer, :pending, shown} -> {:row, shown}
-              _row -> nil
-            end)
-        end
-
-      with {where, shown} <- found do
-        case List.keyfind(state.tools.sent_steers, shown, 0) do
-          {^shown, sent} -> {where, shown, sent}
-          nil -> {where, shown, shown}
-        end
-      end
-    end
-
-    # Cmd+Z, or the key bound to `:revoke_steer` (Alt+Z unless rebound),
-    # takes back a steer that has not reached the model yet; with none
-    # waiting, the key is the editor's.
     @doc false
     @spec revoke_steer(ExRatatui.Event.Key.t(), TUI.t()) :: {:noreply, TUI.t()}
     def revoke_steer(event, state) do
-      case pending_steer(state) do
+      case state.tools.pending_steer do
         nil ->
           Composer.edit(event, state)
 
@@ -333,13 +299,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    # `/unsteer`, the same taking back for every terminal: Cmd+Z reaches the
-    # screen only where the terminal reports the Command key. Typed, so it is
-    # answered in the transcript under the line that asked.
     @doc false
     @spec unsteer(state :: TUI.t()) :: TUI.t()
     def unsteer(state) do
-      case pending_steer(state) do
+      case state.tools.pending_steer do
         nil ->
           Transcript.say(state, :lmx, Unsteer.nothing_waiting())
 
@@ -349,56 +312,23 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    # Taken back from where it was drawn, and only that one: the session
-    # drops one steer with the text, so the screen drops one row with it.
-    defp take_back(state, {where, shown, sent}) do
-      case revoke(state.session, sent) do
+    defp take_back(state, %{id: id}) do
+      case revoke(state.session, id) do
         :ok ->
-          state =
-            state
-            |> undraw(where, shown)
-            |> put_in([Access.key!(:tools), :sent_steers], sent_steers_without(state, shown))
+          {settle_steer(state, :revoked), Unsteer.revoked(:ok)}
 
-          {state, Unsteer.revoked(:ok)}
-
-        {:error, :already_sent} = sent ->
-          {mark_steers(state, :sent), Unsteer.revoked(sent)}
+        {:error, :already_sent} ->
+          {state, "steer is already in a prepared request"}
 
         {:error, :not_running} = stopped ->
-          {mark_steers(state, :not_sent), Unsteer.revoked(stopped)}
+          {settle_steer(state, :not_sent), Unsteer.revoked(stopped)}
       end
     end
 
-    defp undraw(state, :deferred, _shown), do: put_in(state.tools.deferred_steer, nil)
-
-    defp undraw(state, :row, shown),
-      do: %{state | lines: List.delete(state.lines, {:steer, :pending, shown})}
-
-    defp sent_steers_without(state, shown), do: List.keydelete(state.tools.sent_steers, shown, 0)
-
-    # A session that stopped marks its waiting steers undelivered
-    # (`Lemieux.TUI.Lifecycle.session_down/2`), but its `:DOWN` can still be
-    # in the mailbox behind the key or the `/unsteer` that asked. The call
-    # then exits, and an exit here took the whole screen down; a steer whose
-    # session is gone was simply never delivered.
-    defp revoke(session, text) do
-      Session.revoke_steer(session, text)
+    defp revoke(session, id) do
+      Session.revoke_steer(session, {:id, id})
     catch
       :exit, _gone -> {:error, :not_running}
-    end
-
-    # A steer typed while tool calls were running waits under them, so it
-    # lands after the results it was written in reply to.
-    @doc false
-    @spec flush_deferred_steer(TUI.t()) :: TUI.t()
-    def flush_deferred_steer(%{tools: %{deferred_steer: nil}} = state), do: state
-
-    def flush_deferred_steer(state) do
-      {status, text} = state.tools.deferred_steer
-
-      state
-      |> put_in([Access.key!(:tools), :deferred_steer], nil)
-      |> Transcript.append_rows([{:space, ""}, {:steer, status, text}, {:space, ""}])
     end
 
     # The next staged message goes when nothing else holds the screen: no

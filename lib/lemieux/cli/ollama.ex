@@ -483,7 +483,7 @@ defmodule Lemieux.CLI.Ollama do
     base_url =
       if ModelSpec.provider(options.model) == "ollama" and is_binary(options.base_url),
         do: options.base_url,
-        else: configured_base_url()
+        else: Config.provider_base_urls(options.config)["ollama"] || configured_base_url()
 
     api_url(base_url, endpoint)
   end
@@ -492,7 +492,7 @@ defmodule Lemieux.CLI.Ollama do
     base_url =
       if ModelSpec.provider(options.model) == "ollama_cloud" and is_binary(options.base_url),
         do: options.base_url,
-        else: @cloud_base_url
+        else: Config.provider_base_urls(options.config)["ollama_cloud"] || @cloud_base_url
 
     api_url(base_url, endpoint)
   end

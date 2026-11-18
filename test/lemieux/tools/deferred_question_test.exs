@@ -127,6 +127,127 @@ defmodule Lemieux.Tools.DeferredQuestionTest do
     assert Enum.count(entries(resumed), &(&1.payload["source"] == "question_answer")) == 1
   end
 
+  test "lmx submits an answer after independent work without another prompt", ctx do
+    import Lemieux.TUI.TestSupport
+
+    {session, provider, id} =
+      start(ctx, [
+        [{:tool_call, question()}, {:done, :tool_calls}],
+        Scripted.complete("Independent work finished"),
+        Scripted.complete("Updated result")
+      ])
+
+    assert_receive {:lemieux, ^id, {:question, %{call_id: qid} = payload}}
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+
+    state =
+      tui(session: session, id: id)
+      |> info({:question, payload})
+      |> info({:finished, :stop})
+
+    assert screen(state) =~ "Independent work finished · awaiting your answers"
+
+    submitted = state |> type("Widget") |> press("enter") |> press("enter")
+    assert submitted.conversation.busy?
+    assert screen(submitted) =~ "Answer received · continuing the task"
+    assert submitted.tools.question_flow == nil
+
+    settled = settle(submitted)
+    assert screen(settled) =~ "Updated result"
+    assert [_initial, _independent, continued] = Scripted.requests(provider)
+    assert [entry] = Enum.filter(continued.entries, &(&1.payload["source"] == "question_answer"))
+    assert entry.payload["question_id"] == qid
+    assert entry.payload["text"] =~ "Widget"
+    assert {:error, :unknown_call} = Session.answer(session, qid, "Duplicate", :continue)
+  end
+
+  test "an answer accepted during a stop hook reaches the next request as one batch", ctx do
+    owner = self()
+
+    hold_stop = fn _reason, _context ->
+      send(owner, {:stop_waiting, self()})
+
+      receive do
+        :finish -> :allow
+      end
+    end
+
+    {session, provider, id} =
+      start(
+        ctx,
+        [
+          [{:tool_call, question()}, {:done, :tool_calls}],
+          Scripted.complete("Independent work done"),
+          Scripted.complete("Batch incorporated")
+        ],
+        hooks: [stop: hold_stop]
+      )
+
+    assert_receive {:lemieux, ^id, {:question, %{call_id: qid}}}
+    assert_receive {:stop_waiting, task}
+
+    batch = %{
+      "answers" => [
+        %{"id" => "choice", "selected" => ["b"], "option_notes" => %{"b" => "keep it"}},
+        %{"id" => "multiple", "selected" => ["x", "y"]},
+        %{"id" => "text", "text" => "Widget"}
+      ]
+    }
+
+    assert {:ok, :queued} = Session.answer(session, qid, batch, :continue)
+    assert length(Scripted.requests(provider)) == 2
+
+    send(task, :finish)
+    assert_receive {:stop_waiting, final_hook}
+    assert [_first, _independent, continued] = Scripted.requests(provider)
+    assert [answer] = Enum.filter(continued.entries, &(&1.payload["source"] == "question_answer"))
+    assert answer.payload["question_answer"] == %{"question_id" => qid, "answer" => batch}
+    refute_received {:lemieux, ^id, {:finished, _}}
+    send(final_hook, :finish)
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+  end
+
+  test "an accepted late answer cannot exceed the original turn budget", ctx do
+    {session, provider, id} =
+      start(
+        ctx,
+        [[{:tool_call, question()}, {:done, :tool_calls}], Scripted.complete("Done")],
+        max_turns: 2
+      )
+
+    assert_receive {:lemieux, ^id, {:question, %{call_id: qid}}}
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert {:ok, :saved} = Session.answer(session, qid, "Widget", :continue)
+    assert length(Scripted.requests(provider)) == 2
+  end
+
+  test "a restored pending question can continue only on a new authorized answer", ctx do
+    {session, _provider, id} =
+      start(ctx, [[{:tool_call, question()}, {:done, :tool_calls}], Scripted.complete("Done")])
+
+    assert_receive {:lemieux, ^id, {:question, %{call_id: qid}}}
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    :ok = GenServer.stop(session)
+    provider = Scripted.new([Scripted.complete("Continued after resume")])
+
+    {:ok, resumed} =
+      Lemieux.resume_session(
+        supervisor: ctx.runtime,
+        store: ctx.store,
+        resume: id,
+        provider: provider,
+        subscriber: self(),
+        tools: [AskUser]
+      )
+
+    assert Scripted.requests(provider) == []
+    assert {:ok, :continuing} = Session.answer(resumed, qid, "New answer", :continue)
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert [request] = Scripted.requests(provider)
+    assert [entry] = Enum.filter(request.entries, &(&1.payload["source"] == "question_answer"))
+    assert entry.payload["question_id"] == qid
+  end
+
   test "restores a pending question, bounds new batches and rejects answers after cancellation",
        ctx do
     {session, _provider, id} =
@@ -159,7 +280,7 @@ defmodule Lemieux.Tools.DeferredQuestionTest do
            ] =~ "another question"
 
     :ok = Session.cancel(resumed)
-    assert {:error, :unknown_call} = Session.answer(resumed, qid, "late")
+    assert {:error, :unknown_call} = Session.answer(resumed, qid, "late", :continue)
     assert Session.snapshot(resumed).pending == []
   end
 
@@ -180,7 +301,7 @@ defmodule Lemieux.Tools.DeferredQuestionTest do
                     {:entry,
                      %{type: :approval, payload: %{"call_id" => ^qid, "status" => "timed_out"}}}}
 
-    assert {:error, :unknown_call} = Session.answer(session, qid, "late")
+    assert {:error, :unknown_call} = Session.answer(session, qid, "late", :continue)
     assert length(Scripted.requests(provider)) == 2
   end
 

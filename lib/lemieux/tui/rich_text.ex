@@ -92,6 +92,7 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
              | :hook, String.t()}
             | {:bug_hint | :bug_summary, String.t(), String.t()}
             | {:activity, String.t(), String.t()}
+            | {:steer, :pending | :sent | :not_sent | :revoked, String.t()}
             | Blocks.row()
             | {:subagent_child, child()}
             | {:subagent_summary, String.t(), String.t()}
@@ -412,8 +413,9 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
 
     # Says how to take it back while that is still possible: the key that
     # used to be the only way (Cmd+Z) never reaches most terminals.
-    defp steer_status(:pending), do: "queued for next model request · /unsteer takes it back"
-    defp steer_status(:sent), do: "included in model request"
+    defp steer_status(:pending), do: "queued for parent’s next request · /unsteer takes it back"
+    defp steer_status(:sent), do: "included in parent model request"
+    defp steer_status(:revoked), do: "revoked before delivery"
     defp steer_status(:not_sent), do: "turn stopped before delivery"
 
     # The live row, drawn under everything the turn has said so far — see

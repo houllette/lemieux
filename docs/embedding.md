@@ -954,8 +954,9 @@ and hears the same answer until it finishes; that is not a loop.
 
 A request that fails in a way the provider may not repeat (a 5xx, an
 overload, a rate limit, a stream that went quiet or broke off) is sent
-again, up to six attempts with a doubling backoff (2, 4, 8, 16, 32 seconds,
-or the provider's `retry-after`). That holds after the model had started
+again, up to six attempts with a doubling backoff capped at one minute.
+A provider's Retry-After takes precedence within `max_delay_ms`. A longer hint
+ends the turn with the original error and the requested wait. That holds after the model had started
 answering too: tool calls run only once a response is complete, so nothing a
 partial answer contained has taken effect. What it had said is kept as an
 assistant entry marked `"partial" => true`, never sent again, and

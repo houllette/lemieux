@@ -502,6 +502,67 @@ defmodule Lemieux.SessionRetryTest do
     end
   end
 
+  test "a distant Retry-After returns to idle and manual retry retains completed tool results",
+       context do
+    import Lemieux.TUI.TestSupport
+
+    script = [
+      Scripted.tool_call("c1", "echo", %{"say" => "already done"}),
+      Scripted.http_error(503, headers: %{"retry-after" => "3600"}),
+      Scripted.complete("Recovered")
+    ]
+
+    clock = Manual.new()
+    limiter = start_supervised!({Lemieux.ProviderLimiter, clock: clock})
+
+    {session, provider} =
+      start_session(context, script,
+        tools: [Lemieux.SessionRetryTest.Echo],
+        provider_limiter: limiter
+      )
+
+    id = Session.id(session)
+    working = command(tui(session: session, id: id), "Do the task")
+    settled = settle(working)
+
+    refute settled.conversation.busy?
+    assert Session.snapshot(session).status == :idle
+    assert screen(settled) =~ "automatic retry deferred"
+    assert screen(settled) =~ "change route with /provider"
+    assert length(Scripted.requests(provider)) == 2
+    refute_received {:lemieux, ^id, {:provider_retry, _}}
+
+    assert [_timer | _rest] = Manual.advance(clock, :timer.hours(1), settle: limiter)
+    assert :ok = Session.retry(session)
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+    assert [_first, _failed, resumed] = Scripted.requests(provider)
+
+    assert Enum.any?(
+             resumed.entries,
+             &(&1.type == :tool_result and &1.payload["call_id"] == "c1")
+           )
+  end
+
+  test "known exhausted capacity ends immediately with the reset and route actions", context do
+    import Lemieux.TUI.TestSupport
+
+    reason = %Lemieux.Ixway.Capacity{
+      status: 503,
+      reset_at: ~U[2026-11-19 19:22:00Z]
+    }
+
+    {session, provider} = start_session(context, [[{:error, reason}]])
+    id = Session.id(session)
+    settled = tui(session: session, id: id) |> command("Do the task") |> settle()
+
+    assert Session.snapshot(session).status == :idle
+    refute settled.conversation.busy?
+    assert screen(settled) =~ ~r/Resets 2026-11-19 19:22\s+UTC/
+    assert screen(settled) =~ "/retry after the reset"
+    assert length(Scripted.requests(provider)) == 1
+    refute_received {:lemieux, ^id, {:provider_retry, _}}
+  end
+
   test "cancelling during the backoff stops the retry", context do
     # A backoff far longer than the suite's five-second wait for an event, so
     # only the cancel can end this turn before the waits below give up. At

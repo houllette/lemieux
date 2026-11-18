@@ -352,16 +352,17 @@ issuer for `--oauth-client-id ISSUER=ID`.
 A turn ends with an error row when the provider answered with a failure and
 the session's own retries did not get past it. The row says what to do for
 that kind of failure: a missing key names the variable to set; an
-authentication, billing or quota failure says retrying will not help; a rate
-limit gives the provider's wait; a context overflow suggests `/compact` then
+authentication or billing failure points to the key or account; an exhausted
+quota or rate limit gives the provider's wait when available; a context overflow suggests `/compact` then
 `/retry`; anything else offers `/retry`. What happened first depends on the
 failure:
 
 - An HTTP 5xx, a rate limit (429), an overloaded provider, a dropped
   connection or a stream that broke off is retried automatically, up to six
-  attempts, waiting two seconds and doubling each time, or whatever
-  `retry-after` the provider sent. The live row says `retrying in 8s (3/6)`
-  while it waits, and `lmx run` writes a line on standard error such as
+  attempts, starting at two seconds and doubling to a maximum of one minute.
+  When the provider sends Retry-After, lmx honors the hint within that limit.
+  A longer hint ends the turn and tells you how long to wait. The live row
+  says `retrying in 8s (3/6)` while it waits, and `lmx run` writes a line on standard error such as
   `provider request failed (…); retrying in 8000ms (3/6)`.
 - That includes a stream that broke off after output arrived. Tools run only
   once a response is complete, so nothing acted on the partial answer; it is

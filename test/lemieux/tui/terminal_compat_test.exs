@@ -82,7 +82,7 @@ defmodule Lemieux.TUI.TerminalCompatTest do
       state
     end
 
-    defp pending?(state), do: Enum.any?(state.lines, &match?({:steer, :pending, _text}, &1))
+    defp pending?(state), do: state.tools.pending_steer != nil
 
     test "the waiting steer says how to take it back, and a second one points at /unsteer" do
       pending = steered(working(), "do this first")
@@ -104,7 +104,7 @@ defmodule Lemieux.TUI.TerminalCompatTest do
       assert screen(revoked) =~ "steer revoked before the next model request"
 
       sent = steered(revoked, "do this instead")
-      assert Enum.any?(sent.lines, &(&1 == {:steer, :pending, "do this instead"}))
+      assert %{text: "do this instead"} = sent.tools.pending_steer
     end
 
     test "/unsteer with nothing waiting says so" do
@@ -143,7 +143,9 @@ defmodule Lemieux.TUI.TerminalCompatTest do
       {gone, ref} = spawn_monitor(fn -> :ok end)
       assert_receive {:DOWN, ^ref, :process, ^gone, :normal}
 
-      raced = tui(session: gone, lines: [{:steer, :pending, "do this first"}])
+      raced =
+        put_in(tui(session: gone).tools.pending_steer, %{id: "steer", text: "do this first"})
+
       unsteered = command(raced, "/unsteer")
       refute pending?(unsteered)
       assert screen(unsteered) =~ "the session stopped before the steer was sent"

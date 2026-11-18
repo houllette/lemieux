@@ -193,6 +193,9 @@ defmodule Lemieux.Provider.Route do
               reference :: reference()
             ) :: ReqLLM.StreamResponse.t()
 
+  @doc "Normalizes an error returned before a streaming response opens."
+  @callback request_error(state :: term(), reason :: term()) :: term()
+
   @doc "Sees the consumed result; may attach what the stream disclosed."
   @callback finish_stream(state :: term(), result :: result(), reference :: reference()) ::
               result()
@@ -213,6 +216,7 @@ defmodule Lemieux.Provider.Route do
                       estimate_cost: 2,
                       observe_stream: 3,
                       finish_stream: 3,
+                      request_error: 2,
                       after_stream: 3,
                       annotate_message: 3
 
@@ -353,6 +357,16 @@ defmodule Lemieux.Provider.Route do
   end
 
   def observe_stream(nil, response, reference) when is_reference(reference), do: response
+
+  @doc "Interprets a request-opening error according to its route, when implemented."
+  @spec request_error(t() | nil, term()) :: term()
+  def request_error(nil, reason), do: reason
+
+  def request_error({module, state}, reason) do
+    if implements?(module, :request_error, 2),
+      do: module.request_error(state, reason),
+      else: reason
+  end
 
   @doc "Lets `route` finish a consumed result; identity without one."
   @spec finish_stream(route :: t() | nil, result :: term(), reference :: reference()) :: term()
