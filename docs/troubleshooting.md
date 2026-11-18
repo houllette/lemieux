@@ -406,9 +406,10 @@ the failed request's terminal reason, summary sizing, usage when available,
 and whether recovery was attempted. A partial summary never replaces the
 original entries.
 
-If compaction still fails and the next request is forecast to exceed the
-known context window, the prompt stops. Try manual compaction with a larger
-summary allowance or resume with a model that has a larger context window.
+After a length-limited summary fails, prompts whose prepared requests are
+forecast to exceed the known window stop during compaction backoff. Change
+`summary_model` and retry `/compact`, or resume with a model that has a
+larger context window.
 
 ## Local models
 

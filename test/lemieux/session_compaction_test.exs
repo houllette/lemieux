@@ -621,18 +621,28 @@ defmodule Lemieux.SessionCompactionTest do
       script =
         Enum.take(four_roomy_turns(), 3) ++
           [answer("filled window", 10_500)] ++
-          List.duplicate([{:text_delta, "partial"}, {:done, :length}], 2)
+          List.duplicate([{:text_delta, "partial"}, {:done, :length}], 2) ++
+          [answer("manual recovery summary", 1_000), answer("back to work", 1_000)]
 
       {session, provider} =
         start_session(context, script, context_window: 10_000, compact_at: 0.8)
 
       for n <- 1..4, do: say(session, "prompt #{n}")
       assert {:ok, %{stop_reason: :compaction_failed}} = Session.await(session, "keep working")
+
+      assert {:ok, %{stop_reason: :compaction_failed}} =
+               Session.await(session, "try again before compaction")
+
       assert length(Scripted.requests(provider)) == 6
       entries = Session.snapshot(session).entries
       refute Enum.any?(entries, &(&1.type == :compaction))
       assert Enum.any?(entries, &(&1.type == :user and &1.payload["text"] == "keep working"))
       assert Enum.any?(entries, &(&1.type == :error and &1.payload["recovery"] == "exhausted"))
+
+      assert {:ok, %{summary: "manual recovery summary"}} = Session.compact(session)
+
+      assert {:ok, %{stop_reason: :stop, text: "back to work"}} =
+               Session.await(session, "continue after compaction")
     end
 
     test "a paid failed summary remains in transcript spend", context do

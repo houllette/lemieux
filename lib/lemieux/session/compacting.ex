@@ -43,9 +43,9 @@ defmodule Lemieux.Session.Compacting do
   # requests. It used to stop for the rest of the session, so one gateway
   # hiccup during a summary left a long session to run into the provider's
   # own limit with nothing standing in the way.
-  def due?(%{compaction: %{retry_at: at}, request_count: count}, _request)
+  def due?(%{compaction: %{retry_at: at}, request_count: count} = state, request)
       when is_integer(at) and count < at,
-      do: false
+      do: if(length_limited?(state, request), do: :length_limited, else: false)
 
   def due?(%{compaction: %{preflight_attempted?: true}}, _request), do: false
 
@@ -65,6 +65,29 @@ defmodule Lemieux.Session.Compacting do
       true ->
         false
     end
+  end
+
+  # The forecast belongs to the prepared turn. During backoff, recheck it
+  # for each prompt because its input and the host's request hooks can change.
+  defp length_limited?(
+         %{compaction: %{last_failure: :length}, context_window: window} = state,
+         request
+       )
+       when is_integer(window),
+       do: forecast(state, request).input_tokens >= window
+
+  defp length_limited?(_state, _request), do: false
+
+  @spec stop_at_context_limit(state :: map()) :: map()
+  def stop_at_context_limit(state) do
+    state
+    |> Core.put_compaction(:preflight_attempted?, false)
+    |> ToolWave.stop(
+      :compaction_failed,
+      "The summary hit its length limit and the next request is forecast to exceed the " <>
+        "context window. The transcript is intact. Try manual compaction with a larger " <>
+        "summary allowance or resume with a model that has a larger window."
+    )
   end
 
   def valid_compaction_advice?(
@@ -337,7 +360,6 @@ defmodule Lemieux.Session.Compacting do
     }
 
     state
-    |> Core.put_compaction(:compaction_failed?, false)
     |> Core.forget_compaction_failures()
     |> Core.append({:compaction, payload, nil})
     |> Core.emit({:cleared, %{entries: length(sendable)}})
@@ -753,24 +775,12 @@ defmodule Lemieux.Session.Compacting do
       Instrumentation.telemetry_metadata(state, %{
         request_id: request_id,
         kind: Instrumentation.recovery_kind(recovery_reason),
-        outcome: if(state.compaction.compaction_failed?, do: :error, else: :ok)
+        outcome: if(state.compaction.last_failure, do: :error, else: :ok)
       })
     )
 
-    {state, from, continuation_reason(state, compacting, result, recovery_reason)}
+    {state, from, recovery_reason}
   end
-
-  defp continuation_reason(
-         %{compaction: %{compaction_failed?: true}, context_window: window},
-         %{from: nil, forecast: %{input_tokens: tokens}},
-         result,
-         nil
-       )
-       when is_integer(window) and tokens >= window do
-    if summary_finish_reason(result) == "length", do: :summary_length_at_context_limit
-  end
-
-  defp continuation_reason(_state, _compacting, _result, reason), do: reason
 
   defp emit_compaction_metadata(state, {:crashed, _reason}, _request_id), do: state
 
@@ -852,17 +862,8 @@ defmodule Lemieux.Session.Compacting do
   # so the turn goes ahead.
   def after_compaction({state, nil, nil}), do: Requests.start_turn(state)
 
-  def after_compaction({state, nil, :summary_length_at_context_limit}) do
-    ToolWave.stop(
-      state,
-      :compaction_failed,
-      "The summary hit its length limit and the next request is forecast to exceed the " <>
-        "context window. The transcript is intact. Try manual compaction with a larger " <>
-        "summary allowance or resume with a model that has a larger window."
-    )
-  end
-
-  def after_compaction({%{compaction: %{compaction_failed?: true}} = state, nil, recovery_reason}) do
+  def after_compaction({%{compaction: %{last_failure: failure}} = state, nil, recovery_reason})
+      when not is_nil(failure) do
     state
     |> Core.put_compaction(:context_recovery_reason, nil)
     |> Recovery.fold({:error, recovery_reason})
@@ -904,7 +905,6 @@ defmodule Lemieux.Session.Compacting do
 
     state =
       state
-      |> Core.put_compaction(:compaction_failed?, false)
       |> Core.forget_compaction_failures()
       # Only one the loop started itself is checked: a request follows it
       # at once. After an explicit `compact/2` the session goes idle.
@@ -936,19 +936,20 @@ defmodule Lemieux.Session.Compacting do
 
     usage = summary_error_usage(state, result, compacting.request_id)
     recovery = if compacting.retry_strategy, do: "exhausted", else: "unavailable"
+    failure = if summary_finish_reason(result) == "length", do: :length, else: :other
 
     state =
       Core.append(state, {:error, failure_payload(compacting, result, recovery), usage})
 
     state =
       state
-      |> Core.put_compaction(:compaction_failed?, true)
+      |> Core.put_compaction(:last_failure, failure)
       |> Core.back_off_compaction()
       |> Core.emit({:compaction_failed, reason})
 
     if compacting.from, do: GenServer.reply(compacting.from, {:error, reason})
 
-    if summary_finish_reason(result) == "length" do
+    if failure == :length do
       # The provider's overflow path otherwise immediately repeats the same
       # cut on the same prompt, despite the summary already using its retry.
       Core.put_compaction(state, :context_recovery_attempted?, true)

@@ -60,7 +60,7 @@ defmodule Lemieux.Session.Core do
     do: %{state | compaction: %{state.compaction | key => value}}
 
   def forget_compaction_failures(state),
-    do: %{state | compaction: %{state.compaction | failures: 0, retry_at: nil}}
+    do: %{state | compaction: %{state.compaction | last_failure: nil, failures: 0, retry_at: nil}}
 
   def back_off_compaction(state), do: back_off_compaction(state, state.compaction.failures + 1)
 
