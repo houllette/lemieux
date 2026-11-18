@@ -834,11 +834,91 @@ defmodule Lemieux.SessionTest do
 
       assert length(Scripted.requests(provider)) == 3
       assert {:ok, entries} = Store.read(context.store, Session.id(session))
-      assert %Entry{payload: %{"reason" => reason}} = Enum.find(entries, &(&1.type == :error))
+
+      assert %Entry{payload: %{"reason" => reason, "turns_taken" => 3, "max_turns" => 3}} =
+               Enum.find(entries, &(&1.type == :error))
+
       assert reason =~ "3 turns"
 
       assert %Entry{type: :run_evidence, payload: %{"stop_reason" => "max_turns"}} =
                List.last(entries)
+    end
+
+    test "a larger explicit allowance lets a progressing assignment finish its edits",
+         %{
+           tmp_dir: tmp_dir
+         } = context do
+      steps = 1..16
+
+      writes =
+        Enum.map(steps, fn step ->
+          Scripted.tool_call("write-#{step}", "write", %{
+            "path" => "part-#{step}.txt",
+            "content" => "Completed part #{step}\n"
+          })
+        end)
+
+      {session, provider} =
+        start_session(context, writes ++ [Scripted.complete("All parts written.")],
+          cwd: tmp_dir,
+          tools: [Lemieux.Tools.Write],
+          max_turns: 17,
+          max_requests: 17
+        )
+
+      assert {:ok, %{stop_reason: :stop, text: "All parts written."}} =
+               Session.await(session, "Write all 16 parts.")
+
+      assert %{turns_taken: 17, max_turns: 17, requests: 17, max_requests: 17} =
+               Session.info(session)
+
+      assert length(Scripted.requests(provider)) == 17
+
+      for step <- steps do
+        assert File.read!(Path.join(tmp_dir, "part-#{step}.txt")) == "Completed part #{step}\n"
+      end
+    end
+
+    test "late required results survive the turn limit for an explicit continuation", context do
+      {session, provider} =
+        start_session(context, [Scripted.complete("Waiting for the result.")], max_turns: 1)
+
+      assert {:ok, %{stop_reason: :stop}} = Session.await(session, "Start the work")
+      id = Session.id(session)
+      event = %{"id" => "background-1", "text" => "The job completed, count is 7."}
+      opts = [follow_up: true, preserve_turns: true]
+      assert :ok = Session.deliver_notification(session, event, opts)
+      assert_receive {:lemieux, ^id, {:finished, :max_turns}}
+      assert %{turns_taken: 1, max_turns: 1} = Session.info(session)
+      assert :duplicate = Session.deliver_notification(session, event, opts)
+      assert length(Scripted.requests(provider)) == 1
+      GenServer.stop(session)
+
+      provider =
+        Scripted.new([
+          Scripted.tool_call("t1", "echo", %{"text" => "verify"}),
+          Scripted.complete("The count is 7.")
+        ])
+
+      assert {:ok, resumed} =
+               Lemieux.resume_session(
+                 supervisor: context.runtime,
+                 store: context.store,
+                 provider: provider,
+                 resume: id,
+                 tools: [Echo],
+                 max_turns: 2
+               )
+
+      assert :duplicate = Session.deliver_notification(resumed, event, opts)
+
+      assert {:ok, %{stop_reason: :stop, text: "The count is 7."}} =
+               Session.await(resumed, "Finish using the recorded result")
+
+      assert [request, _answer_request] = Scripted.requests(provider)
+
+      assert [%{payload: %{"text" => "The job completed, count is 7."}}] =
+               Enum.filter(request.entries, &(&1.payload["notification_id"] == event["id"]))
     end
 
     test "a new prompt gets a fresh turn budget", context do

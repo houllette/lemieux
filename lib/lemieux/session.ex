@@ -375,6 +375,8 @@ defmodule Lemieux.Session do
           queued_steers: [String.t()],
           queued_follow_ups: [String.t()],
           request_id: String.t() | nil,
+          turns_taken: non_neg_integer(),
+          max_turns: pos_integer(),
           requests: non_neg_integer(),
           max_requests: pos_integer() | nil,
           spent_usd: number() | nil,
@@ -674,7 +676,9 @@ defmodule Lemieux.Session do
       what the option is for and why it is off.
     * `:summary_model` and `:summary_params` — optional model and generation
       parameters for the summarizing request, using the same provider route.
-      The request remains subject to the session's request and cost budgets.
+      If an automatic summary hits its length limit, it can retry once with
+      a shorter writing target when provider retries are enabled. Both
+      attempts count against request and cost budgets.
     * `:summary_max_bytes` — maximum accepted summary size. Defaults to 32768;
       an overlong answer leaves the full transcript intact.
     * `:compaction_price_tiers` — a map from resolved model name to price
@@ -767,7 +771,7 @@ defmodule Lemieux.Session do
           | {:error, :busy | :cancelled}
           | {:error, {:hook_denied, String.t()} | {:hook_failed, term()}}
   def prompt(session, text) when is_binary(text),
-    do: GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts()}, :infinity)
+    do: submit_prompt(session, text, :infinity)
 
   @doc "Submits an untrusted `:attestation` claim for the runtime host ingress to verify."
   @spec prompt(session :: session(), text :: String.t(), opts :: keyword()) ::
@@ -775,6 +779,12 @@ defmodule Lemieux.Session do
   def prompt(session, text, opts) when is_binary(text) and is_list(opts) do
     GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts(), opts}, :infinity)
   end
+
+  @doc false
+  @spec submit_prompt(session :: session(), text :: String.t(), timeout :: timeout()) ::
+          :ok | {:error, term()}
+  def submit_prompt(session, text, timeout) when is_binary(text),
+    do: GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts()}, timeout)
 
   @doc """
   Explicitly continues a restored prompt, with current tools and hooks.
@@ -1198,9 +1208,9 @@ defmodule Lemieux.Session do
   read — out of the session on each call, and a status line that asked for it
   after every event was copying the whole session to learn its model name.
   This answers the same questions a screen asks, plus the ones a snapshot
-  cannot: how many requests have been made against `max_requests`, whether
-  startup MCP connections have settled, and whether the context window is
-  known. See `t:info/0`.
+  cannot: request and turn counts against their limits, whether startup MCP
+  connections have settled, and whether the context window is known. See
+  `t:info/0`.
   """
   @spec info(session :: session(), timeout :: timeout()) :: info()
   def info(session, timeout \\ 5_000), do: GenServer.call(session, :info, timeout)
@@ -1222,10 +1232,9 @@ defmodule Lemieux.Session do
 
   ## Options
 
-    * `:timeout` — how long to wait, `:infinity` by default: a session is
-      bounded by its own budgets, and an arbitrary clock here would abandon
-      work a model was legitimately doing. On timeout the session keeps
-      working and `{:error, :timeout}` is returned; `cancel/1` stops it.
+    * `:timeout` — how long to wait for the next event, `:infinity` by
+      default. Each event renews the wait. On timeout the session keeps
+      working and `{:error, :timeout}` is returned. Use `cancel/1` to stop it.
     * `:on_event` — a one-argument function called in the caller's process
       with every event, in order, as it arrives.
     * `:background` — `true` holds a bounded assignment open after an
@@ -1660,7 +1669,9 @@ defmodule Lemieux.Session do
   already delivered in this session returns `:duplicate` on resume as well.
   Loading receipts or recording a notification alone starts no model request.
   Bounded hosts set `preserve_turns: true` so a completion continues the same
-  task allowance. A batch may supply `receipt_ids`, a nonempty list of at most
+  task allowance. If that allowance is spent, policy-approved follow-up text
+  stays in the transcript for an explicit new prompt, and the continuation
+  ends with `:max_turns`. A batch may supply `receipt_ids`, a nonempty list of at most
   256 component identities. The single transcript receipt deduplicates each
   component across recovery; a mixture of seen and new identities returns
   `{:error, :partial_duplicate}` for the host to reconcile before dispatch.

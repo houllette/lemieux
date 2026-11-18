@@ -135,7 +135,6 @@ defmodule Lemieux.Session.Catalog do
           |> Map.put(:params, params)
           |> Map.put(:context_window, model_context_window(state, model))
           |> forget_served_window()
-          |> Core.put_compaction(:compaction_failed?, false)
           |> Core.forget_compaction_failures()
           |> Setup.record_config()
           |> Core.emit({:model_changed, previous, model})

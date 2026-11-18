@@ -573,6 +573,78 @@ defmodule Lemieux.SessionCompactionTest do
   end
 
   describe "when summarising fails" do
+    test "a length-limited summary retries once with a smaller writing target", context do
+      usage = %{"input_tokens" => 9_000, "output_tokens" => 8_192, "reasoning_tokens" => 8_190}
+
+      truncated = [
+        {:thinking_delta, "reasoning used most of the allowance"},
+        {:text_delta, "discard this partial summary"},
+        {:usage, usage},
+        {:done, :length}
+      ]
+
+      script =
+        four_roomy_turns() ++
+          [truncated, answer("Complete compact summary", 6_000), answer("resumed", 1_000)]
+
+      {session, provider} =
+        start_session(context, script,
+          context_window: 10_000,
+          compact_at: 0.8,
+          summary_params: [max_tokens: 8_192]
+        )
+
+      for n <- 1..4, do: say(session, "before #{n} " <> String.duplicate("history ", 500))
+
+      assert {:ok, %{text: "resumed", stop_reason: :stop}} =
+               Session.await(session, "keep working")
+
+      [first, retry, resumed] = Scripted.requests(provider) |> Enum.drop(4)
+      assert first.entries == retry.entries
+      assert retry.params[:max_tokens] == first.params[:max_tokens]
+      assert retry.system =~ "Finish within"
+      refute first.system =~ "Finish within"
+      assert resumed.system =~ "Complete compact summary"
+      refute resumed.system =~ "discard this partial summary"
+      assert Enum.any?(resumed.entries, &(&1.payload["text"] == "keep working"))
+
+      assert [failure] = Enum.filter(Session.snapshot(session).entries, &(&1.type == :error))
+
+      assert %{"summary_finish_reason" => "length", "recovery" => "shorter_summary"} =
+               failure.payload
+
+      assert failure.payload["summary_request"]["input_bytes"] > 1_000
+      assert failure.usage["output_tokens"] == 8_192
+    end
+
+    test "a second truncated summary stops a prompt forecast above the known window", context do
+      script =
+        Enum.take(four_roomy_turns(), 3) ++
+          [answer("filled window", 10_500)] ++
+          List.duplicate([{:text_delta, "partial"}, {:done, :length}], 2) ++
+          [answer("manual recovery summary", 1_000), answer("back to work", 1_000)]
+
+      {session, provider} =
+        start_session(context, script, context_window: 10_000, compact_at: 0.8)
+
+      for n <- 1..4, do: say(session, "prompt #{n}")
+      assert {:ok, %{stop_reason: :compaction_failed}} = Session.await(session, "keep working")
+
+      assert {:ok, %{stop_reason: :compaction_failed}} =
+               Session.await(session, "try again before compaction")
+
+      assert length(Scripted.requests(provider)) == 6
+      entries = Session.snapshot(session).entries
+      refute Enum.any?(entries, &(&1.type == :compaction))
+      assert Enum.any?(entries, &(&1.type == :user and &1.payload["text"] == "keep working"))
+      assert Enum.any?(entries, &(&1.type == :error and &1.payload["recovery"] == "exhausted"))
+
+      assert {:ok, %{summary: "manual recovery summary"}} = Session.compact(session)
+
+      assert {:ok, %{stop_reason: :stop, text: "back to work"}} =
+               Session.await(session, "continue after compaction")
+    end
+
     test "a paid failed summary remains in transcript spend", context do
       script =
         four_roomy_turns() ++
@@ -586,7 +658,11 @@ defmodule Lemieux.SessionCompactionTest do
           ]
 
       {session, _provider} =
-        start_session(context, script, context_window: 10_000, compact_at: 0.8)
+        start_session(context, script,
+          context_window: 10_000,
+          compact_at: 0.8,
+          provider_retry: false
+        )
 
       for n <- 1..4, do: say(session, "prompt #{n}")
       say(session, "prompt 5")
@@ -613,7 +689,11 @@ defmodule Lemieux.SessionCompactionTest do
           [[{:text_delta, "partial"}, {:done, :length}], priced_answer]
 
       {session, _provider} =
-        start_session(context, script, context_window: 10_000, compact_at: 0.8)
+        start_session(context, script,
+          context_window: 10_000,
+          compact_at: 0.8,
+          provider_retry: false
+        )
 
       for n <- 1..4, do: say(session, "prompt #{n}")
       assert_in_delta Session.snapshot(session).spent_usd, 0.04, 0.000001
@@ -631,7 +711,8 @@ defmodule Lemieux.SessionCompactionTest do
       for suffix <- [[{:done, :length}], []] do
         script =
           four_roomy_turns() ++
-            [[{:text_delta, "partial"} | suffix], answer("carrying on", 1_000)]
+            List.duplicate([{:text_delta, "partial"} | suffix], if(suffix == [], do: 1, else: 2)) ++
+            [answer("carrying on", 1_000)]
 
         {session, provider} =
           start_session(context, script, context_window: 10_000, compact_at: 0.8)
@@ -639,7 +720,7 @@ defmodule Lemieux.SessionCompactionTest do
         for n <- 1..4, do: say(session, "prompt #{n}")
         say(session, "prompt 5")
 
-        assert length(Scripted.requests(provider)) == 6
+        assert length(Scripted.requests(provider)) == if(suffix == [], do: 6, else: 7)
         refute Enum.any?(Session.snapshot(session).entries, &(&1.type == :compaction))
       end
     end

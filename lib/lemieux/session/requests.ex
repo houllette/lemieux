@@ -152,6 +152,9 @@ defmodule Lemieux.Session.Requests do
       |> Compacting.verify_room(request)
 
     case Compacting.due?(state, request) do
+      :length_limited ->
+        Compacting.stop_at_context_limit(state)
+
       {trigger, forecast} ->
         state =
           state

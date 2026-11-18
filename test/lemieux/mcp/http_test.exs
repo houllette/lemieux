@@ -92,16 +92,14 @@ defmodule Lemieux.MCP.HTTPTest do
   end
 
   describe "a modern server" do
-    test "is recognised, and its headers are accepted", %{port: port} do
-      info = start("modern", port) |> Client.info()
+    test "discovers and calls stateless tools with versioned requests", %{port: port} do
+      client = start("modern", port)
+      info = Client.info(client)
 
       assert info.era == :modern
       assert info.version == "2026-07-28"
       assert info.ready?, info.failure || ""
-    end
-
-    test "lists and calls tools", %{port: port} do
-      client = start("modern", port)
+      assert info.server_info == %{"name" => "fixture", "version" => "1.0.0"}
 
       assert {:ok, tools} = Client.list_tools(client)
       assert Enum.any?(tools, &(&1.name == "echo"))

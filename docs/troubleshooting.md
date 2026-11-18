@@ -383,6 +383,34 @@ reduced to its title and first lines. Embedding hosts turn the automatic
 retries off with `provider_retry: false`, or tune them with `max_attempts:`,
 `base_delay_ms:` and `max_delay_ms:`.
 
+### `stopped after … turns`
+
+A prompt gets up to 400 model turns by default. The turn ceiling also
+applies to productive work and to late background follow-ups. When a
+follow-up reaches the ceiling, its approved results stay in the conversation
+for the next prompt. The agent makes no additional request for that
+follow-up.
+
+Send a new prompt to continue with a fresh allowance. To choose a larger
+allowance, reopen the conversation with
+`lmx --resume SESSION --max-turns 800` and ask it to finish using the recorded
+results. Request and spend budgets still apply. A `no_progress` stop comes
+from the repetition or cycle detector, which also applies with a larger
+turn allowance.
+
+### Automatic compaction hits a length limit
+
+Automatic compaction can try one shorter summary within the original
+output allowance when provider retries are enabled. The transcript records
+the failed request's terminal reason, summary sizing, usage when available,
+and whether recovery was attempted. A partial summary never replaces the
+original entries.
+
+After a length-limited summary fails, prompts whose prepared requests are
+forecast to exceed the known window stop during compaction backoff. Change
+`summary_model` and retry `/compact`, or resume with a model that has a
+larger context window.
+
 ## Local models
 
 ### A local model forgets the task or answers with nothing
@@ -635,6 +663,21 @@ They wait for you to trust them. The terminal UI asks. From a shell, run
 `--project-mcp` starts them for one run, and `--no-project-mcp` never does.
 Under `--config none` without `LMX_HOME` there is nowhere to remember
 trust, so only `--project-mcp` starts them.
+
+### An MCP stdio tool is waiting for a response
+
+The stdio client waits for a matching JSON-RPC response. Matching progress
+notifications renew the silence timeout, which defaults to ten minutes and
+can be set with the server's `tool_timeout` in milliseconds. Ctrl-C or
+`/cancel` withdraws the request. A timed-out call can still have completed
+work on the remote service, so check that service before repeating a mutation.
+
+With `LMX_LOG_LEVEL=debug`, the log records the client PID and local request
+ID, the silence budget, first matching progress and the final local outcome.
+Numeric stdout and framing counters help distinguish a partial frame or
+an unmatched reply from no response. Embedders can inspect active requests
+via `Lemieux.MCP.Client.info/1`. These observations describe what reached
+the client. Server-side logs are needed to establish what was emitted.
 
 ### The agent appears stuck on a question
 

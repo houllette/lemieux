@@ -86,13 +86,27 @@ defmodule Lemieux.Session.Prompts do
     end
   end
 
-  defp accept_notification(state, _id, _text, turns) when turns >= state.max_turns,
-    do:
-      ToolWave.stop(
-        state,
-        :max_turns,
-        Messages.render(state.messages, :turn_budget_spent, [state.max_turns])
-      )
+  defp accept_notification(state, id, text, turns) when turns >= state.max_turns do
+    # The receipt prevents a second delivery. Keep the policy-approved text
+    # in model-visible history so a later, explicit prompt can use it.
+    payload = %{
+      "text" => text,
+      "source" => "notification",
+      "notification_id" => id,
+      "continuation" => "deferred_turn_limit"
+    }
+
+    reason = Messages.render(state.messages, :turn_budget_spent, [state.max_turns])
+
+    state
+    |> begin_run()
+    |> Core.append({:user, payload, nil})
+    |> ToolWave.stop(
+      :max_turns,
+      reason <>
+        ". Follow-up results were saved. Send a new prompt to continue with a fresh allowance."
+    )
+  end
 
   defp accept_notification(state, id, text, turns),
     do:

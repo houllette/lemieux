@@ -241,11 +241,6 @@ defmodule Lemieux.Session.Boot do
              # length of it: it is one more request in front of the turn somebody is
              # waiting for, not a background job.
              compacting: nil,
-             # Set when a summarising request fails. Threshold compaction stops being
-             # attempted after that, because the alternative is paying for a doomed
-             # request in front of every turn for the rest of the session. `compact/1`
-             # still works, and clears it.
-             compaction_failed?: false,
              # A typed context overflow before any provider progress may force one
              # compaction and retry. This is per prompt so a still-oversized tail
              # cannot create an unbounded series of paid requests.

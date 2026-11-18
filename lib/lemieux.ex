@@ -239,10 +239,16 @@ defmodule Lemieux do
 
       result.text
 
-  Besides the session options: `:timeout` and `:on_event` as
-  `Lemieux.Session.await/3` takes them, and `:keep_session` to leave the
-  session running afterwards — `session/2` finds it by `result.session_id`.
-  A session that is not kept is stopped even when the wait times out.
+  `:timeout` is the inactivity wait from `Lemieux.Session.await/3`.
+  `:run_deadline_ms` is an optional positive wall-clock allowance in
+  milliseconds, measured from before session startup. Progress does not
+  renew it. Expiry returns `{:error, :deadline_exceeded}`, cancels in-flight
+  work and stops the session. Synchronous startup, `:on_event` callbacks
+  and shutdown hooks can add time to the call.
+
+  `:keep_session` retains the session after an ordinary result or
+  inactivity timeout. `session/2` finds a retained session by
+  `result.session_id`. Deadline expiry always stops the session.
   Raises `ArgumentError` for the mistakes `start_session/1` raises for.
   """
   @spec run(text :: String.t(), opts :: keyword()) ::
@@ -250,15 +256,40 @@ defmodule Lemieux do
   def run(text, opts) when is_binary(text) and is_list(opts) do
     {await_opts, opts} = Keyword.split(opts, [:timeout, :on_event])
     {keep?, opts} = Keyword.pop(opts, :keep_session, false)
+    {deadline_ms, opts} = Keyword.pop(opts, :run_deadline_ms)
+    deadline_at = run_deadline(deadline_ms)
+    supervisor = Keyword.get(opts, :supervisor, Sup)
     start = if Keyword.has_key?(opts, :resume), do: &resume_session/1, else: &start_session/1
 
     with {:ok, session} <- start.(opts) do
       try do
-        Session.await(session, text, await_opts)
+        case Session.Await.run(session, text, await_opts, deadline_at) do
+          {:error, :deadline_exceeded} = error ->
+            cancel_expired(session)
+            if keep?, do: stop(session, supervisor)
+            error
+
+          result ->
+            result
+        end
       after
-        if not keep?, do: stop(session, Keyword.get(opts, :supervisor, Sup))
+        if not keep?, do: stop(session, supervisor)
       end
     end
+  end
+
+  defp run_deadline(nil), do: nil
+
+  defp run_deadline(ms) when is_integer(ms) and ms > 0,
+    do: System.monotonic_time(:millisecond) + ms
+
+  defp run_deadline(_ms), do: raise(ArgumentError, ":run_deadline_ms must be a positive integer")
+
+  defp cancel_expired(session) do
+    Session.cancel(session, :deadline_exceeded)
+  catch
+    # Shutdown still owns cleanup when a session exits while being cancelled.
+    :exit, {_reason, {GenServer, :call, _args}} -> :ok
   end
 
   defp stop(session, supervisor) do

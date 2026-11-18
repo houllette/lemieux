@@ -29,6 +29,13 @@ defmodule Lemieux.MCP.ProtocolTest do
                "2027-01-01"
     end
 
+    test "a discovery request defaults to the modern version before negotiating" do
+      request = Protocol.request(:modern, "server/discover", %{}, id: 1, version: nil)
+
+      assert request["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] ==
+               Protocol.modern_version()
+    end
+
     test "a legacy request carries no metadata at all" do
       request = Protocol.request(:legacy, "tools/list", %{}, id: 1)
 

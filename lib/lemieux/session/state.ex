@@ -41,7 +41,7 @@ defmodule Lemieux.Session.State.Compaction do
             trigger: nil,
             forecast: nil,
             compacting: nil,
-            compaction_failed?: false,
+            last_failure: nil,
             failures: 0,
             retry_at: nil,
             verify_room?: false,

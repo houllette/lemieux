@@ -506,6 +506,13 @@ defmodule Lemieux.Session.ToolWave do
 
   def stop(state, reason, said) do
     stop_reason = reason |> Instrumentation.telemetry_stop_reason() |> Atom.to_string()
+    error = %{"source" => "harness", "stop_reason" => stop_reason, "reason" => said}
+
+    error =
+      if reason in [:max_turns, :no_progress],
+        do:
+          Map.merge(error, %{"turns_taken" => state.turns_taken, "max_turns" => state.max_turns}),
+        else: error
 
     state
     |> Instrumentation.finish_turn_telemetry(reason)
@@ -513,9 +520,7 @@ defmodule Lemieux.Session.ToolWave do
     |> Questions.stopped(reason)
     |> Recovery.discard_steers()
     |> Audit.ensure_harness_snapshot()
-    |> Core.append(
-      {:error, %{"source" => "harness", "stop_reason" => stop_reason, "reason" => said}, nil}
-    )
+    |> Core.append({:error, error, nil})
     |> Audit.finalize_run(reason)
     |> then(&Core.emit(&1, {:context, Compacting.context(&1)}))
     |> Core.emit({:finished, reason})

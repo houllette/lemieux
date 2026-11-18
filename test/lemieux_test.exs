@@ -2,6 +2,7 @@ defmodule LemieuxTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.Providers.Scripted
+  alias Lemieux.Store
   alias Lemieux.Store.JSONL
 
   doctest Lemieux
@@ -105,6 +106,57 @@ defmodule LemieuxTest do
         |> Keyword.put(:resume, result.session_id)
 
       assert {:ok, %{text: "again"}} = Lemieux.run("hello again", resumed)
+    end
+
+    test "a wall-clock deadline expires while model deltas keep the wait active", %{opts: opts} do
+      owner = self()
+
+      turn = fn _request ->
+        send(owner, {:streaming, self()})
+
+        Enum.flat_map(1..100, fn _ -> [{:delay, 20}, {:text_delta, "x"}] end) ++
+          [{:done, :stop}]
+      end
+
+      opts =
+        Keyword.merge(opts,
+          provider: Scripted.new([turn]),
+          timeout: 400,
+          run_deadline_ms: 800,
+          keep_session: true,
+          on_event: fn
+            {:text_delta, _delta} -> send(owner, :progress)
+            _event -> :ok
+          end
+        )
+
+      assert Lemieux.run("hello", opts) == {:error, :deadline_exceeded}
+      assert_received :progress
+      assert_received {:streaming, provider_task}
+      refute Process.alive?(provider_task)
+      assert Lemieux.sessions(opts[:supervisor]) == []
+
+      assert {:ok, [id]} = Store.list_sessions(opts[:store])
+      assert {:ok, entries} = Store.read(opts[:store], id)
+
+      assert Enum.any?(
+               entries,
+               &match?(%{type: :cancelled, payload: %{"reason" => "deadline_exceeded"}}, &1)
+             )
+
+      assert {:ok, releasable_lock} = Store.lock(opts[:store], id)
+      assert :ok = Store.unlock(opts[:store], id, releasable_lock)
+    end
+
+    test "a run that finishes before its deadline can keep its session", %{opts: opts} do
+      assert {:ok, %{text: "hi", session_id: id}} =
+               Lemieux.run(
+                 "hello",
+                 Keyword.merge(opts, run_deadline_ms: 5_000, keep_session: true)
+               )
+
+      assert {:ok, session} = Lemieux.session(opts[:supervisor], id)
+      assert is_pid(session)
     end
 
     test "resume_session/1 checks the store before reading it", %{opts: opts} do

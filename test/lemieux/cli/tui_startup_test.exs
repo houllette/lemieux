@@ -62,53 +62,64 @@ defmodule Lemieux.CLI.TUIStartupTest do
 
     id = "extension:#{inspect(HeldExtension)}"
 
-    for _pass <- 1..2 do
-      assert_receive {:initializing, task}
+    send(assert_initializing(app, id), :continue)
+    task = assert_initializing(app, id)
+    ref = :sys.get_state(app).user_state.resume.initial_task.ref
+    handler = {__MODULE__, ref}
 
-      assert :ok =
-               LemieuxTest.Sync.state(app, fn state ->
-                 Enum.any?(
-                   state.user_state.terminal.boot.steps,
-                   &(&1.id == id and &1.status == "busy")
-                 )
-               end)
+    # Observe the app handling this startup task's reply. The floor runner
+    # reached :ready without notifying a :sys state observer about that transition.
+    :ok =
+      :telemetry.attach(
+        handler,
+        [:ex_ratatui, :runtime, :update, :stop],
+        &__MODULE__.startup_reply/4,
+        {owner, app, ref}
+      )
 
-      state = :sys.get_state(app).user_state
-      assert state.resume.startup_status == :loading
-      assert screen(state) =~ "Initialize #{inspect(HeldExtension)}"
-      assert Enum.any?(state.terminal.boot.steps, &(&1.id == :screen and &1.status == "busy"))
-      send(task, :continue)
-    end
+    on_exit(fn -> :telemetry.detach(handler) end)
+    send(task, :continue)
+    assert_receive {:startup_reply, ^ref}
 
-    try do
-      assert :ok = LemieuxTest.Sync.state(app, &(&1.user_state.resume.startup_status == :ready))
-    rescue
-      error in ExUnit.AssertionError ->
-        # Preserve the ordinary event deadline and include where startup stopped.
-        # A coverage-only failure otherwise reports just the observer's mailbox.
-        state = :sys.get_state(app).user_state
-
-        workers =
-          tasks
-          |> Task.Supervisor.children()
-          |> Enum.map(&Process.info(&1, [:current_stacktrace, :status, :message_queue_len]))
-
-        reraise %{
-                  error
-                  | message:
-                      error.message <>
-                        "\nStartup status: #{inspect(state.resume.startup_status)}" <>
-                        "\nBoot steps: #{inspect(state.terminal.boot.steps)}" <>
-                        "\nStartup workers: #{inspect(workers, limit: :infinity)}"
-                },
-                __STACKTRACE__
-    end
-
+    # This call runs after the app has applied the update.
     ready = :sys.get_state(app).user_state
+    assert ready.resume.startup_status == :ready
     assert ready.overlay == nil
     assert Enum.find(ready.terminal.boot.steps, &(&1.id == id)).status == "ok"
     assert Enum.find(ready.terminal.boot.steps, &(&1.id == :screen)).status == "ok"
     GenServer.stop(app)
     Runtime.stop_sessions(runtime)
   end
+
+  defp assert_initializing(app, id) do
+    assert_receive {:initializing, task}
+
+    assert :ok =
+             LemieuxTest.Sync.state(app, fn state ->
+               Enum.any?(
+                 state.user_state.terminal.boot.steps,
+                 &(&1.id == id and &1.status == "busy")
+               )
+             end)
+
+    state = :sys.get_state(app).user_state
+    assert state.resume.startup_status == :loading
+    assert screen(state) =~ "Initialize #{inspect(HeldExtension)}"
+    assert Enum.any?(state.terminal.boot.steps, &(&1.id == :screen and &1.status == "busy"))
+    task
+  end
+
+  @doc false
+  @spec startup_reply(
+          event :: [atom()],
+          measurements :: map(),
+          metadata :: map(),
+          config :: tuple()
+        ) ::
+          :ok | {:startup_reply, reference()}
+  def startup_reply(_event, _measurements, %{msg: {ref, {:ok, _, _}}}, {owner, app, ref})
+      when self() == app,
+      do: send(owner, {:startup_reply, ref})
+
+  def startup_reply(_event, _measurements, _metadata, _config), do: :ok
 end

@@ -49,6 +49,7 @@ defmodule Lemieux.Conversation.Doctor do
   alias Lemieux.Extensions.Checkpoints
   alias Lemieux.Extensions.Permissions
   alias Lemieux.ModelSpec
+  alias Lemieux.Providers.ReqLLM, as: ReqLLMProvider
   alias Lemieux.Session
 
   @typedoc """
@@ -234,8 +235,7 @@ defmodule Lemieux.Conversation.Doctor do
   defp key(%{model: model}) do
     with name when is_binary(name) <- ModelSpec.provider(model),
          provider when is_atom(provider) and not is_nil(provider) <- req_llm_provider(name),
-         {:ok, module} <- ReqLLM.provider(provider),
-         true <- function_exported?(module, :default_env_key, 0) do
+         true <- ReqLLMProvider.api_key_preflight?(provider) do
       variable = ReqLLM.Keys.env_var_name(provider)
 
       configured =

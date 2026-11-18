@@ -65,6 +65,7 @@ DUPLEX_TOOLS = [
                 "progress": {"type": "boolean"},
                 "interval": {"type": "number"},
                 "control_port": {"type": "integer"},
+                "split_reply": {"type": "boolean"},
             },
         },
     },
@@ -200,6 +201,21 @@ def dispatch(request, headers=None):
     params = request.get("params") or {}
     modern = MODE in MODERN_MODES
 
+    if modern and request_id is not None:
+        # Every modern request must say which version it is using, in the body
+        # and — over HTTP — in a header that matches it.
+        version = params.get("_meta", {}).get("io.modelcontextprotocol/protocolVersion")
+        if not version:
+            return err(request_id, -32022, "Unsupported protocol version",
+                       {"supported": ["2026-07-28"]})
+        header_version = headers.get("mcp-protocol-version")
+        if headers and header_version != version:
+            return err(request_id, -32020,
+                       "Header mismatch: MCP-Protocol-Version %r does not match body %r"
+                       % (header_version, version))
+        if headers and headers.get("mcp-method") != method:
+            return err(request_id, -32020, "Header mismatch: Mcp-Method")
+
     if method == "server/discover":
         if MODE == "legacy":
             return err(request_id, -32601, "Method not found")
@@ -260,21 +276,6 @@ def dispatch(request, headers=None):
             except OSError:
                 pass  # The released tool may already have closed its socket.
         return None
-
-    if modern:
-        # Every modern request must say which version it is using, in the body
-        # and — over HTTP — in a header that matches it.
-        version = params.get("_meta", {}).get("io.modelcontextprotocol/protocolVersion")
-        if not version:
-            return err(request_id, -32022, "Unsupported protocol version",
-                       {"supported": ["2026-07-28"]})
-        header_version = headers.get("mcp-protocol-version")
-        if headers and header_version != version:
-            return err(request_id, -32020,
-                       "Header mismatch: MCP-Protocol-Version %r does not match body %r"
-                       % (header_version, version))
-        if headers and headers.get("mcp-method") != method:
-            return err(request_id, -32020, "Header mismatch: Mcp-Method")
 
     if method == "tools/list":
         if MODE in DUPLEX_MODES:
@@ -423,6 +424,12 @@ def duplex_tool(request_id, name, arguments, params, modern):
                 with DUPLEX["lock"]:
                     DUPLEX["holds"][request_id] = control
                 try:
+                    if arguments.get("split_reply"):
+                        # Simulate completed work before the server sends its
+                        # matching final response.
+                        write({"jsonrpc": "2.0", "method": "notifications/progress",
+                               "params": {"progressToken": token, "progress": 1, "total": 1}})
+                        write(text("unmatched-private-id", "unmatched-private-payload", modern))
                     control.sendall(b"ready\n")
                     control.recv(1)
                 finally:
@@ -431,6 +438,9 @@ def duplex_tool(request_id, name, arguments, params, modern):
             with DUPLEX["lock"]:
                 if request_id in DUPLEX["cancelled"]:
                     return None
+            if arguments.get("split_reply"):
+                write(text(request_id, "completed " + "x" * 100_000, modern), split=True)
+                return None
             return text(request_id, "released", modern)
 
         seconds = float(arguments.get("seconds", 1))
@@ -487,12 +497,18 @@ def duplex_tool(request_id, name, arguments, params, modern):
 # --------------------------------------------------------------------------
 
 
-def write(message):
+def write(message, split=False):
     # A client that has gone away closes the pipe; that ends this server,
     # quietly, rather than with a traceback in somebody's test output.
     with WRITE_LOCK:
         try:
-            sys.stdout.write(json.dumps(message) + "\n")
+            frame = json.dumps(message) + "\n"
+            if split:
+                midpoint = len(frame) // 2
+                sys.stdout.write(frame[:midpoint])
+                sys.stdout.flush()
+                frame = frame[midpoint:]
+            sys.stdout.write(frame)
             sys.stdout.flush()
         except BrokenPipeError:
             os._exit(0)

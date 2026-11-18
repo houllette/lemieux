@@ -1209,6 +1209,31 @@ defmodule Lemieux.Providers.ReqLLMTest do
       assert Enum.all?(models, &String.starts_with?(&1, "anthropic:"))
     end
 
+    test "Vertex model validation lets ReqLLM resolve OAuth credentials" do
+      provider =
+        ReqLLMProvider.new(
+          api_key: "",
+          provider_options: [project_id: "fixture-project", region: "us"]
+        )
+
+      assert :ok =
+               Provider.validate_model(provider, "google_vertex:claude-haiku-4-5@20251001", [])
+
+      assert {:error, {:missing_api_key, :google, hint}} =
+               Provider.validate_model(provider, "google:gemini-2.5-flash", [])
+
+      assert hint =~ "GOOGLE_API_KEY"
+    end
+
+    test "Vertex OAuth does not bypass a host's explicit provider key scope" do
+      provider = ReqLLMProvider.new(api_keys: %{anthropic: "test-key"})
+
+      assert {:error, {:missing_api_key, :google_vertex, hint}} =
+               Provider.validate_model(provider, "google_vertex:claude-haiku-4-5@20251001", [])
+
+      assert hint =~ ":api_keys"
+    end
+
     test "provider-scoped credentials reject a model belonging to another provider" do
       assert {:error, {:missing_api_key, :openai, hint}} =
                Provider.validate_model(

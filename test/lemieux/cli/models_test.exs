@@ -403,6 +403,10 @@ defmodule Lemieux.CLI.ModelsTest do
   end
 
   describe "credential/3" do
+    test "allows Vertex to resolve OAuth credentials at request time" do
+      assert Models.credential("google_vertex", nil, env: %{}) == :not_required
+    end
+
     # An explicitly empty variable switches a saved key off at request time
     # (`Lemieux.Providers.ReqLLM`), so it cannot count as a key here: lmx
     # would start on a provider whose first request is refused.
