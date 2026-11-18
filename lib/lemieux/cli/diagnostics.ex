@@ -114,8 +114,9 @@ defmodule Lemieux.CLI.Diagnostics do
   defp route(%{ixway: endpoint}, _prepared) when is_binary(endpoint), do: "ixway"
   defp route(%{host: %{route: name}}, _prepared) when is_binary(name), do: name
 
-  defp route(%{base_url: url}, %{model: model} = prepared) do
+  defp route(options, %{model: model} = prepared) do
     name = ModelSpec.provider(model)
+    url = options.base_url || Config.provider_base_urls(options.config)[name]
 
     cond do
       name in Map.get(prepared, :routes, []) -> name

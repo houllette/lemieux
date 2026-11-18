@@ -65,8 +65,8 @@ defmodule Lemieux.CLI.CodexModels do
 
     {:ok, model} = ReqLLM.model(spec)
 
-    params =
-      if options.base_url, do: Keyword.put_new(params, :base_url, options.base_url), else: params
+    url = options.base_url || Config.provider_base_urls(options.config)["openai_codex"]
+    params = if url, do: Keyword.put_new(params, :base_url, url), else: params
 
     base = ReqLLM.Provider.Options.effective_base_url(OpenAICodex, model, params)
 

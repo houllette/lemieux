@@ -206,6 +206,7 @@ defmodule Lemieux.Providers.ReqLLM do
               api_keys: nil,
               api_key_defaults: nil,
               api_key_provider: nil,
+              base_urls: %{},
               route: nil,
               response_metadata: %{headers: [], model_header: nil},
               local_max_tokens: nil,
@@ -219,6 +220,7 @@ defmodule Lemieux.Providers.ReqLLM do
             api_keys: %{String.t() => String.t()} | nil,
             api_key_defaults: %{String.t() => String.t()} | nil,
             api_key_provider: String.t() | nil,
+            base_urls: %{String.t() => String.t()},
             local_max_tokens: pos_integer() | nil,
             local_idle_timeout: pos_integer() | nil,
             ollama_window: boolean()
@@ -249,6 +251,8 @@ defmodule Lemieux.Providers.ReqLLM do
     * `:base_url` — replaces the selected provider's API base URL. Use this for
       an API-compatible gateway or model proxy; `req_llm` appends the
       provider-specific request path.
+    * `:base_urls` — a map of logical provider names to API bases. A global
+      `:base_url` takes precedence. Omitted providers use their usual defaults.
     * `:transport_routes` — maps a logical provider name to a keyword list
       containing the API-compatible `:provider`, default `:base_url` and an
       optional `:credential_provider`. The logical provider still owns model
@@ -435,7 +439,9 @@ defmodule Lemieux.Providers.ReqLLM do
   @impl Lemieux.Provider
   def fast_modes(state, spec) do
     case normalize_state(state) do
-      %State{route: nil, options: options} ->
+      %State{route: nil} = direct ->
+        options = endpoint_options(direct, ModelSpec.provider(spec))
+
         if fast_transport?(options, spec),
           do: Enum.filter(["fast", "ultrafast"], &(not is_nil(fast_tier(spec, &1)))),
           else: []
@@ -496,8 +502,12 @@ defmodule Lemieux.Providers.ReqLLM do
   defp put_fast_tier(options, tier), do: Keyword.put(options, :service_tier, tier)
 
   @doc false
-  @spec request_target(spec :: String.t(), options :: keyword()) ::
+  @spec request_target(spec :: String.t(), options :: keyword() | {module(), State.t()}) ::
           {:ok, {ReqLLM.model_input(), keyword()}} | {:error, term()}
+  def request_target(spec, {__MODULE__, %State{route: nil} = state}) do
+    request_target(spec, endpoint_options(state, ModelSpec.provider(spec)))
+  end
+
   def request_target(spec, options) when is_binary(spec) and is_list(options) do
     routes = Keyword.get(options, :transport_routes, %{})
     options = options |> fast_options(spec) |> request_options()
@@ -994,7 +1004,8 @@ defmodule Lemieux.Providers.ReqLLM do
     _error -> nil
   end
 
-  defp daemon_window(%State{ollama_window: true, options: options}, model) do
+  defp daemon_window(%State{ollama_window: true} = state, model) do
+    options = endpoint_options(state, "ollama")
     if local_daemon?(options), do: OllamaWindow.window(daemon_url(model, options), wire_id(model))
   end
 
@@ -1545,11 +1556,13 @@ defmodule Lemieux.Providers.ReqLLM do
           :api_keys,
           :api_key_defaults,
           :api_key_provider,
+          :base_urls,
           :route,
           :response_metadata
           | @adapter_options
         ])
         |> default_timeouts(),
+      base_urls: Keyword.get(opts, :base_urls, %{}),
       api_key_defaults: normalize_api_keys(Keyword.get(opts, :api_key_defaults)),
       api_keys: normalize_api_keys(Keyword.get(opts, :api_keys)),
       api_key_provider: normalize_provider_name(Keyword.get(opts, :api_key_provider)),
@@ -1572,6 +1585,7 @@ defmodule Lemieux.Providers.ReqLLM do
 
   @direct_only [
     :base_url,
+    :base_urls,
     :api_key,
     :api_keys,
     :api_key_defaults,
@@ -1737,7 +1751,8 @@ defmodule Lemieux.Providers.ReqLLM do
         []
 
       provider_atom ->
-        state.options
+        state
+        |> endpoint_options(provider)
         |> Keyword.merge(opts)
         |> Keyword.merge(extra)
         |> Keyword.put(:scope, provider_atom)
@@ -1755,7 +1770,20 @@ defmodule Lemieux.Providers.ReqLLM do
     end
   end
 
-  defp options_for_model(%State{api_keys: keys} = state, model) when is_map(keys) do
+  defp endpoint_options(%State{options: options, base_urls: urls}, provider) do
+    case Map.fetch(urls, provider) do
+      {:ok, url} -> Keyword.put_new(options, :base_url, url)
+      :error -> options
+    end
+  end
+
+  defp options_for_model(state, model) do
+    with {:ok, options} <- credential_options(state, model) do
+      {:ok, endpoint_options(%{state | options: options}, Atom.to_string(model.provider))}
+    end
+  end
+
+  defp credential_options(%State{api_keys: keys} = state, model) when is_map(keys) do
     provider = Atom.to_string(model.provider)
 
     case Map.fetch(keys, provider) do
@@ -1767,7 +1795,7 @@ defmodule Lemieux.Providers.ReqLLM do
     end
   end
 
-  defp options_for_model(%State{api_key_provider: provider} = state, model)
+  defp credential_options(%State{api_key_provider: provider} = state, model)
        when is_binary(provider) do
     if Atom.to_string(model.provider) == provider do
       {:ok, state.options}
@@ -1780,7 +1808,7 @@ defmodule Lemieux.Providers.ReqLLM do
     end
   end
 
-  defp options_for_model(%State{api_key_defaults: defaults} = state, model)
+  defp credential_options(%State{api_key_defaults: defaults} = state, model)
        when is_map(defaults) do
     case ReqLLM.Keys.get(model, state.options) do
       {:ok, _key, _source} ->
@@ -1791,7 +1819,7 @@ defmodule Lemieux.Providers.ReqLLM do
     end
   end
 
-  defp options_for_model(%State{} = state, _model), do: {:ok, state.options}
+  defp credential_options(%State{} = state, _model), do: {:ok, state.options}
 
   defp default_key_options(options, defaults, provider) do
     # An explicitly empty ambient credential disables access; it must not

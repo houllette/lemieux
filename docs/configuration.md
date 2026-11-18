@@ -841,6 +841,26 @@ transcripts or request snapshots, because it belongs to the current host.
 `HTTPS_PROXY` or `SSL_CERT_FILE` today; see [Proxies and private certificate
 authorities](troubleshooting.md#proxies-and-private-certificate-authorities).
 
+To set the API base for one direct provider, add an absolute HTTP or HTTPS
+URL to `providers.<name>.base_url`. It stays scoped to that provider when you
+use `/provider` or `/model`. For example, a [US-region OpenAI
+project](https://developers.openai.com/api/docs/guides/data-residency) can use
+the regional address while the startup model stays on Codex:
+
+```json
+{
+  "model": "openai_codex:gpt-6-sol",
+  "providers": {
+    "openai": {"base_url": "https://us.api.openai.com/v1"}
+  }
+}
+```
+
+Configure the OpenAI API key as usual. Direct API base precedence is
+`--base-url`, `LMX_BASE_URL`, the top-level `base_url`, the selected
+provider's `base_url`, then its normal endpoint. A scoped URL by itself
+does not select a routing mode.
+
 ## Workspace discovery
 
 The *workspace* is what `lmx` reads from the repository and your home

@@ -164,7 +164,7 @@ defmodule Lemieux.CLI.Config do
   @modalities %{"text" => :text, "image" => :image, "pdf" => :pdf}
   @price_fields ~w(up_to input_per_million output_per_million cached_input_per_million)
   @ixway_fields ~w(enabled endpoint api_key model effort headers)
-  @provider_fields ~w(api_key model effort usage_api_key usage_api_key_env usage_project_id)
+  @provider_fields ~w(api_key base_url model effort usage_api_key usage_api_key_env usage_project_id)
   @systemone_fields ~w(mode provider max_evaluations max_cost_usd reservation_per_call_usd)
   @systemone_builtin ~w(typesafe ixway)
   @systemone_provider_fields ~w(type base_url api_key api_key_env api_key_header headers model
@@ -482,6 +482,14 @@ defmodule Lemieux.CLI.Config do
     for {provider, %{"api_key" => key}} <- get(config, "providers", %{}),
         into: %{},
         do: {provider, key}
+  end
+
+  @doc "Returns API base URLs saved in direct-provider sections."
+  @spec provider_base_urls(t() | nil) :: %{optional(String.t()) => String.t()}
+  def provider_base_urls(config) do
+    for {provider, %{"base_url" => url}} <- get(config, "providers", %{}),
+        into: %{},
+        do: {provider, url}
   end
 
   @doc "Returns the private saved key for one search provider, without enabling search."
@@ -1217,6 +1225,9 @@ defmodule Lemieux.CLI.Config do
     do: is_binary(name) and name != "ixway" and Regex.match?(~r/^[a-z][a-z0-9_]*$/, name)
 
   defp provider_field(_provider, "api_key", key), do: expect(key_text?(key), @key_expectation)
+
+  defp provider_field(_provider, "base_url", url),
+    do: expect(valid_base_url?(url), "It must be an absolute http(s) URL.")
 
   defp provider_field(_provider, "usage_api_key", key),
     do: expect(key_text?(key), @key_expectation)
