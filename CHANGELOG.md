@@ -7,6 +7,50 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## 1.2.1 — 2026-11-18
+
+Restart `lmx` after updating from 1.2.0 on every platform, then resume with
+`lmx -c` or `lmx --resume SESSION`. Session and TUI state, retained callbacks,
+and runtime dependency changes require fresh initialization. Existing
+transcripts, personal config version 1, and extension API 1 remain compatible.
+
+### Terminal and session fixes
+
+- Keep parent steering visible and revocable during delegate and tool work.
+  Preserve draft text when Enter races with turn completion. (#205)
+- Continue a paused task when deferred answers are submitted, preserving
+  durable question identities, the original budget, and the host's
+  continuation policy. (#206)
+- Give automatic compaction one shorter retry when a summary hits its output
+  limit. Record failure and sizing evidence, and check prepared requests
+  against the known context window during backoff. (#209)
+- Preserve approved background results that arrive at the turn limit so an
+  explicit continuation can use them once. Record the limit and actual
+  iteration count. (#210)
+
+### Providers and MCP
+
+- Accept `providers.<name>.base_url` for direct providers. An explicit global
+  override takes precedence. (#207)
+- Stop automatic retries for known Ixway quota exhaustion or a retry hint
+  beyond the automatic wait limit. Keep temporary overloads retryable and
+  retain completed tool results for a manual retry. (#208)
+- Send the modern protocol version in the first HTTP MCP discovery request
+  body and header. Record bounded stdio framing and request lifecycle
+  diagnostics. (#212, #215)
+- Use ReqLLM for Vertex OAuth and Application Default Credentials in the
+  library and CLI, while preserving API-key and explicit scope checks. (#217)
+- Update ReqLLM to 1.31.0 and LLMDB to 2026.11.4, and refresh the library,
+  standalone host, and example dependency locks.
+
+### Embedding
+
+- Add `run_deadline_ms:` to one-shot runs. A monotonic deadline cancels and
+  stops the owned session, including with `keep_session:`. The `timeout:`
+  option continues to measure event inactivity. (#213)
+- Add `Lemieux.Store.Memory`, an owner-bound, byte-limited transcript store
+  that supports resume and rejects oversized appends atomically. (#214)
+
 ## 1.2.0 — 2026-11-16
 
 Restart `lmx` after updating from 1.1.3 on every platform, then resume with

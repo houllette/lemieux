@@ -177,6 +177,18 @@ setting, while in-flight requests retain theirs. Faster service still needs
 model/route support and may cost more. `/usage` and highlighted completions
 work with one Enter while work is active.
 
+## Upgrading from 1.2.0 to 1.2.1
+
+Restart `lmx` after the update on every platform. Turn recovery and queued
+steering change session and TUI state, and the release updates runtime
+dependencies. This version applies on the next launch.
+
+Save unsent drafts, stage the signed update with `lmx update` or `/update`,
+then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
+installer-managed TUI restart preserves its exact session. Existing transcripts,
+personal config version 1, and extension API 1 remain compatible. Consumed
+request and spending accounting stays attached to the resumed session.
+
 ## Install a release
 
 On macOS and Linux:
