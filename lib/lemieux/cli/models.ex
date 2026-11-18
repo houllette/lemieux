@@ -76,6 +76,7 @@ defmodule Lemieux.CLI.Models do
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.State
   alias Lemieux.ModelSpec
+  alias Lemieux.Providers.ReqLLM, as: ReqLLMProvider
 
   @recommended [
     %{provider: "anthropic", model: "anthropic:claude-sonnet-5", label: "Anthropic"},
@@ -314,8 +315,9 @@ defmodule Lemieux.CLI.Models do
   @doc """
   Whether `provider`'s credential can be found without asking the network.
 
-  `:not_required` for providers that take none (a local daemon), `:unknown`
-  for a name `req_llm` does not know — neither is reported as missing.
+  `:not_required` when a provider can start without an API key, such as a
+  local daemon or Vertex with request-time OAuth. `:unknown` denotes a name
+  `req_llm` does not know.
 
   A key comes from `:req_llm`'s configuration or the environment, else from
   the config file's `"providers"`. A variable that is set but empty is
@@ -344,7 +346,7 @@ defmodule Lemieux.CLI.Models do
   end
 
   defp credential_for(atom, provider, config, opts) do
-    if key_required?(atom, provider) do
+    if provider == "ollama_cloud" or ReqLLMProvider.api_key_preflight?(atom) do
       env = ReqLLM.Keys.env_var_name(atom)
 
       ambient =
@@ -355,13 +357,6 @@ defmodule Lemieux.CLI.Models do
     else
       :not_required
     end
-  end
-
-  defp key_required?(atom, provider) do
-    {:ok, module} = ReqLLM.provider(atom)
-
-    provider == "ollama_cloud" or
-      (Code.ensure_loaded?(module) and function_exported?(module, :default_env_key, 0))
   end
 
   @doc """

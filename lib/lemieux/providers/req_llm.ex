@@ -25,13 +25,13 @@ defmodule Lemieux.Providers.ReqLLM do
   rewrite the schema, so providers that accept the full JSON Schema continue
   to receive it unchanged.
 
-  ## The key is checked before the request is built
+  ## API key preflight
 
-  A missing key is by far the most common way a first run fails, and it is
-  not worth a network round trip to discover. `run/3` resolves it up front and
-  returns `{:error, {:missing_api_key, provider, hint}}`, which a host can put
-  in front of a person as a sentence about their environment rather than an
-  HTTP 401.
+  For providers that require an API key, `run/3` and `validate_model/3`
+  resolve it up front and return `{:error, {:missing_api_key, provider, hint}}`
+  when it is absent. Google Vertex uses ReqLLM's OAuth flow, which resolves
+  Application Default Credentials or explicit OAuth credentials when the
+  request runs.
 
   ## Gateways use the API base URL
 
@@ -1833,7 +1833,7 @@ defmodule Lemieux.Providers.ReqLLM do
   end
 
   defp missing_scoped_key(options, model, hint) do
-    if credential_required?(model.provider) do
+    if provider_has_key_setting?(model.provider) do
       {:error, {:missing_api_key, model.provider, hint}}
     else
       # Local and other credential-free providers remain usable alongside a
@@ -1842,20 +1842,26 @@ defmodule Lemieux.Providers.ReqLLM do
     end
   end
 
-  defp credential_required?(provider) do
+  defp provider_has_key_setting?(provider) do
     case ReqLLM.provider(provider) do
-      {:ok, module} -> function_exported?(module, :default_env_key, 0)
-      {:error, _reason} -> false
+      {:ok, module} ->
+        Code.ensure_loaded?(module) and function_exported?(module, :default_env_key, 0)
+
+      {:error, _reason} ->
+        false
     end
   end
 
-  # A missing key is the most common way a first run fails, and not worth a round
-  # trip to discover — but only for a provider that wants one. Ollama runs on the
-  # machine and has nothing to authenticate to, and `req_llm` says so by declaring
-  # no environment variable for it.
+  # Vertex's key setting points to an optional ADC file. ReqLLM also resolves
+  # metadata credentials at request time, so preflight cannot decide access
+  # from this setting. An explicit host scope is checked independently.
+  @doc false
+  @spec api_key_preflight?(provider :: atom()) :: boolean()
+  def api_key_preflight?(:google_vertex), do: false
+  def api_key_preflight?(provider), do: provider_has_key_setting?(provider)
+
   defp check_key(model, opts) do
-    with {:ok, provider} <- ReqLLM.provider(model.provider),
-         true <- function_exported?(provider, :default_env_key, 0),
+    with true <- api_key_preflight?(model.provider),
          {:error, hint} <- ReqLLM.Keys.get(model, opts) do
       {:error, {:missing_api_key, model.provider, hint}}
     else
