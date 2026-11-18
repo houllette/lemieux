@@ -1084,13 +1084,37 @@ A store is a `{module, state}` pair implementing three callbacks. `lmx` uses
 host with a database implements the behaviour over its own tables and gets
 transcripts inside its own transactions and its own retention policy.
 
-The contract is small: appends are ordered and durable, `read/2` returns
-exactly what `append/3` was given, in order, and `list_sessions/1` lists ids
-oldest first. `read/2` must not raise: a transcript it cannot understand is an
+For the lifetime of the backing data, `read/2` returns exactly what
+`append/3` was given, in order, and `list_sessions/1` lists ids oldest
+first. `read/2` must not raise: a transcript it cannot understand is an
 `{:error, reason}`, never an exception and never a conversation with a part
 missing. A store is not asked to be a queue or to notify anybody. A session has
 exactly one writer, its own process, and that is where the ordering guarantee
 comes from.
+
+### An in-memory store
+
+For a short-lived assignment, create a `Lemieux.Store.Memory` in the
+process that owns the attempt and pass it as `store:` to `Lemieux.run/2`
+or `Lemieux.start_session/1`.
+
+```elixir
+{:ok, store} = Lemieux.Store.Memory.new(max_bytes: 2 * 1024 * 1024)
+
+try do
+  {:ok, result} = Lemieux.run(prompt, Keyword.put(session_opts, :store, store))
+  {:ok, entries} = Lemieux.Store.read(store, result.session_id)
+  MyApp.Audit.record(result, entries)
+after
+  Lemieux.Store.Memory.close(store)
+end
+```
+
+The session can stop and its transcript remains readable and resumable as
+long as the store is open. Stop any retained sessions before closing the
+store. When the owner exits, its store releases all entries automatically.
+The default limit is 8 MiB across the store. A batch over the limit returns
+`{:error, :limit_exceeded}` and leaves the existing entries intact.
 
 ### A database-backed store
 

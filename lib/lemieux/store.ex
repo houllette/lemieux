@@ -4,8 +4,8 @@ defmodule Lemieux.Store do
 
   A store is a `{module, state}` pair. The module implements this behaviour;
   the state is whatever that implementation needs and lemieux never inspects —
-  a directory for `Lemieux.Store.JSONL`, a repo and a scope for a host that
-  keeps transcripts in Postgres.
+  a directory for `Lemieux.Store.JSONL`, a process for `Lemieux.Store.Memory`,
+  or a repo and scope for a host that keeps transcripts in Postgres.
 
   ## Why a behaviour rather than a table
 
@@ -22,9 +22,9 @@ defmodule Lemieux.Store do
 
   ## The contract
 
-  Appends are ordered and durable: `read/2` returns exactly what `append/3`
-  was given, in the order it was given, and a store rebuilt over the same
-  backing data returns the same list. Nothing else is promised. In particular
+  Appends are ordered: `read/2` returns exactly what `append/3` was given,
+  in the order it was given, for the lifetime of the backing data. A durable
+  store rebuilt over the same backing data returns the same list. In particular
   a store is not asked to be a queue, to notify anybody, or to serialise two
   writers on one session — a session has exactly one writer, its
   `Lemieux.Session` process, and that is where the ordering guarantee comes
