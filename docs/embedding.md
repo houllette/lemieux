@@ -748,8 +748,9 @@ caller's mailbox, and returns when the prompt's work is finished:
 ```
 
 `text` is the last answer's text, `usage` is the prompt's own and `entries`
-are the ones it wrote. `:timeout` defaults to `:infinity` (a session is
-bounded by its own budgets), and a timed-out wait leaves the session working.
+are the ones it wrote. `:timeout` is an inactivity wait that defaults to
+`:infinity`. Each event renews the wait. If the wait times out, the session
+keeps working.
 The session is monitored for the whole wait: one that goes down before the
 prompt finishes, or was already gone, answers
 `{:error, {:session_down, reason}}` with its exit reason instead of a wait
@@ -765,9 +766,18 @@ one, given `:resume`), awaits one prompt, and stops the session again.
     provider: Lemieux.Providers.ReqLLM.new(),
     store: Lemieux.Store.JSONL.new("sessions"),
     model: "anthropic:claude-sonnet-5",
-    max_requests: 20
+    max_requests: 20,
+    run_deadline_ms: :timer.minutes(10)
   )
 ```
+
+The optional `:run_deadline_ms` sets an elapsed-time allowance independent
+of request and spend budgets. On expiry `run/2` returns
+`{:error, :deadline_exceeded}` and cancels and stops its session, including
+when `:keep_session` is enabled. Entries already written stay in the store.
+Synchronous host callbacks and cleanup can add time to the call. On a
+successful run or an inactivity timeout, `:keep_session` still retains the
+session as requested.
 
 ## Where policy attaches
 

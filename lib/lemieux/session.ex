@@ -767,7 +767,7 @@ defmodule Lemieux.Session do
           | {:error, :busy | :cancelled}
           | {:error, {:hook_denied, String.t()} | {:hook_failed, term()}}
   def prompt(session, text) when is_binary(text),
-    do: GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts()}, :infinity)
+    do: submit_prompt(session, text, :infinity)
 
   @doc "Submits an untrusted `:attestation` claim for the runtime host ingress to verify."
   @spec prompt(session :: session(), text :: String.t(), opts :: keyword()) ::
@@ -775,6 +775,12 @@ defmodule Lemieux.Session do
   def prompt(session, text, opts) when is_binary(text) and is_list(opts) do
     GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts(), opts}, :infinity)
   end
+
+  @doc false
+  @spec submit_prompt(session :: session(), text :: String.t(), timeout :: timeout()) ::
+          :ok | {:error, term()}
+  def submit_prompt(session, text, timeout) when is_binary(text),
+    do: GenServer.call(session, {:prompt, text, OpenTelemetry.capture_contexts()}, timeout)
 
   @doc """
   Explicitly continues a restored prompt, with current tools and hooks.
@@ -1222,10 +1228,9 @@ defmodule Lemieux.Session do
 
   ## Options
 
-    * `:timeout` — how long to wait, `:infinity` by default: a session is
-      bounded by its own budgets, and an arbitrary clock here would abandon
-      work a model was legitimately doing. On timeout the session keeps
-      working and `{:error, :timeout}` is returned; `cancel/1` stops it.
+    * `:timeout` — how long to wait for the next event, `:infinity` by
+      default. Each event renews the wait. On timeout the session keeps
+      working and `{:error, :timeout}` is returned. Use `cancel/1` to stop it.
     * `:on_event` — a one-argument function called in the caller's process
       with every event, in order, as it arrives.
     * `:background` — `true` holds a bounded assignment open after an

@@ -42,26 +42,37 @@ defmodule Lemieux.Session.Await do
   """
   @spec run(session :: Session.session(), text :: String.t(), opts :: keyword()) ::
           {:ok, result()} | {:error, {:session_down, term()} | :timeout | term()}
-  def run(session, text, opts) when is_binary(text) and is_list(opts) do
+  def run(session, text, opts), do: run(session, text, opts, nil)
+
+  @doc false
+  @spec run(
+          session :: Session.session(),
+          text :: String.t(),
+          opts :: keyword(),
+          deadline_at :: integer() | nil
+        ) :: {:ok, result()} | {:error, term()}
+  def run(session, text, opts, deadline_at) when is_binary(text) and is_list(opts) do
     case GenServer.whereis(session) do
-      pid when is_pid(pid) -> watch(pid, text, opts)
+      pid when is_pid(pid) -> watch(pid, text, opts, deadline_at)
       _gone -> {:error, {:session_down, :noproc}}
     end
   end
 
-  defp watch(session, text, opts) do
-    timeout = Keyword.get(opts, :timeout, :infinity)
-    on_event = Keyword.get(opts, :on_event)
+  defp watch(session, text, opts, deadline_at) do
     monitor = Process.monitor(session)
-    parent = self()
-    tag = make_ref()
-    relay = spawn_link(fn -> relay(parent, tag) end)
+    tag = :erlang.alias()
+    relay = spawn_link(fn -> relay(tag) end)
 
     try do
-      with :ok <- call(fn -> Session.subscribe(session, relay) end),
-           :ok <- call(fn -> Session.prompt(session, text) end) do
-        collect(tag, monitor, on_event, timeout, %{
-          events: [],
+      with :ok <-
+             before_deadline(deadline_at, fn timeout ->
+               GenServer.call(session, {:subscribe, relay}, min(timeout, 5_000))
+             end),
+           :ok <- before_deadline(deadline_at, &Session.submit_prompt(session, text, &1)) do
+        collect(tag, monitor, %{
+          deadline_at: deadline_at,
+          timeout: Keyword.get(opts, :timeout, :infinity),
+          on_event: Keyword.get(opts, :on_event),
           entries: [],
           error: nil,
           id: nil,
@@ -71,49 +82,69 @@ defmodule Lemieux.Session.Await do
       end
     after
       Process.demonitor(monitor, [:flush])
-      call(fn -> Session.unsubscribe(session, relay) end)
+      :erlang.unalias(tag)
       send(relay, :stop)
+      flush(tag)
+    end
+  end
+
+  defp before_deadline(deadline_at, fun) do
+    case remaining(deadline_at) do
+      0 -> {:error, :deadline_exceeded}
+      timeout -> call(fn -> fun.(timeout) end, deadline_at)
     end
   end
 
   # A session that died between the lookup and a call answers the call with
   # an exit. That is the same fact the monitor reports during the wait, so it
   # gets the same answer rather than taking the caller down with it.
-  defp call(fun) do
+  defp call(fun, deadline_at) do
     fun.()
   catch
-    :exit, {reason, {GenServer, :call, _args}} -> {:error, {:session_down, reason}}
+    :exit, {:timeout, {GenServer, :call, _args}} when not is_nil(deadline_at) ->
+      if remaining(deadline_at) == 0,
+        do: {:error, :deadline_exceeded},
+        else: {:error, {:session_down, :timeout}}
+
+    :exit, {reason, {GenServer, :call, _args}} ->
+      {:error, {:session_down, reason}}
   end
 
-  defp relay(parent, tag) do
+  defp relay(tag) do
     receive do
       {:lemieux, id, event} ->
-        send(parent, {tag, id, event})
-        relay(parent, tag)
+        send(tag, {tag, id, event})
+        relay(tag)
 
       :stop ->
         :ok
     end
   end
 
-  defp collect(tag, monitor, on_event, timeout, acc) do
+  defp flush(tag) do
+    receive do
+      {^tag, _id, _event} -> flush(tag)
+    after
+      0 -> :ok
+    end
+  end
+
+  defp collect(tag, monitor, acc) do
+    case remaining(acc.deadline_at) do
+      0 -> {:error, :deadline_exceeded}
+      remaining -> receive_event(tag, monitor, acc, remaining)
+    end
+  end
+
+  defp receive_event(tag, monitor, acc, remaining) do
     receive do
       {^tag, id, event} ->
-        notify(on_event, event)
-        acc = note(%{acc | id: id}, event)
+        notify(acc.on_event, event)
 
-        case event do
-          {:finished, :stop} when acc.background? ->
-            case Completion.settle(acc.session) do
-              :waiting -> collect(tag, monitor, on_event, timeout, acc)
-              :done -> {:ok, result(acc, :stop)}
-            end
-
-          {:finished, stop_reason} ->
-            {:ok, result(acc, stop_reason)}
-
-          _other ->
-            collect(tag, monitor, on_event, timeout, acc)
+        if remaining(acc.deadline_at) == 0 do
+          {:error, :deadline_exceeded}
+        else
+          advance(tag, monitor, note(%{acc | id: id}, event), event)
         end
 
       {:DOWN, ^monitor, :process, _pid, reason} ->
@@ -122,9 +153,25 @@ defmodule Lemieux.Session.Await do
       {:background_cancelled, id} when id == acc.id and acc.background? ->
         {:ok, result(acc, :cancelled)}
     after
-      timeout -> {:error, :timeout}
+      min(acc.timeout, remaining) ->
+        if remaining(acc.deadline_at) == 0,
+          do: {:error, :deadline_exceeded},
+          else: {:error, :timeout}
     end
   end
+
+  defp advance(tag, monitor, %{background?: true} = acc, {:finished, :stop}) do
+    case Completion.settle(acc.session) do
+      :waiting -> collect(tag, monitor, acc)
+      :done -> {:ok, result(acc, :stop)}
+    end
+  end
+
+  defp advance(_tag, _monitor, acc, {:finished, reason}), do: {:ok, result(acc, reason)}
+  defp advance(tag, monitor, acc, _event), do: collect(tag, monitor, acc)
+
+  defp remaining(nil), do: :infinity
+  defp remaining(deadline_at), do: max(deadline_at - System.monotonic_time(:millisecond), 0)
 
   defp notify(nil, _event), do: :ok
   defp notify(fun, event) when is_function(fun, 1), do: fun.(event)
