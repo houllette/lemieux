@@ -398,6 +398,18 @@ results. Request and spend budgets still apply. A `no_progress` stop comes
 from the repetition or cycle detector, which also applies with a larger
 turn allowance.
 
+### Automatic compaction hits a length limit
+
+Automatic compaction can try one shorter summary within the original
+output allowance when provider retries are enabled. The transcript records
+the failed request's terminal reason, summary sizing, usage when available,
+and whether recovery was attempted. A partial summary never replaces the
+original entries.
+
+If compaction still fails and the next request is forecast to exceed the
+known context window, the prompt stops. Try manual compaction with a larger
+summary allowance or resume with a model that has a larger context window.
+
 ## Local models
 
 ### A local model forgets the task or answers with nothing

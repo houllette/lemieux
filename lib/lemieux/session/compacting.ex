@@ -20,6 +20,7 @@ defmodule Lemieux.Session.Compacting do
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.Recovery
   alias Lemieux.Session.Requests
+  alias Lemieux.Session.ToolWave
   alias Lemieux.Session.Window
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Telemetry
@@ -355,8 +356,8 @@ defmodule Lemieux.Session.Compacting do
     {:noreply, state}
   end
 
-  defp start_compaction(state, plan, from, recovery_reason, attempt \\ 1) do
-    request = %Request{
+  defp start_compaction(state, plan, from, recovery_reason, retry \\ nil) do
+    %Request{
       model: state.compaction.summary_model || state.model,
       system:
         compaction_instructions(state, compaction_summary(state, Core.behavior_entries(state))),
@@ -367,7 +368,11 @@ defmodule Lemieux.Session.Compacting do
       params: summary_params(state),
       output_schema: nil
     }
+    |> summary_retry_request(state, retry)
+    |> dispatch_summary(state, plan, from, recovery_reason, retry)
+  end
 
+  defp dispatch_summary(request, state, plan, from, recovery_reason, retry) do
     state = state |> Core.put_compaction(:advice, nil) |> Audit.prepare_harness_snapshot(request)
 
     case Accounting.reserve_request(state, request) do
@@ -423,8 +428,10 @@ defmodule Lemieux.Session.Compacting do
           request_id: request_id,
           recovery_reason: recovery_reason,
           trigger: state.compaction.trigger || compaction_trigger(from, recovery_reason),
+          forecast: state.compaction.forecast,
           started_at: compaction_started_at,
-          attempt: attempt,
+          retry_strategy: retry,
+          diagnostics: summary_diagnostics(state, request),
           retry: nil
         }
 
@@ -444,6 +451,41 @@ defmodule Lemieux.Session.Compacting do
         GenServer.reply(from, {:error, {:budget, payload}})
         {:noreply, state}
     end
+  end
+
+  defp summary_retry_request(request, state, :shorter_summary) do
+    target = request.params[:max_tokens] |> div(3) |> max(1) |> min(1_500)
+    efforts = Provider.reasoning_efforts(state.provider, request.model)
+
+    params =
+      if "minimal" in efforts and
+           not Keyword.has_key?(state.compaction.summary_params, :reasoning_effort),
+         do: Keyword.put(request.params, :reasoning_effort, "minimal"),
+         else: request.params
+
+    %{
+      request
+      | params: params,
+        system:
+          request.system <>
+            "\n\nFinish within #{target} tokens. Prioritize the user's " <>
+            "constraints, completed work and next steps. Condense older details and keep any required headings."
+    }
+  end
+
+  defp summary_retry_request(request, _state, _retry), do: request
+
+  defp summary_diagnostics(state, request) do
+    {strategy, _config} = state.compaction.strategy
+    effort = request.params[:reasoning_effort]
+
+    %{
+      "strategy" => inspect(strategy),
+      "input_bytes" => Request.input_bytes(request),
+      "forecast_tokens" => (state.compaction.forecast || %{})[:input_tokens],
+      "max_tokens" => request.params[:max_tokens],
+      "reasoning_effort" => if(effort in ~w(none minimal low medium high xhigh max), do: effort)
+    }
   end
 
   defp compaction_trigger(from, _recovery_reason) when not is_nil(from), do: :manual
@@ -489,20 +531,31 @@ defmodule Lemieux.Session.Compacting do
     end
   end
 
-  # One more attempt, for a failure the provider may not repeat, when the host
-  # has not turned retries off. A summariser that stopped at its length limit
-  # or wrote nothing would do the same again, so those are not retried.
+  # Both recovery paths share one retry. Length exhaustion gets a different
+  # writing target over the same safe cut, within the original output cap.
   defp summary_retry(
-         %{provider_retry_policy: policy, compaction: %{compacting: %{attempt: 1} = compacting}} =
-           state,
+         %{
+           provider_retry_policy: policy,
+           compaction: %{compacting: %{retry_strategy: nil} = compacting}
+         } = state,
          {_outcome, _events} = result
        )
        when is_map(policy) do
     reason = summary_failure(result)
 
-    if not is_nil(reason) and ProviderError.transient?(reason, policy.classify),
-      do: {:retry, schedule_summary_retry(state, compacting, result, reason)},
-      else: :no_retry
+    cond do
+      not is_nil(reason) and ProviderError.transient?(reason, policy.classify) ->
+        delay =
+          min(ProviderError.retry_after_ms(reason) || @summary_retry_delay_ms, :timer.minutes(1))
+
+        {:retry, schedule_summary_retry(state, compacting, result, :transient, delay)}
+
+      is_nil(reason) and is_nil(compacting.from) and summary_finish_reason(result) == "length" ->
+        {:retry, schedule_summary_retry(state, compacting, result, :shorter_summary, 0)}
+
+      true ->
+        :no_retry
+    end
   end
 
   defp summary_retry(_state, _result), do: :no_retry
@@ -516,29 +569,22 @@ defmodule Lemieux.Session.Compacting do
     end
   end
 
-  defp schedule_summary_retry(state, compacting, result, reason) do
+  defp schedule_summary_retry(state, compacting, result, strategy, delay) do
     request_id = compacting.request_id
 
-    delay =
-      min(ProviderError.retry_after_ms(reason) || @summary_retry_delay_ms, :timer.minutes(1))
-
     Logger.warning(
-      "lemieux: summarising session #{state.id} failed (#{ProviderError.category(reason)}); " <>
-        "retrying in #{delay}ms: " <> ProviderError.message(reason)
+      "lemieux: summarising session #{state.id} failed; retrying in #{delay}ms (#{strategy})"
     )
+
+    payload = failure_payload(compacting, result, Atom.to_string(strategy))
 
     state =
       state
       |> emit_compaction_metadata(result, request_id)
       |> Accounting.account_compaction(result)
       |> Core.append(
-        {:error,
-         %{
-           "reason" => "compaction failed",
-           "request_id" => request_id,
-           "trigger" => Atom.to_string(compacting.trigger),
-           "retrying" => true
-         }, summary_error_usage(state, result, request_id)}
+        {:error, Map.put(payload, "retrying", true),
+         summary_error_usage(state, result, request_id)}
       )
 
     Telemetry.stop(
@@ -557,17 +603,22 @@ defmodule Lemieux.Session.Compacting do
     Core.put_compaction(state, :compacting, %{
       compacting
       | task: nil,
-        retry: %{ref: ref, timer: timer}
+        retry: %{ref: ref, timer: timer, strategy: strategy}
     })
   end
 
   def resume_compaction(state, compacting) do
+    state =
+      state
+      |> Core.put_compaction(:trigger, compacting.trigger)
+      |> Core.put_compaction(:forecast, compacting.forecast)
+
     case start_compaction(
            state,
            compacting.plan,
            compacting.from,
            compacting.recovery_reason,
-           compacting.attempt + 1
+           compacting.retry.strategy
          ) do
       {:noreply, state} -> state
       state -> state
@@ -682,7 +733,7 @@ defmodule Lemieux.Session.Compacting do
       recovery_reason: recovery_reason,
       trigger: trigger,
       started_at: started_at
-    } = state.compaction.compacting
+    } = compacting = state.compaction.compacting
 
     state =
       state
@@ -693,7 +744,7 @@ defmodule Lemieux.Session.Compacting do
     state =
       case summary_outcome(state, result) do
         {:ok, summary, usage} -> compacted(state, plan, summary, usage, from, request_id, trigger)
-        {:error, reason} -> compaction_failed(state, reason, from, result, request_id, trigger)
+        {:error, reason} -> compaction_failed(state, reason, result, compacting)
       end
 
     Telemetry.stop(
@@ -706,8 +757,20 @@ defmodule Lemieux.Session.Compacting do
       })
     )
 
-    {state, from, recovery_reason}
+    {state, from, continuation_reason(state, compacting, result, recovery_reason)}
   end
+
+  defp continuation_reason(
+         %{compaction: %{compaction_failed?: true}, context_window: window},
+         %{from: nil, forecast: %{input_tokens: tokens}},
+         result,
+         nil
+       )
+       when is_integer(window) and tokens >= window do
+    if summary_finish_reason(result) == "length", do: :summary_length_at_context_limit
+  end
+
+  defp continuation_reason(_state, _compacting, _result, reason), do: reason
 
   defp emit_compaction_metadata(state, {:crashed, _reason}, _request_id), do: state
 
@@ -789,6 +852,16 @@ defmodule Lemieux.Session.Compacting do
   # so the turn goes ahead.
   def after_compaction({state, nil, nil}), do: Requests.start_turn(state)
 
+  def after_compaction({state, nil, :summary_length_at_context_limit}) do
+    ToolWave.stop(
+      state,
+      :compaction_failed,
+      "The summary hit its length limit and the next request is forecast to exceed the " <>
+        "context window. The transcript is intact. Try manual compaction with a larger " <>
+        "summary allowance or resume with a model that has a larger window."
+    )
+  end
+
   def after_compaction({%{compaction: %{compaction_failed?: true}} = state, nil, recovery_reason}) do
     state
     |> Core.put_compaction(:context_recovery_reason, nil)
@@ -858,21 +931,14 @@ defmodule Lemieux.Session.Compacting do
   # failed must not cost anybody their history. The turn goes ahead with the
   # full conversation, and will usually work — the threshold fires well before
   # the window is actually full.
-  defp compaction_failed(state, reason, from, result, request_id, trigger) do
+  defp compaction_failed(state, reason, result, compacting) do
     Logger.warning("lemieux: could not summarise session #{state.id}: #{reason}")
 
-    usage = summary_error_usage(state, result, request_id)
+    usage = summary_error_usage(state, result, compacting.request_id)
+    recovery = if compacting.retry_strategy, do: "exhausted", else: "unavailable"
 
     state =
-      Core.append(
-        state,
-        {:error,
-         %{
-           "reason" => "compaction failed",
-           "request_id" => request_id,
-           "trigger" => Atom.to_string(trigger)
-         }, usage}
-      )
+      Core.append(state, {:error, failure_payload(compacting, result, recovery), usage})
 
     state =
       state
@@ -880,9 +946,44 @@ defmodule Lemieux.Session.Compacting do
       |> Core.back_off_compaction()
       |> Core.emit({:compaction_failed, reason})
 
-    if from, do: GenServer.reply(from, {:error, reason})
+    if compacting.from, do: GenServer.reply(compacting.from, {:error, reason})
 
-    state
+    if summary_finish_reason(result) == "length" do
+      # The provider's overflow path otherwise immediately repeats the same
+      # cut on the same prompt, despite the summary already using its retry.
+      Core.put_compaction(state, :context_recovery_attempted?, true)
+    else
+      state
+    end
+  end
+
+  defp failure_payload(compacting, result, recovery) do
+    %{
+      "reason" => "compaction failed",
+      "request_id" => compacting.request_id,
+      "trigger" => Atom.to_string(compacting.trigger),
+      "summary_request" => compacting.diagnostics,
+      "summary_finish_reason" => summary_finish_reason(result),
+      "recovery" => recovery
+    }
+  end
+
+  defp summary_finish_reason({:crashed, _reason}), do: "crashed"
+
+  defp summary_finish_reason({outcome, events} = result) do
+    case {summary_failure(result), outcome, List.last(events)} do
+      {nil, :ok, {:done, reason}} when reason in [:length, :stop, :tool_calls, :content_filter] ->
+        Atom.to_string(reason)
+
+      {nil, :ok, {:done, _reason}} ->
+        "other_terminal_reason"
+
+      {nil, :ok, _event} ->
+        "incomplete"
+
+      {reason, _, _event} ->
+        reason |> ProviderError.category() |> Atom.to_string()
+    end
   end
 
   defp summary_error_usage(_state, {:crashed, _reason}, _request_id), do: nil

@@ -676,7 +676,9 @@ defmodule Lemieux.Session do
       what the option is for and why it is off.
     * `:summary_model` and `:summary_params` — optional model and generation
       parameters for the summarizing request, using the same provider route.
-      The request remains subject to the session's request and cost budgets.
+      If an automatic summary hits its length limit, it can retry once with
+      a shorter writing target when provider retries are enabled. Both
+      attempts count against request and cost budgets.
     * `:summary_max_bytes` — maximum accepted summary size. Defaults to 32768;
       an overlong answer leaves the full transcript intact.
     * `:compaction_price_tiers` — a map from resolved model name to price
