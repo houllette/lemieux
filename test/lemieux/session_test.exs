@@ -844,6 +844,41 @@ defmodule Lemieux.SessionTest do
                List.last(entries)
     end
 
+    test "a larger explicit allowance lets a progressing assignment finish its edits",
+         %{
+           tmp_dir: tmp_dir
+         } = context do
+      steps = 1..16
+
+      writes =
+        Enum.map(steps, fn step ->
+          Scripted.tool_call("write-#{step}", "write", %{
+            "path" => "part-#{step}.txt",
+            "content" => "Completed part #{step}\n"
+          })
+        end)
+
+      {session, provider} =
+        start_session(context, writes ++ [Scripted.complete("All parts written.")],
+          cwd: tmp_dir,
+          tools: [Lemieux.Tools.Write],
+          max_turns: 17,
+          max_requests: 17
+        )
+
+      assert {:ok, %{stop_reason: :stop, text: "All parts written."}} =
+               Session.await(session, "Write all 16 parts.")
+
+      assert %{turns_taken: 17, max_turns: 17, requests: 17, max_requests: 17} =
+               Session.info(session)
+
+      assert length(Scripted.requests(provider)) == 17
+
+      for step <- steps do
+        assert File.read!(Path.join(tmp_dir, "part-#{step}.txt")) == "Completed part #{step}\n"
+      end
+    end
+
     test "late required results survive the turn limit for an explicit continuation", context do
       {session, provider} =
         start_session(context, [Scripted.complete("Waiting for the result.")], max_turns: 1)
