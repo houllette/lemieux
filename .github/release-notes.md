@@ -1,59 +1,42 @@
-# Lemieux 1.2.0
+# Lemieux 1.2.1
 
-Lemieux 1.2.0 expands editor integration through ACP, adds native hover pointers
-in supporting terminals, and makes active work easier to inspect and stop.
-The supported 1.x library, CLI and extension contracts remain compatible.
+Lemieux 1.2.1 improves recovery in long-running sessions, keeps queued input
+visible during tool work, and adds deadlines and in-memory transcripts for
+embedders.
 
 ## What changed
 
-- **Editor integration.** Use `lmx acp setup` to configure credentials and a
-  model before connecting Zed. ACP exposes model/reasoning selectors, form
-  questions, tool locations and file diffs. V1 editor text access includes
-  unsaved buffers while preserving host filesystem policy and approvals.
-  Session load/resume and repeated close are corrected. Experimental draft v2
-  clients must adopt the updated configuration/capability shapes and
-  `_meta["com.github.houllette.lemieux/capabilities"]` namespace; v1 keeps
-  `_meta.lemieux`. Registry metadata is prepared; registry publication follows
-  separate qualification.
-- **Native hover pointers.** Direct Ghostty and Kitty sessions show a pointer
-  over visible click targets through ExRatatui 0.21.0. `LMX_HOVER_POINTER=0`
-  disables it; `LMX_HOVER_POINTER=1` explicitly declares support elsewhere.
-  Unknown terminals and multiplexers stay conservative. Editor handoff and
-  shutdown restore the arrow; embedding hosts opt in explicitly.
-- **Visible verification and cancellation.** Post-answer verification has an
-  explicit phase and Tasks entry with bounded output, elapsed time and Stop
-  task. Cancellation is recorded, queued follow-ups survive, and later results
-  are labelled as new follow-ups. Tasks puts `[c Stop task]` first for running
-  commands and agents while retaining confirmation and logs.
-- **Responsive commands.** `/fast` can change during a turn and takes effect
-  on the next model request, including tool continuations; requests already
-  in flight retain their parameters. Faster service still requires route/model
-  support and may cost more. `/usage` executes with one Enter and reports
-  asynchronous fetching, results or failures. Highlighted autocomplete choices
-  work on Enter and Tab during active turns.
-- **Terminal fixes.** Startup notices stay in one temporary box and dismiss
-  completely. FAST and ULTRAFAST badges use consistent spacing and case.
-  Standard console log handlers are muted while the TUI owns the terminal,
-  while file diagnostics remain available.
-- **Dependency refresh.** NimblePool moves to 1.2.0 and Telemetry to 1.4.3;
-  committed example locks are refreshed.
+- **Session recovery.** Automatic compaction makes one shorter attempt when a
+  summary hits its output limit. During backoff, requests are checked against
+  the known context window. Approved background results that arrive at the
+  turn limit remain available to an explicit continuation.
+- **Steering and questions.** Parent steering stays visible and revocable
+  during delegate and tool work. Submitting deferred answers can continue a
+  paused task with the original budget and the host's continuation policy.
+- **Provider routing and recovery.** Direct providers accept a per-provider
+  `base_url`. Known Ixway quota exhaustion stops automatic retries and keeps
+  completed tool results for manual retry. Vertex OAuth and Application Default
+  Credentials go through ReqLLM 1.31.0.
+- **MCP.** The initial HTTP discovery request advertises the protocol version
+  in its body and header. Bounded stdio diagnostics record framing and the
+  request lifecycle.
+- **Embedding.** `run_deadline_ms:` sets a wall-clock limit for one-shot runs.
+  `Lemieux.Store.Memory` provides an owner-bound, byte-limited transcript
+  store that supports resume.
 
-The [changelog](https://github.com/houllette/lemieux/blob/v1.2.0/CHANGELOG.md)
-has the detailed changes. See [ACP setup](https://github.com/houllette/lemieux/blob/v1.2.0/docs/acp.md)
-for editor configuration and protocol scope.
+See the [full changelog](https://github.com/houllette/lemieux/blob/v1.2.1/CHANGELOG.md).
 
-## Update from 1.1.3
+## Update from 1.2.0
 
-**Restart on every platform. No hot update or live downgrade is declared.**
-New ACP and verification modules, retained server/TUI state and the native
-terminal dependency update require fresh initialization.
+**Restart on every platform.** Session and TUI state, retained callbacks, and
+runtime dependency changes require fresh initialization.
 
 Save unsent drafts, stage the signed update with `lmx update` or `/update`,
 then restart and resume with `lmx -c` or `lmx --resume SESSION`. The explicit
 installer-managed TUI restart preserves its exact session. Personal config
 version 1, extension API 1, existing transcripts and supported 1.x contracts
 remain compatible. Consumed budgets remain attached to the resumed session.
-See the [upgrade steps](https://github.com/houllette/lemieux/blob/v1.2.0/docs/releases.md#upgrading-from-113-to-120).
+See the [upgrade steps](https://github.com/houllette/lemieux/blob/v1.2.1/docs/releases.md#upgrading-from-120-to-121).
 
 ## Install
 
@@ -74,14 +57,14 @@ checksums, and installs per user under `~/.local`. Add `~/.local/bin` to PATH.
 | Linux arm64 or musl | Use a source checkout; no native archive |
 
 The release-signing public key is `X7aGNLOgOV+bz13CuG4x4AVnhKmsPIH8eYvBrajsiG8=`.
-[Verification and installation details](https://github.com/houllette/lemieux/blob/v1.2.0/docs/releases.md)
+[Verification and installation details](https://github.com/houllette/lemieux/blob/v1.2.1/docs/releases.md)
 explain the signature/checksum chain and platform limits.
 
 For an embedding application, use `{:lemieux, "~> 1.2"}`. The library requires
 Elixir 1.19 or newer and OTP 27 or newer, starts no Lemieux processes on its
 own, and retains explicit host ownership of credentials, storage and policy.
 Update constrained provider-stack locks together; start with
-[First embedded agent](https://hexdocs.pm/lemieux/1.2.0/first-embedded-agent.html).
+[First embedded agent](https://hexdocs.pm/lemieux/1.2.1/first-embedded-agent.html).
 
 ## Trust and experimental scope
 
@@ -89,7 +72,7 @@ Update constrained provider-stack locks together; start with
 only inside an available OS sandbox, otherwise they ask. MCP, web and eval
 tools ask either way. Instructions, skills and optional answers grant no new
 authority. The installed binary never loads a working directory's `.env`.
-See [the trust model](https://github.com/houllette/lemieux/blob/v1.2.0/SECURITY.md#what-lmx-trusts-by-default).
+See [the trust model](https://github.com/houllette/lemieux/blob/v1.2.1/SECURITY.md#what-lmx-trusts-by-default).
 
 Windows, browser automation, ACP draft v2 and experimental learning/benchmarking
 APIs retain their experimental status. This release makes no claim of live

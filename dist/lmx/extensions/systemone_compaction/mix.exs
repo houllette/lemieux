@@ -14,9 +14,9 @@ defmodule LemieuxSystemOneCompaction.MixProject do
         {:system_one_sdk, "~> 0.6.0"},
         {:pristine, "~> 0.4.0"},
         # Pristine 0.4 and Sinter 0.3 pin older Finch, NimbleOptions and JSV.
-        # ReqLLM 1.31 needs the current versions; the compatibility tests exercise
+        # The release shares newer resolutions with Lemieux; the compatibility tests exercise
         # the SDK transport and schema validation with these shared resolutions.
-        {:finch, "~> 0.24.0", override: true},
+        {:finch, "~> 0.25.0", override: true},
         {:nimble_options, "~> 1.2.0", override: true},
         {:jsv, "~> 0.27.0", override: true},
         {:req_llm, "~> 1.31"},
