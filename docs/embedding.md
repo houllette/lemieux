@@ -95,10 +95,9 @@ numbers in it were measured, and each says where.
 ```
 
 Lemieux needs Elixir 1.19 or later and recent releases of its provider stack:
-`req_llm ~> 1.30`, `req ~> 0.7`, `finch ~> 0.24`, and Splode 0.3.3 or later.
-ReqLLM 1.30 uses
-`llm_db ~> 2026.11.0`; this release locks ReqLLM 1.30.0, LLMDB 2026.11.2
-and the patched JSV 0.27.0 validator.
+`req_llm ~> 1.31`, `req ~> 0.7`, `finch ~> 0.24`, and Splode 0.3.3 or later.
+ReqLLM 1.31 uses `llm_db ~> 2026.11.4`. The repository locks ReqLLM 1.31.0,
+LLMDB 2026.11.4 and the patched JSV 0.27.0 validator.
 A newly generated Phoenix 1.8 or Ash 3
 application resolves them without edits. An older `mix.lock` stops
 `mix deps.get` with a message like this:
