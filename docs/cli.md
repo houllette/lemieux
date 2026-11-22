@@ -441,7 +441,7 @@ links to the docs, issues and questions at the end.
 | `/effort [LEVEL]` | Show or select a reasoning effort the model supports |
 | `/fast [on \| off \| ultrafast]` | Toggle faster service for subsequent requests; shown only for supported models and connections. May cost more and requires provider account access |
 | `/new` | Start a new session: fresh name, transcript and usage totals |
-| `/resume [SESSION \| all]` | List this directory's sessions, most recently active first, or switch to one; `all` lists every directory's |
+| `/resume [SESSION \| all]` | Open the **This folder** picker or resume a specific session. `all` opens **All sessions** |
 | `/compact` | Summarize the earlier conversation now |
 | `/context` | Draw what is filling the context window |
 | `/usage [refresh]` | Fetch provider account spend or subscription quota; reuse a report for up to one minute |
@@ -871,7 +871,9 @@ model, `lmx` tries, in order:
   `--continue`. Other paths on the command line are still read from where you
   ran `lmx`.
 - `-c` / `--continue` (terminal UI and `lmx run`) resumes the newest session
-  that ran in this directory. `/resume` lists sessions by last activity.
+  that ran in this directory. `/resume` opens a searchable picker ordered by
+  last activity. Tab and Shift+Tab switch between **This folder** and **All
+  sessions**. Use the arrow keys and Enter to resume, or Esc to dismiss.
 - A flag that belongs to another command is named as such (`--model does not
   apply to lmx log`), and a missing or mistyped value says so.
 - A prompt goes to `lmx run`, to the terminal UI with `--prompt`, or into

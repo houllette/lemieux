@@ -13,9 +13,6 @@ defmodule Lemieux.TUI.EffectsTest do
   alias Lemieux.TUI.Effects
   alias Lemieux.TUI.Keys
 
-  # Performed directly: typing `/resume` and Enter takes the highlighted
-  # session out of the completion menu the command opens, which is the menu's
-  # job and not what these tests are about.
   defp perform(state, effect) do
     assert {:noreply, state} = Effects.run(state, [effect])
     state
@@ -73,52 +70,90 @@ defmodule Lemieux.TUI.EffectsTest do
   end
 
   describe "/resume" do
-    test "lists this directory's sessions, most recently active first" do
-      text = tui(sessions: sessions(), cwd: "/work/here") |> perform(:resume_status) |> lmx_text()
-
-      assert text =~ "sessions in this directory, most recent first"
+    test "opens this folder and switches scope without losing the search" do
+      state = tui(sessions: sessions(), cwd: "/work/here") |> command("/resume")
+      text = screen(state)
+      assert state.modal.scope == :here
+      assert text =~ "This folder"
       assert position(text, "new-here") < position(text, "old-here")
       assert text =~ "2m ago"
-      assert text =~ "\"add a --cwd flag\""
+      assert text =~ "add a --cwd flag"
       refute text =~ "another repository"
-      assert text =~ "/resume all adds 1 from other directories"
+
+      searched = type(state, "repo")
+      assert screen(searched) =~ "No matching sessions"
+      all = press(searched, "tab")
+      assert all.modal.scope == :all
+      assert screen(all) =~ "/work/other"
+      refute screen(all) =~ "new-here"
+      back = press(all, "back_tab", ["shift"])
+      assert back.modal.scope == :here
+      assert back.modal.query == "repo"
+      assert press(back, "esc").modal == nil
     end
 
-    test "all lists every directory's" do
-      text =
-        tui(sessions: sessions(), cwd: "/work/here")
-        |> perform({:resume_list, :all})
-        |> lmx_text()
-
-      assert text =~ "stored sessions, most recent first"
+    test "all shows directory context and sorts by last activity" do
+      state = tui(sessions: sessions(), cwd: "/work/here") |> command("/resume all")
+      assert state.modal.scope == :all
+      text = screen(state)
       assert position(text, "elsewhere") < position(text, "new-here")
     end
 
-    test "a directory with none of its own points at the others" do
-      text =
-        tui(sessions: sessions(), cwd: "/work/empty") |> perform(:resume_status) |> lmx_text()
-
-      assert text =~ "no stored sessions in this directory · /resume all lists 3"
-    end
-
-    # An index built before sessions recorded their directory: listing
-    # everything beats claiming there is nothing here.
-    test "an index that does not know directories lists everything" do
+    test "unknown directories stay reachable from the empty folder tab" do
       unknown = Enum.map(sessions(), &%{&1 | cwd: nil})
-      text = tui(sessions: unknown, cwd: "/work/here") |> perform(:resume_status) |> lmx_text()
+      state = tui(sessions: unknown, cwd: "/work/here") |> perform(:resume_status)
 
-      assert text =~ "stored sessions"
-      assert text =~ "elsewhere"
+      assert screen(state) =~ "No previous sessions in this folder"
+      all = press(state, "tab")
+      assert screen(all) =~ "elsewhere"
+      assert screen(all) =~ "directory unknown"
     end
 
-    test "leaves out the session on screen" do
+    test "leaves out the session on screen and compares normalized paths" do
       text =
-        tui(sessions: sessions(), cwd: "/work/here", id: "01NEWHERE")
+        tui(sessions: sessions(), cwd: "/work/here/../here", id: "01NEWHERE")
         |> perform(:resume_status)
-        |> lmx_text()
+        |> screen()
 
       refute text =~ "new-here"
       assert text =~ "old-here"
+    end
+
+    test "loads and scrolls the full index, then resumes the selected ID" do
+      owner = self()
+      [entry | _] = sessions()
+
+      many =
+        for n <- 1..80 do
+          %{
+            entry
+            | id: "SESSION-#{n}",
+              shorthand: "shared name",
+              updated_at: DateTime.add(entry.at, -n)
+          }
+        end
+
+      start = fn id, _subscriber ->
+        send(owner, {:selected, id})
+        {:error, :already_open}
+      end
+
+      list = fn -> {:ok, many ++ [hd(many)]} end
+      state = tui(cwd: entry.cwd, resume_session: start)
+      state = put_in(state.resume.list_all, list)
+      opened = command(state, "/resume")
+      assert_receive {:resume_picker_index, _, _} = loaded
+      assert {:noreply, ready} = Lemieux.TUI.handle_info(loaded, opened)
+      assert length(ready.modal.matches) == 80
+      scrolled = Enum.reduce(1..70, ready, fn _, ui -> press(ui, "down") end)
+      assert screen(scrolled) =~ "71/80"
+      assert press(scrolled, "enter").modal == nil
+      assert_receive {:selected, "SESSION-71"}
+      assert_receive {:resume_result, "SESSION-71", {:error, :already_open}}
+
+      busy = put_in(ready.conversation.busy?, true)
+      assert screen(press(busy, "enter")) =~ "cancel or wait for this turn"
+      refute_received {:selected, _}
     end
   end
 

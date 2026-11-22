@@ -23,6 +23,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Flash
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.Lifecycle
+    alias Lemieux.TUI.ResumePicker
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.SkillLoading
     alias Lemieux.TUI.Submission
@@ -181,10 +182,8 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp perform(state, {:set_theme, name}), do: Appearance.set_theme(state, name)
     defp perform(state, :toggle_elixir_mode), do: Choices.toggle_elixir_mode(state)
     defp perform(state, :habs), do: Lifecycle.start_habs(state)
-    defp perform(state, :resume_status), do: Transcript.say(state, :lmx, resumable(state, :here))
-
-    defp perform(state, {:resume_list, :all}),
-      do: Transcript.say(state, :lmx, resumable(state, :all))
+    defp perform(state, :resume_status), do: ResumePicker.open(state, :here)
+    defp perform(state, {:resume_list, :all}), do: ResumePicker.open(state, :all)
 
     defp perform(state, :new), do: Lifecycle.new_session(state)
     defp perform(state, {:resume, id}), do: Lifecycle.resume_session(state, id)
@@ -525,97 +524,5 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp action_words(action),
       do: Map.get_lazy(@action_words, action, fn -> String.replace(action, "_", " ") end)
-
-    # `/resume`'s list: this directory's sessions first, most recently active
-    # first, because the session a person in this repository is looking for is
-    # almost always one they had here. `all` is every directory's. The
-    # sessions are the host's index (`state.resume.sessions`), read for
-    # `:cwd` and `:updated_at` when it carries them; an index that does not
-    # know directories lists everything, newest first, rather than nothing.
-    @listed 15
-
-    defp resumable(state, scope) do
-      sessions = Enum.reject(state.resume.sessions, &(Map.get(&1, :id) == state.id))
-      cwd = state.references.cwd
-      known? = Enum.any?(sessions, &is_binary(Map.get(&1, :cwd)))
-      {here, elsewhere} = Enum.split_with(sessions, &(known? and Map.get(&1, :cwd) == cwd))
-
-      case {scope, known?, sessions, here} do
-        {_scope, _known, [], _here} ->
-          "no stored sessions yet"
-
-        {:here, true, _sessions, []} ->
-          "no stored sessions in this directory · /resume all lists " <>
-            "#{length(elsewhere)} from other directories"
-
-        {:here, true, _sessions, here} ->
-          listing("sessions in this directory", here, length(elsewhere))
-
-        {_all_or_unknown, _known, sessions, _here} ->
-          listing("stored sessions", sessions, 0)
-      end
-    end
-
-    defp listing(title, sessions, elsewhere) do
-      now = DateTime.utc_now()
-      shown = sessions |> Enum.sort_by(&recency/1, {:desc, DateTime}) |> Enum.take(@listed)
-      more = length(sessions) - length(shown)
-
-      rows = Enum.map(shown, &("  " <> session_row(&1, now)))
-
-      footer =
-        [
-          if(more > 0, do: "  … and #{more} more"),
-          "/resume SESSION continues one (tab completes)" <>
-            if(elsewhere > 0,
-              do: " · /resume all adds #{elsewhere} from other directories",
-              else: ""
-            )
-        ]
-        |> Enum.reject(&is_nil/1)
-
-      Enum.join(["#{title}, most recent first" | rows] ++ footer, "\n")
-    end
-
-    @epoch ~U[1970-01-01 00:00:00Z]
-
-    defp recency(session),
-      do: timestamp(Map.get(session, :updated_at)) || timestamp(Map.get(session, :at)) || @epoch
-
-    defp timestamp(%DateTime{} = at), do: at
-    defp timestamp(_other), do: nil
-
-    defp session_row(session, now) do
-      [
-        Map.get(session, :shorthand) || Map.get(session, :id),
-        ago(recency(session), now),
-        Map.get(session, :model),
-        quoted(Map.get(session, :preview))
-      ]
-      |> Enum.reject(&(&1 in [nil, ""]))
-      |> Enum.join(" · ")
-    end
-
-    defp ago(@epoch, _now), do: nil
-
-    defp ago(at, now) do
-      seconds = max(DateTime.diff(now, at), 0)
-
-      cond do
-        seconds < 60 -> "just now"
-        seconds < 3_600 -> "#{div(seconds, 60)}m ago"
-        seconds < 86_400 -> "#{div(seconds, 3_600)}h ago"
-        seconds < 7 * 86_400 -> "#{div(seconds, 86_400)}d ago"
-        true -> Calendar.strftime(at, "%Y-%m-%d")
-      end
-    end
-
-    defp quoted(preview) when is_binary(preview) and preview != "" do
-      text = preview |> String.replace(~r/\s+/, " ") |> String.trim()
-      text = if String.length(text) > 60, do: String.slice(text, 0, 59) <> "…", else: text
-      "\"#{text}\""
-    end
-
-    defp quoted(_preview), do: nil
   end
 end

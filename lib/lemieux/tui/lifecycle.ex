@@ -505,6 +505,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def resume_session(%TUI{resume: %{busy?: true}} = state, _id),
       do: Transcript.say(state, :lmx, "already resuming a session")
 
+    def resume_session(%TUI{conversation: %{busy?: true}} = state, _id),
+      do:
+        Transcript.say(
+          state,
+          :lmx,
+          "cancel or wait for this turn before resuming another session"
+        )
+
     def resume_session(%TUI{resume: %{start: nil}} = state, _id),
       do: Transcript.say(state, :lmx, "session resume is not available in this host")
 

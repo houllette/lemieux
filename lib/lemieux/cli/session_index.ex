@@ -89,12 +89,12 @@ defmodule Lemieux.CLI.SessionIndex do
 
   Options:
 
-    * `:limit` — how many to return (default 50);
+    * `:limit` — how many to return (default 50), or `:infinity` for all;
     * `:cwd` — only sessions that ran in this directory.
   """
   @spec recent(store :: Store.t(), opts :: keyword()) :: {:ok, [t()]} | {:error, term()}
   def recent({JSONL, %{dir: dir}} = store, opts) when is_list(opts) do
-    limit = opts |> Keyword.get(:limit, @default_limit) |> max(0)
+    limit = limit(opts)
     walk = %{store: store, limit: limit, cwd: cwd_filter(opts)}
 
     dir
@@ -112,7 +112,7 @@ defmodule Lemieux.CLI.SessionIndex do
   end
 
   def recent(store, opts) when is_list(opts) do
-    limit = opts |> Keyword.get(:limit, @default_limit) |> max(0)
+    limit = limit(opts)
     cwd = cwd_filter(opts)
 
     with {:ok, ids} <- Store.list_sessions(store) do
@@ -126,6 +126,13 @@ defmodule Lemieux.CLI.SessionIndex do
         error ->
           error
       end)
+    end
+  end
+
+  defp limit(opts) do
+    case Keyword.get(opts, :limit, @default_limit) do
+      :infinity -> :infinity
+      count -> max(count, 0)
     end
   end
 
@@ -166,7 +173,7 @@ defmodule Lemieux.CLI.SessionIndex do
   # One transcript, newest first, until the limit is reached: served from the
   # index when unchanged, read and re-indexed when not.
   defp visit(%{limit: limit}, _stamped, {:ok, found, _index, _changed?} = acc)
-       when length(found) >= limit,
+       when is_integer(limit) and length(found) >= limit,
        do: {:halt, acc}
 
   defp visit(walk, {id, stamp}, {:ok, found, index, changed?}) do
@@ -184,7 +191,7 @@ defmodule Lemieux.CLI.SessionIndex do
   end
 
   defp read_until_limit(_store, limit, _cwd, _id, {:ok, sessions} = acc)
-       when length(sessions) >= limit,
+       when is_integer(limit) and length(sessions) >= limit,
        do: {:halt, acc}
 
   defp read_until_limit(store, _limit, cwd, id, {:ok, sessions}) do
@@ -227,6 +234,18 @@ defmodule Lemieux.CLI.SessionIndex do
   @spec shorthand(session :: t()) :: String.t()
   def shorthand(%__MODULE__{shorthand: shorthand}) when is_binary(shorthand), do: shorthand
   def shorthand(%__MODULE__{id: id}), do: Shorthand.of(id)
+
+  @doc "Last activity, falling back to creation time for older index entries."
+  @spec activity(session :: t()) :: DateTime.t()
+  def activity(%__MODULE__{updated_at: updated, at: started}),
+    do: updated || started || ~U[1970-01-01 00:00:00Z]
+
+  @doc "Compares two recorded working directories using the index's path normalization."
+  @spec same_folder?(Path.t() | nil, Path.t() | nil) :: boolean()
+  def same_folder?(left, right) when is_binary(left) and is_binary(right),
+    do: Path.expand(left) == Path.expand(right)
+
+  def same_folder?(_left, _right), do: false
 
   # --- The index --------------------------------------------------------------
 
@@ -309,7 +328,7 @@ defmodule Lemieux.CLI.SessionIndex do
 
   defp offered?(%{"offered" => false}, _cwd), do: false
   defp offered?(_entry, nil), do: true
-  defp offered?(%{"cwd" => cwd}, wanted) when is_binary(cwd), do: Path.expand(cwd) == wanted
+  defp offered?(%{"cwd" => cwd}, wanted), do: same_folder?(cwd, wanted)
   defp offered?(_entry, _wanted), do: false
 
   defp cwd_filter(opts) do

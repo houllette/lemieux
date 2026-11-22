@@ -679,6 +679,7 @@ defmodule Lemieux.CLI.TUI do
             harness: prepared.harness,
             sessions: sessions,
             list_sessions: list_sessions,
+            list_resume_sessions: fn -> SessionIndex.recent(store, limit: :infinity) end,
             resume_session: resume_session(options, opts, prepared),
             new_session: new_session(options, opts, prepared),
             standard_tools: standard_tools,

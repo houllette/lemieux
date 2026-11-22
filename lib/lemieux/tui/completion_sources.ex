@@ -117,7 +117,7 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
         # These bare commands act immediately; their arguments are optional.
         accepts_arguments? =
           Map.fetch!(by_name, command.name).accepts_arguments? and
-            command.name not in ~w(mcp copy tools fast usage)
+            command.name not in ~w(mcp copy tools fast usage resume)
 
         suffix = if accepts_arguments?, do: " ", else: ""
 
@@ -311,6 +311,9 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
         end
       end)
     end
+
+    defp resume_completions(_state, command) when command in ["/resume all", "/resume --all"],
+      do: []
 
     defp resume_completions(state, "/resume " <> query) do
       query = query |> String.downcase() |> String.trim()

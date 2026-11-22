@@ -50,6 +50,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp module(:tools), do: Lemieux.TUI.ToolsPanel
     defp module(:diff), do: Lemieux.TUI.DiffPanel
     defp module(:history_search), do: HistorySearch
+    defp module(:resume_picker), do: Lemieux.TUI.ResumePicker
     defp module(:trust), do: Trust
     defp module(:first_run), do: FirstRun
   end

@@ -169,6 +169,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         resume: %{
           sessions: Keyword.get(opts, :sessions, []),
           list: Keyword.get(opts, :list_sessions),
+          list_all: Keyword.get(opts, :list_resume_sessions),
           start: Keyword.get(opts, :resume_session),
           new: Keyword.get(opts, :new_session),
           busy?: false,
