@@ -119,6 +119,7 @@ defmodule Lemieux.Conversation.Dispatch do
           | {:provider_set, String.t()}
           | {:reasoning_effort_set, String.t()}
           | {:fast_mode_set, String.t()}
+          | {:priority_set, String.t()}
           | {:tool_statuses, [map()]}
           | :tools_changed
           | {:mcp_statuses, [map()]}

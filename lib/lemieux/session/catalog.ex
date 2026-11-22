@@ -6,6 +6,7 @@ defmodule Lemieux.Session.Catalog do
   alias Lemieux.ModelSpec
   alias Lemieux.Provider
   alias Lemieux.Provider.Error, as: ProviderError
+  alias Lemieux.Provider.Priority
   alias Lemieux.Session.Compacting
   alias Lemieux.Session.Core
   alias Lemieux.Session.Setup
@@ -122,12 +123,12 @@ defmodule Lemieux.Session.Catalog do
       :ok ->
         previous = state.model
         previous_effort = reasoning_effort(state)
-        previous_fast = Keyword.get(state.params, :fast_mode, "off")
+        previous_params = state.params
 
         params =
           state
           |> compatible_reasoning_params(model)
-          |> compatible_fast_params(state.provider, model)
+          |> compatible_priority_params(state.provider, model)
 
         state =
           state
@@ -140,7 +141,7 @@ defmodule Lemieux.Session.Catalog do
           |> Core.emit({:model_changed, previous, model})
 
         state = maybe_emit_effort_change(state, previous_effort, reasoning_effort(state))
-        state = maybe_emit_fast_change(state, previous_fast)
+        state = emit_priority_changes(state, previous_params)
 
         state = Setup.notice_unknown_window(state)
         state = Core.emit(state, {:context, Compacting.context(state)})
@@ -201,7 +202,7 @@ defmodule Lemieux.Session.Catalog do
   end
 
   def change_fast_mode(state, mode) do
-    current = Keyword.get(state.params, :fast_mode, "off")
+    current = Priority.fast_mode(state.params)
     mode = mode |> String.trim() |> String.downcase() |> fast_choice(current)
     supported = Provider.fast_modes(state.provider, state.model)
 
@@ -209,37 +210,76 @@ defmodule Lemieux.Session.Catalog do
       mode not in ["off" | supported] ->
         {:reply, {:error, {:fast_mode_unsupported, state.model, mode, supported}}, state}
 
-      mode == current ->
+      mode == current and not Keyword.has_key?(state.params, :priority) ->
         {:reply, {:ok, mode}, state}
 
       true ->
-        state =
-          state
-          |> Map.update!(:params, &Keyword.put(&1, :fast_mode, mode))
-          |> Setup.record_config()
-          |> Core.emit({:fast_mode_changed, current, mode})
-
-        {:reply, {:ok, mode}, state}
+        put_priority(state, :fast_mode, mode)
     end
   end
 
-  defp maybe_emit_fast_change(state, previous) do
-    current = Keyword.get(state.params, :fast_mode, "off")
+  def change_priority(state, requested) do
+    tier = requested |> String.trim() |> String.downcase()
+    choices = Provider.priority_tiers(state.provider, state.model)
 
-    if current == previous,
-      do: state,
-      else: Core.emit(state, {:fast_mode_changed, previous, current})
+    if List.keymember?(choices, tier, 0),
+      do: put_priority(state, :priority, tier),
+      else:
+        {:reply,
+         {:error, {:priority_unsupported, state.model, tier, Enum.map(choices, &elem(&1, 0))}},
+         state}
   end
+
+  defp put_priority(state, key, tier) do
+    previous = state.params
+    params = previous |> Priority.clear() |> Keyword.put(key, tier)
+
+    state =
+      if Priority.explicit(previous) == Priority.explicit(params) do
+        state
+      else
+        state
+        |> Map.put(:params, params)
+        |> Setup.record_config()
+        |> emit_priority_changes(previous)
+      end
+
+    {:reply, {:ok, tier}, state}
+  end
+
+  defp emit_priority_changes(state, previous) do
+    state
+    |> emit_setting_change(
+      :fast_mode_changed,
+      Priority.fast_mode(previous),
+      Priority.fast_mode(state.params)
+    )
+    |> emit_setting_change(
+      :priority_changed,
+      Priority.requested(previous),
+      Priority.requested(state.params)
+    )
+  end
+
+  defp emit_setting_change(state, _kind, value, value), do: state
+  defp emit_setting_change(state, kind, old, new), do: Core.emit(state, {kind, old, new})
 
   defp fast_choice("on", _current), do: "fast"
   defp fast_choice("toggle", "off"), do: "fast"
   defp fast_choice("toggle", _current), do: "off"
   defp fast_choice(mode, _current), do: mode
 
-  def compatible_fast_params(params, provider, model) do
-    if Keyword.get(params, :fast_mode, "off") in ["off" | Provider.fast_modes(provider, model)],
-      do: params,
-      else: Keyword.delete(params, :fast_mode)
+  def compatible_priority_params(params, provider, model) do
+    supported? =
+      case Keyword.fetch(params, :priority) do
+        {:ok, tier} ->
+          List.keymember?(Provider.priority_tiers(provider, model), tier, 0)
+
+        :error ->
+          Keyword.get(params, :fast_mode, "off") in ["off" | Provider.fast_modes(provider, model)]
+      end
+
+    if supported?, do: params, else: Priority.clear(params)
   end
 
   def reasoning_effort(state), do: normalize_effort(Keyword.get(state.params, :reasoning_effort))

@@ -8,6 +8,7 @@ defmodule Lemieux.Session.Calls do
   alias Lemieux.ModelSpec
   alias Lemieux.OpenTelemetry
   alias Lemieux.Provider
+  alias Lemieux.Provider.Priority
   alias Lemieux.Session.Accounting
   alias Lemieux.Session.Approvals
   alias Lemieux.Session.Aside
@@ -105,6 +106,11 @@ defmodule Lemieux.Session.Calls do
     do: {:reply, Provider.fast_modes(state.provider, state.model), state}
 
   def call({:set_fast_mode, mode}, _from, state), do: Catalog.change_fast_mode(state, mode)
+
+  def call(:priority_tiers, _from, state),
+    do: {:reply, Provider.priority_tiers(state.provider, state.model), state}
+
+  def call({:set_priority, tier}, _from, state), do: Catalog.change_priority(state, tier)
 
   def call(:request_hooks, _from, state),
     do: {:reply, Keyword.get_values(state.hooks, :prepare_next_turn), state}
@@ -290,8 +296,10 @@ defmodule Lemieux.Session.Calls do
       provider: ModelSpec.provider(state.model),
       reasoning_effort: Catalog.reasoning_effort(state) || "default",
       reasoning_efforts: Provider.reasoning_efforts(state.provider, state.model),
-      fast_mode: Keyword.get(state.params, :fast_mode, "off"),
+      fast_mode: Priority.fast_mode(state.params),
       fast_modes: Provider.fast_modes(state.provider, state.model),
+      priority: Priority.requested(state.params),
+      priority_tiers: Provider.priority_tiers(state.provider, state.model),
       tools: Catalog.local_tool_names(state),
       cwd: state.cwd,
       pending: Core.pending(state),
@@ -330,8 +338,10 @@ defmodule Lemieux.Session.Calls do
       provider: ModelSpec.provider(state.model),
       reasoning_effort: Catalog.reasoning_effort(state) || "default",
       reasoning_efforts: Provider.reasoning_efforts(state.provider, state.model),
-      fast_mode: Keyword.get(state.params, :fast_mode, "off"),
+      fast_mode: Priority.fast_mode(state.params),
       fast_modes: Provider.fast_modes(state.provider, state.model),
+      priority: Priority.requested(state.params),
+      priority_tiers: Provider.priority_tiers(state.provider, state.model),
       tools: Catalog.local_tool_names(state),
       cwd: state.cwd,
       pending: Core.pending(state),

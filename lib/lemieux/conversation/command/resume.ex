@@ -18,7 +18,7 @@ defmodule Lemieux.Conversation.Command.Resume do
   def spec do
     %{
       name: "resume",
-      description: "continue a stored session (all lists every directory's)",
+      description: "find a previous session in this folder or across all folders",
       accepts_arguments?: true,
       action: :resume_status,
       actions: [:resume_status, {:resume_list, :all}, {:resume, "SESSION"}]

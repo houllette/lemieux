@@ -12,6 +12,7 @@ defmodule Lemieux.TUI.TestSupport do
   alias ExRatatui.Widgets.Paragraph
   alias ExRatatui.Widgets.Textarea
   alias Lemieux.Context
+  alias Lemieux.Provider.Priority
   alias Lemieux.TUI
   alias Lemieux.TUI.Theme
 
@@ -245,6 +246,7 @@ defmodule Lemieux.TUI.TestSupport do
         :discovered_models,
         :efforts,
         :fast_modes,
+        :priority_tiers,
         :mcp_servers,
         :sessions,
         :list_sessions,
@@ -375,6 +377,7 @@ defmodule Lemieux.TUI.TestSupport do
           model_metadata: Keyword.get(choices, :model_metadata, %{}),
           efforts: Keyword.get(choices, :efforts, ["default", "high"]),
           fast_modes: Keyword.get(choices, :fast_modes, []),
+          priorities: Priority.choices(Keyword.get(choices, :priority_tiers, [])),
           tool_statuses:
             Keyword.get(choices, :tool_statuses, [
               %{name: "read", source: :local, enabled?: true},
@@ -492,6 +495,15 @@ defmodule Lemieux.TUI.TestSupport do
       {:"$gen_call", from, :fast_modes} ->
         GenServer.reply(from, state.fast_modes)
         fake_session_loop(state)
+
+      {:"$gen_call", from, :priority_tiers} ->
+        GenServer.reply(from, state.priorities)
+        fake_session_loop(state)
+
+      {:"$gen_call", from, {:set_priority, tier}} ->
+        send(state.owner, {:set_priority, tier})
+        GenServer.reply(from, {:ok, tier})
+        fake_session_loop(%{state | snapshot: Map.put(state.snapshot, :priority, tier)})
 
       {:"$gen_call", from, {:set_fast_mode, mode}} ->
         send(state.owner, {:set_fast_mode, mode})

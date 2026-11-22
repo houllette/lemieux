@@ -505,6 +505,14 @@ if Code.ensure_loaded?(ExRatatui.App) do
     def resume_session(%TUI{resume: %{busy?: true}} = state, _id),
       do: Transcript.say(state, :lmx, "already resuming a session")
 
+    def resume_session(%TUI{conversation: %{busy?: true}} = state, _id),
+      do:
+        Transcript.say(
+          state,
+          :lmx,
+          "cancel or wait for this turn before resuming another session"
+        )
+
     def resume_session(%TUI{resume: %{start: nil}} = state, _id),
       do: Transcript.say(state, :lmx, "session resume is not available in this host")
 
@@ -673,6 +681,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         model_metadata: Session.model_metadata(session),
         efforts: Session.reasoning_efforts(session),
         fast_modes: Session.fast_modes(session),
+        priority_tiers: Session.priority_tiers(session),
         tool_statuses: tool_statuses(session, info),
         mcp: mcp_statuses(session, info),
         # Asked once, because a host profile is fixed for the life of a

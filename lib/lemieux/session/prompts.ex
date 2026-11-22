@@ -11,6 +11,7 @@ defmodule Lemieux.Session.Prompts do
   alias Lemieux.Input
   alias Lemieux.MCP
   alias Lemieux.Messages
+  alias Lemieux.Provider.Priority
   alias Lemieux.Reference
   alias Lemieux.Request
   alias Lemieux.Session.Accounting
@@ -347,11 +348,11 @@ defmodule Lemieux.Session.Prompts do
   def finish_hook(state, {:prepare_next_turn, original}, {:ok, %Request{} = request}) do
     # A held preparation hook owns its request copy. A service-mode change
     # accepted while it ran must reach this not-yet-dispatched request too.
-    current_mode = Keyword.get(state.params, :fast_mode, "off")
+    current = Priority.explicit(state.params)
 
     request =
-      if current_mode != Keyword.get(original.params, :fast_mode, "off"),
-        do: %{request | params: Keyword.put(request.params, :fast_mode, current_mode)},
+      if current != Priority.explicit(original.params),
+        do: %{request | params: Keyword.merge(Priority.clear(request.params), current)},
         else: request
 
     case Tool.validate_all(request.tools) do

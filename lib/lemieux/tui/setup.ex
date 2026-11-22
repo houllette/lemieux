@@ -6,6 +6,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     alias Lemieux.Conversation
     alias Lemieux.ModelSpec
+    alias Lemieux.Provider.Priority
     alias Lemieux.Session
     alias Lemieux.Tools
     alias Lemieux.TUI
@@ -142,6 +143,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           discover: Keyword.get(opts, :discover, %{}),
           efforts: Keyword.get(opts, :efforts, []),
           fast_modes: Keyword.get(opts, :fast_modes, []),
+          priority_tiers: Priority.choices(Keyword.get(opts, :priority_tiers, [])),
           mcp: Keyword.get(opts, :mcp_servers, [])
         },
         skills: Keyword.get(opts, :skills, []),
@@ -169,6 +171,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         resume: %{
           sessions: Keyword.get(opts, :sessions, []),
           list: Keyword.get(opts, :list_sessions),
+          list_all: Keyword.get(opts, :list_resume_sessions),
           start: Keyword.get(opts, :resume_session),
           new: Keyword.get(opts, :new_session),
           busy?: false,
@@ -194,6 +197,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           |> History.loaded()
           |> History.staged(Keyword.get(opts, :prompt)),
         session_view: %{
+          requested_access_program: nil,
           mcp: %{},
           mcp_ready?: true,
           mcp_announced?: false,

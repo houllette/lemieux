@@ -783,6 +783,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       %{
         catalog: state.catalog,
         model_tab: state.model_tab,
+        requested_access_program: state.session_view.requested_access_program,
         command_tab: state.command_tab,
         conversation: state.conversation,
         skills: state.skills,

@@ -145,6 +145,7 @@ defmodule Lemieux.Providers.ReqLLM do
   alias Lemieux.OpenTelemetry
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Provider.Interrupted
+  alias Lemieux.Provider.Priority
   alias Lemieux.Provider.Route
   alias Lemieux.Providers.OllamaWindow
   alias Lemieux.Providers.ReqLLM.CodexObject
@@ -414,7 +415,7 @@ defmodule Lemieux.Providers.ReqLLM do
       stream_at(
         request,
         target,
-        put_tools(options |> Keyword.delete(:fast_mode) |> request_options(), request.tools),
+        put_tools(options |> Priority.clear() |> request_options(), request.tools),
         emit,
         route,
         state.response_metadata
@@ -451,13 +452,85 @@ defmodule Lemieux.Providers.ReqLLM do
     end
   end
 
+  @impl Lemieux.Provider
+  def priority_tiers(state, spec) do
+    case normalize_state(state) do
+      %State{route: nil} = direct ->
+        options = endpoint_options(direct, ModelSpec.provider(spec))
+
+        for {mode, _wire} <- direct_priorities(spec, options),
+            do: {mode, priority_description(ModelSpec.provider(spec), mode)}
+
+      %State{route: route} ->
+        Route.priority_tiers(route, spec)
+    end
+  end
+
+  # Require an affirmative wire mapping for an optional tier. Billing data
+  # may list a Flex rate for models whose API rejects Flex requests.
+  defp direct_priorities(spec, options) do
+    with true <- fast_transport?(options, spec),
+         {:ok, %{provider: provider, extra: extra}} <- model(spec),
+         true <- provider in [:openai, :openai_codex, :amazon_bedrock, :groq] do
+      standard = if provider == :groq, do: "on_demand", else: "default"
+
+      for mode <- ~w(flex fast ultrafast),
+          tier =
+            get_in(extra || %{}, [
+              "experimental",
+              "modes",
+              mode,
+              "provider",
+              "body",
+              "service_tier"
+            ]),
+          tier in priority_wires(mode, provider),
+          into: %{"standard" => standard},
+          do: {mode, tier}
+    else
+      _unknown -> %{"standard" => nil}
+    end
+  end
+
+  defp priority_wires("flex", provider) when provider in [:openai, :amazon_bedrock, :groq],
+    do: ["flex"]
+
+  defp priority_wires("fast", :groq), do: ["performance"]
+  defp priority_wires("fast", _provider), do: ["fast", "priority"]
+  defp priority_wires("ultrafast", _provider), do: ["ultrafast"]
+  defp priority_wires(_mode, _provider), do: []
+
+  defp priority_description("openai", "flex"),
+    do: "OpenAI Flex · slower processing and variable availability"
+
+  defp priority_description("amazon_bedrock", "flex"),
+    do: "Bedrock Flex · for latency-tolerant workloads"
+
+  defp priority_description("groq", "flex"),
+    do: "Groq Flex · dynamic capacity with immediate rejection when busy"
+
+  defp priority_description(_provider, "standard"), do: "Use the connection's standard service"
+  defp priority_description(_provider, _mode), do: "Request this connection's service tier"
+
   defp routed_fast_mode(route, request) do
     mode = Keyword.get(request.params, :fast_mode, "off")
     supported = Route.fast_modes(route, request.model)
+    priorities = Enum.map(Route.priority_tiers(route, request.model), &elem(&1, 0))
 
-    if mode in ["off" | supported],
-      do: :ok,
-      else: {:error, {:fast_mode_unsupported, request.model, mode, supported}}
+    case Keyword.get(request.params, :priority) do
+      nil when mode == "off" ->
+        :ok
+
+      nil ->
+        if mode in supported,
+          do: :ok,
+          else: {:error, {:fast_mode_unsupported, request.model, mode, supported}}
+
+      priority ->
+        if priority in priorities,
+          do: :ok,
+          else: {:error, {:priority_unsupported, request.model, priority, priorities}}
+    end
   end
 
   defp fast_tier(spec, mode) do
@@ -510,14 +583,41 @@ defmodule Lemieux.Providers.ReqLLM do
 
   def request_target(spec, options) when is_binary(spec) and is_list(options) do
     routes = Keyword.get(options, :transport_routes, %{})
-    options = options |> fast_options(spec) |> request_options()
 
-    case ModelSpec.split(spec) do
-      {:ok, {provider, model_id}} ->
-        request_target(spec, model_id, Map.get(routes, provider), options)
+    with {:ok, {provider, model_id}} <- ModelSpec.split(spec),
+         {:ok, options} <- priority_options(options, spec) do
+      request_target(spec, model_id, Map.get(routes, provider), request_options(options))
+    else
+      :error -> {:error, {:invalid_model_spec, spec}}
+      {:error, _reason} = error -> error
+    end
+  end
 
+  defp priority_options(options, spec) do
+    case Keyword.fetch(options, :priority) do
       :error ->
-        {:error, {:invalid_model_spec, spec}}
+        {:ok, fast_options(options, spec)}
+
+      {:ok, priority} ->
+        tiers = direct_priorities(spec, options)
+
+        case Map.fetch(tiers, priority) do
+          {:ok, wire} ->
+            {:ok, options |> Priority.clear() |> clear_nested_tier() |> put_fast_tier(wire)}
+
+          :error ->
+            {:error, {:priority_unsupported, spec, priority, Map.keys(tiers)}}
+        end
+    end
+  end
+
+  defp clear_nested_tier(options) do
+    case Keyword.fetch(options, :provider_options) do
+      {:ok, nested} when is_list(nested) ->
+        Keyword.put(options, :provider_options, Keyword.delete(nested, :service_tier))
+
+      _other ->
+        options
     end
   end
 

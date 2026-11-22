@@ -160,6 +160,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.QuestionSelection
     alias Lemieux.TUI.Renderer
     alias Lemieux.TUI.Replies
+    alias Lemieux.TUI.ResumePicker
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.Selection
     alias Lemieux.TUI.Setup
@@ -560,6 +561,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               resume: %{
                 sessions: [],
                 list: nil,
+                list_all: nil,
                 start: nil,
                 new: nil,
                 busy?: false,
@@ -675,6 +677,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               # What the session has reported about itself. See
               # `t:session_view/0`.
               session_view: %{
+                requested_access_program: nil,
                 mcp: %{},
                 mcp_ready?: true,
                 mcp_announced?: false,
@@ -1099,6 +1102,9 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp route_info({:resume_result, _reference, {:ok, details, sessions}}, state),
       do: {:noreply, Lifecycle.switched(state, details, sessions, "resumed")}
+
+    defp route_info({:resume_picker_index, ref, result}, state),
+      do: {:noreply, ResumePicker.loaded(state, ref, result)}
 
     defp route_info({:new_result, {:ok, details, sessions}}, state),
       do: {:noreply, Lifecycle.switched(state, details, sessions, nil)}

@@ -300,6 +300,8 @@ defmodule Lemieux.Session do
           reasoning_efforts: [String.t()],
           fast_mode: String.t(),
           fast_modes: [String.t()],
+          priority: String.t() | nil,
+          priority_tiers: [Lemieux.Provider.Priority.choice()],
           tools: [String.t()],
           cwd: Path.t(),
           pending: [%{call_id: String.t(), kind: atom(), payload: term()}],
@@ -369,6 +371,8 @@ defmodule Lemieux.Session do
           reasoning_efforts: [String.t()],
           fast_mode: String.t(),
           fast_modes: [String.t()],
+          priority: String.t() | nil,
+          priority_tiers: [Lemieux.Provider.Priority.choice()],
           tools: [String.t()],
           cwd: Path.t(),
           pending: [%{call_id: String.t(), kind: atom(), payload: term()}],
@@ -929,6 +933,16 @@ defmodule Lemieux.Session do
           {:ok, String.t()} | {:error, term()}
   def set_fast_mode(session, mode) when is_binary(mode),
     do: GenServer.call(session, {:set_fast_mode, mode})
+
+  @doc "The current connection's offered service tiers and descriptions."
+  @spec priority_tiers(session :: session()) :: [Lemieux.Provider.Priority.choice()]
+  def priority_tiers(session), do: GenServer.call(session, :priority_tiers)
+
+  @doc "Requests a service tier for subsequent model calls and saves the choice with the session."
+  @spec set_priority(session :: session(), tier :: String.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def set_priority(session, tier) when is_binary(tier),
+    do: GenServer.call(session, {:set_priority, tier})
 
   @doc "Lists the reasoning-effort choices for the current model."
   @spec reasoning_efforts(session :: session()) :: [String.t()]

@@ -7,7 +7,8 @@ defmodule Lemieux.TUI.ChromeTest do
   alias Lemieux.TUI
   alias Lemieux.TUI.{Responsive, Width}
 
-  import Lemieux.TUI.TestSupport, only: [fake_session: 1, snapshot: 1]
+  import Lemieux.TUI.TestSupport,
+    only: [fake_session: 1, snapshot: 1, snapshot: 2, type: 2, suggestions: 1]
 
   test "overflow gets a quarter-second clock independent of cursor blinking and stops when it fits" do
     clock = :atomics.new(1, [])
@@ -166,6 +167,42 @@ defmodule Lemieux.TUI.ChromeTest do
     assert {:ok, old} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, old_session} end)
     assert old.conversation.fast_mode == "off"
     assert is_binary(header(old))
+  end
+
+  test "the last prepared access program is read-only, independent of priority, and restored" do
+    model = "openai:gpt-6-sol"
+
+    requested =
+      Lemieux.Request.new(model,
+        params: [provider_options: [access_programs: %{"cyber" => "standard"}]]
+      )
+      |> Lemieux.RequestSnapshot.build()
+
+    entry = Lemieux.Entry.new(:request, requested)
+    state = TUI.new(id: "access", model: model, models: [model], test_mode: {160, 24})
+    state = put_in(state.conversation.priority, "fast")
+
+    assert {:noreply, observed} = TUI.handle_info({:lemieux, state.id, {:entry, entry}}, state)
+    assert observed.session_view.requested_access_program == "Standard"
+    assert Enum.map_join(header(observed, 100).spans, & &1.content) =~ "STANDARD REQ · FAST"
+    assert Enum.map_join(header(observed, 21).spans, & &1.content) =~ "ACCESS STD · FAST"
+
+    assert %{items: [label]} = observed |> type("/model ") |> suggestions()
+    assert label =~ "last requested Standard"
+
+    saved = Map.put(snapshot("restored", [entry]), :model, model)
+    session = fake_session(saved)
+    assert {:ok, reopened} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
+    assert reopened.session_view.requested_access_program == "Standard"
+
+    no_program = Lemieux.Entry.new(:request, Map.put(requested, "params", %{}))
+
+    assert {:noreply, ordinary} =
+             TUI.handle_info({:lemieux, state.id, {:entry, no_program}}, observed)
+
+    assert ordinary.session_view.requested_access_program == nil
+    assert Enum.map_join(header(ordinary, 100).spans, & &1.content) =~ "FAST"
+    refute Enum.map_join(header(ordinary, 100).spans, & &1.content) =~ "REQ"
   end
 
   defp header(state, width \\ 80) do

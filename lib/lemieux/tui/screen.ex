@@ -16,6 +16,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.ID.Shorthand
     alias Lemieux.ModelSpec
     alias Lemieux.TUI
+    alias Lemieux.TUI.AccessProgram
     alias Lemieux.TUI.Activity
     alias Lemieux.TUI.Art
     alias Lemieux.TUI.Boot
@@ -533,7 +534,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp header(state, width) do
       {identity, metadata} = header_parts(state)
-      badge = fast_badge(state, width)
+      badge = header_badges(state, width)
 
       text =
         Responsive.header(
@@ -555,14 +556,31 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     # Reserve the qualifier before the ticker's viewport is measured: otherwise
     # the service setting disappears while the metadata scrolls past it.
-    defp fast_badge(%{conversation: %{fast_mode: mode}}, width)
-         when mode in ["fast", "ultrafast"] do
-      label = String.upcase(mode)
-      text = " · #{label} "
-      if Width.of(text) <= width, do: text, else: Responsive.fit(label, width)
+    defp header_badges(state, width) do
+      access = state.session_view.requested_access_program
+      tier = priority_label(state.conversation.priority || state.conversation.fast_mode)
+      access_label = if access, do: String.upcase(access) <> " REQ"
+
+      case join_badges([access_label, tier]) do
+        "" ->
+          ""
+
+        label ->
+          text = " · #{label} "
+
+          if Width.of(text) <= width do
+            text
+          else
+            compact = AccessProgram.compact_label(access)
+            Responsive.fit(join_badges([compact, tier]), width)
+          end
+      end
     end
 
-    defp fast_badge(_state, _width), do: ""
+    defp join_badges(labels), do: labels |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+
+    defp priority_label(mode) when mode in ["flex", "fast", "ultrafast"], do: String.upcase(mode)
+    defp priority_label(_mode), do: nil
 
     @doc false
     @spec chrome_interval(state :: TUI.t()) :: pos_integer() | nil
@@ -572,7 +590,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {identity, metadata} = header_parts(state)
       area = panes(state).transcript
       width = max(area.width - 2, 0)
-      width = max(width - Width.of(fast_badge(state, width)), 0)
+      width = max(width - Width.of(header_badges(state, width)), 0)
       if area.height > 0 and Responsive.header_scrolling?(identity, metadata, width), do: 250
     end
 

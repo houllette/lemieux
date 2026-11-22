@@ -8,6 +8,7 @@ defmodule Lemieux.TUI.CatalogState do
   """
 
   alias Lemieux.ModelSpec
+  alias Lemieux.Provider.Priority
   alias Lemieux.TUI.ModelChoices
 
   @recent_limit 20
@@ -128,6 +129,7 @@ defmodule Lemieux.TUI.CatalogState do
         recent_models: recent(model, catalog.recent_models),
         efforts: details.efforts,
         fast_modes: Map.get(details, :fast_modes, []),
+        priority_tiers: Priority.choices(Map.get(details, :priority_tiers, [])),
         mcp: server_names(details.mcp)
     }
     |> merge(provider, details.providers, details.models)

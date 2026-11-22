@@ -9,6 +9,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.Diagnostic
     alias Lemieux.Session
     alias Lemieux.TUI
+    alias Lemieux.TUI.AccessProgram
     alias Lemieux.TUI.Choices
     alias Lemieux.TUI.Composer
     alias Lemieux.TUI.Editor
@@ -80,8 +81,12 @@ if Code.ensure_loaded?(ExRatatui.App) do
       end
     end
 
-    defp sync_event(state, {:model_changed, _old, model}),
-      do: state |> Choices.remember_model(model) |> Choices.refresh_choices()
+    defp sync_event(state, {:model_changed, _old, model}) do
+      state
+      |> put_in([Access.key!(:session_view), :requested_access_program], nil)
+      |> Choices.remember_model(model)
+      |> Choices.refresh_choices()
+    end
 
     defp sync_event(state, {:reasoning_effort_changed, _old, _effort}),
       do: Choices.refresh_choices(state)
@@ -173,10 +178,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
            {:entry, %{type: :request, payload: payload}}
          )
          when is_integer(started),
-         do: state |> counted() |> Submission.deliver_steer(payload) |> phase(:waiting)
+         do: state |> request_seen(payload) |> phase(:waiting)
 
     defp sync_event(state, {:entry, %{type: :request} = entry}),
-      do: state |> counted() |> Submission.deliver_steer(Map.get(entry, :payload, %{}))
+      do: request_seen(state, Map.get(entry, :payload, %{}))
 
     defp sync_event(%{tools: %{pending_steer: %{id: id}}} = state, {:steers_discarded, ids}) do
       if id in ids, do: Submission.settle_steer(state, :not_sent), else: state
@@ -649,6 +654,19 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp counted(state), do: update_in(state, [Access.key!(:session_view), :requests], &(&1 + 1))
+
+    defp request_seen(state, payload) do
+      state
+      |> observe_access_program(payload)
+      |> counted()
+      |> Submission.deliver_steer(payload)
+    end
+
+    defp observe_access_program(state, %{"kind" => "turn", "model" => model} = payload)
+         when model == state.conversation.model,
+         do: put_in(state.session_view.requested_access_program, AccessProgram.requested(payload))
+
+    defp observe_access_program(state, _payload), do: state
 
     @doc false
     @spec present_approval(TUI.t(), map()) :: TUI.t()

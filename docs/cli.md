@@ -270,23 +270,23 @@ build show notices only. A source checkout checks nothing on its own:
 `mix deps.get` and restart `mix lmx`. `lmx run` and embedded hosts never
 check. See [Updates from the TUI](releases.md#updates-from-the-tui).
 
-**Fast service.** `/fast` toggles fast mode; `/fast on` and `/fast off` select
-it explicitly. `/fast ultrafast` is offered only when the model catalog and
-active transport support that tier. The choice is saved with the session and
-cleared when switching to an unsupported model or connection. Changes are
-accepted during a turn and apply to the next model request, including the
-continuation after a tool; an in-flight request keeps its original settings.
-Changing Fast mode starts no extra request. An active
-`FAST` or `ULTRAFAST` qualifier stays visible in red in the header, beside the
-scrolling metadata. It shows the requested mode; upstream may downgrade a
-request. Capability is
-not subscription entitlement: the provider still authorizes each request.
-Ixway connections use the gateway's `ixway_fast_modes` catalogue metadata;
-older gateways that do not publish it keep `/fast` hidden. Update Ixway to
-enable discovery and forwarding of fast service through Codex routes.
-With the pinned provider library, supported direct OpenAI and Codex models
-expose service tiers; Anthropic and gateways without a declared transport
-contract do not.
+**Request priority.** `/priority` opens the active model's service-tier picker.
+Standard uses the connection's baseline and appears selected for sessions
+using its implicit default. Flex, Fast, and Ultrafast appear when the catalog
+or route advertises a wire mapping. The saved selection applies from the next
+request, including another request in the same turn. The header shows the
+requested nonstandard tier. Reasoning effort remains a separate setting.
+`/fast`, `/fast on`, `/fast off`, and `/fast ultrafast` continue to work for
+existing workflows and saved sessions.
+
+Ixway uses its advertised `ixway_priority_tiers` or legacy `ixway_fast_modes`.
+Catalog availability describes request compatibility. The provider determines
+regional availability, account access, and the tier actually served. The
+pinned model catalog lacks Flex wire mappings for Bedrock and Groq models, so
+those choices appear when corresponding capability data is available.
+[OpenAI Flex](https://developers.openai.com/api/docs/guides/flex-processing) ·
+[Bedrock service tiers](https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html) ·
+[Groq Flex](https://console.groq.com/docs/flex-processing)
 
 **Codex account models.** The Codex subscription picker fetches visible models
 for the same account and access credential used by the existing ReqLLM Codex
@@ -439,9 +439,10 @@ links to the docs, issues and questions at the end.
 | `/model [SPEC]` | Show or select a model within the current provider |
 | `/provider [NAME]` | Show or select a provider; switching provider is how you reach another provider's models |
 | `/effort [LEVEL]` | Show or select a reasoning effort the model supports |
-| `/fast [on \| off \| ultrafast]` | Toggle faster service for subsequent requests; shown only for supported models and connections. May cost more and requires provider account access |
+| `/priority [TIER]` | Choose Flex, Standard, Fast, or Ultrafast where supported |
+| `/fast [on \| off \| ultrafast]` | Compatibility shortcut for faster service |
 | `/new` | Start a new session: fresh name, transcript and usage totals |
-| `/resume [SESSION \| all]` | List this directory's sessions, most recently active first, or switch to one; `all` lists every directory's |
+| `/resume [SESSION \| all]` | Open the **This folder** picker or resume a specific session. `all` opens **All sessions** |
 | `/compact` | Summarize the earlier conversation now |
 | `/context` | Draw what is filling the context window |
 | `/usage [refresh]` | Fetch provider account spend or subscription quota; reuse a report for up to one minute |
@@ -871,7 +872,9 @@ model, `lmx` tries, in order:
   `--continue`. Other paths on the command line are still read from where you
   ran `lmx`.
 - `-c` / `--continue` (terminal UI and `lmx run`) resumes the newest session
-  that ran in this directory. `/resume` lists sessions by last activity.
+  that ran in this directory. `/resume` opens a searchable picker ordered by
+  last activity. Tab and Shift+Tab switch between **This folder** and **All
+  sessions**. Use the arrow keys and Enter to resume, or Esc to dismiss.
 - A flag that belongs to another command is named as such (`--model does not
   apply to lmx log`), and a missing or mistyped value says so.
 - A prompt goes to `lmx run`, to the terminal UI with `--prompt`, or into

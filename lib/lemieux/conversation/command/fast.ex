@@ -17,7 +17,7 @@ defmodule Lemieux.Conversation.Command.Fast do
   def spec do
     %{
       name: "fast",
-      description: "toggle faster service (may cost more)",
+      description: "compatibility shortcut for faster service (see /priority)",
       accepts_arguments?: true,
       action: {:set_fast_mode, "MODE"},
       actions: [{:set_fast_mode, "MODE"}]

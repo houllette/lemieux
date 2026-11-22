@@ -241,6 +241,8 @@ defmodule Lemieux.Conversation do
           | :reasoning_effort_status
           | {:set_reasoning_effort, String.t()}
           | {:set_fast_mode, String.t()}
+          | :priority_status
+          | {:set_priority, String.t()}
           | :name_status
           | {:set_name, String.t()}
           | :colour_status
@@ -290,6 +292,7 @@ defmodule Lemieux.Conversation do
           model_chosen?: boolean(),
           reasoning_effort: String.t(),
           fast_mode: String.t(),
+          priority: String.t() | nil,
           context: Context.t(),
           spent_usd: number() | nil,
           measured_spent_usd: number(),
@@ -331,6 +334,7 @@ defmodule Lemieux.Conversation do
             model_chosen?: true,
             reasoning_effort: "default",
             fast_mode: "off",
+            priority: nil,
             # Where the session stands in its context window, as of the last
             # turn. Kept rather than asked for, because a snapshot copies the
             # whole transcript and a status line wants a number.
@@ -412,6 +416,7 @@ defmodule Lemieux.Conversation do
       model_chosen?: Keyword.get(opts, :model_chosen?, true) != false,
       reasoning_effort: Keyword.get(opts, :reasoning_effort, "default"),
       fast_mode: Keyword.get(opts, :fast_mode, "off"),
+      priority: Keyword.get(opts, :priority),
       context: %Context{},
       observed_request_ids: MapSet.new(),
       commands: Command.registry!(Keyword.get(opts, :commands) || [])
@@ -909,6 +914,15 @@ defmodule Lemieux.Conversation do
 
   def event(conversation, {:fast_mode_changed, _old, mode}),
     do: {%{conversation | fast_mode: mode}, []}
+
+  def event(conversation, {:priority_changed, old, tier}) do
+    effects =
+      if tier == nil and old != "standard",
+        do: [{:say, "Requested priority is unavailable here · using the connection default"}],
+        else: []
+
+    {%{conversation | priority: tier}, effects}
+  end
 
   def event(conversation, {:reasoning_effort_changed, _old, effort}) do
     {%{conversation | reasoning_effort: effort}, [{:say, "reasoning effort: #{effort}"}]}

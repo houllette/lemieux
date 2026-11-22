@@ -95,6 +95,9 @@ defmodule Lemieux.CLI.CodexProvider do
   def reasoning_efforts({provider, _opts}, model), do: Provider.reasoning_efforts(provider, model)
   @impl true
   def fast_modes({provider, _opts}, model), do: Provider.fast_modes(provider, model)
+
+  @impl Lemieux.Provider
+  def priority_tiers({provider, _opts}, model), do: Provider.priority_tiers(provider, model)
   @impl true
   def estimate_cost({provider, _opts}, request), do: Provider.estimate_cost(provider, request)
   @impl true

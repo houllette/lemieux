@@ -79,6 +79,7 @@ defmodule Lemieux.Provider.Route do
   """
 
   alias Lemieux.ModelSpec
+  alias Lemieux.Provider.Priority
   alias Lemieux.Request
 
   @typedoc "An implementation module paired with its own state."
@@ -130,6 +131,11 @@ defmodule Lemieux.Provider.Route do
   cannot establish a gateway's capabilities or the caller's entitlement.
   """
   @callback fast_modes(state :: term(), model :: String.t()) :: [String.t()]
+
+  @doc "Advertises tiers the route can encode from the request's `:priority` parameter."
+  @callback priority_tiers(state :: term(), model :: String.t()) :: [
+              Priority.choice()
+            ]
 
   @doc """
   Readies the route to answer: discovery, a catalogue refresh, a policy read.
@@ -209,6 +215,7 @@ defmodule Lemieux.Provider.Route do
               map()
 
   @optional_callbacks fast_modes: 2,
+                      priority_tiers: 2,
                       model_metadata: 1,
                       ready: 1,
                       default_model: 1,
@@ -253,23 +260,34 @@ defmodule Lemieux.Provider.Route do
     if implements?(module, :fast_modes, 2), do: module.fast_modes(state, model), else: []
   end
 
+  @doc "The service tiers advertised by the route, including Standard."
+  @spec priority_tiers(t(), String.t()) :: [Priority.choice()]
+  def priority_tiers({module, state} = route, model) do
+    choices =
+      if implements?(module, :priority_tiers, 2),
+        do: module.priority_tiers(state, model),
+        else: Priority.legacy_choices(fast_modes(route, model))
+
+    Priority.choices(choices)
+  end
+
   @doc "Resolves the wire target for `request` through `route`; see `c:target/3`."
   @spec target(route :: t(), request :: Request.t(), options :: keyword()) ::
           {:ok, target()} | {:error, term()}
   def target({module, state}, %Request{} = request, options)
       when is_atom(module) and is_list(options) do
-    # Before routes could opt into fast service, the adapter consumed this
-    # parameter itself. Preserve that contract for older routes, including
-    # an explicit off carried over from another connection during resume.
-    {request, options} =
-      if implements?(module, :fast_modes, 2) do
-        {request, options}
-      else
-        {%{request | params: Keyword.delete(request.params, :fast_mode)},
-         Keyword.delete(options, :fast_mode)}
-      end
+    request = %{request | params: service_params(module, request.params)}
+    module.target(state, request, service_params(module, options))
+  end
 
-    module.target(state, request, options)
+  # Old routes understand the fast-mode vocabulary. Routes that never opted
+  # into service selection receive only their original generation parameters.
+  defp service_params(module, params) do
+    cond do
+      implements?(module, :priority_tiers, 2) -> params
+      implements?(module, :fast_modes, 2) -> Priority.legacy_params(params, true)
+      true -> Priority.clear(params)
+    end
   end
 
   @doc "Whether the route opts this request into session-derived cache keys; false when absent."

@@ -52,6 +52,7 @@ defmodule Lemieux.Ixway do
   alias Lemieux.Ixway.LogFilter
   alias Lemieux.Ixway.Receipt
   alias Lemieux.ModelSpec
+  alias Lemieux.Provider.Priority
   alias Lemieux.Provider.Route
   alias Lemieux.Providers.ReqLLM, as: Adapter
   alias Lemieux.Request
@@ -344,10 +345,18 @@ defmodule Lemieux.Ixway do
     Enum.filter(["fast", "ultrafast"], &Map.has_key?(tiers, &1))
   end
 
+  @impl Lemieux.Provider.Route
+  def priority_tiers(connection, spec) do
+    for {mode, _wire} <- fast_tiers(connection, spec),
+        do: {mode, "Request the tier advertised by this Ixway route"}
+  end
+
   defp fast_tiers(connection, spec) do
     with {:ok, entry} <- entry(connection, spec),
-         modes when is_map(modes) <- entry["ixway_fast_modes"] do
+         modes when is_map(modes) <- entry["ixway_priority_tiers"] || entry["ixway_fast_modes"] do
       Map.filter(modes, fn
+        {"standard", tier} -> tier in ["default", "standard", "on_demand"]
+        {"flex", "flex"} -> true
         {"fast", tier} -> tier in ["priority", "fast"]
         {"ultrafast", "ultrafast"} -> true
         _ -> false
@@ -360,12 +369,13 @@ defmodule Lemieux.Ixway do
   defp fast_options(connection, request, options) do
     options = Keyword.delete(options, :service_tier)
 
-    case Keyword.get(options, :fast_mode) do
+    case Priority.requested(options) do
       nil ->
         {:ok, options}
 
-      "off" ->
-        {:ok, Keyword.put(options, :service_tier, "default")}
+      "standard" ->
+        tier = Map.get(fast_tiers(connection, request.model), "standard", "default")
+        {:ok, Keyword.put(options, :service_tier, tier)}
 
       mode ->
         case Map.fetch(fast_tiers(connection, request.model), mode) do
@@ -373,10 +383,18 @@ defmodule Lemieux.Ixway do
             {:ok, Keyword.put(options, :service_tier, tier)}
 
           :error ->
-            {:error,
-             {:fast_mode_unsupported, request.model, mode, fast_modes(connection, request.model)}}
+            unsupported_tier(connection, request.model, mode, options)
         end
     end
+  end
+
+  defp unsupported_tier(connection, model, mode, options) do
+    if Keyword.has_key?(options, :priority),
+      do:
+        {:error,
+         {:priority_unsupported, model, mode,
+          ["standard" | Map.keys(fast_tiers(connection, model))]}},
+      else: {:error, {:fast_mode_unsupported, model, mode, fast_modes(connection, model)}}
   end
 
   # Prices cannot be inferred from an alias or the requested concrete model,

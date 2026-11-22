@@ -189,6 +189,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             discover: %{optional(String.t()) => (-> [CatalogState.discovery()])},
             efforts: [String.t()],
             fast_modes: [String.t()],
+            priority_tiers: [Lemieux.Provider.Priority.choice()],
             mcp: [String.t()]
           }
 
@@ -239,6 +240,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       * `:sessions` — what `/resume` completes against.
       * `:list` — refreshes that, after resuming changes which is current.
+      * `:list_all` — loads the full index when the resume picker opens.
       * `:start` — starts the resumed session. `nil` in a host without one.
       * `:new` — starts a fresh session. `nil` in a host without one.
       * `:busy?` — a switch is in flight, so another is refused rather than raced.
@@ -246,6 +248,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     @type resume :: %{
             sessions: [SessionIndex.t()],
             list: (-> {:ok, [SessionIndex.t()]} | {:error, term()}) | nil,
+            list_all: (-> {:ok, [SessionIndex.t()]} | {:error, term()}) | nil,
             start: (String.t(), pid() -> {:ok, pid()} | {:error, term()}) | nil,
             new: (pid() -> {:ok, pid()} | {:error, term()}) | nil,
             busy?: boolean(),
@@ -269,6 +272,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     """
     @type session_view :: %{
             optional(:tasks) => map(),
+            requested_access_program: String.t() | nil,
             mcp: %{optional(String.t()) => map()},
             mcp_ready?: boolean(),
             mcp_announced?: boolean(),

@@ -6,6 +6,7 @@ defmodule Lemieux.Session.Setup do
   alias Lemieux.Evidence.ArtifactReference
   alias Lemieux.Harness.Validation
   alias Lemieux.Messages
+  alias Lemieux.Provider.Priority
   alias Lemieux.Session.Catalog
   alias Lemieux.Session.Core
   alias Lemieux.Session.Guard
@@ -45,7 +46,7 @@ defmodule Lemieux.Session.Setup do
   @restored ~w(model system tools disabled_tools mcp_servers params reasoning_effort)a
   @recorded_only ~w(cwd tool_profile harness_assembly)a
   @configuration @restored ++ @recorded_only
-  @recordable_params ~w(temperature max_tokens top_p top_k seed stop frequency_penalty presence_penalty fast_mode)a
+  @recordable_params ~w(temperature max_tokens top_p top_k seed stop frequency_penalty presence_penalty fast_mode priority)a
 
   # A store that cannot lock claims nothing; one whose claim is held by another
   # live writer is the one refusal worth a sentence of its own, because the fix
@@ -392,7 +393,10 @@ defmodule Lemieux.Session.Setup do
   defp recorded_profile_requires_authorization?(_recorded), do: false
 
   def resolve_params(opts, recorded) do
-    params = Keyword.merge(restored_params(recorded), Keyword.get(opts, :params, []))
+    supplied = Keyword.get(opts, :params, [])
+    restored = restored_params(recorded)
+    restored = if Priority.explicit(supplied) == [], do: restored, else: Priority.clear(restored)
+    params = Keyword.merge(restored, supplied)
 
     effort =
       cond do
