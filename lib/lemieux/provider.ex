@@ -158,7 +158,12 @@ defmodule Lemieux.Provider do
   """
   @callback available_models(state :: term(), opts :: keyword()) :: [String.t()]
 
-  @doc "Optional display metadata keyed by model specification. Empty when unavailable."
+  @doc """
+  Optional display metadata keyed by model specification. Empty when unavailable.
+
+  Providers advertise `:standard_access?` for connections that honor the
+  explicit `:standard_access` request parameter.
+  """
   @callback model_metadata(state :: term()) :: %{optional(String.t()) => map()}
 
   @doc """
@@ -236,7 +241,12 @@ defmodule Lemieux.Provider do
   """
   @spec run(provider :: t(), request :: Request.t(), emit :: emit()) :: :ok | {:error, term()}
   def run({module, state}, %Request{} = request, emit) when is_function(emit, 1) do
-    module.run(state, service_request(module, request), emit)
+    if request.params[:standard_access] == true and
+         not standard_access?({module, state}, request.model) do
+      {:error, {:standard_access_unsupported, request.model}}
+    else
+      module.run(state, service_request(module, request), emit)
+    end
   end
 
   @doc """
@@ -310,6 +320,11 @@ defmodule Lemieux.Provider do
   def model_metadata({module, state}) do
     if function_exported?(module, :model_metadata, 1), do: module.model_metadata(state), else: %{}
   end
+
+  @doc "Whether a connection advertises explicit Standard access for a model."
+  @spec standard_access?(provider :: t(), model :: String.t()) :: boolean()
+  def standard_access?(provider, model),
+    do: get_in(model_metadata(provider), [model, :standard_access?]) == true
 
   @doc """
   Validates a model against a provider and the session's current tools.

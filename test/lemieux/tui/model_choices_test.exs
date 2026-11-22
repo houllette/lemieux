@@ -67,6 +67,23 @@ defmodule Lemieux.TUI.ModelChoicesTest do
            ]
   end
 
+  test "Standard access is searchable and submits a separate choice for the same model" do
+    spec = "openai:gpt-6-sol"
+
+    choices =
+      ModelChoices.prepare([spec, "openai:gpt-4o"],
+        metadata: %{spec => %{standard_access?: true}}
+      )
+
+    assert [ordinary, standard] = ModelChoices.completions(choices, "/model gpt-6-sol")
+    assert ordinary.value == "/model gpt-6-sol"
+    assert standard.label == "gpt-6-sol · Standard access"
+    assert standard.value == "/model gpt-6-sol --standard-access"
+    assert ModelChoices.completions(choices, "/model standard access") == [standard]
+    assert ModelChoices.completions(choices, standard.value) == [standard]
+    assert [%{value: "/model gpt-4o"}] = ModelChoices.completions(choices, "/model gpt-4o")
+  end
+
   test "stable model ids lead dated snapshots of the same model" do
     choices = ModelChoices.prepare(["openai:gpt-4o-2024-11-20", "openai:gpt-4o"])
     assert Enum.map(choices, & &1.id) == ["gpt-4o", "gpt-4o-2024-11-20"]

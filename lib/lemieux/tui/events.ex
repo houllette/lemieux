@@ -83,7 +83,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp sync_event(state, {:model_changed, _old, model}) do
       state
-      |> put_in([Access.key!(:session_view), :requested_access_program], nil)
+      |> reset_access_program()
       |> Choices.remember_model(model)
       |> Choices.refresh_choices()
     end
@@ -125,8 +125,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
          when is_integer(started) and is_map(usage),
          do: put_in(state.turn.usage, Turn.add_usage(state.turn.usage, usage))
 
-    defp sync_event(state, {:entry, %{type: :assistant, usage: usage}}) do
+    defp sync_event(state, {:entry, %{type: :session, payload: payload}}) do
+      put_in(
+        state.session_view.standard_access?,
+        get_in(payload, ["params", "standard_access"]) == true
+      )
+    end
+
+    defp sync_event(state, {:entry, %{type: :assistant, usage: usage} = entry}) do
       state = update_in(state.session_view.throughput, &Turn.add_sample(&1, usage))
+      state = observe_confirmed_access(state, Map.get(entry, :payload, %{}))
 
       if is_integer(state.turn.started_at),
         do: update_in(state.turn.usage.rate, &Turn.add_sample(&1, usage)),
@@ -663,10 +671,37 @@ if Code.ensure_loaded?(ExRatatui.App) do
     end
 
     defp observe_access_program(state, %{"kind" => "turn", "model" => model} = payload)
-         when model == state.conversation.model,
-         do: put_in(state.session_view.requested_access_program, AccessProgram.requested(payload))
+         when model == state.conversation.model do
+      state
+      |> reset_access_program()
+      |> put_in([Access.key!(:session_view), :access_request_id], payload["id"])
+      |> put_in(
+        [Access.key!(:session_view), :requested_access_program],
+        AccessProgram.requested(payload)
+      )
+    end
+
+    defp observe_access_program(state, %{"kind" => "turn"}), do: reset_access_program(state)
 
     defp observe_access_program(state, _payload), do: state
+
+    defp reset_access_program(state) do
+      update_in(state.session_view, fn view ->
+        %{
+          view
+          | requested_access_program: nil,
+            access_request_id: nil,
+            confirmed_access_program: nil
+        }
+      end)
+    end
+
+    defp observe_confirmed_access(state, payload) do
+      case AccessProgram.confirmed(payload, state.session_view.access_request_id) do
+        nil -> state
+        program -> put_in(state.session_view.confirmed_access_program, program)
+      end
+    end
 
     @doc false
     @spec present_approval(TUI.t(), map()) :: TUI.t()

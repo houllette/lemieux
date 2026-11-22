@@ -1,6 +1,10 @@
 defmodule Lemieux.Conversation.Command.Model do
   @moduledoc """
-  `/model [SPEC]`: which model, within the current provider.
+  `/model [SPEC [--standard-access]]`: which model, within the current provider.
+
+  `--standard-access` selects explicit Standard access for a compatible
+  connection. A bare model ID keeps the session's selection for compatible
+  models.
 
   The argument is a model id, scoped to the provider the session is already
   on: `/model haiku` under `anthropic:*` asks for `anthropic:haiku`, which is
@@ -41,7 +45,7 @@ defmodule Lemieux.Conversation.Command.Model do
       description: "switch model in this provider",
       accepts_arguments?: true,
       action: :model_status,
-      actions: [:model_status, {:set_model, "SPEC"}]
+      actions: [:model_status, {:set_model, "SPEC"}, {:set_standard_model, "SPEC"}]
     }
   end
 
@@ -58,15 +62,27 @@ defmodule Lemieux.Conversation.Command.Model do
         [{:say, "the current model has no provider; choose one with /provider"}]
 
       {id, provider} ->
-        [{:set_model, ModelSpec.join(provider, id)}]
+        case String.split(id) do
+          [model_id, "--standard-access"] ->
+            [{:set_standard_model, ModelSpec.join(provider, model_id)}]
+
+          _ordinary ->
+            [{:set_model, ModelSpec.join(provider, id)}]
+        end
     end
   end
 
   @impl Lemieux.Conversation.Command
   def perform(acc, _host, :model_status), do: acc
 
-  def perform(acc, host, {:set_model, model}) do
-    case Session.set_model(host.session, model) do
+  def perform(acc, host, {:set_model, model}),
+    do: switched(acc, host, model, Session.set_model(host.session, model))
+
+  def perform(acc, host, {:set_standard_model, model}),
+    do: switched(acc, host, model, Session.set_standard_model(host.session, model))
+
+  defp switched(acc, host, model, result) do
+    case result do
       {:ok, selected} ->
         Dispatch.react(acc, host, {:model_set, selected})
 

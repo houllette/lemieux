@@ -46,7 +46,7 @@ defmodule Lemieux.Session.Setup do
   @restored ~w(model system tools disabled_tools mcp_servers params reasoning_effort)a
   @recorded_only ~w(cwd tool_profile harness_assembly)a
   @configuration @restored ++ @recorded_only
-  @recordable_params ~w(temperature max_tokens top_p top_k seed stop frequency_penalty presence_penalty fast_mode priority)a
+  @recordable_params ~w(temperature max_tokens top_p top_k seed stop frequency_penalty presence_penalty fast_mode priority standard_access)a
 
   # A store that cannot lock claims nothing; one whose claim is held by another
   # live writer is the one refusal worth a sentence of its own, because the fix

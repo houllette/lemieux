@@ -119,6 +119,24 @@ defmodule Lemieux.Session.Catalog do
   def delegated_settled(state, _type), do: state
 
   def change_model(state, model) do
+    params =
+      if state.params[:standard_access] == true and
+           not Provider.standard_access?(state.provider, model),
+         do: Keyword.delete(state.params, :standard_access),
+         else: state.params
+
+    change_model(state, model, params)
+  end
+
+  def select_standard_model(%{model: model} = state, model) do
+    state = %{state | params: Keyword.put(state.params, :standard_access, true)}
+    {:reply, {:ok, model}, Setup.record_config(state)}
+  end
+
+  def select_standard_model(state, model),
+    do: change_model(state, model, Keyword.put(state.params, :standard_access, true))
+
+  defp change_model(state, model, params) do
     case Provider.validate_model(state.provider, model, state.tools) do
       :ok ->
         previous = state.model
@@ -126,7 +144,7 @@ defmodule Lemieux.Session.Catalog do
         previous_params = state.params
 
         params =
-          state
+          %{state | params: params}
           |> compatible_reasoning_params(model)
           |> compatible_priority_params(state.provider, model)
 

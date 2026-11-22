@@ -130,7 +130,12 @@ defmodule Lemieux.Conversation.CommandTest do
       assert spec.subcommands == []
       refute spec.hidden?
 
-      assert Command.spec!(Command.Model).actions == [:model_status, {:set_model, "SPEC"}]
+      assert Command.spec!(Command.Model).actions == [
+               :model_status,
+               {:set_model, "SPEC"},
+               {:set_standard_model, "SPEC"}
+             ]
+
       assert Command.spec!(Command.Habs).hidden?
     end
 

@@ -38,9 +38,17 @@ defmodule Lemieux.CLI.ProviderMuxTest do
     assert "anthropic" in Session.available_providers(session)
     assert Session.available_models(session, "ixway") == ["ixway:team/coding"]
 
-    assert Session.model_metadata(session) == %{
-             "ixway:team/coding" => %{kind: nil, route: "Automatic"}
-           }
+    assert %{
+             "ixway:team/coding" => %{kind: nil, route: "Automatic"},
+             "openai:gpt-6-sol" => %{standard_access?: true}
+           } = Session.model_metadata(session)
+
+    blocked =
+      ProviderMux.new([], ReqLLM.new(api_keys: %{"openai" => "test-key"}),
+        blocked_providers: ["openai"]
+      )
+
+    refute Provider.standard_access?(blocked, "openai:gpt-6-sol")
 
     openai_models = Session.available_models(session, "openai")
     assert "openai:gpt-4o-mini" in openai_models

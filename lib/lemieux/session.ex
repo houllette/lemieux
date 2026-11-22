@@ -905,6 +905,12 @@ defmodule Lemieux.Session do
   def set_model(session, model) when is_binary(model),
     do: GenServer.call(session, {:set_model, model})
 
+  @doc "Selects a compatible model with explicit Standard access for subsequent requests."
+  @spec set_standard_model(session :: session(), model :: String.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def set_standard_model(session, model) when is_binary(model),
+    do: GenServer.call(session, {:set_standard_model, model})
+
   @doc """
   Changes provider by selecting its first compatible catalog model.
 
