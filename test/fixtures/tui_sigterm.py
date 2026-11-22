@@ -1,7 +1,7 @@
 """Open a terminal UI on a pseudo-terminal, send its VM SIGTERM once it is up,
 and report what the terminal received.
 
-    python3 tui_sigterm.py OPEN_SECONDS MARKER COMMAND [ARG...]
+    python3 tui_sigterm.py OPEN_SECONDS MARKER [--keys] COMMAND [ARG...]
 
 COMMAND runs as the pseudo-terminal's session leader, in this process's
 environment and working directory, and must become the VM itself (`mix`
@@ -31,6 +31,9 @@ import time
 open_seconds = float(sys.argv[1])
 marker = sys.argv[2].encode()
 command = sys.argv[3:]
+keys = command[0] == "--keys"
+if keys:
+    command = command[1:]
 
 pid, fd = pty.fork()
 if pid == 0:
@@ -39,10 +42,12 @@ if pid == 0:
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 100, 0, 0))
 output = bytearray()
 status = None
+keyboard_query_answered = False
 
 
 def drain(seconds):
     """Reads what the terminal received for up to SECONDS; False once it is closed."""
+    global keyboard_query_answered
     if not select.select([fd], [], [], seconds)[0]:
         return True
     try:
@@ -50,6 +55,9 @@ def drain(seconds):
     except OSError:
         return False
     output.extend(data)
+    if not keyboard_query_answered and b"\x1b[?u\x1b[c" in output:
+        os.write(fd, b"\x1b[?15u\x1b[?1;2c")
+        keyboard_query_answered = True
     return bool(data)
 
 
@@ -79,6 +87,10 @@ stopped_at = len(output)
 
 try:
     if opened and not exited():
+        if keys and keyboard_query_answered:
+            # Send Shift+Enter only when the application has asked for the protocol.
+            os.write(fd, b"first\x1b[13;2:1u\x1b[13;1:3usecond")
+            until(lambda: b"KEYBOARD_PROBE_DONE" in output or exited(), 8)
         # The host registers its trap right after the screen starts; the
         # marker is drawn later, once the session is up. A second more is
         # margin, not a guess about the order.

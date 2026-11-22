@@ -591,6 +591,22 @@ defmodule Lemieux.TUI.InputTest do
   end
 
   describe "typing" do
+    test "Shift+Enter starts an empty draft and preserves a working draft with choices open" do
+      empty = tui() |> press("enter", ["shift"])
+      assert typed(empty) == "\n"
+      assert caret(empty) == {1, 0}
+
+      busy = tui(theme: "dark") |> type("/theme l")
+      assert suggestions(busy).items == ["light"]
+      busy = put_in(busy.conversation.busy?, true)
+      continued = busy |> press("enter", ["shift"]) |> type("next") |> press("enter", ["shift"])
+
+      assert typed(continued) == "/theme l\nnext\n"
+      assert caret(continued) == {2, 0}
+      assert continued.history.entries == []
+      assert continued.history.queued == []
+    end
+
     test "Shift+Enter inserts one newline at the caret and its release never submits" do
       state = tui() |> type("first second") |> press("left") |> press("left")
       assert caret(state) == {0, 10}

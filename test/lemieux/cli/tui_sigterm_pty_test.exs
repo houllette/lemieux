@@ -24,9 +24,9 @@ defmodule Lemieux.CLI.TUISigtermPtyTest do
   # Runs `command` on a pseudo-terminal until its screen draws the provider
   # panel, then sends it SIGTERM: the fixture's report, and every byte the
   # terminal received.
-  defp on_a_terminal(dir, command, env \\ []) do
+  defp on_a_terminal(dir, command, env \\ [], marker \\ @marker) do
     {json, 0} =
-      System.cmd("python3", [@fixture, "180", @marker | command],
+      System.cmd("python3", [@fixture, "180", marker | command],
         env: hermetic(dir) ++ env,
         cd: File.cwd!()
       )
@@ -60,6 +60,49 @@ defmodule Lemieux.CLI.TUISigtermPtyTest do
       inspect(binary_part(output, max(byte_size(output) - 1200, 0), min(byte_size(output), 1200)))
 
   defp mix, do: System.find_executable("mix") || flunk("mix is not on PATH")
+
+  @keyboard_probe ~S"""
+  alias Lemieux.TUI
+  alias ExRatatui.Runtime
+
+  {:ok, screen} = TUI.start_link(name: nil, background: :dark, models: ["test:model"])
+  flush = fn text -> IO.write("\r\n#{text}\r\n") end
+  flush.("KEYBOARD_PROBE_READY")
+
+  if Runtime.snapshot(screen).keyboard_enhancement do
+    Enum.reduce_while(1..250, nil, fn _, _ ->
+      %{user_state: ui} = :sys.get_state(screen)
+      draft = ExRatatui.textarea_get_value(ui.input)
+
+      if String.ends_with?(draft, "second") do
+        result = {draft, ExRatatui.textarea_cursor(ui.input), ui.history.entries}
+        GenServer.stop(screen)
+        flush.("KEYBOARD_PROBE_DONE #{inspect(result)}")
+        {:halt, :ok}
+      else
+        Process.sleep(20)
+        {:cont, nil}
+      end
+    end)
+  end
+  """
+
+  @tag timeout: 240_000
+  test "the local terminal negotiates and restores modified Enter support", %{tmp_dir: dir} do
+    {result, output} =
+      on_a_terminal(
+        dir,
+        ["--keys", mix(), "run", "-e", @keyboard_probe],
+        [],
+        "KEYBOARD_PROBE_READY"
+      )
+
+    assert result["opened"], tail(output)
+    assert output =~ "\e[>15u"
+    assert output =~ ~S(KEYBOARD_PROBE_DONE {"first\nsecond", {1, 6}, []})
+    assert output =~ "\e[<1u"
+    assert result["status"] == 0
+  end
 
   @tag timeout: 240_000
   test "SIGTERM to a running source terminal UI restores the screen and exits at once",
