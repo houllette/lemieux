@@ -123,8 +123,40 @@ if Code.ensure_loaded?(ExRatatui.Layout.Rect) do
 
       empty = if tools == [], do: text_rows(empty_reason(inspection.server), width), else: []
       notices = Enum.flat_map(inspection.notices, &text_rows(&1, width))
-      header ++ tools ++ empty ++ notices
+      requests = Enum.flat_map(stdio_activity(inspection[:stdio]), &text_rows(&1, width))
+      header ++ requests ++ tools ++ empty ++ notices
     end
+
+    defp stdio_activity(nil), do: []
+
+    defp stdio_activity(stdio) do
+      pending = Enum.find(stdio.pending, & &1.tool?)
+      recent = Enum.find(stdio.recent, &(&1.tool? and &1.phase in [:timed_out, :cancelled]))
+      Enum.reject([pending_request(pending), recent_request(recent)], &is_nil/1)
+    end
+
+    defp pending_request(nil), do: nil
+
+    defp pending_request(request) do
+      phase =
+        if request.progress_count > 0,
+          do: "awaiting reply after progress",
+          else: "awaiting reply or progress"
+
+      "Request #{request.request_id} · #{phase} · #{duration(request.silence_ms)} silent " <>
+        "of #{duration(request.timeout_ms)} · /cancel stops the turn"
+    end
+
+    defp recent_request(nil), do: nil
+
+    defp recent_request(request) do
+      phase = if request.phase == :timed_out, do: "timed out", else: "cancelled"
+      late = if request.late_response?, do: " · reply arrived afterwards", else: ""
+      "Request #{request.request_id} · #{phase}#{late}"
+    end
+
+    defp duration(ms) when ms >= 1_000, do: "#{div(ms, 1_000)}s"
+    defp duration(ms), do: "#{ms}ms"
 
     defp empty_reason(%{status: :connecting}),
       do: "Discovery is still connecting. Esc returns to servers; reopen after it settles."

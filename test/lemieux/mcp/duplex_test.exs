@@ -128,6 +128,46 @@ defmodule Lemieux.MCP.DuplexTest do
     assert Client.info(client).stdio.pending_count == 0
   end
 
+  test "a completed remote operation can time out and its late reply is tracked without replay" do
+    log =
+      capture_log([level: :debug], fn ->
+        client = start("duplex", tool_timeout: 1_500)
+        gate = CommandGate.new()
+        {:ok, port} = :inet.port(gate.listener)
+
+        call =
+          Task.async(fn ->
+            Client.call_tool(client, "slow", %{
+              "control_port" => port,
+              "reply_after_cancellation" => true
+            })
+          end)
+
+        socket = CommandGate.ready(gate)
+        assert {:error, message} = Task.await(call)
+        assert message =~ "Progress notifications received: 1"
+        assert message =~ "Check the remote state before retrying"
+        assert :ok = CommandGate.closed(socket)
+        assert [id] = cancelled(client)
+        assert text(Client.call_tool(client, "fast", %{"text" => "next"})) == "fast: next"
+
+        assert :ok =
+                 LemieuxTest.Sync.state(client, fn state -> state.unmatched_responses == 1 end)
+
+        assert %{
+                 pending_count: 0,
+                 recent: recent,
+                 unmatched_responses: 1
+               } = Client.info(client).stdio
+
+        assert %{phase: :timed_out, late_response?: true, progress_count: 1, timeout_ms: 1_500} =
+                 Enum.find(recent, &(&1.request_id == id))
+      end)
+
+    assert log =~ "late_response"
+    refute log =~ "late-private-payload"
+  end
+
   test "a changed tool list is listed again and announced" do
     client = start("duplex", notify: self())
     assert {:ok, tools} = Client.list_tools(client)

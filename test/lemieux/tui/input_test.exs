@@ -2111,12 +2111,25 @@ defmodule Lemieux.TUI.InputTest do
         for name <- ["one", "two"],
             do: %{name: name, transport: "http", tool_count: 2, enabled?: true, error: nil}
 
+      stdio = %{
+        pending: [
+          %{request_id: 7, tool?: true, progress_count: 1, silence_ms: 920, timeout_ms: 15_000}
+        ],
+        recent: [%{request_id: 6, tool?: true, phase: :timed_out, late_response?: true}]
+      }
+
       session =
         fake_session(snapshot("01INSPECT"),
           mcp_statuses: statuses,
           mcp_inspections: %{
             "two" =>
-              {:ok, %{server: %{name: "two", status: :connected}, tools: tools, notices: []}}
+              {:ok,
+               %{
+                 server: %{name: "two", status: :connected},
+                 tools: tools,
+                 notices: [],
+                 stdio: stdio
+               }}
           }
         )
 
@@ -2125,6 +2138,9 @@ defmodule Lemieux.TUI.InputTest do
       assert_receive {:mcp_inspection, ^session, "two", _} = result
       assert {:noreply, state} = TUI.handle_info(result, state)
       assert screen(state) =~ "read"
+      assert screen(state) =~ "Request 7 · awaiting reply after progress"
+      assert screen(state) =~ "920ms silent of 15s"
+      assert screen(state) =~ "Request 6 · timed out · reply arrived afterwards"
       state = state |> press("down") |> press("enter")
       assert screen(state) =~ "Model name: two__write"
       state = Enum.reduce(1..10, state, fn _, acc -> press(acc, "page_down") end)
