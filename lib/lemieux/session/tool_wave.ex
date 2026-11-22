@@ -504,9 +504,11 @@ defmodule Lemieux.Session.ToolWave do
     })
   end
 
-  def stop(state, reason, said) do
+  def stop(state, reason, said, details \\ %{}) do
     stop_reason = reason |> Instrumentation.telemetry_stop_reason() |> Atom.to_string()
-    error = %{"source" => "harness", "stop_reason" => stop_reason, "reason" => said}
+
+    error =
+      Map.merge(details, %{"source" => "harness", "stop_reason" => stop_reason, "reason" => said})
 
     error =
       if reason in [:max_turns, :no_progress],

@@ -5,6 +5,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
   defmodule Lemieux.TUI.TranscriptPresentation do
     @moduledoc "Projects saved events into rows and formats delegation rows."
 
+    alias Lemieux.Conversation
     alias Lemieux.Diagnostic
     alias Lemieux.Extensions.Verify
     alias Lemieux.ID.Shorthand
@@ -281,6 +282,15 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp entry_lines(%{type: :user, payload: %{"text" => text}} = entry) do
       harness_lines(entry) || split_lines(:you, text)
     end
+
+    defp entry_lines(%{
+           type: :error,
+           payload: %{"stop_reason" => reason, "max_turns" => _, "turns_taken" => _} = limit
+         })
+         when reason in ["max_turns", "no_progress"],
+         do: [
+           {:lmx, Conversation.loop_stop_message(limit) <> Conversation.turn_limit_hint(limit)}
+         ]
 
     defp entry_lines(%{type: :error, payload: payload}) do
       message =

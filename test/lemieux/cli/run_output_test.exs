@@ -95,6 +95,20 @@ defmodule Lemieux.CLI.RunOutputTest do
     refute result.stderr =~ "\e]7501;state=done:"
   end
 
+  test "a spent prompt reports its request count and how to resume with a chosen allowance",
+       context do
+    provider = scripted([Scripted.tool_call("check", "read", %{"path" => "fixture.txt"})])
+
+    result = lmx(["run", "--max-turns", "1", "--output-format", "json", "go"], context, provider)
+    assert result.status == {:error, 4}
+    summary = JSON.decode!(result.stdout)
+    assert summary["stop_reason"] == "max_turns"
+    assert summary["error"]["turns_taken"] == 1
+    assert summary["error"]["max_turns"] == 1
+    assert summary["error"]["message"] =~ "Turn limit reached (1/1 model requests)"
+    assert summary["error"]["message"] =~ "run --resume #{summary["session_id"]} --max-turns N"
+  end
+
   describe "text mode on a terminal" do
     test "the answer and the activity lines lose their escape sequences", context do
       call = %{id: "t1", name: "bash", arguments: %{"command" => "echo \e]0;TITLE\ahi"}}
