@@ -21,6 +21,14 @@ defmodule Lemieux.SessionCompactionTest do
 
   @moduletag :tmp_dir
 
+  defmodule ReasoningProvider do
+    @behaviour Lemieux.Provider
+    @impl true
+    defdelegate run(state, request, emit), to: Scripted
+    @impl true
+    def reasoning_efforts(_state, _model), do: ~w(none minimal low high)
+  end
+
   setup %{tmp_dir: tmp_dir} do
     runtime = :"lemieux_compaction_#{System.unique_integer([:positive])}"
     start_supervised!({Lemieux.Supervisor, name: runtime})
@@ -29,14 +37,15 @@ defmodule Lemieux.SessionCompactionTest do
   end
 
   defp start_session(context, script, opts \\ []) do
-    provider = Scripted.new(script)
+    {Scripted, script_state} = provider = Scripted.new(script)
+    {provider_module, opts} = Keyword.pop(opts, :scripted_provider, Scripted)
 
     {:ok, session} =
       Lemieux.start_session(
         Keyword.merge(
           [
             supervisor: context.runtime,
-            provider: provider,
+            provider: {provider_module, script_state},
             store: context.store,
             model: "test:model",
             subscriber: self(),
@@ -573,6 +582,89 @@ defmodule Lemieux.SessionCompactionTest do
   end
 
   describe "when summarising fails" do
+    test "repeated recovery shrinks bulky tool output without changing the cut or the transcript",
+         %{tmp_dir: dir} = context do
+      fixture = String.duplicate("reproducible fixture line\n", 700)
+      File.write!(Path.join(dir, "fixture.txt"), fixture)
+
+      phases = ["one", "two"]
+
+      script =
+        Enum.flat_map(phases, fn phase ->
+          reads =
+            Enum.flat_map(1..3, fn index ->
+              call = "#{phase}-#{index}"
+              [Scripted.tool_call(call, "read", %{"path" => "fixture.txt"}), answer(call, 5_000)]
+            end)
+
+          reads ++
+            [
+              [
+                {:text_delta, "truncated #{phase}"},
+                {:usage, %{"input_tokens" => 60_000, "output_tokens" => 2_048}},
+                {:done, :length}
+              ],
+              answer("Summary for phase #{phase}", 10_000),
+              answer("continued #{phase}", 5_000)
+            ]
+        end)
+
+      counter = fn request ->
+        latest = request.entries |> Enum.reverse() |> Enum.find(&(&1.type == :user))
+
+        cliff? =
+          Enum.any?(phases, fn phase ->
+            latest.payload["text"] == "continue #{phase}" and
+              not String.contains?(request.system, "Summary for phase #{phase}")
+          end)
+
+        {:ok, if(cliff?, do: 95_000, else: 5_000)}
+      end
+
+      {session, provider} =
+        start_session(context, script,
+          cwd: dir,
+          tools: [Lemieux.Tools.Read],
+          context_window: 100_000,
+          compact_at: 0.8,
+          keep: 0.25,
+          input_token_counter: counter,
+          summary_params: [max_tokens: 2_048]
+        )
+
+      for phase <- phases do
+        for index <- 1..3 do
+          assert {:ok, %{stop_reason: :stop}} = Session.await(session, "read #{phase} #{index}")
+        end
+
+        assert {:ok, %{text: "continued " <> ^phase}} =
+                 Session.await(session, "continue #{phase}")
+      end
+
+      [first, retry, second, second_retry] =
+        Enum.filter(Scripted.requests(provider), &(&1.tools == []))
+
+      for {original, recovered} <- [{first, retry}, {second, second_retry}] do
+        assert Request.input_bytes(recovered) < Request.input_bytes(original) / 2
+        assert Enum.map(recovered.entries, & &1.id) == Enum.map(original.entries, & &1.id)
+        assert recovered.params[:max_tokens] == 2_048
+
+        assert Enum.any?(recovered.entries, fn entry ->
+                 entry.type == :tool_result and
+                   entry.payload["output"] =~ "bytes cut from the middle"
+               end)
+      end
+
+      assert second_retry.system =~ "Summary for phase one"
+      assert List.last(Scripted.requests(provider)).system =~ "Summary for phase two"
+
+      entries = Session.snapshot(session).entries
+      assert Enum.count(entries, &(&1.type == :compaction)) == 2
+      results = Enum.filter(entries, &(&1.type == :tool_result))
+      assert length(results) == 6
+      assert Enum.all?(results, &(byte_size(&1.payload["output"]) > 10_000))
+    end
+
     test "a length-limited summary retries once with a smaller writing target", context do
       usage = %{"input_tokens" => 9_000, "output_tokens" => 8_192, "reasoning_tokens" => 8_190}
 
@@ -591,6 +683,8 @@ defmodule Lemieux.SessionCompactionTest do
         start_session(context, script,
           context_window: 10_000,
           compact_at: 0.8,
+          scripted_provider: ReasoningProvider,
+          params: [reasoning_effort: "high"],
           summary_params: [max_tokens: 8_192]
         )
 
@@ -602,6 +696,8 @@ defmodule Lemieux.SessionCompactionTest do
       [first, retry, resumed] = Scripted.requests(provider) |> Enum.drop(4)
       assert first.entries == retry.entries
       assert retry.params[:max_tokens] == first.params[:max_tokens]
+      assert first.params[:reasoning_effort] == "low"
+      assert retry.params[:reasoning_effort] == "none"
       assert retry.system =~ "Finish within"
       refute first.system =~ "Finish within"
       assert resumed.system =~ "Complete compact summary"

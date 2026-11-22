@@ -24,6 +24,7 @@ defmodule Lemieux.Session.Compacting do
   alias Lemieux.Session.Window
   alias Lemieux.Supervisor, as: Sup
   alias Lemieux.Telemetry
+  alias Lemieux.Tool
   alias Lemieux.Usage
 
   # A summary's output budget. It was 4,096, which a reasoning model at high
@@ -33,6 +34,7 @@ defmodule Lemieux.Session.Compacting do
   @summary_max_tokens 8_192
   @summary_max_tokens_cap 16_384
   @summary_retry_delay_ms 2_000
+  @summary_retry_tool_bytes 2_048
 
   # The prepared request, including host hook changes, is the only truthful
   # input to an admission decision. Compaction still runs between turns.
@@ -85,8 +87,8 @@ defmodule Lemieux.Session.Compacting do
     |> ToolWave.stop(
       :compaction_failed,
       "The summary hit its length limit and the next request is forecast to exceed the " <>
-        "context window. The transcript is intact. Try manual compaction with a larger " <>
-        "summary allowance or resume with a model that has a larger window."
+        "context window. The transcript is intact. Use /compact after selecting a model " <>
+        "with a larger window, or resume with a different summary model."
     )
   end
 
@@ -477,17 +479,11 @@ defmodule Lemieux.Session.Compacting do
 
   defp summary_retry_request(request, state, :shorter_summary) do
     target = request.params[:max_tokens] |> div(3) |> max(1) |> min(1_500)
-    efforts = Provider.reasoning_efforts(state.provider, request.model)
-
-    params =
-      if "minimal" in efforts and
-           not Keyword.has_key?(state.compaction.summary_params, :reasoning_effort),
-         do: Keyword.put(request.params, :reasoning_effort, "minimal"),
-         else: request.params
 
     %{
       request
-      | params: params,
+      | params: summary_retry_params(request, state),
+        entries: Enum.map(request.entries, &trim_summary_result/1),
         system:
           request.system <>
             "\n\nFinish within #{target} tokens. Prioritize the user's " <>
@@ -497,13 +493,48 @@ defmodule Lemieux.Session.Compacting do
 
   defp summary_retry_request(request, _state, _retry), do: request
 
+  defp summary_retry_params(request, state) do
+    explicit = state.compaction.summary_params
+    efforts = Provider.reasoning_efforts(state.provider, request.model)
+
+    with false <- Keyword.has_key?(explicit, :reasoning_effort),
+         effort when is_binary(effort) <- Enum.find(~w(none minimal low), &(&1 in efforts)) do
+      Keyword.put(request.params, :reasoning_effort, effort)
+    else
+      _unchanged -> request.params
+    end
+  end
+
+  # Keep the safe cut and tool call/result identities. The retry only clips
+  # reproducible lookup output in its own request, retaining both ends for
+  # evidence such as the file path and the final matching lines.
+  defp trim_summary_result(%{type: :tool_result, payload: payload} = entry) do
+    case payload do
+      %{"name" => name, "output" => output, "error" => false}
+      when name in ~w(read glob grep) and is_binary(output) and
+             byte_size(output) > @summary_retry_tool_bytes ->
+        %{
+          entry
+          | payload: %{payload | "output" => Tool.truncate(output, @summary_retry_tool_bytes)}
+        }
+
+      _other ->
+        entry
+    end
+  end
+
+  defp trim_summary_result(entry), do: entry
+
   defp summary_diagnostics(state, request) do
     {strategy, _config} = state.compaction.strategy
     effort = request.params[:reasoning_effort]
+    input_bytes = Request.input_bytes(request)
 
     %{
       "strategy" => inspect(strategy),
-      "input_bytes" => Request.input_bytes(request),
+      "model" => request.model,
+      "input_bytes" => input_bytes,
+      "input_tokens_estimate" => div(input_bytes + 3, 4),
       "forecast_tokens" => (state.compaction.forecast || %{})[:input_tokens],
       "max_tokens" => request.params[:max_tokens],
       "reasoning_effort" => if(effort in ~w(none minimal low medium high xhigh max), do: effort)
@@ -554,7 +585,8 @@ defmodule Lemieux.Session.Compacting do
   end
 
   # Both recovery paths share one retry. Length exhaustion gets a different
-  # writing target over the same safe cut, within the original output cap.
+  # writing target and smaller input over the same safe cut, within the
+  # original output cap.
   defp summary_retry(
          %{
            provider_retry_policy: policy,

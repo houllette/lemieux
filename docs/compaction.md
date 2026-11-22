@@ -119,10 +119,15 @@ is summarised rather than continued, and for Anthropic models it is sent
 without prompt caching, since its prefix is one no later request reads.
 `summary_max_bytes` defaults to 32,768. A missing terminal event, length stop,
 tool call, empty answer, or oversized answer cannot replace transcript
-history. A transient provider failure is retried once; any other failure
-leaves the conversation whole and holds the threshold off for a few requests,
-a number that doubles with each consecutive failure. Old attachments are
-projected according to `keep_attachments` before they reach the summarizer.
+history. An automatic summary that reaches its length limit gets one recovery
+attempt with a shorter writing target, the lowest available reasoning effort
+if the host left it unset, and excerpts of large successful `read`, `glob`
+and `grep` results. The same messages and output limit apply to the retry.
+Transient provider failures also have a single retry. If recovery fails,
+the entire transcript is retained and the automatic threshold backs off.
+When a length failure leaves the prepared turn at or beyond a known context
+window, the session stops and gives a recovery hint. Old attachments follow
+`keep_attachments` before they reach the summarizer.
 
 `lmx` accepts `"auto_compaction"` (`false` stops every automatic
 compaction), `"keep_recent_tokens"`, `"summary_model"` and
