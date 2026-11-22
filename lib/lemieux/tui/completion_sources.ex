@@ -11,6 +11,7 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
     alias Lemieux.Conversation
     alias Lemieux.Conversation.Command, as: ConversationCommand
     alias Lemieux.Extensions.Workspace.Skill
+    alias Lemieux.ModelSpec
     alias Lemieux.Reference
     alias Lemieux.TUI.ModelChoices
     alias Lemieux.TUI.Theme
@@ -42,8 +43,11 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
     defp argument_completions(state, "/provider " <> _rest = value),
       do: value_completions(state.catalog.providers, value, "/provider ")
 
-    defp argument_completions(state, "/model " <> _rest = value),
-      do: ModelChoices.completions(state.catalog.model_choices, value, state.model_tab)
+    defp argument_completions(state, "/model " <> _rest = value) do
+      choices = ModelChoices.completions(state.catalog.model_choices, value, state.model_tab)
+      access = Map.get(state, :requested_access_program)
+      if access, do: annotate_access(choices, state.conversation.model, access), else: choices
+    end
 
     defp argument_completions(state, "/fast " <> _rest = value) do
       choices =
@@ -83,6 +87,18 @@ if Code.ensure_loaded?(ExRatatui.Widgets.SlashCommands) do
         [] -> path_completions(state, value)
         completions -> completions
       end
+    end
+
+    defp annotate_access(choices, model, access) do
+      current = "/model " <> ModelSpec.model_id(model)
+
+      Enum.map(choices, fn
+        %{value: ^current, label: label} = choice ->
+          %{choice | label: "#{label} · last requested #{access}"}
+
+        choice ->
+          choice
+      end)
     end
 
     defp command_completions_for(state, "/" <> rest = value) do

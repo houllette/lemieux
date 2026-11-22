@@ -27,6 +27,11 @@ when the screen closes; redirected stderr keeps its logging behavior.
 The `FLEX`, `FAST`, and `ULTRAFAST` badges stay visible while model metadata
 scrolls. Choose Standard to return to the connection’s baseline.
 
+When the latest prepared OpenAI request includes a recognized access
+program, the header shows its label with `REQ`. The current model row
+in the picker shows the same requested value. The label describes the
+prepared request. Provider authorization and the response determine access.
+
 Update announcements arriving during session preparation share the setup
 notice box. Esc dismisses the whole box; expiry during preparation stays dismissed.
 

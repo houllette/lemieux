@@ -677,6 +677,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
               # What the session has reported about itself. See
               # `t:session_view/0`.
               session_view: %{
+                requested_access_program: nil,
                 mcp: %{},
                 mcp_ready?: true,
                 mcp_announced?: false,

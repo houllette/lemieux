@@ -272,6 +272,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     """
     @type session_view :: %{
             optional(:tasks) => map(),
+            requested_access_program: String.t() | nil,
             mcp: %{optional(String.t()) => map()},
             mcp_ready?: boolean(),
             mcp_announced?: boolean(),

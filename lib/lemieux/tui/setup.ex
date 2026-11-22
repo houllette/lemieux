@@ -197,6 +197,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           |> History.loaded()
           |> History.staged(Keyword.get(opts, :prompt)),
         session_view: %{
+          requested_access_program: nil,
           mcp: %{},
           mcp_ready?: true,
           mcp_announced?: false,

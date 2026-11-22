@@ -12,6 +12,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
 
     alias Lemieux.Conversation
     alias Lemieux.ModelSpec
+    alias Lemieux.TUI.AccessProgram
     alias Lemieux.TUI.CatalogState
     alias Lemieux.TUI.ToolText
     alias Lemieux.TUI.TranscriptPresentation
@@ -79,7 +80,11 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
               :systemone,
               restore_systemone(snapshot.entries, opts.empty_tools.systemone)
             ),
-          session_view: Map.put(state.session_view, :throughput, throughput(snapshot.entries)),
+          session_view:
+            Map.merge(state.session_view, %{
+              throughput: throughput(snapshot.entries),
+              requested_access_program: AccessProgram.restore(snapshot.entries, snapshot.model)
+            }),
           turn: opts.idle_turn
       }
     end
