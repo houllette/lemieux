@@ -16,7 +16,7 @@ defmodule LemieuxComputerUse.MixProject do
         # Keep Pristine and Sinter compatible with ReqLLM's current dependencies.
         {:finch, "~> 0.25.0", override: true},
         {:nimble_options, "~> 1.2.0", override: true},
-        {:jsv, "~> 0.27.0", override: true},
+        {:jsv, "~> 0.28.0", override: true},
         {:dotenvy, "~> 1.2"}
       ],
       aliases: [

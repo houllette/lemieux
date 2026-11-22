@@ -18,7 +18,7 @@ defmodule LemieuxSystemOneCompaction.MixProject do
         # the SDK transport and schema validation with these shared resolutions.
         {:finch, "~> 0.25.0", override: true},
         {:nimble_options, "~> 1.2.0", override: true},
-        {:jsv, "~> 0.27.0", override: true},
+        {:jsv, "~> 0.28.0", override: true},
         {:req_llm, "~> 1.31"},
         {:dotenvy, "~> 1.2"}
       ],
