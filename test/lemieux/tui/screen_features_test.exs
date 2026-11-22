@@ -405,14 +405,14 @@ defmodule Lemieux.TUI.ScreenFeaturesTest do
       assert screen(info(tui(), {:entry, entry})) =~ "interrupted"
     end
 
-    test "a verify report is drawn in the harness's voice" do
+    test "legacy verification repair prompts stay in the saved model context" do
       entry = Entry.new(:user, %{"text" => "[lmx verify] mix test failed"})
       state = info(tui(), {:entry, entry})
-      assert Enum.any?(state.lines, &match?({:verify, "mix test failed"}, &1))
+      refute screen(state) =~ "mix test failed"
 
       marked = Entry.new(:user, %{"text" => "[lmx verify] mix test failed", "stop_hook" => true})
       state = info(tui(), {:entry, marked})
-      assert Enum.any?(state.lines, &match?({:verify, "mix test failed"}, &1))
+      refute screen(state) =~ "mix test failed"
     end
 
     test "any stop hook's message is drawn in the harness's voice, without its tag" do

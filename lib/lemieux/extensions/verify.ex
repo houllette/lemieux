@@ -650,14 +650,9 @@ defmodule Lemieux.Extensions.Verify do
   defp decide(_config, %{"status" => "passed"}, _discovery, _check), do: :allow
 
   # The command could not run at all — not installed, a broken pipe. The
-  # model cannot fix the machine, and telling it the check "failed" would
-  # send it hunting for a bug in code that was never exercised. A shell
-  # reports a missing or non-executable command as 127 or 126, which is the
-  # same news arriving as an exit status.
-  defp decide(_config, %{"status" => "failed_to_run"}, _discovery, _check), do: :allow
-
-  defp decide(_config, %{"status" => "failed", "exit_status" => status}, _discovery, _check)
-       when status in [126, 127],
+  # project was never exercised, so there is no regression to repair.
+  defp decide(_config, %{"status" => status}, _discovery, _check)
+       when status in ["failed_to_run", "blocked"],
        do: :allow
 
   defp decide(config, result, discovery, check) do

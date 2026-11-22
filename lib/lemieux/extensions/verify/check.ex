@@ -62,7 +62,9 @@ defmodule Lemieux.Extensions.Verify.Check do
         {:error, reason} -> failed_to_run(reason, buffer())
       end
 
-    Map.merge(result, %{
+    result
+    |> classify_setup(command)
+    |> Map.merge(%{
       "command" => command,
       "timeout_ms" => timeout,
       "duration_ms" => System.monotonic_time(:millisecond) - started
@@ -154,8 +156,31 @@ defmodule Lemieux.Extensions.Verify.Check do
   defp exited(0, buffer), do: finish("passed", buffer) |> Map.put("exit_status", 0)
   defp exited(status, buffer), do: finish("failed", buffer) |> Map.put("exit_status", status)
 
+  defp classify_setup(%{"status" => "failed", "exit_status" => exit} = result, _command)
+       when exit in [126, 127],
+       do: blocked(result, "the check command could not be executed")
+
+  # Mix aborts dependency checking before it loads the test suite. Require
+  # both of its diagnostics so an ordinary exit 1 still reaches the model.
+  defp classify_setup(%{"status" => "failed", "output" => output} = result, "mix test") do
+    if Regex.match?(~r/^Unchecked dependencies for environment [^\n]+:$/m, output) and
+         Regex.match?(
+           ~r/^\*\* \(Mix\) Can't continue due to errors on dependencies\s*\z/m,
+           output
+         ),
+       do: blocked(result, "Mix could not load the project's dependencies"),
+       else: result
+  end
+
+  defp classify_setup(result, _command), do: result
+
+  defp blocked(result, reason),
+    do: Map.merge(result, %{"status" => "blocked", "reason" => reason})
+
   defp failed_to_run(reason, buffer),
-    do: finish("failed_to_run", buffer) |> Map.put("error", inspect(reason))
+    do:
+      finish("failed_to_run", buffer)
+      |> Map.merge(%{"error" => inspect(reason), "reason" => "the check could not run"})
 
   defp finish(status, buffer),
     do: %{"status" => status, "exit_status" => nil, "output" => output(buffer)}

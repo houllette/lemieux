@@ -2,10 +2,22 @@ defmodule Lemieux.CLI.Tasks.Verification do
   @moduledoc false
   alias Lemieux.CLI.Tasks.Activity
   alias Lemieux.Extensions.Verify.Work
+  alias Lemieux.Session
 
   @spec rows(info :: map()) :: [map()]
   def rows(info) do
-    Enum.map(Work.list(info.supervisor, info.id), fn work ->
+    live = Work.list(info.supervisor, info.id)
+    context = Session.work_context(info.session, ["lemieux.verify"])
+
+    saved =
+      context.entries
+      |> Enum.reverse()
+      |> Enum.flat_map(&completed_check/1)
+
+    (live ++ saved)
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.take(256)
+    |> Enum.map(fn work ->
       result = work.result || %{}
 
       row = %{
@@ -27,7 +39,7 @@ defmodule Lemieux.CLI.Tasks.Verification do
           ),
         command: work.command,
         logs: work.logs,
-        status: result["status"] || "running",
+        status: status(result),
         running?: work.result == nil,
         watching?: false,
         managed?: true,
@@ -52,4 +64,32 @@ defmodule Lemieux.CLI.Tasks.Verification do
       )
     end)
   end
+
+  defp completed_check(%{
+         type: :extension_state,
+         payload: %{
+           "namespace" => "lemieux.verify",
+           "value" => %{"last" => %{"task_id" => id, "status" => status} = result}
+         }
+       })
+       when is_binary(id) and status != "running" do
+    [
+      %{
+        id: id,
+        command: result["command"],
+        started_at: result["started_at"],
+        duration_ms: result["duration_ms"],
+        logs: result["output"] || "",
+        result: result
+      }
+    ]
+  end
+
+  defp completed_check(_entry), do: []
+
+  defp status(%{"status" => "failed", "exit_status" => exit}) when exit in [126, 127],
+    do: "blocked"
+
+  defp status(%{"status" => "failed_to_run"}), do: "unavailable"
+  defp status(result), do: result["status"] || "running"
 end
