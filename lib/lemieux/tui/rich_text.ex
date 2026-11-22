@@ -88,8 +88,8 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
              | :summary
              | :notice
              | :interrupted
-             | :verify
              | :hook, String.t()}
+            | {:verification, term(), String.t()}
             | {:bug_hint | :bug_summary, String.t(), String.t()}
             | {:activity, String.t(), String.t()}
             | {:steer, :pending | :sent | :not_sent | :revoked, String.t()}
@@ -279,14 +279,8 @@ if Code.ensure_loaded?(ExRatatui.Text.Line) do
         {text, %Style{fg: theme.text.muted, modifiers: [:italic, :dim]}}
       ]
 
-    # A check the verify extension ran and reported to the model: said by the
-    # harness, not by the person, so it is drawn in the harness's voice with
-    # its marker, not as a `›` line somebody typed.
-    defp styled({:verify, text}, theme),
-      do: [
-        {"✓ ", %Style{fg: theme.voices.activity, modifiers: [:bold]}},
-        {text, %Style{fg: theme.voices.activity}}
-      ]
+    defp styled({:verification, _id, text}, theme),
+      do: [{text, %Style{fg: theme.voices.activity}}]
 
     # Any other stop hook sending the model back to work — an unfinished plan,
     # an answer cut off, a host's own rule — in the same voice, with a mark

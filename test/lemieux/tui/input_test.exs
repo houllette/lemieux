@@ -591,6 +591,22 @@ defmodule Lemieux.TUI.InputTest do
   end
 
   describe "typing" do
+    test "Shift+Enter starts an empty draft and preserves a working draft with choices open" do
+      empty = tui() |> press("enter", ["shift"])
+      assert typed(empty) == "\n"
+      assert caret(empty) == {1, 0}
+
+      busy = tui(theme: "dark") |> type("/theme l")
+      assert suggestions(busy).items == ["light"]
+      busy = put_in(busy.conversation.busy?, true)
+      continued = busy |> press("enter", ["shift"]) |> type("next") |> press("enter", ["shift"])
+
+      assert typed(continued) == "/theme l\nnext\n"
+      assert caret(continued) == {2, 0}
+      assert continued.history.entries == []
+      assert continued.history.queued == []
+    end
+
     test "Shift+Enter inserts one newline at the caret and its release never submits" do
       state = tui() |> type("first second") |> press("left") |> press("left")
       assert caret(state) == {0, 10}
@@ -2095,12 +2111,25 @@ defmodule Lemieux.TUI.InputTest do
         for name <- ["one", "two"],
             do: %{name: name, transport: "http", tool_count: 2, enabled?: true, error: nil}
 
+      stdio = %{
+        pending: [
+          %{request_id: 7, tool?: true, progress_count: 1, silence_ms: 920, timeout_ms: 15_000}
+        ],
+        recent: [%{request_id: 6, tool?: true, phase: :timed_out, late_response?: true}]
+      }
+
       session =
         fake_session(snapshot("01INSPECT"),
           mcp_statuses: statuses,
           mcp_inspections: %{
             "two" =>
-              {:ok, %{server: %{name: "two", status: :connected}, tools: tools, notices: []}}
+              {:ok,
+               %{
+                 server: %{name: "two", status: :connected},
+                 tools: tools,
+                 notices: [],
+                 stdio: stdio
+               }}
           }
         )
 
@@ -2109,6 +2138,9 @@ defmodule Lemieux.TUI.InputTest do
       assert_receive {:mcp_inspection, ^session, "two", _} = result
       assert {:noreply, state} = TUI.handle_info(result, state)
       assert screen(state) =~ "read"
+      assert screen(state) =~ "Request 7 · awaiting reply after progress"
+      assert screen(state) =~ "920ms silent of 15s"
+      assert screen(state) =~ "Request 6 · timed out · reply arrived afterwards"
       state = state |> press("down") |> press("enter")
       assert screen(state) =~ "Model name: two__write"
       state = Enum.reduce(1..10, state, fn _, acc -> press(acc, "page_down") end)

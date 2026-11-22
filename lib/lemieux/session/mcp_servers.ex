@@ -348,9 +348,22 @@ defmodule Lemieux.Session.MCPServers do
             inspect_tool(state, status, enabled_names, tool)
           end
 
-        {:ok, %{server: status, tools: tools, notices: Map.get(state.mcp_notices, name, [])}}
+        {:ok,
+         %{
+           server: status,
+           tools: tools,
+           notices: Map.get(state.mcp_notices, name, []),
+           stdio_client: stdio_client(state, name, status)
+         }}
     end
   end
+
+  defp stdio_client(state, name, %{status: :connected, transport: "stdio"}) do
+    {_tools, clients} = Map.fetch!(state.mcp_connections, name)
+    Enum.find(clients, &Process.alive?/1)
+  end
+
+  defp stdio_client(_state, _name, _status), do: nil
 
   defp inspect_tool(state, status, enabled_names, tool) do
     reason =

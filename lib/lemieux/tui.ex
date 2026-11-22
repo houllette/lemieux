@@ -268,6 +268,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     exact session; scanning recent history can instead choose another session,
     since the picker omits idle new sessions. The callback must return promptly.
 
+    Local terminals negotiate the enhanced keyboard protocol by default so
+    Shift+Enter reaches the composer with its modifier. Hosts can override
+    this with `:keyboard_enhancement`.
+
     All options are also passed to `mount/1`; pass `:size` so paging is correct
     before the first resize event.
     """
@@ -277,7 +281,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
       case Keyword.get(opts, :transport, :local) do
         :local ->
-          opts |> with_background() |> ExRatatui.App.dispatch_start()
+          opts
+          |> Keyword.put_new(:keyboard_enhancement, true)
+          |> with_background()
+          |> ExRatatui.App.dispatch_start()
 
         transport when transport in [:ssh, :distributed] ->
           ExRatatui.App.dispatch_start(opts)

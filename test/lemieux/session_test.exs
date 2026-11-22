@@ -888,6 +888,19 @@ defmodule Lemieux.SessionTest do
       event = %{"id" => "background-1", "text" => "The job completed, count is 7."}
       opts = [follow_up: true, preserve_turns: true]
       assert :ok = Session.deliver_notification(session, event, opts)
+
+      assert_receive {:lemieux, ^id,
+                      {:entry,
+                       %Entry{
+                         type: :error,
+                         payload: %{
+                           "stop_reason" => "max_turns",
+                           "follow_up_saved" => true,
+                           "turns_taken" => 1,
+                           "max_turns" => 1
+                         }
+                       }}}
+
       assert_receive {:lemieux, ^id, {:finished, :max_turns}}
       assert %{turns_taken: 1, max_turns: 1} = Session.info(session)
       assert :duplicate = Session.deliver_notification(session, event, opts)

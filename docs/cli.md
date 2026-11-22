@@ -990,7 +990,12 @@ variable; an empty or blank variable counts as unset, so the config file's
 value applies.
 `lmx explain` shows the limits in effect under `settings`.
 
-- `max_turns` (default 400) bounds one prompt.
+- `max_turns` (default 400) bounds one prompt's model requests, including its
+  in-turn provider retries. The repeat and cycle guard is independent. A
+  turn that reaches the ceiling reports the used and allowed request counts.
+  A late result whose continuation shares a spent allowance stays in the
+  session for your next prompt. For a larger task, reopen with
+  `lmx --resume SESSION --max-turns N` and ask to continue.
 - `max_requests` counts the session's own provider requests, retries and
   compaction included. The repository scout's requests have their own caps
   ([below](#delegated-repository-investigation)); use `--no-delegate` when

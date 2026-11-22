@@ -1522,11 +1522,30 @@ defmodule Lemieux.Session do
   Returns the connection status, discovery notices and tools, including tools
   disabled by the session or excluded by its profile. Each tool has its MCP
   name, model-facing name, description, input schema and availability reason.
-  A connecting server answers immediately with its current state.
+  A connected stdio server can also report bounded request diagnostics from
+  the local client. A connecting server answers immediately with its state.
   """
   @spec inspect_mcp(session :: session(), name :: String.t()) ::
           {:ok, map()} | {:error, :unknown_server}
-  def inspect_mcp(session, name), do: GenServer.call(session, {:inspect_mcp, name})
+  def inspect_mcp(session, name) do
+    case GenServer.call(session, {:inspect_mcp, name}) do
+      {:ok, %{stdio_client: client} = view} ->
+        {:ok, view |> Map.delete(:stdio_client) |> Map.put(:stdio, mcp_stdio_status(client))}
+
+      result ->
+        result
+    end
+  end
+
+  defp mcp_stdio_status(nil), do: nil
+
+  # Read diagnostics in the caller. The session stays responsive to steers
+  # and cancellation even when a client goes away during inspection.
+  defp mcp_stdio_status(client) do
+    MCP.Client.info(client, 500).stdio
+  catch
+    :exit, _reason -> nil
+  end
 
   @doc "Enables or disables a configured MCP server for this session only."
   @spec set_mcp_enabled(session :: session(), name :: String.t(), enabled? :: boolean()) ::

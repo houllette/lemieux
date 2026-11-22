@@ -18,7 +18,7 @@ defmodule Lemieux.TUI.VerificationTest do
     def read_file(_owner, _cwd, _path), do: {:error, :enoent}
     def write_file(_owner, _cwd, _path, _contents), do: {:ok, :created}
 
-    def run(owner, "held-check", _opts) do
+    def run(owner, command, _opts) when command in ["held-check", "mix test"] do
       {:ok,
        Stream.resource(
          fn -> :start end,
@@ -29,6 +29,7 @@ defmodule Lemieux.TUI.VerificationTest do
 
            :held ->
              receive do
+               {:output, output} -> {[{:data, output}], :held}
                {:finish, event} -> {[event], :done}
              after
                60_000 -> {[{:failed, :fixture_not_released}], :done}
@@ -48,8 +49,8 @@ defmodule Lemieux.TUI.VerificationTest do
     %{runtime: runtime, dir: dir}
   end
 
-  defp start(ctx) do
-    {:ok, harness} = Harness.assemble(Harness.new(), [{Verify, command: "held-check"}])
+  defp start(ctx, command) do
+    {:ok, harness} = Harness.assemble(Harness.new(), [{Verify, command: command}])
 
     provider =
       Scripted.new([
@@ -73,8 +74,8 @@ defmodule Lemieux.TUI.VerificationTest do
     {session, provider}
   end
 
-  defp held(ctx) do
-    {session, provider} = start(ctx)
+  defp held(ctx, command \\ "held-check") do
+    {session, provider} = start(ctx, command)
     id = Session.id(session)
     assert {:ok, state} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
     assert :ok = Session.prompt(session, "edit")
@@ -92,7 +93,7 @@ defmodule Lemieux.TUI.VerificationTest do
 
     assert {:noreply, state} = TUI.handle_info(event, put_in(state.conversation.busy?, true))
     assert state.turn.phase.kind == :verification
-    assert screen(state) =~ "Answer received · verifying held-check"
+    assert screen(state) =~ "Answer received · verifying #{command}"
     assert Session.info(session).status == :busy
     assert {:error, :busy} = Session.prompt(session, "too soon")
 
@@ -121,6 +122,28 @@ defmodule Lemieux.TUI.VerificationTest do
     {session, provider, row, pump, state}
   end
 
+  test "Mix prerequisite failures finish with a blocked status without asking for repair", ctx do
+    {session, provider, row, pump, state} = held(ctx, "mix test")
+
+    send(
+      pump,
+      {:output,
+       """
+       Unchecked dependencies for environment test:
+       * fixture_dependency (Hex package)
+         the dependency is not available
+       ** (Mix) Can't continue due to errors on dependencies
+       """}
+    )
+
+    send(pump, {:finish, {:exit_status, 1}})
+    state = fold_to_finish(Session.id(session), state)
+    assert length(Scripted.requests(provider)) == 2
+    assert screen(state) =~ "Verification blocked · mix test"
+    assert {:ok, %{detail: %{status: "blocked", logs: logs}}} = Tasks.snapshot(session, row.id)
+    assert logs =~ "Unchecked dependencies"
+  end
+
   test "post-answer verification is visible and targeted cancellation preserves the answer",
        ctx do
     {session, provider, row, pump, state} = held(ctx)
@@ -129,9 +152,9 @@ defmodule Lemieux.TUI.VerificationTest do
     assert :ok = Tasks.action(session, row.id, :cancel)
     assert_receive {:DOWN, ^monitor, :process, ^pump, _}
     id = Session.id(session)
-    assert_receive {:lemieux, ^id, {:finished, :stop}} = finished
-    assert {:noreply, done} = TUI.handle_info(finished, state)
+    done = fold_to_finish(id, state)
     refute done.conversation.busy?
+    assert screen(done) =~ "Verification cancelled · held-check"
     assert Session.info(session).status == :idle
 
     assert {:ok,
@@ -166,6 +189,58 @@ defmodule Lemieux.TUI.VerificationTest do
     assert Session.info(session).status == :idle
   end
 
+  test "long assertion output stays in Tasks and the repair prompt stays in context", ctx do
+    {session, provider, row, pump, state} = held(ctx)
+    id = Session.id(session)
+    diagnostics = Enum.map_join(1..120, "\n", &"assertion failure #{&1}")
+    send(pump, {:output, diagnostics})
+    send(pump, {:finish, {:exit_status, 1}})
+
+    state = fold_to_finish(id, state)
+    assert length(Scripted.requests(provider)) == 3
+
+    assert Enum.any?(Session.snapshot(session).entries, fn entry ->
+             entry.type == :user && entry.payload["stop_hook"] &&
+               entry.payload["text"] =~ "assertion failure 120"
+           end)
+
+    [{work, _}] =
+      Registry.lookup(
+        Lemieux.Supervisor.background_registry(ctx.runtime),
+        {:verification, id, row.work_id}
+      )
+
+    monitor = Process.monitor(work)
+    send(work, :expire)
+    assert_receive {:DOWN, ^monitor, :process, ^work, :normal}
+    assert {:ok, %{detail: detail}} = Tasks.snapshot(session, row.id)
+    assert detail.status == "failed"
+    assert detail.logs =~ "assertion failure 1\n"
+    assert detail.logs =~ "assertion failure 120"
+
+    assert {:ok, reopened} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
+
+    for ui <- [state, reopened] do
+      assert Enum.count(ui.lines, &match?({:verification, _, _}, &1)) == 2
+      assert length(ui.lines) < 25
+      text = screen(ui)
+      assert text =~ "Verification failed (exit 1)"
+      assert text =~ "F6 Tasks"
+      refute text =~ "✓ Verification"
+      refute text =~ "assertion failure"
+      refute text =~ "Fix what your changes broke"
+    end
+
+    assert screen(reopened) =~ ~r/Answer already received.*Verification failed.*Next answer/s
+    refute state.conversation.busy?
+  end
+
+  defp fold_to_finish(id, state) do
+    assert_receive {:lemieux, ^id, event}
+    assert {:noreply, state} = TUI.handle_info({:lemieux, id, event}, state)
+    if match?({:finished, :stop}, event), do: state, else: fold_to_finish(id, state)
+  end
+
   test "an authorized later result is labeled as a new follow-up in live and saved views" do
     value = %{"follow_up" => true, "text" => "result arrived", "display_text" => "Result ready"}
 
@@ -196,14 +271,15 @@ defmodule Lemieux.TUI.VerificationTest do
         {{:timeout, 300_000}, "timed_out", 3}
       ] do
     test "#{status} verification settles coherently and preserves queued follow-ups", ctx do
-      {session, provider, _row, pump, _state} = held(ctx)
+      {session, provider, _row, pump, state} = held(ctx)
       id = Session.id(session)
 
       if unquote(status) == "passed",
         do: assert(:ok = Session.follow_up(session, "queued question"))
 
       send(pump, {:finish, unquote(Macro.escape(event))})
-      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      state = fold_to_finish(id, state)
+      assert screen(state) =~ "Verification " <> String.replace(unquote(status), "_", " ")
       assert {:ok, %{last: %{"status" => unquote(status)}}} = Verify.status(session)
       expected = if unquote(status) == "passed", do: 3, else: unquote(requests)
 

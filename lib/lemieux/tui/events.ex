@@ -576,33 +576,22 @@ if Code.ensure_loaded?(ExRatatui.App) do
            {:entry,
             %{
               type: :extension_state,
-              payload: %{
-                "namespace" => "lemieux.verify",
-                "value" => %{"last" => %{"task_id" => _id} = last}
-              }
-            }},
+              payload: %{"namespace" => "lemieux.verify"}
+            } = entry},
            effects
          ) do
-      text =
-        if last["status"] == "running",
-          do: "Answer received · verifying #{last["command"]} · F6 Tasks to inspect or stop",
-          else: "Verification #{last["status"]}: #{last["command"] || last["reason"]}"
-
-      {Transcript.say(state, :lmx, text), effects}
+      rows = TranscriptPresentation.verification_rows(entry, state.lines)
+      {Transcript.append_rows(state, rows), effects}
     end
 
     defp present_event(state, {:entry, %{type: :extension_state} = entry}, effects),
       do: {PlanPanel.observe(state, entry), effects}
 
-    # A stop hook's message to the model — verify's report, continuation's
-    # nudge, a command hook's feedback — arrives as a user message the person
-    # did not type, so nothing else draws it. What the person typed was drawn
-    # when it was submitted.
+    # Stop-hook feedback arrives as a user entry. The person's own message
+    # was already drawn at submission.
     defp present_event(state, {:entry, %{type: :user} = entry}, effects) do
-      case TranscriptPresentation.harness_lines(entry) do
-        [] -> {state, effects}
-        rows -> {Transcript.append_rows(state, rows), effects}
-      end
+      rows = TranscriptPresentation.harness_lines(entry) || []
+      {Transcript.append_rows(state, rows), effects}
     end
 
     # An attempt the stream broke off in the middle of: kept on the record,

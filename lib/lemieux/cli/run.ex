@@ -728,12 +728,31 @@ defmodule Lemieux.CLI.Run do
       stop_reason: result.stop_reason,
       error: result.error,
       usage: result.usage,
-      category: category
+      category: category,
+      loop_stop: loop_stop(result)
     }
   end
 
   defp outcome(id, {:error, reason}),
     do: %{session_id: id, text: "", stop_reason: nil, error: reason, usage: nil, category: :other}
+
+  defp loop_stop(%{stop_reason: reason, entries: entries})
+       when reason in [:max_turns, :no_progress] do
+    reason = Atom.to_string(reason)
+
+    Enum.find_value(Enum.reverse(entries), fn
+      %{
+        type: :error,
+        payload: %{"stop_reason" => ^reason, "max_turns" => _, "turns_taken" => _} = payload
+      } ->
+        Map.take(payload, ~w(stop_reason reason turns_taken max_turns follow_up_saved))
+
+      _entry ->
+        nil
+    end)
+  end
+
+  defp loop_stop(_result), do: nil
 
   # The answer the prompt ended on. A run that failed before finishing one
   # keeps the last text the model produced — an interrupted stream's partial
@@ -813,6 +832,14 @@ defmodule Lemieux.CLI.Run do
       "the answer did not complete: it was cut off at the model's output limit; " <>
         "#{CLI.program(out.opts)} run --resume #{id} continue picks up where it stopped"
 
+  defp message(out, %{loop_stop: %{"stop_reason" => "max_turns"} = limit, session_id: id}) do
+    Conversation.loop_stop_message(limit) <>
+      " To continue with a chosen allowance, use #{CLI.program(out.opts)} " <>
+      "run --resume #{id} --max-turns N 'continue the unfinished task'."
+  end
+
+  defp message(_out, %{loop_stop: %{} = limit}), do: Conversation.loop_stop_message(limit)
+
   defp message(_out, %{error: nil, stop_reason: reason}),
     do: "session did not complete: #{inspect(reason)}"
 
@@ -848,8 +875,14 @@ defmodule Lemieux.CLI.Run do
 
   defp error_object(_out, %{category: :ok}), do: nil
 
-  defp error_object(out, outcome),
-    do: %{"category" => Atom.to_string(outcome.category), "message" => message(out, outcome)}
+  defp error_object(out, outcome) do
+    fields = %{"category" => Atom.to_string(outcome.category), "message" => message(out, outcome)}
+
+    counts =
+      Map.take(Map.get(outcome, :loop_stop) || %{}, ~w(turns_taken max_turns follow_up_saved))
+
+    Map.merge(fields, counts)
+  end
 
   defp stop_reason_text(nil), do: nil
   defp stop_reason_text(reason) when is_atom(reason), do: Atom.to_string(reason)

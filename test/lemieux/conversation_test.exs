@@ -1082,15 +1082,38 @@ defmodule Lemieux.ConversationTest do
     end
 
     test "a turn the session stopped on its own says which bound it hit" do
-      assert conversation(busy?: true)
-             |> Conversation.event({:finished, :max_turns})
-             |> elem(1)
-             |> said() =~ "turns"
+      entry = %{
+        type: :error,
+        payload: %{
+          "stop_reason" => "max_turns",
+          "turns_taken" => 400,
+          "max_turns" => 400,
+          "follow_up_saved" => true
+        }
+      }
 
-      assert conversation(busy?: true)
-             |> Conversation.event({:finished, :no_progress})
-             |> elem(1)
-             |> said() =~ "same answer"
+      {busy, effects} = Conversation.event(conversation(busy?: true), {:entry, entry})
+      assert said(effects) =~ "Turn limit reached (400/400 model requests)"
+      assert said(effects) =~ "Follow-up results are saved"
+      assert said(effects) =~ "--max-turns"
+      {done, effects} = Conversation.event(busy, {:finished, :max_turns})
+      refute done.busy?
+      refute said(effects) =~ "too many turns"
+
+      cycle = %{
+        entry
+        | payload: %{
+            "stop_reason" => "no_progress",
+            "turns_taken" => 6,
+            "max_turns" => 20,
+            "reason" => "most of the last 6 calls repeated an earlier call"
+          }
+      }
+
+      {_busy, effects} = Conversation.event(conversation(busy?: true), {:entry, cycle})
+      assert said(effects) =~ "Progress guard stopped the turn (6/20 model requests)"
+      assert said(effects) =~ "most of the last 6 calls repeated"
+      refute said(effects) =~ "--max-turns"
     end
 
     test "an ordinary end of turn says nothing about why" do

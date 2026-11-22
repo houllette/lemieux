@@ -163,6 +163,14 @@ rather than held until it answers. A server's `ping` is answered, and
 `notifications/tools/list_changed` makes the client list the tools again and
 tell the session.
 
+While a stdio tool is waiting, open `/mcp` and press Enter on its server to
+see the request ID, whether progress has arrived, and the silence budget.
+Return to the composer and use `/cancel` to stop the turn. The inspector
+also shows a recent timed-out or cancelled request and whether its reply
+arrived afterwards. The diagnostics contain timing and framing information
+without tool arguments or replies. A remote operation can finish separately
+from its reply, so check the remote state before repeating a timed-out call.
+
 With `interactive_auth: false`, a server whose OAuth needs somebody at a
 browser is reported as `{:needs_auth, info}` rather than opening a page and
 holding startup; a stored or refreshable token is still used. The host

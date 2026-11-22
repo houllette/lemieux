@@ -104,7 +104,8 @@ defmodule Lemieux.Session.Prompts do
     |> ToolWave.stop(
       :max_turns,
       reason <>
-        ". Follow-up results were saved. Send a new prompt to continue with a fresh allowance."
+        ". Follow-up results were saved. Send a new prompt to continue with a fresh allowance.",
+      %{"follow_up_saved" => true}
     )
   end
 

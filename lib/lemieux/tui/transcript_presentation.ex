@@ -5,6 +5,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
   defmodule Lemieux.TUI.TranscriptPresentation do
     @moduledoc "Projects saved events into rows and formats delegation rows."
 
+    alias Lemieux.Conversation
     alias Lemieux.Diagnostic
     alias Lemieux.Extensions.Verify
     alias Lemieux.ID.Shorthand
@@ -235,6 +236,13 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
        calls}
     end
 
+    defp transcript_entry(
+           %{type: :extension_state, payload: %{"namespace" => "lemieux.verify"}} = entry,
+           {lines, calls},
+           _view
+         ),
+         do: {lines ++ verification_rows(entry, lines), calls}
+
     defp transcript_entry(entry, {lines, calls}, _view), do: {lines ++ entry_lines(entry), calls}
 
     defp merged_child(lines, child) do
@@ -272,11 +280,17 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
       do: [{:lmx, question_answer(payload)}]
 
     defp entry_lines(%{type: :user, payload: %{"text" => text}} = entry) do
-      case harness_lines(entry) do
-        [] -> split_lines(:you, text)
-        lines -> lines
-      end
+      harness_lines(entry) || split_lines(:you, text)
     end
+
+    defp entry_lines(%{
+           type: :error,
+           payload: %{"stop_reason" => reason, "max_turns" => _, "turns_taken" => _} = limit
+         })
+         when reason in ["max_turns", "no_progress"],
+         do: [
+           {:lmx, Conversation.loop_stop_message(limit) <> Conversation.turn_limit_hint(limit)}
+         ]
 
     defp entry_lines(%{type: :error, payload: payload}) do
       message =
@@ -342,38 +356,51 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
     defp split_lines(who, text) when is_binary(text),
       do: Enum.map(String.split(text, "\n"), &{who, &1})
 
-    @doc "Whether a user message is one the verify extension wrote."
-    @spec verify?(String.t()) :: boolean()
-    def verify?(text) when is_binary(text), do: String.starts_with?(text, Verify.marker())
-    def verify?(_text), do: false
-
-    @doc "A verify message's rows, without its marker."
-    @spec verify_lines(String.t()) :: [{:verify, String.t()}]
-    def verify_lines(text) do
-      text
-      |> String.replace_prefix(Verify.marker(), "")
-      |> String.trim_leading()
-      |> then(&split_lines(:verify, &1))
+    @doc "A compact check status shared by live and reopened transcripts."
+    @spec verification_rows(Lemieux.Entry.t(), list()) :: [{:verification, term(), String.t()}]
+    def verification_rows(
+          %{payload: %{"value" => %{"last" => %{"status" => status} = last}}},
+          lines
+        )
+        when status != "skipped" do
+      row = {:verification, last["task_id"] || last["through_seq"], verification_text(last)}
+      if row in lines, do: [], else: [row]
     end
 
-    @doc """
-    The rows for a user entry the harness wrote, or `[]` for one the person
-    did.
+    def verification_rows(_entry, _lines), do: []
 
-    A stop hook's message (`Lemieux.Transcript.stop_hook?/1`) is drawn as
-    `:hook` rows without its `[lmx …]` tag, and verify's as `:verify` rows
-    with its check mark — including verify messages from before the session
-    marked stop hooks' words, which only the tag identifies.
-    """
-    @spec harness_lines(entry :: Lemieux.Entry.t()) :: [{:hook | :verify, String.t()}]
+    defp verification_text(%{"status" => "running", "command" => command}),
+      do: "Answer received · verifying #{brief(command)} · F6 Tasks to inspect or stop"
+
+    defp verification_text(last) do
+      detail = brief(last["command"] || last["reason"])
+      logs = if last["task_id"], do: " · F6 Tasks for logs", else: ""
+      "Verification #{verification_status(last)} · #{detail}#{logs}"
+    end
+
+    defp verification_status(%{"status" => "failed", "exit_status" => status})
+         when status in [126, 127],
+         do: "blocked (exit #{status})"
+
+    defp verification_status(%{"status" => "failed", "exit_status" => status})
+         when is_integer(status),
+         do: "failed (exit #{status})"
+
+    defp verification_status(%{"status" => "denied"}), do: "blocked by permissions"
+    defp verification_status(%{"status" => "failed_to_run"}), do: "unavailable"
+    defp verification_status(%{"status" => "output_limit"}), do: "stopped at the output limit"
+    defp verification_status(%{"status" => status}), do: String.replace(status, "_", " ")
+
+    @doc "Rows for a harness message, or `nil` for a message the person typed."
+    @spec harness_lines(entry :: Lemieux.Entry.t()) :: [{:hook, String.t()}] | nil
     def harness_lines(%{type: :user, payload: %{"text" => text}} = entry) when is_binary(text) do
       cond do
-        verify?(text) -> verify_lines(text)
+        String.starts_with?(text, Verify.marker()) -> []
         Transcript.stop_hook?(entry) -> split_lines(:hook, String.replace(text, @hook_tag, ""))
-        true -> []
+        true -> nil
       end
     end
 
-    def harness_lines(_entry), do: []
+    def harness_lines(_entry), do: nil
   end
 end

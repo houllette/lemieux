@@ -68,8 +68,8 @@ defmodule Lemieux.MCP.Client do
   This contains no transport error payload; sessions retain cached descriptors
   for inspection while removing that connection's tools from future requests.
 
-  For stdio connections, `info/1` reports the active requests' timing, their
-  silence budgets, and numeric framing and unmatched-response counters.
+  For stdio connections, `info/1` reports active request timing, silence
+  budgets, numeric framing counters and a bounded list of recent outcomes.
   Debug logs correlate request ids with the client PID and record send, first
   progress, and terminal outcomes without including server payloads.
 
@@ -98,6 +98,7 @@ defmodule Lemieux.MCP.Client do
   @timeout :timer.seconds(30)
   @startup_timeout :timer.seconds(60)
   @tool_timeout :timer.minutes(10)
+  @stdio_recent_limit 12
 
   # JSON-RPC's "method not found", for the requests a server may not send us.
   @method_not_found -32_601
@@ -211,8 +212,8 @@ defmodule Lemieux.MCP.Client do
   capabilities it declared, and the notices from its last tool listing —
   tools renamed to fit a provider, or left out.
   """
-  @spec info(client :: client()) :: map()
-  def info(client), do: GenServer.call(client, :info, :infinity)
+  @spec info(client :: client(), timeout :: timeout()) :: map()
+  def info(client, timeout \\ :infinity), do: GenServer.call(client, :info, timeout)
 
   @doc false
   @spec finish_startup(client :: client()) :: :ok | {:error, String.t()}
@@ -253,6 +254,7 @@ defmodule Lemieux.MCP.Client do
       notify: Keyword.get(opts, :notify, owner),
       pending: %{},
       unmatched_responses: 0,
+      stdio_recent: [],
       monitors: %{},
       listed?: false,
       notices: [],
@@ -635,7 +637,7 @@ defmodule Lemieux.MCP.Client do
       :duplex ->
         case state.module.notify(state.transport, request) do
           {:ok, transport} ->
-            entry = entry(continue, timeout, nil)
+            entry = entry(continue, timeout, nil, method)
             trace_stdio(state, id, entry, :sent)
 
             %{state | transport: transport}
@@ -651,11 +653,11 @@ defmodule Lemieux.MCP.Client do
       # progress keep a long call alive, and an abandoned call is killed.
       :independent ->
         task = spawn_call(state, id, request, timeout)
-        track(state, id, entry(continue, timeout, task), Keyword.get(opts, :from))
+        track(state, id, entry(continue, timeout, task, method), Keyword.get(opts, :from))
     end
   end
 
-  defp entry(continue, timeout, task),
+  defp entry(continue, timeout, task, method),
     do: %{
       continue: continue,
       timeout: timeout,
@@ -663,6 +665,7 @@ defmodule Lemieux.MCP.Client do
       token: nil,
       task: task,
       caller: nil,
+      tool?: method == "tools/call",
       sent_at: System.monotonic_time(:millisecond),
       last_progress_at: nil,
       progress_count: 0
@@ -674,19 +677,12 @@ defmodule Lemieux.MCP.Client do
     pending =
       state.pending
       |> Enum.take(20)
-      |> Enum.map(fn {id, entry} ->
-        %{
-          request_id: id,
-          elapsed_ms: now - entry.sent_at,
-          silence_ms: now - (entry.last_progress_at || entry.sent_at),
-          timeout_ms: entry.timeout,
-          progress_count: entry.progress_count
-        }
-      end)
+      |> Enum.map(fn {id, entry} -> request_status(id, entry, now) end)
 
     %{
       pending: pending,
       pending_count: map_size(state.pending),
+      recent: state.stdio_recent,
       unmatched_responses: state.unmatched_responses,
       stdout_bytes: state.transport.total_bytes,
       unframed_bytes: byte_size(state.transport.buffer),
@@ -695,6 +691,45 @@ defmodule Lemieux.MCP.Client do
   end
 
   defp stdio_status(_state), do: nil
+
+  defp request_status(id, entry, now) do
+    %{
+      request_id: id,
+      tool?: entry.tool?,
+      elapsed_ms: now - entry.sent_at,
+      silence_ms: now - (entry.last_progress_at || entry.sent_at),
+      timeout_ms: entry.timeout,
+      progress_count: entry.progress_count
+    }
+  end
+
+  defp settle_stdio(%{module: Stdio} = state, id, entry, phase) do
+    trace_stdio(state, id, entry, phase)
+
+    status =
+      id
+      |> request_status(entry, System.monotonic_time(:millisecond))
+      |> Map.merge(%{phase: phase, late_response?: false})
+
+    %{state | stdio_recent: Enum.take([status | state.stdio_recent], @stdio_recent_limit)}
+  end
+
+  defp settle_stdio(state, _id, _entry, _phase), do: state
+
+  defp note_unmatched_response(state, id) do
+    recent =
+      Enum.map(state.stdio_recent, fn
+        %{request_id: ^id, phase: phase, late_response?: false} = request
+        when phase in [:timed_out, :cancelled] ->
+          Logger.debug(fn -> "MCP stdio #{inspect(self())} request #{id} late_response" end)
+          %{request | late_response?: true}
+
+        request ->
+          request
+      end)
+
+    %{state | unmatched_responses: state.unmatched_responses + 1, stdio_recent: recent}
+  end
 
   defp trace_stdio(%{module: Stdio} = state, id, entry, phase) do
     Logger.debug(fn ->
@@ -817,9 +852,11 @@ defmodule Lemieux.MCP.Client do
         state
 
       {entry, state} ->
-        trace_stdio(state, id, entry, :cancelled)
         with {pid, _ref} <- entry.task, do: Process.exit(pid, :kill)
-        cancel_on_wire(state, id, reason)
+
+        state
+        |> settle_stdio(id, entry, :cancelled)
+        |> cancel_on_wire(id, reason)
     end
   end
 
@@ -849,12 +886,11 @@ defmodule Lemieux.MCP.Client do
   def handle_info({:mcp_deadline, id, token}, state) do
     case Map.fetch(state.pending, id) do
       {:ok, %{token: ^token, timeout: timeout} = entry} ->
-        trace_stdio(state, id, entry, :timed_out)
-        state = cancel_on_wire(state, id, "timed out")
+        state = state |> settle_stdio(id, entry, :timed_out) |> cancel_on_wire(id, "timed out")
 
         message =
           "the MCP server #{state.server} did not answer within #{duration(timeout)} " <>
-            "of silence (request #{id})"
+            "of silence (request #{id})" <> stdio_timeout_hint(state, entry)
 
         {:noreply, complete(state, id, {:error, message})}
 
@@ -909,6 +945,12 @@ defmodule Lemieux.MCP.Client do
 
   def handle_info(message, state), do: other(message, state)
 
+  defp stdio_timeout_hint(%{module: Stdio}, %{tool?: true, progress_count: count}) do
+    ". Progress notifications received: #{count}. Check the remote state before retrying."
+  end
+
+  defp stdio_timeout_hint(_state, _entry), do: ""
+
   defp other({:EXIT, port, reason}, %{transport: %{port: port}} = state) when is_port(port) do
     {:noreply, closed(state, "the MCP server #{state.server} stopped: #{inspect(reason)}")}
   end
@@ -946,11 +988,10 @@ defmodule Lemieux.MCP.Client do
        when is_map_key(message, "result") or is_map_key(message, "error") do
     case Map.fetch(state.pending, id) do
       {:ok, entry} ->
-        trace_stdio(state, id, entry, :response)
-        complete(state, id, {:ok, message})
+        state |> settle_stdio(id, entry, :response) |> complete(id, {:ok, message})
 
       :error ->
-        %{state | unmatched_responses: state.unmatched_responses + 1}
+        note_unmatched_response(state, id)
     end
   end
 
@@ -1057,8 +1098,9 @@ defmodule Lemieux.MCP.Client do
     state.pending
     |> Map.keys()
     |> Enum.reduce(state, fn id, state ->
-      trace_stdio(state, id, Map.fetch!(state.pending, id), :closed)
-      complete(state, id, {:error, state.failure})
+      state
+      |> settle_stdio(id, Map.fetch!(state.pending, id), :closed)
+      |> complete(id, {:error, state.failure})
     end)
   end
 

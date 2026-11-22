@@ -66,6 +66,7 @@ DUPLEX_TOOLS = [
                 "interval": {"type": "number"},
                 "control_port": {"type": "integer"},
                 "split_reply": {"type": "boolean"},
+                "reply_after_cancellation": {"type": "boolean"},
             },
         },
     },
@@ -424,17 +425,20 @@ def duplex_tool(request_id, name, arguments, params, modern):
                 with DUPLEX["lock"]:
                     DUPLEX["holds"][request_id] = control
                 try:
-                    if arguments.get("split_reply"):
+                    if arguments.get("split_reply") or arguments.get("reply_after_cancellation"):
                         # Simulate completed work before the server sends its
                         # matching final response.
                         write({"jsonrpc": "2.0", "method": "notifications/progress",
                                "params": {"progressToken": token, "progress": 1, "total": 1}})
-                        write(text("unmatched-private-id", "unmatched-private-payload", modern))
+                        if arguments.get("split_reply"):
+                            write(text("unmatched-private-id", "unmatched-private-payload", modern))
                     control.sendall(b"ready\n")
                     control.recv(1)
                 finally:
                     with DUPLEX["lock"]:
                         DUPLEX["holds"].pop(request_id, None)
+            if arguments.get("reply_after_cancellation"):
+                return text(request_id, "late-private-payload", modern)
             with DUPLEX["lock"]:
                 if request_id in DUPLEX["cancelled"]:
                     return None

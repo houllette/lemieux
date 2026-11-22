@@ -945,6 +945,17 @@ defmodule Lemieux.Conversation do
   def event(conversation, {:entry, %{type: :user, payload: %{"source" => "notification"}}}),
     do: {%{conversation | busy?: true}, []}
 
+  def event(
+        conversation,
+        {:entry,
+         %{
+           type: :error,
+           payload: %{"stop_reason" => reason, "max_turns" => _, "turns_taken" => _} = limit
+         }}
+      )
+      when reason in ["max_turns", "no_progress"],
+      do: {conversation, [{:say, loop_stop_message(limit) <> turn_limit_hint(limit)}]}
+
   def event(conversation, {:reflection_result, :ok}), do: {conversation, []}
 
   def event(conversation, {:reflection_result, {:error, reason}}),
@@ -1219,21 +1230,6 @@ defmodule Lemieux.Conversation do
   def event(conversation, {:finished, :cancelled}),
     do: finished(conversation, [{:say, "cancelled"}], :cancelled)
 
-  # A session that stopped itself has to say so. The transcript gets an error entry
-  # either way, but nobody is reading the transcript at the moment the prompt comes
-  # back — and a turn that ends early without a word is indistinguishable from one
-  # that finished.
-  def event(conversation, {:finished, :max_turns}),
-    do: finished(conversation, [{:say, "stopped: too many turns without finishing"}], :max_turns)
-
-  def event(conversation, {:finished, :no_progress}),
-    do:
-      finished(
-        conversation,
-        [{:say, "stopped: the last rounds asked the same thing and got the same answer"}],
-        :no_progress
-      )
-
   def event(conversation, {:finished, {:budget, %{spent: spent, estimate: estimate, cap: cap}}}),
     do:
       finished(
@@ -1249,6 +1245,29 @@ defmodule Lemieux.Conversation do
   def event(conversation, {:finished, stop_reason}), do: finished(conversation, [], stop_reason)
 
   def event(conversation, _other), do: {conversation, []}
+
+  @doc "Describes a stop by the progress guard or turn limit using the recorded counts."
+  @spec loop_stop_message(limit :: map()) :: String.t()
+  def loop_stop_message(%{
+        "stop_reason" => "no_progress",
+        "reason" => reason,
+        "turns_taken" => used,
+        "max_turns" => max
+      }),
+      do: "Progress guard stopped the turn (#{used}/#{max} model requests) · #{reason}"
+
+  def loop_stop_message(%{"turns_taken" => used, "max_turns" => max} = limit) do
+    message = "Turn limit reached (#{used}/#{max} model requests)."
+    if limit["follow_up_saved"], do: message <> " Follow-up results are saved.", else: message
+  end
+
+  @doc false
+  @spec turn_limit_hint(limit :: map()) :: String.t()
+  def turn_limit_hint(%{"stop_reason" => "no_progress"}), do: ""
+
+  def turn_limit_hint(%{}) do
+    " Send a new prompt for a fresh allowance, or reopen this session with --max-turns N."
+  end
 
   defp compaction_window(%{tokens: %{before: before, after: _remaining}}),
     do: ["last request #{tokens(before)} tok"]

@@ -1,9 +1,11 @@
 defmodule Lemieux.MCP.InspectionTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureLog
+  alias Lemieux.MCP.Client
   alias Lemieux.Providers.Scripted
   alias Lemieux.Session
   alias Lemieux.Store.JSONL
+  alias LemieuxTest.CommandGate
   @moduletag :tmp_dir
 
   defmodule Catalog do
@@ -49,6 +51,42 @@ defmodule Lemieux.MCP.InspectionTest do
     def prepare_tools(state, tools), do: {tools, state}
     @impl true
     def close(_state), do: :ok
+  end
+
+  test "inspection surfaces a live stdio request while the session remains responsive", %{
+    tmp_dir: dir
+  } do
+    runtime = :"mcp_pending_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: runtime})
+    fixture = Path.expand("../../fixtures/mcp_server.py", __DIR__)
+
+    {:ok, session} =
+      Lemieux.start_session(
+        supervisor: runtime,
+        provider: Scripted.new([]),
+        model: "test:model",
+        tools: [],
+        store: JSONL.new(dir),
+        mcp_servers: [%{"name" => "stdio", "command" => "python3", "args" => [fixture, "duplex"]}]
+      )
+
+    assert [%{name: "stdio"}] = Session.mcp_status(session, :infinity)
+    [%{client: client}] = Session.mcp_clients(session)
+    gate = CommandGate.new()
+    {:ok, port} = :inet.port(gate.listener)
+    task = Task.async(fn -> Client.call_tool(client, "slow", %{"control_port" => port}) end)
+    socket = CommandGate.ready(gate)
+
+    assert {:ok, %{stdio: %{pending_count: 1, pending: [pending]}}} =
+             Session.inspect_mcp(session, "stdio")
+
+    assert %{tool?: true, progress_count: 0, timeout_ms: 600_000, request_id: id} = pending
+    assert :ok = CommandGate.release(socket)
+    assert {:ok, %{model_text: "released"}} = Task.await(task)
+
+    assert {:ok,
+            %{stdio: %{pending_count: 0, recent: [%{phase: :response, request_id: ^id} | _]}}} =
+             Session.inspect_mcp(session, "stdio")
   end
 
   test "transport closure is visible without discarding cached tool details", %{tmp_dir: dir} do
