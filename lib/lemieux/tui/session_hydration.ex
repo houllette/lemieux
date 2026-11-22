@@ -81,10 +81,10 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
               restore_systemone(snapshot.entries, opts.empty_tools.systemone)
             ),
           session_view:
-            Map.merge(state.session_view, %{
-              throughput: throughput(snapshot.entries),
-              requested_access_program: AccessProgram.restore(snapshot.entries, snapshot.model)
-            }),
+            state.session_view
+            |> Map.merge(AccessProgram.restore(snapshot.entries, snapshot.model))
+            |> Map.put(:throughput, throughput(snapshot.entries))
+            |> Map.put(:standard_access?, get_in(snapshot, [:params, :standard_access]) == true),
           turn: opts.idle_turn
       }
     end

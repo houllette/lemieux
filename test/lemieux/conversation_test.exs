@@ -654,6 +654,12 @@ defmodule Lemieux.ConversationTest do
       assert {_conversation, [{:set_model, "test:qwen:tag"}]} =
                Conversation.input(conversation(), "/model qwen:tag")
 
+      assert {_conversation, [{:set_standard_model, "test:gpt-6-sol"}]} =
+               Conversation.input(conversation(), "/model gpt-6-sol --standard-access")
+
+      assert said(effects(conversation(busy?: true), "/model gpt-6-sol --standard-access")) =~
+               "wait"
+
       effects = effects(conversation(busy?: true), "/model gpt-5")
       refute Enum.any?(effects, &match?({:set_model, _model}, &1))
       assert said(effects) =~ "wait"

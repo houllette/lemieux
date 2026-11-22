@@ -355,6 +355,11 @@ defmodule Lemieux.Session.Prompts do
         do: %{request | params: Keyword.merge(Priority.clear(request.params), current)},
         else: request
 
+    request =
+      if original.params[:standard_access] == true,
+        do: %{request | params: Keyword.put(request.params, :standard_access, true)},
+        else: request
+
     case Tool.validate_all(request.tools) do
       :ok -> Requests.dispatch_request(state, request)
       {:error, reason} -> Requests.request_hook_failed(state, {:invalid_tool_catalog, reason})

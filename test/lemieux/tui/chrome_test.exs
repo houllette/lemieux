@@ -185,24 +185,55 @@ defmodule Lemieux.TUI.ChromeTest do
     assert {:noreply, observed} = TUI.handle_info({:lemieux, state.id, {:entry, entry}}, state)
     assert observed.session_view.requested_access_program == "Standard"
     assert Enum.map_join(header(observed, 100).spans, & &1.content) =~ "STANDARD REQ · FAST"
-    assert Enum.map_join(header(observed, 21).spans, & &1.content) =~ "ACCESS STD · FAST"
+    assert Enum.map_join(header(observed, 21).spans, & &1.content) =~ "STD REQ · FAST"
 
     assert %{items: [label]} = observed |> type("/model ") |> suggestions()
     assert label =~ "last requested Standard"
 
-    saved = Map.put(snapshot("restored", [entry]), :model, model)
+    wrong_request =
+      Lemieux.Entry.new(:assistant, %{
+        "request_id" => "prior-request",
+        "confirmed_access_program" => "standard"
+      })
+
+    confirmation =
+      Lemieux.Entry.new(:assistant, %{
+        "request_id" => requested["id"],
+        "confirmed_access_program" => "standard"
+      })
+
+    assert {:noreply, unconfirmed} =
+             TUI.handle_info({:lemieux, state.id, {:entry, wrong_request}}, observed)
+
+    assert unconfirmed.session_view.confirmed_access_program == nil
+
+    assert {:noreply, confirmed} =
+             TUI.handle_info({:lemieux, state.id, {:entry, confirmation}}, unconfirmed)
+
+    assert confirmed.session_view.confirmed_access_program == "Standard"
+    assert Enum.map_join(header(confirmed, 100).spans, & &1.content) =~ "STANDARD REQ/CONF · FAST"
+    assert Enum.map_join(header(confirmed, 21).spans, & &1.content) =~ "STD REQ/CONF · FAST"
+
+    saved = Map.put(snapshot("restored", [entry, confirmation]), :model, model)
     session = fake_session(saved)
     assert {:ok, reopened} = TUI.mount(test_mode: {80, 24}, start: fn -> {:ok, session} end)
     assert reopened.session_view.requested_access_program == "Standard"
+    assert reopened.session_view.confirmed_access_program == "Standard"
 
-    no_program = Lemieux.Entry.new(:request, Map.put(requested, "params", %{}))
+    no_program =
+      Lemieux.Entry.new(:request, Lemieux.RequestSnapshot.build(Lemieux.Request.new(model)))
 
     assert {:noreply, ordinary} =
-             TUI.handle_info({:lemieux, state.id, {:entry, no_program}}, observed)
+             TUI.handle_info({:lemieux, state.id, {:entry, no_program}}, confirmed)
 
     assert ordinary.session_view.requested_access_program == nil
+    assert ordinary.session_view.confirmed_access_program == nil
     assert Enum.map_join(header(ordinary, 100).spans, & &1.content) =~ "FAST"
     refute Enum.map_join(header(ordinary, 100).spans, & &1.content) =~ "REQ"
+
+    config = Lemieux.Entry.new(:session, %{"params" => %{"standard_access" => true}})
+    assert {:noreply, next} = TUI.handle_info({:lemieux, state.id, {:entry, config}}, ordinary)
+    assert Enum.map_join(header(next, 100).spans, & &1.content) =~ "STANDARD NEXT · FAST"
   end
 
   defp header(state, width \\ 80) do

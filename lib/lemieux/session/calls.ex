@@ -151,6 +151,19 @@ defmodule Lemieux.Session.Calls do
     end
   end
 
+  def call({:set_standard_model, model}, _from, state) do
+    cond do
+      Core.busy?(state) ->
+        {:reply, {:error, :busy}, state}
+
+      not Provider.standard_access?(state.provider, model) ->
+        {:reply, {:error, {:standard_access_unsupported, model}}, state}
+
+      true ->
+        Catalog.select_standard_model(state, model)
+    end
+  end
+
   def call({:set_provider, _provider}, _from, state) when not is_nil(state.turn),
     do: {:reply, {:error, :busy}, state}
 

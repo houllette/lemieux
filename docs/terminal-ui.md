@@ -27,10 +27,17 @@ when the screen closes; redirected stderr keeps its logging behavior.
 The `FLEX`, `FAST`, and `ULTRAFAST` badges stay visible while model metadata
 scrolls. Choose Standard to return to the connection’s baseline.
 
-When the latest prepared OpenAI request includes a recognized access
-program, the header shows its label with `REQ`. The current model row
-in the picker shows the same requested value. The label describes the
-prepared request. Provider authorization and the response determine access.
+On supported OpenAI Responses models, choose the **Standard access** row in
+the model picker or enter `/model MODEL --standard-access`. The choice applies
+to subsequent requests, persists when you resume or fork, and carries over
+when you select another compatible model. The ordinary model row keeps the
+session's existing choice. Switching to an incompatible model clears the
+explicit setting.
+
+The header shows `STANDARD NEXT` when Standard is selected and the latest
+request has yet to use it. `REQ` shows the program in the latest prepared
+request. `CONF` shows a program explicitly reported by that request's
+completed response. When the values match, the header uses `REQ/CONF`.
 
 Update announcements arriving during session preparation share the setup
 notice box. Esc dismisses the whole box; expiry during preparation stays dismissed.

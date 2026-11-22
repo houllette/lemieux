@@ -370,11 +370,47 @@ defmodule Lemieux.Providers.ReqLLM do
     discovered ++ fallbacks
   end
 
+  # General-purpose models whose Responses API accepts explicit Standard.
+  # The picker uses the catalog's Responses capability and accepts the
+  # connection's configured API base URL.
+  @standard_access_models ~w(gpt-6-sol gpt-6-luna gpt-6.2-astra gpt-6.2-sol gpt-6.1-sol gpt-6.1-terra gpt-6-astra)
+
   @impl Lemieux.Provider
   def model_metadata(%State{route: route}) when not is_nil(route),
     do: Route.model_metadata(route)
 
-  def model_metadata(_state), do: %{}
+  def model_metadata(provider_state) do
+    state = normalize_state(provider_state)
+
+    for id <- @standard_access_models,
+        spec = "openai:" <> id,
+        advertise_standard_access?(spec, state),
+        into: %{},
+        do: {spec, %{standard_access?: true}}
+  end
+
+  defp advertise_standard_access?(spec, state) do
+    with {:ok, model} <- standard_access_model(spec, state.options),
+         {:ok, options} <- options_for_model(state, model),
+         :ok <- check_key(model, options) do
+      true
+    else
+      _other -> false
+    end
+  end
+
+  defp standard_access_model("openai:" <> id = spec, options)
+       when id in @standard_access_models do
+    with nil <- get_in(options, [:transport_routes, "openai"]),
+         {:ok, %{id: ^id} = resolved} <- model(spec, options),
+         {:ok, :openai_responses, _, _} <- ReqLLM.RequestPlan.openai_surface(resolved) do
+      {:ok, resolved}
+    else
+      _other -> :unsupported
+    end
+  end
+
+  defp standard_access_model(_spec, _options), do: :unsupported
 
   @impl Lemieux.Provider
   def validate_model(%State{route: route}, spec, tools) when not is_nil(route),
@@ -409,7 +445,8 @@ defmodule Lemieux.Providers.ReqLLM do
   @impl Lemieux.Provider
   def run(%State{route: route, options: options} = state, %Request{} = request, emit)
       when not is_nil(route) do
-    with :ok <- routed_fast_mode(route, request),
+    with :ok <- routed_access(request),
+         :ok <- routed_fast_mode(route, request),
          {:ok, {target, options}} <-
            Route.target(route, request, Keyword.merge(options, request.params)) do
       stream_at(
@@ -433,6 +470,12 @@ defmodule Lemieux.Providers.ReqLLM do
          :ok <- check_tools(model, request, options) do
       stream(request, model, options, emit, state)
     end
+  end
+
+  defp routed_access(request) do
+    if request.params[:standard_access] == true,
+      do: {:error, {:standard_access_unsupported, request.model}},
+      else: :ok
   end
 
   # Catalog modes carry the actual wire value. Do not infer support from a
@@ -585,11 +628,30 @@ defmodule Lemieux.Providers.ReqLLM do
     routes = Keyword.get(options, :transport_routes, %{})
 
     with {:ok, {provider, model_id}} <- ModelSpec.split(spec),
+         {:ok, options} <- standard_access_options(spec, options),
          {:ok, options} <- priority_options(options, spec) do
       request_target(spec, model_id, Map.get(routes, provider), request_options(options))
     else
       :error -> {:error, {:invalid_model_spec, spec}}
       {:error, _reason} = error -> error
+    end
+  end
+
+  defp standard_access_options(spec, options) do
+    case Keyword.pop(options, :standard_access) do
+      {true, options} ->
+        if match?({:ok, _model}, standard_access_model(spec, options)) do
+          nested = Keyword.get(options, :provider_options, [])
+          params = Keyword.put(nested, :access_programs, %{"cyber" => "standard"})
+
+          {:ok,
+           options |> Keyword.delete(:access_programs) |> Keyword.put(:provider_options, params)}
+        else
+          {:error, {:standard_access_unsupported, spec}}
+        end
+
+      {_unset, options} ->
+        {:ok, options}
     end
   end
 
@@ -2214,7 +2276,12 @@ defmodule Lemieux.Providers.ReqLLM do
          {:ok, result} <- structured_response(request, result, emit),
          :ok <- check_answered(result, request.model) do
       Enum.each(calls(result.message, request.tools), &emit.({:tool_call, &1}))
-      message = Route.annotate_message(route, payload(result.message), result)
+
+      message =
+        route
+        |> Route.annotate_message(payload(result.message), result)
+        |> confirm_access(result, target, route)
+
       emit.({:message, message})
       if result.usage, do: emit.({:usage, json(result.usage)})
       report_served_window(served, emit)
@@ -2229,6 +2296,21 @@ defmodule Lemieux.Providers.ReqLLM do
          |> ProviderError.recognize_overflow(wire_provider(target))}
     end
   end
+
+  defp confirm_access(message, result, target, nil) do
+    # Only the final Responses object supplies explicit confirmation.
+    with "completed" <- get_in(result.provider_meta || %{}, ["status"]),
+         program when program in ["standard", "daybreak_blue", "daybreak_red"] <-
+           get_in(result.provider_meta, ["access_programs", "cyber"]),
+         {:ok, %{provider: :openai} = model} <- ReqLLM.model(target),
+         {:ok, :openai_responses, _, _} <- ReqLLM.RequestPlan.openai_surface(model) do
+      Map.put(message, "confirmed_access_program", program)
+    else
+      _other -> message
+    end
+  end
+
+  defp confirm_access(message, _result, _target, _route), do: message
 
   # ReqLLM reports an OpenAI-compatible server's error event — sent inside a
   # `200` stream, mid-answer — as the bare sentence, which classified as

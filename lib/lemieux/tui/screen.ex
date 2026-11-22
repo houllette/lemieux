@@ -557,11 +557,10 @@ if Code.ensure_loaded?(ExRatatui.App) do
     # Reserve the qualifier before the ticker's viewport is measured: otherwise
     # the service setting disappears while the metadata scrolls past it.
     defp header_badges(state, width) do
-      access = state.session_view.requested_access_program
+      access = state.session_view
       tier = priority_label(state.conversation.priority || state.conversation.fast_mode)
-      access_label = if access, do: String.upcase(access) <> " REQ"
 
-      case join_badges([access_label, tier]) do
+      case join_badges(access_badges(access, &String.upcase/1) ++ [tier]) do
         "" ->
           ""
 
@@ -571,9 +570,37 @@ if Code.ensure_loaded?(ExRatatui.App) do
           if Width.of(text) <= width do
             text
           else
-            compact = AccessProgram.compact_label(access)
-            Responsive.fit(join_badges([compact, tier]), width)
+            compact = access |> access_badges(&AccessProgram.compact_label/1) |> join_badges()
+            fit_badges(compact, tier, width)
           end
+      end
+    end
+
+    defp fit_badges(access, nil, width), do: Responsive.fit(access, width)
+    defp fit_badges("", tier, width), do: Responsive.fit(tier, width)
+
+    defp fit_badges(access, tier, width) do
+      case width - Width.of(" · " <> tier) do
+        remaining when remaining > 0 -> Responsive.fit(access, remaining) <> " · " <> tier
+        _narrow -> Responsive.fit(tier, width)
+      end
+    end
+
+    defp access_badges(view, label) do
+      requested = view.requested_access_program
+      confirmed = view.confirmed_access_program
+
+      next =
+        if view.standard_access? and requested != "Standard", do: label.("Standard") <> " NEXT"
+
+      if requested && requested == confirmed do
+        [next, label.(requested) <> " REQ/CONF"]
+      else
+        [
+          next,
+          if(requested, do: label.(requested) <> " REQ"),
+          if(confirmed, do: label.(confirmed) <> " CONF")
+        ]
       end
     end
 

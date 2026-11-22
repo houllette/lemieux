@@ -25,6 +25,7 @@ defmodule Lemieux.TUI.ModelChoices do
   alias Lemieux.ModelSpec
 
   @dated_snapshot ~r/^(.*?)(?:-|@)\d{4}-?\d{2}-?\d{2}$/
+  @standard_switch " --standard-access"
 
   @type choice :: %{
           spec: String.t(),
@@ -32,6 +33,7 @@ defmodule Lemieux.TUI.ModelChoices do
           label: String.t(),
           deprecated?: boolean(),
           personal?: boolean(),
+          standard_access?: boolean(),
           route: String.t() | nil,
           search_id: String.t()
         }
@@ -108,9 +110,11 @@ defmodule Lemieux.TUI.ModelChoices do
     choices
     |> Enum.filter(&visible_in_tab?(&1, tab, cross_route?))
     |> Enum.with_index()
-    |> Enum.filter(fn {choice, _index} -> matches_query?(choice, query) end)
+    |> Enum.filter(fn {choice, _index} ->
+      matches_query?(choice, query) or matches_standard?(choice, query)
+    end)
     |> Enum.sort_by(&match_order(&1, query))
-    |> Enum.map(&completion(&1, cross_route?))
+    |> Enum.flat_map(&completions_for(&1, query, cross_route?))
   end
 
   defp qualified_query?(choices, query) do
@@ -128,6 +132,13 @@ defmodule Lemieux.TUI.ModelChoices do
       String.contains?(String.downcase(choice.search_id), query) or
         String.contains?(String.downcase(choice.id), query)
 
+  defp matches_standard?(choice, query) do
+    choice.standard_access? and
+      (matches_query?(choice, query) or
+         String.contains?(String.downcase(choice.id <> @standard_switch), query) or
+         String.contains?("standard access", query))
+  end
+
   defp match_order({choice, index}, query) do
     id = String.downcase(choice.search_id)
     full_id = String.downcase(choice.id)
@@ -142,13 +153,27 @@ defmodule Lemieux.TUI.ModelChoices do
     {rank, index}
   end
 
-  defp completion({choice, _index}, cross_route?) do
-    %{
+  defp completions_for({choice, _index}, query, cross_route?) do
+    ordinary = %{
       label: if(cross_route?, do: qualified_label(choice), else: choice.label),
       value: "/model " <> choice.id,
       deprecated?: choice.deprecated?,
       personal?: choice.personal?
     }
+
+    standard = %{
+      ordinary
+      | label: ordinary.label <> " · Standard access",
+        value: ordinary.value <> @standard_switch
+    }
+
+    Enum.reject(
+      [
+        if(matches_query?(choice, query), do: ordinary),
+        if(matches_standard?(choice, query), do: standard)
+      ],
+      &is_nil/1
+    )
   end
 
   defp qualified_label(%{route: route, id: id, label: label})
@@ -183,6 +208,7 @@ defmodule Lemieux.TUI.ModelChoices do
       label: label,
       deprecated?: status == :deprecated,
       personal?: preferred? or is_integer(recent_index),
+      standard_access?: Map.get(metadata, :standard_access?, false),
       order:
         {priority, kind_rank(kind), status_rank(status, family_date), -family_date, snapshot?(id),
          -own_date, id}

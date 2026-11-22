@@ -124,7 +124,18 @@ defmodule Lemieux.Provider.Error do
 
   @doc "Returns a safe human-readable projection of `reason`."
   @spec message(reason :: term()) :: String.t()
-  def message(reason), do: reason |> projection() |> readable()
+  def message(reason), do: readable(access_message(code(reason)) || projection(reason))
+
+  defp access_message("invalid_access_program"),
+    do: "the provider rejected the access program for this model"
+
+  defp access_message("unsupported_access_program"),
+    do: "this model or endpoint does not support the requested access program"
+
+  defp access_message("access_program_not_enabled"),
+    do: "the provider reports that the requested access program is unavailable for this project"
+
+  defp access_message(_code), do: nil
 
   # No vendor's vocabulary is projected here. A gateway's failures are typed
   # exceptions that describe themselves (`Lemieux.Ixway.Error`), rendered by
@@ -135,6 +146,9 @@ defmodule Lemieux.Provider.Error do
     do: "unknown model #{inspect(spec)}: #{message(reason)}"
 
   defp projection({:missing_api_key, _provider, hint}) when is_binary(hint), do: hint
+
+  defp projection({:standard_access_unsupported, model}),
+    do: "explicit Standard access is unavailable for #{model} on this connection"
 
   defp projection({:tool_schema_unsupported, _provider, _tool, _keyword, message}), do: message
 
@@ -548,7 +562,9 @@ defmodule Lemieux.Provider.Error do
   """
   @spec retryable?(reason :: term()) :: boolean()
   def retryable?(reason),
-    do: not refused?(reason) and not quota_exhausted?(reason) and typed_retryable?(reason)
+    do:
+      is_nil(access_message(code(reason))) and not refused?(reason) and
+        not quota_exhausted?(reason) and typed_retryable?(reason)
 
   defp typed_retryable?(%{retryable: retryable}) when is_boolean(retryable), do: retryable
 
@@ -611,7 +627,7 @@ defmodule Lemieux.Provider.Error do
 
   defp default_transient?(reason),
     do:
-      not quota_exhausted?(reason) and
+      is_nil(access_message(code(reason))) and not quota_exhausted?(reason) and
         (category(reason) in [:server, :rate_limit, :timeout] or retryable?(reason))
 
   defp rate_limit?(reason) do

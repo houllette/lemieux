@@ -1,10 +1,13 @@
 defmodule Lemieux.Providers.ReqLLMResponseTest do
   use ExUnit.Case, async: true
 
-  alias Lemieux.{Entry, Provider, Request, Session, Store}
+  alias Lemieux.{Entry, Provider, Request, Session, Store, Transcript}
   alias Lemieux.Provider.Error, as: ProviderError
   alias Lemieux.Providers.ReqLLM, as: Adapter
+  alias Lemieux.TUI
   alias LemieuxTest.HTTPFixture
+
+  import Lemieux.TUI.TestSupport, only: [press: 2, suggestions: 1, type: 2]
 
   @moduletag :tmp_dir
 
@@ -93,6 +96,114 @@ defmodule Lemieux.Providers.ReqLLMResponseTest do
                api_key: "fixture-key",
                transport_routes: %{"openai" => [provider: "openai", wire_protocol: "typo"]}
              )
+  end
+
+  test "an explicit Standard choice reaches a provider-scoped Responses endpoint and survives a fork",
+       context do
+    model = "openai:gpt-6-sol"
+    body = responses_body(%{"cyber" => "standard"})
+    provider = provider(200, body, self(), fixture_surface: :responses)
+    runtime = :"standard_access_test_#{System.unique_integer([:positive])}"
+    start_supervised!({Lemieux.Supervisor, name: runtime})
+    store = Store.JSONL.new(context.tmp_dir)
+    opts = [supervisor: runtime, provider: provider, store: store, subscriber: self()]
+
+    # Even a preparation hook that replaces generation parameters preserves
+    # the explicit selection.
+    prepare = fn request, _context -> {:ok, %{request | params: []}} end
+
+    assert {:ok, session} =
+             Lemieux.start_session(
+               [model: model, tools: [], hooks: [prepare_next_turn: prepare]] ++ opts
+             )
+
+    refute Session.snapshot(session).params[:standard_access]
+    assert Provider.standard_access?(provider, model)
+    assert {:ok, tui} = TUI.mount(test_mode: {120, 24}, start: fn -> {:ok, session} end)
+    picker = type(tui, "/model gpt-6-sol --standard")
+    assert %{items: [label]} = suggestions(picker)
+    assert label =~ "gpt-6-sol"
+    assert label =~ "Standard access"
+    _selected = press(picker, "enter")
+    assert Session.snapshot(session).params[:standard_access]
+
+    assert {:ok, ^model} = Session.set_model(session, model)
+
+    assert {:error, {:standard_access_unsupported, "openai:gpt-4o"}} =
+             Session.set_standard_model(session, "openai:gpt-4o")
+
+    assert Session.snapshot(session).params[:standard_access]
+    id = Session.id(session)
+    assert :ok = Session.prompt(session, "hello")
+    assert_receive {:path, "/responses"}
+
+    assert_receive {:wire, _headers,
+                    %{"model" => "gpt-6-sol", "access_programs" => %{"cyber" => "standard"}}}
+
+    assert_receive {:lemieux, ^id, {:finished, :stop}}
+
+    {:ok, entries} = Store.read(store, id)
+    assert [request] = Enum.filter(entries, &(&1.type == :request))
+    assert request.payload["params"]["standard_access"] == true
+    assert [answer] = Enum.filter(entries, &(&1.type == :assistant))
+    assert answer.payload["confirmed_access_program"] == "standard"
+    assert answer.payload["request_id"] == request.payload["id"]
+
+    assert {:ok, fork} = Transcript.fork(store, id)
+    assert {:ok, resumed} = Lemieux.resume_session([resume: fork] ++ opts)
+    assert Session.snapshot(resumed).params[:standard_access]
+    assert {:ok, "openai:gpt-6-luna"} = Session.set_model(resumed, "openai:gpt-6-luna")
+    assert Session.snapshot(resumed).params[:standard_access]
+    assert {:ok, "openai:gpt-4o"} = Session.set_model(resumed, "openai:gpt-4o")
+    refute Session.snapshot(resumed).params[:standard_access]
+  end
+
+  test "an omitted program sends the ordinary request and supplies no explicit confirmation" do
+    request = Request.new("openai:gpt-6-sol", entries: [Entry.new(:user, %{"text" => "hello"})])
+    provider = provider(200, responses_body(nil), self(), fixture_surface: :responses)
+    owner = self()
+
+    assert :ok = Provider.run(provider, request, &send(owner, {:event, &1}))
+    assert_receive {:path, "/responses"}
+    assert_receive {:wire, _headers, body}
+    refute Map.has_key?(body, "access_programs")
+    assert_receive {:event, {:message, answer}}
+    refute Map.has_key?(answer, "confirmed_access_program")
+    assert_receive {:event, {:done, :stop}}
+  end
+
+  test "a transport remap cannot dispatch the Standard selection" do
+    model = "openai:gpt-6-sol"
+    provider = provider(200, success_body(), self())
+    refute Provider.standard_access?(provider, model)
+
+    assert {:error, {:standard_access_unsupported, ^model}} =
+             Provider.run(provider, Request.new(model, params: [standard_access: true]), fn _ ->
+               flunk("rejected request emitted a provider event")
+             end)
+  end
+
+  test "an access program rejection preserves its code and gives a readable error" do
+    body =
+      JSON.encode!(%{
+        "error" => %{
+          "code" => "access_program_not_enabled",
+          "message" => "fixture account detail"
+        }
+      })
+
+    provider = provider(403, body, self(), fixture_surface: :responses)
+    request = Request.new("openai:gpt-6-sol", entries: [Entry.new(:user, %{"text" => "hello"})])
+    owner = self()
+
+    assert {:error, reason} = Provider.run(provider, request, &send(owner, {:event, &1}))
+    assert ProviderError.code(reason) == "access_program_not_enabled"
+
+    assert ProviderError.message(reason) ==
+             "the provider reports that the requested access program is unavailable for this project"
+
+    refute ProviderError.retryable?(reason)
+    refute_received {:event, {:message, _answer}}
   end
 
   test "metadata defaults disclose no headers or guessed resolved model" do
@@ -247,6 +358,7 @@ defmodule Lemieux.Providers.ReqLLMResponseTest do
 
   defp provider(status, body, owner, overrides \\ []) do
     {response_id, overrides} = Keyword.pop(overrides, :fixture_response_id, "gateway-1")
+    {surface, overrides} = Keyword.pop(overrides, :fixture_surface, :chat)
 
     {url, listener, server} =
       HTTPFixture.server(fn path, headers, request_body, socket ->
@@ -275,13 +387,42 @@ defmodule Lemieux.Providers.ReqLLMResponseTest do
       api_key: "fixture-key",
       api_key_provider: :openai,
       max_retries: 0,
-      response_metadata: [headers: ["x-ixway-request-id"], model_header: "x-ixway-resolved-model"],
-      transport_routes: %{
-        "openai" => [provider: "openai", base_url: url, wire_protocol: "openai_chat"]
+      response_metadata: [headers: ["x-ixway-request-id"], model_header: "x-ixway-resolved-model"]
+    ]
+
+    connection =
+      case surface do
+        :responses ->
+          [base_urls: %{"openai" => url}]
+
+        :chat ->
+          [
+            transport_routes: %{
+              "openai" => [provider: "openai", base_url: url, wire_protocol: "openai_chat"]
+            }
+          ]
+      end
+
+    Adapter.new(Keyword.merge(options ++ connection, overrides))
+  end
+
+  defp responses_body(access_programs) do
+    events = [
+      %{"type" => "response.output_text.delta", "delta" => "hello"},
+      %{
+        "type" => "response.completed",
+        "response" => %{
+          "id" => "fixture-response",
+          "model" => "gpt-6-sol",
+          "status" => "completed",
+          "output" => [],
+          "access_programs" => access_programs,
+          "usage" => %{"input_tokens" => 10, "output_tokens" => 5, "total_tokens" => 15}
+        }
       }
     ]
 
-    Adapter.new(Keyword.merge(options, overrides))
+    Enum.map_join(events, "", &("data: " <> JSON.encode!(&1) <> "\n\n"))
   end
 
   defp success_body(text \\ ~s({"label":"test"})) do

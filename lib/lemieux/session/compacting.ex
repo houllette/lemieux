@@ -692,11 +692,20 @@ defmodule Lemieux.Session.Compacting do
 
     state.params
     |> Keyword.merge(explicit)
+    |> summary_access(state, model)
     |> summary_effort(explicit, Provider.reasoning_efforts(state.provider, model))
     |> Keyword.put(:max_tokens, summary_max_tokens(state.params, explicit))
     |> Catalog.compatible_priority_params(state.provider, model)
     |> summary_cache(model)
   end
+
+  defp summary_access(params, state, "openai:" <> _id) do
+    if state.params[:standard_access] == true,
+      do: Keyword.put(params, :standard_access, true),
+      else: params
+  end
+
+  defp summary_access(params, _state, _model), do: Keyword.delete(params, :standard_access)
 
   # A summary's system prompt is not the turn's, so the prefix it would cache
   # is one no later request reads, and Anthropic bills the write at a quarter

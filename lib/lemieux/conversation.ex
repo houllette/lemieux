@@ -49,7 +49,7 @@ defmodule Lemieux.Conversation do
       `:provider_status`, `{:set_provider, provider}`
     * `{:reflect, :assessment | :opportunities}`, `:mine_opportunities`
     * `:feedback`, `{:feedback, submission}`
-    * `:model_status`, `{:set_model, spec}`, `:reasoning_effort_status`,
+    * `:model_status`, `{:set_model, spec}`, `{:set_standard_model, spec}`, `:reasoning_effort_status`,
       `{:set_reasoning_effort, effort}`
     * `:name_status`, `{:set_name, text}`, `:colour_status`,
       `{:set_colour, text}` — what this sitting calls the session and what
@@ -238,6 +238,7 @@ defmodule Lemieux.Conversation do
           | {:set_provider, String.t()}
           | :model_status
           | {:set_model, String.t()}
+          | {:set_standard_model, String.t()}
           | :reasoning_effort_status
           | {:set_reasoning_effort, String.t()}
           | {:set_fast_mode, String.t()}
