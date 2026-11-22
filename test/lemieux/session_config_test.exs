@@ -4,6 +4,7 @@ defmodule Lemieux.SessionConfigTest do
   alias Lemieux.Entry
   alias Lemieux.Extensions.Workspace.Skill
   alias Lemieux.Extensions.Workspace.SkillTool
+  alias Lemieux.Provider.Priority
   alias Lemieux.Providers.ReqLLM
   alias Lemieux.Providers.Scripted
   alias Lemieux.Request
@@ -18,7 +19,7 @@ defmodule Lemieux.SessionConfigTest do
     @behaviour Lemieux.Provider
 
     @impl Lemieux.Provider
-    def run(scripted, request, emit), do: Lemieux.Provider.run(scripted, request, emit)
+    def run({Scripted, scripted}, request, emit), do: Scripted.run(scripted, request, emit)
 
     @impl Lemieux.Provider
     def available_models(_scripted, require: [chat: true, tools: true]),
@@ -39,6 +40,15 @@ defmodule Lemieux.SessionConfigTest do
     @impl Lemieux.Provider
     def fast_modes(_scripted, "test:model"), do: ["fast", "ultrafast"]
     def fast_modes(_scripted, _model), do: []
+
+    @impl Lemieux.Provider
+    def priority_tiers(scripted, "test:model" = model),
+      do: [
+        {"flex", "Fixture flex"}
+        | Priority.legacy_choices(fast_modes(scripted, model))
+      ]
+
+    def priority_tiers(_scripted, _model), do: []
 
     @impl Lemieux.Provider
     def reasoning_efforts(_scripted, "test:model"), do: ["default", "low", "high"]
@@ -460,6 +470,43 @@ defmodule Lemieux.SessionConfigTest do
       {resumed, _} = resume(context, id, [])
       assert Session.fast_modes(resumed) == []
       assert Session.snapshot(resumed).fast_mode == "off"
+    end
+
+    test "priority leaves an in-flight request unchanged and survives resume", context do
+      owner = self()
+
+      held = fn request ->
+        send(owner, {:original_priority, self(), request.params[:priority]})
+        receive do: (:finish -> Scripted.tool_call("read", "read", %{"path" => "file.txt"}))
+      end
+
+      File.write!(Path.join(context.tmp_dir, "file.txt"), "fixture")
+      provider = model_provider([held, Scripted.complete("done")])
+
+      {session, scripted} =
+        start(context, provider: provider, cwd: context.tmp_dir, tools: [Tools.Read])
+
+      id = Session.id(session)
+      assert :ok = Session.prompt(session, "read")
+      assert_receive {:original_priority, task, nil}
+      assert {:ok, "flex"} = Session.set_priority(session, "flex")
+      send(task, :finish)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      assert [first, second] = Scripted.requests(scripted)
+      assert first.params[:priority] == nil
+      assert second.params[:priority] == "flex"
+
+      stop(context, session)
+      {resumed, _} = resume(context, id, provider: provider)
+      assert Session.snapshot(resumed).priority == "flex"
+      assert {:ok, "test:other"} = Session.set_model(resumed, "test:other")
+      assert Session.snapshot(resumed).priority == nil
+
+      assert {:error, {:priority_unsupported, "test:other", "flex", ["standard"]}} =
+               Session.set_priority(resumed, "flex")
+
+      assert {:ok, "standard"} = Session.set_priority(resumed, "standard")
+      assert Session.snapshot(resumed).priority == "standard"
     end
 
     test "reasoning effort is persisted, sent, and restored", context do

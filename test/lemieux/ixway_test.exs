@@ -196,6 +196,36 @@ defmodule Lemieux.IxwayTest do
     assert options[:service_tier] == "default"
   end
 
+  test "priority uses advertised gateway wire values and preserves its implicit default" do
+    tiers = %{
+      "flex" => "flex",
+      "standard" => "standard",
+      "fast" => "priority",
+      "ultrafast" => "ultrafast"
+    }
+
+    config = connection(%{"ixway_priority_tiers" => tiers})
+    provider = Ixway.provider(config)
+
+    assert Enum.map(Provider.priority_tiers(provider, "ixway:team/coding"), &elem(&1, 0)) ==
+             ~w(flex standard fast ultrafast)
+
+    request = Request.new("ixway:team/coding")
+    assert {:ok, {_, options}} = Ixway.target(config, request, [])
+    refute Keyword.has_key?(options, :service_tier)
+
+    for {tier, wire} <- tiers do
+      assert {:ok, {_, options}} = Ixway.target(config, request, priority: tier)
+      assert options[:service_tier] == wire
+    end
+
+    unsupported = Ixway.provider(connection())
+    request = %{request | params: [priority: "flex"]}
+
+    assert {:error, {:priority_unsupported, "ixway:team/coding", "flex", ["standard"]}} =
+             Provider.run(unsupported, request, fn _ -> flunk("must not stream") end)
+  end
+
   test "uses only compatible gateway models and conservative limits" do
     provider = Ixway.provider(connection())
     assert Provider.available_models(provider) == ["ixway:team/coding"]

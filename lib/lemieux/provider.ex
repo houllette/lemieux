@@ -67,6 +67,7 @@ defmodule Lemieux.Provider do
   machine, such as a missing API key — and the caller treats it the same way.
   """
 
+  alias Lemieux.Provider.Priority
   alias Lemieux.Request
 
   @typedoc "An implementation module paired with its own state."
@@ -192,6 +193,11 @@ defmodule Lemieux.Provider do
   """
   @callback fast_modes(state :: term(), model :: String.t()) :: [String.t()]
 
+  @doc "Advertises service tiers and their descriptions for the resolved model and connection."
+  @callback priority_tiers(state :: term(), model :: String.t()) :: [
+              Priority.choice()
+            ]
+
   @doc """
   A realistic upper USD cost estimate for a request, or `nil` when it cannot be
   priced.
@@ -221,6 +227,7 @@ defmodule Lemieux.Provider do
                       validate_model: 3,
                       reasoning_efforts: 2,
                       fast_modes: 2,
+                      priority_tiers: 2,
                       estimate_cost: 2,
                       input_modalities: 2
 
@@ -229,7 +236,7 @@ defmodule Lemieux.Provider do
   """
   @spec run(provider :: t(), request :: Request.t(), emit :: emit()) :: :ok | {:error, term()}
   def run({module, state}, %Request{} = request, emit) when is_function(emit, 1) do
-    module.run(state, request, emit)
+    module.run(state, service_request(module, request), emit)
   end
 
   @doc """
@@ -327,6 +334,19 @@ defmodule Lemieux.Provider do
     if function_exported?(module, :fast_modes, 2), do: module.fast_modes(state, model), else: []
   end
 
+  @doc "The tiers supported by the connection for this model, including Standard."
+  @spec priority_tiers(provider :: t(), model :: String.t()) :: [
+          Priority.choice()
+        ]
+  def priority_tiers({module, state} = provider, model) when is_binary(model) do
+    choices =
+      if function_exported?(module, :priority_tiers, 2),
+        do: module.priority_tiers(state, model),
+        else: Priority.legacy_choices(fast_modes(provider, model))
+
+    Priority.choices(choices)
+  end
+
   @doc "Returns the reasoning-effort choices a provider reports for a model."
   @spec reasoning_efforts(provider :: t(), model :: String.t()) :: [String.t()]
   def reasoning_efforts({module, state}, model) when is_binary(model) do
@@ -359,7 +379,22 @@ defmodule Lemieux.Provider do
   @spec estimate_cost(provider :: t(), request :: Request.t()) :: number() | nil
   def estimate_cost({module, state}, %Request{} = request) do
     if function_exported?(module, :estimate_cost, 2) do
-      module.estimate_cost(state, request)
+      module.estimate_cost(state, service_request(module, request))
+    end
+  end
+
+  defp service_request(module, request) do
+    if Keyword.has_key?(request.params, :priority) and
+         not function_exported?(module, :priority_tiers, 2) do
+      params =
+        Priority.legacy_params(
+          request.params,
+          function_exported?(module, :fast_modes, 2)
+        )
+
+      %{request | params: params}
+    else
+      request
     end
   end
 end

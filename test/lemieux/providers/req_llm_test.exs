@@ -14,9 +14,59 @@ defmodule Lemieux.Providers.ReqLLMTest do
   alias ReqLLM.Message
   alias ReqLLM.Message.ContentPart
   alias ReqLLM.Provider.Defaults
+  alias ReqLLM.Providers.OpenAI
 
   defp request(entries, opts \\ []) do
     Request.new("anthropic:claude-haiku-4-5", Keyword.put(opts, :entries, entries))
+  end
+
+  test "priority uses affirmative capabilities and encodes each advertised OpenAI tier" do
+    provider = ReqLLMProvider.new(api_key: "fake")
+
+    for {spec, requested, wire} <- [
+          {"openai:gpt-5", "flex", "flex"},
+          {"openai:gpt-5", "standard", "default"},
+          {"openai:gpt-5", "fast", "priority"},
+          {"openai:gpt-6-astra", "ultrafast", "ultrafast"}
+        ] do
+      assert List.keymember?(Provider.priority_tiers(provider, spec), requested, 0)
+
+      assert {:ok, {target, options}} =
+               ReqLLMProvider.request_target(spec, api_key: "fake", priority: requested)
+
+      refute Keyword.has_key?(options, :priority)
+      assert {:ok, model} = ReqLLM.model(target)
+
+      assert {:ok, req} =
+               OpenAI.prepare_request(
+                 :chat,
+                 model,
+                 Context.new([Context.user("hello")]),
+                 options
+               )
+
+      assert Jason.decode!(OpenAI.encode_body(req).body)["service_tier"] == wire
+    end
+
+    for spec <- [
+          "openai:gpt-6.1-sol",
+          "openai:gpt-6.2-sol",
+          "groq:openai/gpt-oss-120b",
+          "amazon_bedrock:amazon.nova-2-lite-v1:0"
+        ] do
+      refute List.keymember?(Provider.priority_tiers(provider, spec), "flex", 0)
+
+      assert {:error, {:priority_unsupported, ^spec, "flex", _}} =
+               ReqLLMProvider.request_target(spec, priority: "flex")
+    end
+
+    assert {:ok, {_, default}} = ReqLLMProvider.request_target("openai:gpt-5", api_key: "fake")
+    refute Keyword.has_key?(default, :service_tier)
+
+    assert {:ok, {_, groq}} =
+             ReqLLMProvider.request_target("groq:openai/gpt-oss-120b", priority: "standard")
+
+    assert groq[:service_tier] == "on_demand"
   end
 
   describe "fast modes" do

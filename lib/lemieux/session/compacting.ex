@@ -16,6 +16,7 @@ defmodule Lemieux.Session.Compacting do
   alias Lemieux.RequestSnapshot
   alias Lemieux.Session.Accounting
   alias Lemieux.Session.Audit
+  alias Lemieux.Session.Catalog
   alias Lemieux.Session.Core
   alias Lemieux.Session.Instrumentation
   alias Lemieux.Session.Recovery
@@ -693,6 +694,7 @@ defmodule Lemieux.Session.Compacting do
     |> Keyword.merge(explicit)
     |> summary_effort(explicit, Provider.reasoning_efforts(state.provider, model))
     |> Keyword.put(:max_tokens, summary_max_tokens(state.params, explicit))
+    |> Catalog.compatible_priority_params(state.provider, model)
     |> summary_cache(model)
   end
 

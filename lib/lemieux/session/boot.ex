@@ -96,7 +96,7 @@ defmodule Lemieux.Session.Boot do
     params =
       opts
       |> Setup.resolve_params(recorded)
-      |> Catalog.compatible_fast_params(Keyword.fetch!(opts, :provider), model)
+      |> Catalog.compatible_priority_params(Keyword.fetch!(opts, :provider), model)
 
     supervisor = Keyword.fetch!(opts, :supervisor)
     hooks = Keyword.get(opts, :hooks, [])

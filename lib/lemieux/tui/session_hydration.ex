@@ -127,6 +127,7 @@ if Code.ensure_loaded?(ExRatatui.CodeBlock) do
         model: snapshot.model,
         reasoning_effort: Map.get(snapshot, :reasoning_effort, "default"),
         fast_mode: Map.get(snapshot, :fast_mode, "off"),
+        priority: Map.get(snapshot, :priority),
         commands: previous.commands
       )
       |> Conversation.restore_usage(snapshot.entries)

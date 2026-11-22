@@ -195,6 +195,13 @@ defmodule Lemieux.CLI.ProviderMux do
       else: state |> connection(model) |> Provider.fast_modes(model)
   end
 
+  @impl Lemieux.Provider
+  def priority_tiers(state, model) do
+    if blocked?(state, model),
+      do: [],
+      else: state |> connection(model) |> Provider.priority_tiers(model)
+  end
+
   @impl Provider
   def reasoning_efforts(state, model) do
     if blocked?(state, model),

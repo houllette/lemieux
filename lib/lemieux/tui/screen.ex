@@ -533,7 +533,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     defp header(state, width) do
       {identity, metadata} = header_parts(state)
-      badge = fast_badge(state, width)
+      badge = priority_badge(state, width)
 
       text =
         Responsive.header(
@@ -555,14 +555,16 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     # Reserve the qualifier before the ticker's viewport is measured: otherwise
     # the service setting disappears while the metadata scrolls past it.
-    defp fast_badge(%{conversation: %{fast_mode: mode}}, width)
-         when mode in ["fast", "ultrafast"] do
+    defp priority_badge(%{conversation: %{priority: priority, fast_mode: fast_mode}}, width),
+      do: tier_badge(priority || fast_mode, width)
+
+    defp tier_badge(mode, width) when mode in ["flex", "fast", "ultrafast"] do
       label = String.upcase(mode)
       text = " · #{label} "
       if Width.of(text) <= width, do: text, else: Responsive.fit(label, width)
     end
 
-    defp fast_badge(_state, _width), do: ""
+    defp tier_badge(_mode, _width), do: ""
 
     @doc false
     @spec chrome_interval(state :: TUI.t()) :: pos_integer() | nil
@@ -572,7 +574,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
       {identity, metadata} = header_parts(state)
       area = panes(state).transcript
       width = max(area.width - 2, 0)
-      width = max(width - Width.of(fast_badge(state, width)), 0)
+      width = max(width - Width.of(priority_badge(state, width)), 0)
       if area.height > 0 and Responsive.header_scrolling?(identity, metadata, width), do: 250
     end
 

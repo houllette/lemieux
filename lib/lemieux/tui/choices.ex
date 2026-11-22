@@ -81,6 +81,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
         state
         |> put_in([Access.key!(:catalog), :efforts], Session.reasoning_efforts(state.session))
         |> put_in([Access.key!(:catalog), :fast_modes], Session.fast_modes(state.session))
+        |> put_in([Access.key!(:catalog), :priority_tiers], Session.priority_tiers(state.session))
         |> put_in([Access.key!(:catalog), :model_metadata], Session.model_metadata(state.session))
 
       merge_discovered_choices(

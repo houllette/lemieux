@@ -23,8 +23,9 @@ including handlers a host installed after CLI logging setup. Captured MCP
 stderr remains in the bounded file log at debug level. Console levels return
 when the screen closes; redirected stderr keeps its logging behavior.
 
-Enabled fast service appears as a red `FAST` or `ULTRAFAST` header badge. It
-stays visible while model metadata scrolls; `/fast off` removes it.
+`/priority` opens the service-tier picker with the current choice highlighted.
+The `FLEX`, `FAST`, and `ULTRAFAST` badges stay visible while model metadata
+scrolls. Choose Standard to return to the connection’s baseline.
 
 Update announcements arriving during session preparation share the setup
 notice box. Esc dismisses the whole box; expiry during preparation stays dismissed.

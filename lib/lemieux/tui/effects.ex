@@ -23,6 +23,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     alias Lemieux.TUI.Flash
     alias Lemieux.TUI.Keys
     alias Lemieux.TUI.Lifecycle
+    alias Lemieux.TUI.PriorityPicker
     alias Lemieux.TUI.ResumePicker
     alias Lemieux.TUI.Screen
     alias Lemieux.TUI.SkillLoading
@@ -183,6 +184,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp perform(state, :toggle_elixir_mode), do: Choices.toggle_elixir_mode(state)
     defp perform(state, :habs), do: Lifecycle.start_habs(state)
     defp perform(state, :resume_status), do: ResumePicker.open(state, :here)
+    defp perform(state, :priority_status), do: PriorityPicker.open(state)
     defp perform(state, {:resume_list, :all}), do: ResumePicker.open(state, :all)
 
     defp perform(state, :new), do: Lifecycle.new_session(state)
@@ -332,7 +334,11 @@ if Code.ensure_loaded?(ExRatatui.App) do
     defp react(state, {:provider_set, selected}),
       do: Choices.open_model_completions(state, ModelSpec.provider(selected))
 
-    defp react(state, {:fast_mode_set, mode}), do: put_in(state.conversation.fast_mode, mode)
+    defp react(state, {:fast_mode_set, mode}) do
+      %{state | conversation: %{state.conversation | fast_mode: mode, priority: nil}}
+    end
+
+    defp react(state, {:priority_set, tier}), do: put_in(state.conversation.priority, tier)
 
     defp react(state, {:reasoning_effort_set, _effort}), do: Choices.refresh_choices(state)
     defp react(state, {:tool_statuses, statuses}), do: Choices.put_tool_statuses(state, statuses)

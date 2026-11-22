@@ -189,6 +189,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
             discover: %{optional(String.t()) => (-> [CatalogState.discovery()])},
             efforts: [String.t()],
             fast_modes: [String.t()],
+            priority_tiers: [Lemieux.Provider.Priority.choice()],
             mcp: [String.t()]
           }
 

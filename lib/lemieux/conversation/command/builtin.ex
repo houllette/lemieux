@@ -35,6 +35,7 @@ defmodule Lemieux.Conversation.Command.Builtin do
       Command.Provider,
       Command.Effort,
       Command.Fast,
+      Command.Priority,
       Command.New,
       Command.Resume,
       Command.Compact,

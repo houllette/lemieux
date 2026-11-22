@@ -6,6 +6,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
 
     alias Lemieux.Conversation
     alias Lemieux.ModelSpec
+    alias Lemieux.Provider.Priority
     alias Lemieux.Session
     alias Lemieux.Tools
     alias Lemieux.TUI
@@ -142,6 +143,7 @@ if Code.ensure_loaded?(ExRatatui.App) do
           discover: Keyword.get(opts, :discover, %{}),
           efforts: Keyword.get(opts, :efforts, []),
           fast_modes: Keyword.get(opts, :fast_modes, []),
+          priority_tiers: Priority.choices(Keyword.get(opts, :priority_tiers, [])),
           mcp: Keyword.get(opts, :mcp_servers, [])
         },
         skills: Keyword.get(opts, :skills, []),

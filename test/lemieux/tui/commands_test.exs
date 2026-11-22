@@ -185,6 +185,28 @@ defmodule Lemieux.TUI.CommandsTest do
     end
   end
 
+  describe "/priority" do
+    test "highlights the current tier and applies the next selection without changing effort" do
+      tiers = [{"flex", "Provider Flex description"}, {"fast", "Priority service"}]
+      session = fake_session(snapshot("01SESSION"), priority_tiers: tiers)
+      state = tui(session: session, priority_tiers: tiers) |> command("/priority")
+      assert screen(state) =~ "› Standard"
+      assert screen(state) =~ "Provider Flex description"
+      refute screen(state) =~ "Ultrafast"
+
+      chosen = state |> press("up") |> press("enter")
+      assert_receive {:set_priority, "flex"}
+      assert chosen.conversation.priority == "flex"
+      assert chosen.conversation.reasoning_effort == state.conversation.reasoning_effort
+      assert screen(chosen) =~ "FLEX"
+
+      reopened = command(chosen, "/priority")
+      assert screen(reopened) =~ "› Flex"
+      assert press(reopened, "esc").modal == nil
+      refute_received {:set_priority, _}
+    end
+  end
+
   describe "/fast" do
     test "a highlighted fast command updates requested mode during work" do
       session = fake_session(snapshot("01SESSION"), fast_modes: ["fast", "ultrafast"])
