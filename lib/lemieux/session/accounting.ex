@@ -254,12 +254,26 @@ defmodule Lemieux.Session.Accounting do
     do: {elem(provider, 0), ModelSpec.provider(model), model}
 
   def measured_spend(entries) do
-    accounted = MapSet.new(entries, fn entry -> entry.usage && entry.usage["request_id"] end)
+    # Every dispatched request can incur cost even if the stream ended before
+    # its first word. Older assistant/summary usage may only identify the
+    # preceding request by position.
+    {_last_id, missing} =
+      Enum.reduce(entries, {nil, MapSet.new()}, fn
+        %Entry{type: :request, payload: %{"id" => id}}, {_last_id, missing} ->
+          {id, MapSet.put(missing, id)}
 
-    if Enum.any?(entries, fn entry ->
-         entry.type == :request and entry.payload["auxiliary"] == true and
-           not MapSet.member?(accounted, entry.payload["id"])
-       end) do
+        %Entry{usage: %{"request_id" => id}}, {last_id, missing} when is_binary(id) ->
+          {last_id, MapSet.delete(missing, id)}
+
+        %Entry{type: type, usage: usage, payload: payload}, {last_id, missing}
+        when type in [:assistant, :compaction] and is_map(usage) ->
+          {last_id, MapSet.delete(missing, payload["request_id"] || last_id)}
+
+        _, acc ->
+          acc
+      end)
+
+    if MapSet.size(missing) > 0 do
       nil
     else
       known_spend(entries)
@@ -274,6 +288,9 @@ defmodule Lemieux.Session.Accounting do
           nil -> {:cont, total}
           _invalid -> {:halt, nil}
         end
+
+      %Entry{type: :compaction, payload: %{"summary" => nil, "request_id" => nil}}, total ->
+        {:cont, total}
 
       %Entry{type: type, usage: nil}, _total when type in [:assistant, :compaction] ->
         {:halt, nil}

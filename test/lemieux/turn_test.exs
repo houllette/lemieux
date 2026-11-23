@@ -19,6 +19,23 @@ defmodule Lemieux.TurnTest do
 
   defp effects(events), do: events |> fold() |> elem(1)
 
+  test "a wave with ambiguous call IDs ends before either call can execute" do
+    for second <- ["first", "second"] do
+      calls =
+        for name <- ["first", second], do: {:tool_call, %{id: "same", name: name, arguments: %{}}}
+
+      result = effects([{:text_delta, "checking"} | calls] ++ [{:done, :tool_calls}])
+      assert {:finished, :error} in result
+      refute Enum.any?(result, &match?({:run_tools, _}, &1))
+
+      assert [{:append, {:assistant, payload, nil}}] =
+               Enum.filter(result, &match?({:append, {:assistant, _, _}}, &1))
+
+      assert payload["partial"]
+      refute Map.has_key?(payload, "tool_calls")
+    end
+  end
+
   describe "text" do
     test "each delta is emitted as it arrives" do
       assert [

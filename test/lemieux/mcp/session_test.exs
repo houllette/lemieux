@@ -368,6 +368,38 @@ defmodule Lemieux.MCP.SessionTest do
       refute payload["error"]
     end
 
+    test "a tool worker exiting closes its nested question", context do
+      owner = self()
+
+      hook = fn _call, _context ->
+        send(owner, {:worker, self()})
+        :allow
+      end
+
+      {session, _provider} =
+        start(
+          context,
+          [[{:tool_call, call("fixture__echo")}, {:done, :tool_calls}], [{:done, :stop}]],
+          mcp_servers: [server("fixture", "mrtr")],
+          hooks: [before_tool_call: hook],
+          approval_timeout: :infinity
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "use the tool")
+      assert_receive {:worker, pid}
+      assert_receive {:lemieux, ^id, {:question, %{call_id: question}}}
+      Process.exit(pid, :kill)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+      assert Session.snapshot(session).pending == []
+      assert {:error, :unknown_call} = Session.answer(session, question, "too late")
+
+      assert Enum.any?(Session.snapshot(session).entries, fn e ->
+               e.type == :approval and e.payload["call_id"] == question and
+                 e.payload["status"] == "cancelled"
+             end)
+    end
+
     # Nobody answers, so the client declines rather than inventing content, and
     # the server is told plainly.
     test "nobody answering becomes a decline the server can act on", context do
@@ -390,7 +422,7 @@ defmodule Lemieux.MCP.SessionTest do
 
       # Nobody answers the server's question; its forty milliseconds pass when
       # the test moves the clock, however slow the machine is.
-      Manual.await_timer(clock, &match?({:park_timeout, _call_id}, &1.message))
+      Manual.await_timer(clock, &match?({:park_timeout, _call_id, _from}, &1.message))
       Manual.advance(clock, 40, settle: session)
 
       assert_receive {:lemieux, ^id, {:finished, :stop}}, 5_000

@@ -68,6 +68,27 @@ defmodule Lemieux.Asset.ProposalTest do
     assert Registry.active(registry, Version.identity(second)) == second
   end
 
+  test "reactivating the same version invalidates the earlier rollback receipt" do
+    attrs = %{type: :prompt, layer: :host, scope: :project, project_id: "project"}
+    {:ok, base} = Version.new(Map.put(attrs, :content, "base"))
+    {:ok, changed} = Version.new(Map.merge(attrs, %{content: "changed", parent_id: base.id}))
+    {:ok, approved} = Proposal.approve(Proposal.new(changed), %{"id" => "owner"})
+    {:ok, registry, first} = Registry.activate(Registry.new(), approved)
+    {:ok, registry, _} = Registry.rollback(registry, first, base)
+    {:ok, registry, second} = Registry.activate(registry, approved)
+    assert {:error, :invalid_rollback_target} = Registry.rollback(registry, first, base)
+    assert {:ok, _, _} = Registry.rollback(registry, second, base)
+  end
+
+  test "approval requires a named actor" do
+    {:ok, version} = Version.new(%{type: :prompt, layer: :host, scope: :global, content: "hello"})
+    proposal = Proposal.new(version)
+
+    for actor <- [%{}, %{"id" => " "}, %{id: nil}] do
+      assert {:error, :invalid_approval_actor} = Proposal.approve(proposal, actor)
+    end
+  end
+
   test "rollback refuses a pointer that is no longer present" do
     attrs = %{type: :prompt, layer: :host, scope: :project, project_id: "project"}
     {:ok, base} = Version.new(Map.put(attrs, :content, "base"))

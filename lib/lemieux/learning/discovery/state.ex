@@ -120,7 +120,8 @@ defmodule Lemieux.Learning.Discovery.State do
          :ok <- Candidate.verify(candidate),
          true <- candidate.plan_id == plan.id and candidate.plan_sha256 == plan.sha256,
          :ok <- candidate_absent(state, candidate),
-         :ok <- candidate_budget_available(state, plan) do
+         :ok <- candidate_budget_available(state, plan),
+         :ok <- valid_accounting(facts) do
       reference = %{
         "id" => candidate.id,
         "sha256" => candidate.sha256,
@@ -161,7 +162,10 @@ defmodule Lemieux.Learning.Discovery.State do
     end
   end
 
-  defp noop_facts(facts) do
+  def record_noop(%__MODULE__{} = state, %Plan{}, _facts),
+    do: {:error, {:invalid_discovery_state, state.status, :record_noop}}
+
+  defp valid_accounting(facts) do
     counts =
       Enum.all?(
         ~w(tokens time_ms),
@@ -169,12 +173,18 @@ defmodule Lemieux.Learning.Discovery.State do
       )
 
     cost = facts["cost_usd"]
+
+    if counts and (is_nil(cost) or (is_number(cost) and cost >= 0)),
+      do: :ok,
+      else: {:error, :invalid_discovery_accounting}
+  end
+
+  defp noop_facts(facts) do
     reason = facts["reason"]
 
-    if counts and (is_nil(cost) or (is_number(cost) and cost >= 0)) and
-         is_binary(reason) and byte_size(reason) in 1..512,
-       do: :ok,
-       else: {:error, :invalid_noop_accounting}
+    if valid_accounting(facts) == :ok and is_binary(reason) and byte_size(reason) in 1..512,
+      do: :ok,
+      else: {:error, :invalid_noop_accounting}
   end
 
   @doc "Records one evaluation exactly once by id and candidate/split/case key."
@@ -191,7 +201,9 @@ defmodule Lemieux.Learning.Discovery.State do
          :ok <- Evaluation.verify(evaluation),
          true <- evaluation.plan_id == plan.id and evaluation.plan_sha256 == plan.sha256,
          true <- candidate_recorded?(state, evaluation),
-         :ok <- evaluation_absent(state, evaluation, key) do
+         :ok <- evaluation_absent(state, evaluation, key),
+         facts = evaluation_facts(evaluation),
+         :ok <- valid_accounting(facts) do
       reference = %{
         "id" => evaluation.id,
         "sha256" => evaluation.sha256,
@@ -199,12 +211,6 @@ defmodule Lemieux.Learning.Discovery.State do
         "candidate_content_sha256" => evaluation.candidate_content_sha256,
         "split" => evaluation.split,
         "case_id" => evaluation.case_id
-      }
-
-      facts = %{
-        "tokens" => evaluation.usage["total_tokens"],
-        "cost_usd" => evaluation.cost["usd"],
-        "time_ms" => evaluation.latency["milliseconds"]
       }
 
       state =
@@ -224,6 +230,14 @@ defmodule Lemieux.Learning.Discovery.State do
 
   def record_evaluation(%__MODULE__{} = state, %Plan{}, %Evaluation{}),
     do: {:error, {:invalid_discovery_state, state.status, :record_evaluation}}
+
+  defp evaluation_facts(evaluation) do
+    %{
+      "tokens" => evaluation.usage["total_tokens"],
+      "cost_usd" => evaluation.cost["usd"],
+      "time_ms" => evaluation.latency["milliseconds"]
+    }
+  end
 
   @doc "Completes running or exhausted discovery with a deterministic frontier."
   @spec complete(state :: t(), plan :: Plan.t(), frontier :: Frontier.t()) ::

@@ -152,7 +152,7 @@ defmodule Lemieux.Session.MessagesTest do
 
     # The approval's timeout is armed on the manual clock; nobody answers, and
     # its twenty milliseconds pass when the test moves time, not before.
-    Manual.await_timer(clock, &match?({:park_timeout, _call_id}, &1.message))
+    Manual.await_timer(clock, &match?({:park_timeout, _call_id, _from}, &1.message))
     Manual.advance(clock, 20, settle: session)
     assert_receive {:lemieux, ^id, {:finished, :stop}}
 

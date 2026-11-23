@@ -265,6 +265,8 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
     config =
       Map.put(ctx.config, :provider, fn _ ->
+        send(test, {:provider_requested, self()})
+
         Scripted.new([
           fn _request ->
             send(test, {:request_running, self()})
@@ -276,6 +278,10 @@ defmodule Lemieux.CLI.Learning.QualificationHostTest do
 
     worker = spawn(fn -> Host.episode(config, context(ctx.fixture, "updating")) end)
     on_exit(fn -> Process.exit(worker, :kill) end)
+    # The host first prepares the control, then builds a provider for the
+    # acquired workspace. Each crosses a disk-backed qualification boundary.
+    assert_receive {:provider_requested, ^worker}
+    assert_receive {:provider_requested, ^worker}
     assert_receive {:request_running, request}
     request_monitor = Process.monitor(request)
     {:monitored_by, guardians} = Process.info(worker, :monitored_by)

@@ -698,8 +698,10 @@ line and go idle), and `Lemieux.Provider.Error` classifies it `:server`, so
 the session's bounded retry asks again — unless the session is under
 `:max_cost_usd` and the failed attempt left spend unknown, which a stream
 that reported no usage does: the dollar gate refuses to retry on unknown
-spend, and a host's category-based retry is what applies there. OpenAI
-refuses a request on an
+spend, and a host's category-based retry is what applies there. On resume,
+an attempt with missing usage still has unknown spend. If the provider
+reported usage without returning any text, the transcript preserves that
+usage, including a reported zero. OpenAI refuses a request on an
 account with no credit in exactly this shape; that refusal repeats, and
 after the retries the failure's sentence still says to check credit, quota
 and request validity. An empty stream that ends `:length` or

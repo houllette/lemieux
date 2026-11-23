@@ -10,6 +10,31 @@ defmodule Lemieux.Learning.Discovery.StateBudgetTest do
 
   @unpriced %{"tokens" => 40, "cost_usd" => nil, "time_ms" => 5}
 
+  test "candidate and evaluation accounting cannot decrease consumed resources" do
+    plan = plan(%{})
+    {:ok, state} = plan |> State.new() |> State.start()
+    candidate = candidate(plan, "first")
+    facts = %{"tokens" => 1, "time_ms" => 1, "cost_usd" => 0.5}
+
+    for {field, invalid} <- [{"tokens", -1}, {"time_ms", "later"}, {"cost_usd", -0.5}] do
+      assert {:error, _} =
+               State.record_candidate(state, plan, candidate, Map.put(facts, field, invalid))
+    end
+
+    {:ok, state} = State.record_candidate(state, plan, candidate, facts)
+
+    assert {:error, _} =
+             State.record_evaluation(state, plan, evaluation(plan, candidate, "eval-1", -1))
+  end
+
+  test "recording a no-op after an abort returns a transition error" do
+    plan = plan(%{})
+    {:ok, state} = State.abort(State.new(plan), "operator")
+
+    assert {:error, {:invalid_discovery_state, :aborted, :record_noop}} =
+             State.record_noop(state, plan, %{"reason" => "nothing"})
+  end
+
   test "a metered plan treats an unpriced fact as an unknown budget and stops" do
     plan = plan(%{})
     {:ok, state} = plan |> State.new() |> State.start()

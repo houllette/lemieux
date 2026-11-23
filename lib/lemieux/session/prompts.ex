@@ -427,7 +427,12 @@ defmodule Lemieux.Session.Prompts do
     |> Core.put_compaction(:preflight_attempted?, false)
     |> Core.put_compaction(:trigger, nil)
     |> Core.put_compaction(:forecast, nil)
-    |> Map.merge(%{stop_hook_active: false, retry_note: nil, retry_failure: nil})
+    |> Map.merge(%{
+      stop_hook_active: false,
+      retry_note: nil,
+      retry_failure: nil,
+      current_request_id: nil
+    })
     |> Instrumentation.finish_prompt_telemetry(stop_reason)
     |> Diagnostics.finish()
     |> Audit.finalize_run(stop_reason)
@@ -591,7 +596,8 @@ defmodule Lemieux.Session.Prompts do
   defp aside_kind(%Aside{kind: kind}), do: kind
   defp aside_kind(nil), do: nil
 
-  defp drop_provider_retry(%{provider_retry: nil} = state), do: state
+  defp drop_provider_retry(%{provider_retry: nil} = state),
+    do: %{state | retry_note: nil, retry_failure: nil}
 
   defp drop_provider_retry(%{provider_retry: retry} = state) do
     Clock.cancel(state.clock, retry.timer)
@@ -604,34 +610,24 @@ defmodule Lemieux.Session.Prompts do
   defp drop_parked(%{parked: parked} = state) when map_size(parked) == 0, do: state
 
   defp drop_parked(state) do
-    state =
-      Enum.reduce(state.parked, state, fn {call_id, waiting}, state ->
-        Approvals.cancel_timer(state, waiting.timer)
-
-        if Map.get(waiting, :request),
-          do:
-            Core.append(
-              state,
-              {:approval, Approvals.record(call_id, waiting, :cancelled, %{}), nil}
-            ),
-          else: state
-      end)
-
-    %{state | parked: %{}} |> observe_working()
+    Enum.reduce(state.parked, state, &cancel_park/2)
   end
 
-  # A call that ended while parked — it crashed, or its deadline had already
-  # fired when it parked — takes its waiting entry with it. Left behind, a later
-  # answer would be recorded as approving a call that never ran.
-  def drop_parked_call(state, call_id) do
-    case Map.pop(state.parked, call_id) do
-      {nil, _parked} ->
-        state
+  # Elicitation can name a question inside a call. Worker identity still
+  # identifies its waiting entry when the question and tool IDs differ.
+  def drop_parked_worker(state, pid) do
+    Enum.reduce(state.parked, state, fn
+      {_id, %{from: {^pid, _tag}}} = park, acc -> cancel_park(park, acc)
+      _other, acc -> acc
+    end)
+  end
 
-      {waiting, parked} ->
-        Approvals.cancel_timer(state, waiting.timer)
-        observe_working(%{state | parked: parked})
-    end
+  defp cancel_park({id, waiting}, state) do
+    Approvals.cancel_timer(state, waiting.timer)
+
+    %{state | parked: Map.delete(state.parked, id)}
+    |> Core.append({:approval, Approvals.record(id, waiting, :cancelled, %{}), nil})
+    |> observe_working()
   end
 
   def do_cancel(state, reason) do
@@ -695,6 +691,7 @@ defmodule Lemieux.Session.Prompts do
       state
       | turn: nil,
         turn_ref: nil,
+        current_request_id: nil,
         task: nil,
         hook_task: nil,
         compaction: %{state.compaction | compacting: nil},

@@ -25,7 +25,7 @@ defmodule Lemieux.Session.Questions do
         expires = if is_integer(ttl), do: System.system_time(:millisecond) + ttl
         deadline = if is_integer(ttl), do: Clock.now_ms(state.clock) + ttl
         payload = Map.merge(payload, %{call_id: id, tool_call_id: call_id, deferred: true})
-        timer = Approvals.park_timer(state, ttl, id)
+        timer = Approvals.park_timer(state, ttl, {:question_timeout, id})
         question = %{payload: payload, timer: timer, expires_at: expires, deadline: deadline}
 
         state =
@@ -246,7 +246,7 @@ defmodule Lemieux.Session.Questions do
 
     # Only the known presentation keys become atoms; never external atom creation.
     payload = atom_keys(pending["presentation"])
-    timer = Approvals.park_timer(state, remaining, id)
+    timer = Approvals.park_timer(state, remaining, {:question_timeout, id})
     deadline = if is_integer(remaining), do: Clock.now_ms(state.clock) + remaining
 
     state = %{

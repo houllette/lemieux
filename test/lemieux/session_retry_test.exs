@@ -79,6 +79,116 @@ defmodule Lemieux.SessionRetryTest do
   end
 
   describe "retry admission and host accounting" do
+    test "settling a failed attempt keeps the persisted transcript in lockstep with the session",
+         context do
+      for limits <- [[max_requests: 1], [max_requests: 2]] do
+        {session, _} =
+          start_session(context, [gateway_down(), Scripted.complete("ok")], job_limits: limits)
+
+        id = Session.id(session)
+        :ok = Session.prompt(session, "continue")
+        assert_receive {:lemieux, ^id, {:finished, reason}}
+        assert reason == if(limits[:max_requests] == 1, do: :error, else: :stop)
+        assert {:ok, entries} = Store.read(context.store, id)
+        assert Enum.map(entries, & &1.seq) == Enum.to_list(0..(length(entries) - 1))
+        assert Enum.map(entries, & &1.id) == Enum.map(Session.snapshot(session).entries, & &1.id)
+      end
+    end
+
+    test "cancelling retry preparation clears the failed request before the next prompt",
+         context do
+      owner = self()
+
+      hook = fn request, context ->
+        if context.retry do
+          send(owner, :preparing_retry)
+          Process.sleep(:timer.minutes(1))
+        end
+
+        {:ok, request}
+      end
+
+      [{:error, reason}] = gateway_down()
+
+      provider =
+        Scripted.new([[{:usage, %{"cost_usd" => 0.0}}, {:error, reason}]],
+          estimated_cost_usd: fn request ->
+            if Enum.count(request.entries, &(&1.type == :user)) > 1, do: 2.0, else: 0.1
+          end
+        )
+
+      {session, _} =
+        start_session(context, [],
+          provider: provider,
+          max_cost_usd: 1.0,
+          hooks: [prepare_next_turn: hook]
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "first")
+      assert_receive :preparing_retry
+      assert :ok = Session.cancel(session)
+      assert_receive {:lemieux, ^id, {:finished, :cancelled}}
+      assert %{request_id: nil, status: :idle} = Session.snapshot(session)
+      :ok = Session.prompt(session, "second")
+      assert_receive {:lemieux, ^id, {:finished, {:budget, _}}}
+      assert length(Scripted.requests(provider)) == 1
+    end
+
+    test "a denied retry preparation leaves no current request when the session returns to idle",
+         context do
+      hook = fn request, ctx -> if ctx.retry, do: {:deny, :policy}, else: {:ok, request} end
+
+      {session, provider} =
+        start_session(context, [gateway_down()], hooks: [prepare_next_turn: hook])
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "first")
+      assert_receive {:lemieux, ^id, {:finished, :hook_failed}}
+      assert %{request_id: nil, status: :idle} = Session.snapshot(session)
+      assert length(Scripted.requests(provider)) == 1
+    end
+
+    test "resume preserves the cost of attempts with no assistant text", context do
+      for usage <- [nil, %{"cost_usd" => 0.4}], ending <- [hd(gateway_down()), {:done, :stop}] do
+        events = if usage, do: [{:usage, usage}, ending], else: [ending]
+
+        {session, provider} =
+          start_session(context, [events, Scripted.complete("second")],
+            provider_retry: false,
+            max_cost_usd: 1.0
+          )
+
+        id = Session.id(session)
+        :ok = Session.prompt(session, "first")
+        assert_receive {:lemieux, ^id, {:finished, _}}
+        expected = usage && usage["cost_usd"]
+        assert Session.snapshot(session).spent_usd == expected
+        assert {:ok, _} = Session.clear(session)
+        :ok = GenServer.stop(session)
+
+        {:ok, resumed} =
+          Lemieux.resume_session(
+            resume: id,
+            supervisor: context.runtime,
+            store: context.store,
+            provider: provider,
+            subscriber: self(),
+            max_cost_usd: 1.0
+          )
+
+        assert Session.snapshot(resumed).spent_usd == expected
+
+        if is_nil(expected) do
+          :ok = Session.prompt(resumed, "second")
+          assert_receive {:lemieux, ^id, {:finished, {:budget, %{spent: nil}}}}
+          assert length(Scripted.requests(provider)) == 1
+        end
+
+        :ok = GenServer.stop(resumed)
+      end
+    end
+
     for status <- [429, 503] do
       @status status
       test "a request cap preserves HTTP #{status} without waiting or scheduling a retry",

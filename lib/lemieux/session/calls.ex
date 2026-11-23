@@ -655,18 +655,22 @@ defmodule Lemieux.Session.Calls do
   def call({:input_original, id, token}, _from, state),
     do: {:reply, Input.read(state, id, token), state}
 
-  def call({:prompt, text, contexts, opts}, from, state) do
-    if Core.busy?(state) do
-      {:reply, {:error, :busy}, state}
-    else
-      case Input.attest(state, from, :prompt, opts) do
-        {:ok, attestation} ->
-          OpenTelemetry.bind_prompt_parent(state.id, contexts)
-          Prompts.start_prompt_hook(state, from, text, attestation)
+  def call({:prompt, text, contexts, opts}, from, state),
+    do: call({:prompt, text, contexts, opts, nil}, from, state)
 
-        {:error, _reason} = error ->
-          {:reply, error, state}
-      end
+  def call({:prompt, text, contexts, opts, relay}, from, state) do
+    with false <- Core.busy?(state),
+         {:ok, attestation} <- Input.attest(state, from, :prompt, opts) do
+      state =
+        if is_pid(relay),
+          do: %{state | subscribers: Subscribers.add(state.subscribers, relay)},
+          else: state
+
+      OpenTelemetry.bind_prompt_parent(state.id, contexts)
+      Prompts.start_prompt_hook(state, from, text, attestation)
+    else
+      true -> {:reply, {:error, :busy}, state}
+      {:error, _reason} = error -> {:reply, error, state}
     end
   end
 

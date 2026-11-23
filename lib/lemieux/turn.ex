@@ -124,12 +124,20 @@ defmodule Lemieux.Turn do
     case assistant(turn) do
       [{:append, {:assistant, payload, usage}}] ->
         payload = Map.delete(payload, "tool_calls")
-        if Map.get(payload, "content", []) == [], do: nil, else: {:assistant, payload, usage}
+
+        if Map.get(payload, "content", []) == [],
+          do: usage_checkpoint(usage),
+          else: {:assistant, payload, usage}
 
       [] ->
         nil
     end
   end
+
+  # A charge can precede the first word. Keep a usage-only entry out of
+  # future model input while preserving the exact cost across resume.
+  defp usage_checkpoint(nil), do: nil
+  defp usage_checkpoint(usage), do: {:assistant, %{"content" => [], "partial" => true}, usage}
 
   @doc "Whether the provider has emitted any semantic response for this turn."
   @spec progressed?(turn :: t()) :: boolean()
@@ -187,9 +195,14 @@ defmodule Lemieux.Turn do
   end
 
   def step(%__MODULE__{} = turn, {:done, stop_reason}) when is_atom(stop_reason) do
-    turn = %{turn | status: :done, stop_reason: stop_reason}
-
-    {turn, assistant(turn) ++ [ending(turn, stop_reason)]}
+    # Results, leases and parked approvals are keyed by ID within this wave.
+    # Dispatching two calls under one key loses the identity of their effects.
+    if Enum.uniq_by(turn.tool_calls, & &1.id) == turn.tool_calls do
+      turn = %{turn | status: :done, stop_reason: stop_reason}
+      {turn, assistant(turn) ++ [ending(turn, stop_reason)]}
+    else
+      step(turn, {:error, "provider returned duplicate tool call IDs in one response"})
+    end
   end
 
   # What was said survives the error; the calls do not. A call announced before
@@ -313,6 +326,9 @@ defmodule Lemieux.Turn do
 
   defp assistant(%__MODULE__{} = turn) do
     case {content(turn), turn.tool_calls} do
+      {[], []} when is_map(turn.usage) ->
+        [{:append, usage_checkpoint(turn.usage)}]
+
       {[], []} ->
         []
 

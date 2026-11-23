@@ -43,17 +43,11 @@ defmodule Lemieux.Session.Mailbox do
   def message({:approval_timeout, call_id, request_id}, state),
     do: Approvals.expire(state, call_id, request_id)
 
-  def message({:park_timeout, call_id}, state) do
-    state = Questions.expire(state, call_id)
+  def message({:question_timeout, id}, state), do: {:noreply, Questions.expire(state, id)}
 
+  def message({:park_timeout, call_id, from}, state) do
     case Map.pop(state.parked, call_id) do
-      {nil, _parked} ->
-        {:noreply, state}
-
-      {%{request: %{}}, _parked} ->
-        {:noreply, state}
-
-      {waiting, parked} ->
+      {%{from: ^from, request: nil} = waiting, parked} ->
         state =
           state
           |> Map.put(:parked, parked)
@@ -71,6 +65,9 @@ defmodule Lemieux.Session.Mailbox do
            waiting,
            waiting.timeout_reply || Approvals.timed_out(state, waiting.kind)
          )}
+
+      _stale ->
+        {:noreply, state}
     end
   end
 
@@ -106,7 +103,7 @@ defmodule Lemieux.Session.Mailbox do
         {:provider_event, ref, {:error, reason}},
         %{turn_ref: ref, compaction: %{context_recovery_reason: nil}} = state
       ) do
-    state = Catalog.learn_window(state, reason)
+    state = state |> Catalog.learn_window(reason) |> Accounting.account_missing_usage()
 
     cond do
       Recovery.recoverable_context_error?(state, reason) ->
@@ -316,13 +313,15 @@ defmodule Lemieux.Session.Mailbox do
 
   def message({:mcp_grace_over, _stale}, state), do: {:noreply, state}
 
-  def message({:tool_timeout, ref, timeout_ms}, state)
-      when is_map_key(state.wave.tool_tasks, ref) do
-    {task, _call, _stream_ref, _started, _timer, _descriptor} =
-      Map.fetch!(state.wave.tool_tasks, ref)
+  def message({:tool_timeout, ref, timeout_ms, token}, state) do
+    case state.wave.tool_tasks[ref] do
+      {task, _call, _stream, _started, {:timer, _timer, _due, ^token}, _descriptor} ->
+        Task.shutdown(task, 0)
+        {:noreply, ToolWave.tool_finished(state, ref, {:timeout, timeout_ms})}
 
-    Task.shutdown(task, 0)
-    {:noreply, ToolWave.tool_finished(state, ref, {:timeout, timeout_ms})}
+      _paused_or_stale ->
+        {:noreply, state}
+    end
   end
 
   # A receipt is the tool saying the remote side has committed its effect, sent
