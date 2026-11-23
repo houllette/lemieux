@@ -32,13 +32,19 @@ defmodule Lemieux.Asset.Proposal do
   @doc "Records explicit approval by a named actor."
   @spec approve(proposal :: t(), actor :: map()) :: {:ok, t()} | {:error, term()}
   def approve(%__MODULE__{status: :proposed} = proposal, actor) when is_map(actor) do
-    {:ok,
-     %{
-       proposal
-       | status: :approved,
-         approved_by: actor,
-         approved_at: DateTime.utc_now()
-     }}
+    id = Map.get(actor, "id", Map.get(actor, :id))
+
+    if is_binary(id) and String.trim(id) != "" do
+      {:ok,
+       %{
+         proposal
+         | status: :approved,
+           approved_by: actor,
+           approved_at: DateTime.utc_now()
+       }}
+    else
+      {:error, :invalid_approval_actor}
+    end
   end
 
   def approve(%__MODULE__{}, _actor), do: {:error, :proposal_not_pending}

@@ -65,6 +65,12 @@ defmodule Lemieux.Session.Approvals do
       kind == :question and Questions.occupied?(state) ->
         {:reply, {:error, "another question is still awaiting an answer"}, state}
 
+      Map.has_key?(state.parked, call_id) or match?(%{id: ^call_id}, state.deferred_question) ->
+        # A nested elicitation ID can coincide with a sibling tool's provider ID.
+        reason = "another request is already waiting under this call ID"
+        reply = if kind == :approval, do: {:deny, reason}, else: {:error, reason}
+        {:reply, reply, state}
+
       true ->
         do_park(state, from, call_id, kind, payload, opts)
     end
@@ -120,8 +126,8 @@ defmodule Lemieux.Session.Approvals do
     end
   end
 
-  defp challenge(state, _from, call_id, _kind, _opts),
-    do: {:ok, nil, park_timer(state, state.approval_timeout, call_id)}
+  defp challenge(state, from, call_id, _kind, _opts),
+    do: {:ok, nil, park_timer(state, state.approval_timeout, {:park_timeout, call_id, from})}
 
   defp owner_call_id(state, caller) do
     Enum.find_value(state.wave.tool_tasks, fn {_ref,
@@ -292,18 +298,23 @@ defmodule Lemieux.Session.Approvals do
 
   def park_timer(_state, :infinity, _call_id), do: nil
 
-  def park_timer(state, timeout, call_id),
-    do: Clock.send_after(state.clock, self(), {:park_timeout, call_id}, timeout)
+  def park_timer(state, timeout, message),
+    do: Clock.send_after(state.clock, self(), message, timeout)
 
   # A tool's deadline carries when it falls due, because the clock cannot say
   # how much of a cancelled timer was left, and a parked call's deadline is
   # held as exactly that.
   def tool_timer(state, ref, timeout_ms, delay_ms) do
-    timer = Clock.send_after(state.clock, self(), {:tool_timeout, ref, timeout_ms}, delay_ms)
-    {:timer, timer, Clock.now_ms(state.clock) + delay_ms}
+    token = make_ref()
+    due = Clock.now_ms(state.clock) + delay_ms
+
+    timer =
+      Clock.send_after(state.clock, self(), {:tool_timeout, ref, timeout_ms, token}, delay_ms)
+
+    {:timer, timer, due, token}
   end
 
-  def cancel_timer(state, {:timer, timer, _due}), do: Clock.cancel(state.clock, timer)
+  def cancel_timer(state, {:timer, timer, _due, _token}), do: Clock.cancel(state.clock, timer)
   def cancel_timer(state, timer) when is_reference(timer), do: Clock.cancel(state.clock, timer)
   def cancel_timer(_state, _timer), do: :ok
 
@@ -313,7 +324,7 @@ defmodule Lemieux.Session.Approvals do
   # would have.
   def pause_tool_clock(state, call_id) do
     case tool_task_for(state, call_id) do
-      {ref, {task, call, stream_ref, started, {:timer, timer, due}, descriptor}} ->
+      {ref, {task, call, stream_ref, started, {:timer, timer, due, _token}, descriptor}} ->
         case due - Clock.now_ms(state.clock) do
           remaining when remaining > 0 ->
             Clock.cancel(state.clock, timer)

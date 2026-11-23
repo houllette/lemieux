@@ -35,6 +35,7 @@ alias Lemieux.Writers.Worktree
 [root, directory, phase] = System.argv()
 {:ok, _} = Application.ensure_all_started(:crypto)
 {module, state} = Worktree.new(root: root, directory: directory)
+IO.puts("runtime ready")
 
 plan =
   Plan.new(id: "cold", task: "Update files", paths: ["original.txt", "one.txt"], tools: ["write"])
@@ -47,6 +48,7 @@ evidence = %{"status" => "passed", "check" => "fixture"}
 result = %{session_id: "cold-fixture", entries: [], report: report}
 {:ok, artifact} = module.export(state, isolated, plan, result, evidence)
 :ok = module.release(state, isolated)
+IO.puts("artifact ready")
 journal = {WriterRuntimeLossJournal, %{inner: state.journal, phase: phase}}
 state = %{state | journal: journal}
 

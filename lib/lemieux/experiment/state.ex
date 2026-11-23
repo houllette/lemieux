@@ -97,8 +97,13 @@ defmodule Lemieux.Experiment.State do
        when {from, to} in [
               {:triaged, :needs_clarification},
               {:needs_clarification, :triaged}
-            ] and is_integer(count) and count > 3,
-       do: {:error, :too_many_questions}
+            ] do
+    cond do
+      not is_integer(count) or count < 0 -> {:error, {:gate_failed, :question_count}}
+      count > 3 -> {:error, :too_many_questions}
+      true -> :ok
+    end
+  end
 
   defp check_special(:triaged, :case_draft, %{verifiability: class})
        when class not in [:mechanical, :environmental],

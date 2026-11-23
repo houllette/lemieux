@@ -7,6 +7,19 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
+## Unreleased
+
+- Preserve provider spend and transcript order across retries, cancellation
+  and resume. A synchronous prompt now receives the outcome of its own turn.
+- Reject duplicate tool call IDs before dispatch. Ignore expired timers from
+  earlier waits and close pending questions when their worker exits.
+- Preserve a writer group's integration result when cancellation arrives late.
+- Asset approval now requires a nonblank string under `"id"` or `:id` in the
+  actor map. Hosts that passed an empty map must supply the approving actor's
+  identity. Rollback receipts apply only to the latest activation of the asset.
+- Reject invalid discovery charges, retries of terminal discovery records and
+  invalid experiment clarification counts.
+
 ## 1.2.1 — 2026-11-18
 
 Restart `lmx` after updating from 1.2.0 on every platform, then resume with

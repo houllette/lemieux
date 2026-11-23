@@ -65,7 +65,7 @@ defmodule Lemieux.Asset.Registry do
     current = Map.get(registry.active, activation.key)
 
     if not is_nil(current) and current.id == activation.version_id and
-         activation in registry.history and
+         Enum.find(Enum.reverse(registry.history), &(&1.key == activation.key)) == activation and
          activation.rollback_target_id == target.id and activation.key == Version.identity(target) do
       record = %{
         id: "activation_" <> ID.generate(),

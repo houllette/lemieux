@@ -89,7 +89,7 @@ defmodule Lemieux.Session.Recovery do
   def close(%{provider_retry: %{}} = state, _result), do: state
 
   def close(state, {:error, reason}) do
-    state = Catalog.learn_window(state, reason)
+    state = state |> Catalog.learn_window(reason) |> Accounting.account_missing_usage()
 
     cond do
       recoverable_context_error?(state, reason) ->
@@ -128,6 +128,8 @@ defmodule Lemieux.Session.Recovery do
   end
 
   defp begin_context_recovery(state, reason) do
+    state = if state.turn.usage, do: checkpoint_partial(state), else: state
+
     state =
       state
       |> Accounting.account_missing_usage()
@@ -200,12 +202,12 @@ defmodule Lemieux.Session.Recovery do
     request = state.evidence.current_run.pending_request
 
     state.turns_taken < state.max_turns and
-      Accounting.request_budget(Accounting.account_missing_usage(state), request) == :ok
+      Accounting.request_budget(state, request) == :ok
   end
 
   def begin_provider_retry(state, reason) do
     after_output? = progressed?(state)
-    state = if after_output?, do: checkpoint_partial(state), else: state
+    state = checkpoint_partial(state)
     attempt = state.retry_attempt + 1
     delay = retry_delay(state.provider_retry_policy, reason, attempt)
     ref = make_ref()
@@ -219,7 +221,6 @@ defmodule Lemieux.Session.Recovery do
     )
 
     state
-    |> Accounting.account_missing_usage()
     |> Instrumentation.finish_turn_telemetry(:error)
     |> Map.merge(%{
       # The dead task's late events must not reach a turn that is over, and

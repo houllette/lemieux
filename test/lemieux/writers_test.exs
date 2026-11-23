@@ -205,6 +205,12 @@ defmodule Lemieux.WritersTest do
     assert {:error, :unauthorized} = Writers.integrate(group, artifacts, :stranger)
     assert {:ok, integrated} = Writers.integrate(group, artifacts, :owner)
     assert integrated.status == :integrated
+    assert :ok = Writers.cancel(group, :owner)
+    assert {:ok, %{status: :integrated}} = Writers.snapshot(group)
+
+    assert {:ok, %{value: %{"status" => "integrated"}}} =
+             Session.document(ctx.parent, "lemieux.writers." <> group.id)
+
     assert File.read!(Path.join(ctx.root, "alpha.txt")) == "alpha\n"
     assert File.read!(Path.join(ctx.root, "beta.txt")) == "beta\n"
     assert File.read!(Path.join(ctx.root, "unrelated.txt")) == "keep my work\n"
@@ -1019,6 +1025,8 @@ defmodule Lemieux.WritersTest do
         receive do
           :finish -> :ok
         end
+      else
+        send(observer, :checking_candidate)
       end
 
       {:ok, %{"status" => "passed", "check" => "held check"}}
@@ -1026,8 +1034,9 @@ defmodule Lemieux.WritersTest do
 
     {group, result} = ready(ctx, checks: checks)
     waiter = Task.async(fn -> Writers.integrate(group, digests(result), :owner) end)
-    assert_receive {:checking_primary, _worker}
+    assert_receive :checking_candidate
     assert_receive {:transaction, key, "prepared"}
+    assert_receive {:checking_primary, _worker}
     assert :ok = Session.cancel(ctx.parent)
     assert {:error, :cancelled} = Task.await(waiter)
     assert_receive {:transaction, ^key, "rolled_back"}
@@ -1046,6 +1055,8 @@ defmodule Lemieux.WritersTest do
       if cwd == ctx.root do
         send(observer, {:checking_primary, self()})
         receive do: (:finish -> :ok)
+      else
+        send(observer, :checking_candidate)
       end
 
       {:ok, %{"status" => "passed", "check" => "held check"}}
@@ -1053,8 +1064,9 @@ defmodule Lemieux.WritersTest do
 
     {group, result} = ready(ctx, checks: checks)
     waiter = Task.async(fn -> Writers.integrate(group, digests(result), :owner) end)
-    assert_receive {:checking_primary, worker}
+    assert_receive :checking_candidate
     assert_receive {:transaction, key, "prepared"}
+    assert_receive {:checking_primary, worker}
     Process.exit(worker, :kill)
     assert {:error, {:integration_interrupted, :killed}} = Task.await(waiter, :infinity)
     assert_receive {:transaction, ^key, "rolled_back"}
@@ -1519,11 +1531,14 @@ defmodule Lemieux.WritersTest do
       Port.open({:spawn_executable, System.find_executable("elixir")}, [
         :binary,
         :exit_status,
+        {:line, 4096},
         args: arguments
       ])
 
     on_exit(fn -> if Port.info(port), do: Port.close(port) end)
-    assert_receive {^port, {:data, bytes}}
+    assert_receive {^port, {:data, {:eol, "runtime ready"}}}
+    assert_receive {^port, {:data, {:eol, "artifact ready"}}}
+    assert_receive {^port, {:data, {:eol, bytes}}}
     %{"transaction_id" => key, "os_pid" => os_pid} = JSON.decode!(String.trim(bytes))
     assert {_output, 0} = System.cmd("kill", ["-KILL", os_pid], stderr_to_stdout: true)
     assert_receive {^port, {:exit_status, status}}

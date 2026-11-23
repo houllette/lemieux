@@ -10,8 +10,9 @@ defmodule Lemieux.Session.Await do
   stopped caring.
 
   So the waiting is done through a relay: a process linked to the caller that
-  subscribes before the prompt is sent — nothing the prompt starts can arrive
-  before somebody is listening — forwards each event tagged with a reference,
+  subscribes in the same session call that admits the prompt. A separate
+  subscribe call can capture the end of a competing prompt before this one
+  starts. The relay forwards each event tagged with a reference,
   and is unsubscribed and stopped when the wait ends. Whatever the session
   sends afterwards goes to a process that no longer exists rather than into
   the caller's mailbox.
@@ -19,6 +20,7 @@ defmodule Lemieux.Session.Await do
 
   alias Lemieux.Background.Completion
   alias Lemieux.Entry
+  alias Lemieux.OpenTelemetry
   alias Lemieux.Session
   alias Lemieux.Usage
 
@@ -64,11 +66,9 @@ defmodule Lemieux.Session.Await do
     relay = spawn_link(fn -> relay(tag) end)
 
     try do
-      with :ok <-
-             before_deadline(deadline_at, fn timeout ->
-               GenServer.call(session, {:subscribe, relay}, min(timeout, 5_000))
-             end),
-           :ok <- before_deadline(deadline_at, &Session.submit_prompt(session, text, &1)) do
+      request = {:prompt, text, OpenTelemetry.capture_contexts(), [], relay}
+
+      with :ok <- before_deadline(deadline_at, &GenServer.call(session, request, &1)) do
         collect(tag, monitor, %{
           deadline_at: deadline_at,
           timeout: Keyword.get(opts, :timeout, :infinity),

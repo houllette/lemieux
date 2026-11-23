@@ -697,6 +697,12 @@ defmodule Lemieux.Writers do
 
   defp settle(state), do: state
 
+  # A late parent DOWN or a second cancel can arrive while a terminal
+  # group is retained for inspection. Its integration receipt stays final.
+  defp stop_writers(%{status: status} = state, _reason)
+       when status in [:integrated, :cancelled, :timed_out, :interrupted, :failed],
+       do: state
+
   defp stop_writers(state, status) do
     Enum.each(state.tasks, fn {_ref, {_id, task}} -> Task.shutdown(task, 0) end)
 

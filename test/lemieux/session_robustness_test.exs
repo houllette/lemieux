@@ -237,6 +237,49 @@ defmodule Lemieux.SessionRobustnessTest do
                Session.await(session, "wait for me", on_event: kill_once_prompted)
     end
 
+    test "an await concurrent with another prompt's cancellation cannot collect its result",
+         context do
+      {session, _} =
+        start_session(context, [
+          Scripted.delayed(:timer.minutes(1), Scripted.complete("first")),
+          Scripted.complete("second")
+        ])
+
+      :ok = Session.prompt(session, "first")
+      owner = self()
+      # Hold the first call from the awaiter in the session mailbox handler,
+      # then queue cancellation before it can issue a second call.
+      awaiter =
+        Task.async(fn ->
+          receive do
+            :start -> Session.await(session, "second")
+          end
+        end)
+
+      caller = awaiter.pid
+
+      barrier = fn
+        _, {:in, {:"$gen_call", {^caller, _}, _request}}, _ ->
+          send(owner, :await_arrived)
+
+          receive do
+            :release_await -> :done
+          end
+
+        acc, _, _ ->
+          acc
+      end
+
+      :ok = :sys.install(session, {make_ref(), barrier, nil})
+      send(caller, :start)
+      assert_receive :await_arrived
+      cancel = :gen_server.send_request(session, {:cancel, :cancelled})
+      send(session, :release_await)
+      assert {:reply, :ok} = :gen_server.wait_response(cancel, 5_000)
+      assert {:error, :busy} = Task.await(awaiter)
+      assert Session.snapshot(session).status == :idle
+    end
+
     test "await on a session that is already gone says so", context do
       {session, _provider} = start_session(context, [], subscriber: nil)
       ref = Process.monitor(session)
@@ -308,6 +351,81 @@ defmodule Lemieux.SessionRobustnessTest do
       assert [result] = Enum.filter(entries, &(&1.type == :tool_result))
       assert result.payload["error"] == false
       assert result.payload["output"] =~ "hello"
+    end
+
+    test "a nested question cannot replace a parallel tool's pending approval", context do
+      owner = self()
+
+      hook = fn
+        %{id: "outer:field"}, _ ->
+          :pending
+
+        %{id: "outer"}, ctx ->
+          send(owner, {:nested_worker, self()})
+          receive do: (:ask -> :ok)
+          result = Session.park(ctx.session, "outer:field", :question, %{question: "Which file?"})
+          send(owner, {:nested_result, result})
+          :allow
+      end
+
+      calls =
+        for id <- ["outer:field", "outer"] do
+          %{id: id, name: "read", arguments: %{"path" => "note.txt"}}
+        end
+
+      {session, _} =
+        start_session(context, [Scripted.tool_calls(calls), Scripted.complete("ok")],
+          tools: [Lemieux.Tools.Read],
+          cwd: context.tmp_dir,
+          hooks: [before_tool_call: hook]
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "read both")
+      assert_receive {:lemieux, ^id, {:tool_approval, _}}
+      assert_receive {:nested_worker, worker}
+      send(worker, :ask)
+      assert_receive {:nested_result, {:error, _reason}}
+      assert :ok = Session.resolve_tool(session, "outer:field", :allow)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
+    end
+
+    test "old timers cannot end a paused tool or a later park under the same call ID", context do
+      clock = start_supervised!(Manual)
+      owner = self()
+
+      hook = fn _, _ ->
+        send(owner, {:ready_to_park, self()})
+        receive do: (:park_now -> :pending)
+      end
+
+      call = Scripted.tool_call("c1", "read", %{"path" => "note.txt"})
+
+      {session, _} =
+        start_session(context, [call, call, Scripted.complete("ok")],
+          tools: [Lemieux.Tools.Read],
+          cwd: context.tmp_dir,
+          hooks: [before_tool_call: hook],
+          clock: clock
+        )
+
+      id = Session.id(session)
+      :ok = Session.prompt(session, "read twice")
+      assert_receive {:ready_to_park, first}
+      timer = Manual.await_timer(clock, &(elem(&1.message, 0) == :tool_timeout))
+      send(first, :park_now)
+      assert_receive {:lemieux, ^id, {:tool_approval, _}}
+      approval = Manual.await_timer(clock, &(elem(&1.message, 0) == :park_timeout))
+      send(session, timer.message)
+      assert [%{call_id: "c1"}] = Session.snapshot(session).pending
+      assert :ok = Session.resolve_tool(session, "c1", :allow)
+      assert_receive {:ready_to_park, second}
+      send(second, :park_now)
+      assert_receive {:lemieux, ^id, {:tool_approval, _}}
+      send(session, approval.message)
+      assert [%{call_id: "c1"}] = Session.snapshot(session).pending
+      assert :ok = Session.resolve_tool(session, "c1", :allow)
+      assert_receive {:lemieux, ^id, {:finished, :stop}}
     end
 
     test "can wait without a clock when the host says somebody will answer", context do

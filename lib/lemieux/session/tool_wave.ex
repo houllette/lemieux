@@ -367,11 +367,11 @@ defmodule Lemieux.Session.ToolWave do
   end
 
   def tool_finished(state, ref, outcome) do
-    {{_task, call, _stream_ref, started, timer, descriptor}, tasks} =
+    {{task, call, _stream_ref, started, timer, descriptor}, tasks} =
       Map.pop(state.wave.tool_tasks, ref)
 
     Approvals.cancel_timer(state, timer)
-    state = Prompts.drop_parked_call(state, call.id)
+    state = Prompts.drop_parked_worker(state, task.pid)
 
     duration_ms = max(System.monotonic_time(:millisecond) - started, 0)
     {receipt, receipts} = Map.pop(state.wave.tool_receipts, call.id)

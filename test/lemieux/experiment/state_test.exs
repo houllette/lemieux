@@ -72,6 +72,22 @@ defmodule Lemieux.Experiment.StateTest do
     assert Enum.map(promoted.history, & &1.to) |> List.last() == :promoted
   end
 
+  test "negative and non-integer counts cannot pass either clarification gate" do
+    {:ok, triaged} =
+      State.transition(State.new("experiment"), :triaged, %{
+        anchor_resolved: true,
+        authorized: true,
+        raw_preserved: true
+      })
+
+    {:ok, asking} = State.transition(triaged, :needs_clarification, %{question_count: 1})
+
+    for count <- [-1, 4.5, "4"],
+        {state, target} <- [{triaged, :needs_clarification}, {asking, :triaged}] do
+      assert {:error, _} = State.transition(state, target, %{question_count: count})
+    end
+  end
+
   test "caps clarification at three questions" do
     state = %{State.new("experiment") | status: :triaged}
 
