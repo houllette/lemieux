@@ -45,8 +45,8 @@ defmodule Lemieux.CLI.ACP.Setup do
 
   defp key(provider, config, opts) do
     if Models.credential(provider, config, opts) == :missing do
-      prompt = ~c"Provider API key (hidden; Ctrl-D cancels): "
-      read = Keyword.get(opts, :setup_password, &:io.get_password/1)
+      prompt = ~c"Provider API key (hidden, leave blank to cancel): "
+      read = Keyword.get(opts, :setup_password, &read_password/1)
 
       with {:ok, key} <- text(read.(prompt)),
            false <- key == "" do
@@ -57,6 +57,19 @@ defmodule Lemieux.CLI.ACP.Setup do
       end
     else
       {:ok, nil}
+    end
+  end
+
+  defp read_password(prompt) do
+    # OTP's password reader takes an IO device and requires raw mode in a
+    # noshell VM, including the installed launcher.
+    with :ok <- :shell.start_interactive({:noshell, :raw}) do
+      try do
+        IO.write(prompt)
+        :io.get_password()
+      after
+        :shell.start_interactive({:noshell, :cooked})
+      end
     end
   end
 
@@ -80,7 +93,7 @@ defmodule Lemieux.CLI.ACP.Setup do
 
   @spec methods(version :: 1 | 2, argv :: [String.t()], capabilities :: map()) :: [map()]
   def methods(version, argv, capabilities) do
-    if match?(%{"auth" => %{"terminal" => true}}, capabilities) do
+    if terminal_auth?(version, capabilities) do
       id = if version == 1, do: "id", else: "methodId"
 
       [
@@ -96,6 +109,12 @@ defmodule Lemieux.CLI.ACP.Setup do
       []
     end
   end
+
+  defp terminal_auth?(2, %{"auth" => %{"terminal" => capability}}) when is_map(capability),
+    do: true
+
+  defp terminal_auth?(_version, %{"auth" => %{"terminal" => true}}), do: true
+  defp terminal_auth?(_version, _capabilities), do: false
 
   defp error(reason) do
     IO.puts(:stderr, "lmx: #{reason}")

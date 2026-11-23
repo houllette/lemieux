@@ -1,4 +1,8 @@
-"""Run a bounded offline fixture on a controlling terminal and return its bytes."""
+"""Run a bounded offline fixture on a controlling terminal and return its bytes.
+
+Pass --respond with a JSON list of [prompt, reply] pairs before the command
+to send each reply when its prompt appears in the terminal output.
+"""
 import base64
 import fcntl
 import json
@@ -11,9 +15,15 @@ import sys
 import termios
 import time
 
+command = sys.argv[1:]
+replies = []
+if command[0] == "--respond":
+    replies = [(prompt.encode(), reply.encode()) for prompt, reply in json.loads(command[1])]
+    command = command[2:]
+
 pid, fd = pty.fork()
 if pid == 0:
-    os.execvp(sys.argv[1], sys.argv[1:])
+    os.execvp(command[0], command)
 
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
 output = bytearray()
@@ -29,6 +39,9 @@ try:
                 data = b""
             terminal_open = bool(data)
             output.extend(data)
+            if replies and replies[0][0] in output:
+                _, reply = replies.pop(0)
+                os.write(fd, reply)
         if not terminal_open:
             time.sleep(0.01)
         done, code = os.waitpid(pid, os.WNOHANG)

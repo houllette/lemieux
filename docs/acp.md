@@ -35,6 +35,8 @@ same private configuration writer as the terminal UI. Editors advertising
 terminal authentication can offer this setup inside their own terminal.
 Authentication arguments retain the ACP launch flags, including `--config`.
 After setup, a new session reloads the configuration.
+Create an explicitly selected config file before setup. A private JSON file
+containing `{}` is enough to start.
 
 Credentials and defaults belong to [Lemieux's configuration](configuration.md),
 normally `~/.lmx/config.json`, or the process environment. Zed's saved provider
@@ -62,6 +64,8 @@ uses the ACP Registry; agent-server extensions are deprecated.
   and `lmx help acp` in your terminal. For source runs, finish compilation first.
 - Missing credentials: run `lmx acp setup` with the same `--config` flags as
   the editor entry, or supply credentials in the agent process's environment.
+- If the provider rejects a credential, replace the saved key or environment
+  variable and start a new thread. Setup reuses an existing credential.
 - Wrong files or working directory: open the intended project in Zed. A loaded
   session must match its recorded absolute working directory.
 - Protocol errors: run `dev: open acp logs` in Zed and check the negotiated
@@ -207,6 +211,26 @@ Repeat with `--protocol-version 2` for the draft contract. Review failed,
 skipped and unexercised requirements separately. Keep reports outside the
 repository. Packaged release qualification also runs provider-free ACP
 handshakes through the real launcher in `test/release_stdin_smoke.py`.
+
+### Qualification results for the v1.2.2 review
+
+| lmx build | Client and platform | Result |
+| --- | --- | --- |
+| Integration PR #197 source fixture | Zed 1.28.1, macOS arm64, ACP v1 | Interactive edit approval, diffs and question forms. [PR #197](https://github.com/houllette/lemieux/pull/197) |
+| Signed v1.2.1 archive, commit `29e456ebfff53673e9f6f7baf7d1cb00fd159db1` | Automated stdio client and terminal, macOS 27.2.1 arm64, ACP v1 | Workspace paths, streaming, selectors and persistence, file tools and diffs, approvals, shell output, forms, resource links, stdio MCP, cancellation, disconnect and transcript reload passed. Packaged negotiation and EOF passed for both protocol versions. First-run terminal setup crashed at key entry. [v1.2.1 release](https://github.com/houllette/lemieux/releases/tag/v1.2.1) |
+| Local archive built from `429f80f` with the ACP fixes, version string `1.2.1` | Automated stdio client and terminal, macOS 27.2.1 arm64 | The v1 protocol checks repeated successfully. Setup accepted a hidden fixture key on first run, saved it privately and reused it on a later run. Blank key input cancelled setup, and invalid model input left the saved config intact. Mock invalid and expired credentials returned an actionable message in v1. Draft v2 emitted distinct IDs for concurrent approval requests and ignored late replies after cancellation. |
+| `429f80f`, source fixture | Experimental ACP TCK, macOS 27.2.1 arm64 | Zero failures at `f050441441ca4faafd1d4e58761125304d06743d`. Mandatory v1 tests had 31 passes and 1 skip. Draft v2 had 30 passes and 4 skips. |
+
+The v1 skip was the optional `$/cancel_request` behavior. The native
+`session/cancel` path passed. The draft v2 skips were three auth descriptor
+checks and one agent-request ID check. The no-config fixture advertises no
+auth methods, and the TCK prompt did not trigger an agent request.
+The two targeted draft v2 TCK tests for the terminal descriptor and its
+capability gate passed on the local archive after the fix.
+
+The interactive checklist for a signed release in Zed 1.29.2 remains open.
+Other platforms and Zed's draft v2 integration remain unqualified.
+[Issue #198](https://github.com/houllette/lemieux/issues/198)
 
 ## ACP Registry distribution
 
