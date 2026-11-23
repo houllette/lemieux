@@ -9,6 +9,10 @@ API.
 
 ## Unreleased
 
+- Fix the hidden provider-key prompt in ACP terminal setup for fresh installs.
+  ACP v1 also reports when a provider rejects the configured credential.
+- Advertise terminal setup to draft ACP v2 clients using the object
+  capability shape.
 - Preserve provider spend and transcript order across retries, cancellation
   and resume. A synchronous prompt now receives the outcome of its own turn.
 - Reject duplicate tool call IDs before dispatch. Ignore expired timers from

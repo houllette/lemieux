@@ -8,6 +8,7 @@ defmodule Lemieux.CLI.ACP.Server do
   alias Lemieux.CLI.ACP.Tool
   alias Lemieux.CLI.ACP.Wire
   alias Lemieux.CLI.Config, as: CLIConfig
+  alias Lemieux.CLI.Errors
   alias Lemieux.CLI.Models
   alias Lemieux.CLI.Options
   alias Lemieux.CLI.Runtime
@@ -499,6 +500,7 @@ defmodule Lemieux.CLI.ACP.Server do
       session = %{
         pid: pid,
         prompt: nil,
+        prompt_error: nil,
         queued: [],
         streamed: MapSet.new(),
         servers: servers,
@@ -686,6 +688,13 @@ defmodule Lemieux.CLI.ACP.Server do
     state
   end
 
+  defp event(%{version: 1} = state, id, {:error, reason}) do
+    case Errors.error_category(reason) do
+      :auth -> put_in(state.sessions[id].prompt_error, :authentication)
+      _other -> state
+    end
+  end
+
   defp event(state, id, {:finished, reason}), do: finish(state, id, reason)
 
   defp event(state, id, {changed, _previous, _current})
@@ -748,7 +757,7 @@ defmodule Lemieux.CLI.ACP.Server do
   defp finish(state, id, reason) do
     session = state.sessions[id]
 
-    terminal_reply(state, session.prompt, reason)
+    terminal_reply(state, session, reason)
 
     if state.version == 2,
       do:
@@ -772,6 +781,7 @@ defmodule Lemieux.CLI.ACP.Server do
       put_session(%{state | pending: pending}, id, %{
         session
         | prompt: nil,
+          prompt_error: nil,
           queued: [],
           streamed: MapSet.new(),
           diffs: %{}
@@ -804,9 +814,18 @@ defmodule Lemieux.CLI.ACP.Server do
     end
   end
 
-  defp terminal_reply(_state, nil, _reason), do: :ok
+  defp terminal_reply(_state, %{prompt: nil}, _reason), do: :ok
 
-  defp terminal_reply(state, request_id, :error),
+  defp terminal_reply(state, %{prompt: request_id, prompt_error: :authentication}, :error),
+    do:
+      failure(
+        state,
+        request_id,
+        -32_603,
+        "Provider rejected authentication. Update the configured credential and start a new thread."
+      )
+
+  defp terminal_reply(state, %{prompt: request_id}, :error),
     do:
       failure(
         state,
@@ -815,10 +834,10 @@ defmodule Lemieux.CLI.ACP.Server do
         "Agent request failed; inspect the local transcript or log"
       )
 
-  defp terminal_reply(%{version: 2} = state, request_id, _reason),
+  defp terminal_reply(%{version: 2} = state, %{prompt: request_id}, _reason),
     do: failure(state, request_id, -32_800, "Prompt ended before its user message was committed")
 
-  defp terminal_reply(state, request_id, reason),
+  defp terminal_reply(state, %{prompt: request_id}, reason),
     do: reply(state, request_id, %{"stopReason" => Wire.stop_reason(reason)})
 
   defp ask_client(state, id, call_id, kind, method, params) do

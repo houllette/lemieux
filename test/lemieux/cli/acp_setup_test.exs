@@ -33,6 +33,53 @@ defmodule Lemieux.CLI.ACP.SetupTest do
     assert Bitwise.band(mode, 0o777) == 0o600
   end
 
+  if not match?({:win32, _}, :os.type()) do
+    test "terminal setup accepts a key without echoing it on a controlling terminal", %{
+      tmp_dir: dir
+    } do
+      path = Path.join(dir, "config.json")
+      File.write!(path, "{}")
+      key = "offline-setup-fixture"
+      model = "anthropic:claude-sonnet-5"
+
+      replies =
+        JSON.encode!([
+          ["Model (provider:model)", model <> "\n"],
+          ["Provider API key", key <> "\r"]
+        ])
+
+      fixture = Path.expand("../../fixtures/run_pty.py", __DIR__)
+
+      {report, 0} =
+        System.cmd(
+          "python3",
+          [
+            fixture,
+            "--respond",
+            replies,
+            System.find_executable("mix"),
+            "run",
+            "--no-compile",
+            "--no-deps-check",
+            "-e",
+            ":ok = Lemieux.CLI.ACP.Setup.main(System.argv(), env: %{})",
+            "--",
+            "--config",
+            path
+          ],
+          env: [{"MIX_ENV", "test"}, {"TERM", "xterm-256color"}]
+        )
+
+      %{"status" => status, "output" => encoded} = JSON.decode!(report)
+      output = Base.decode64!(encoded)
+      assert status == 0, inspect(output)
+      refute output =~ key
+
+      assert %{"providers" => %{"anthropic" => %{"api_key" => ^key}}} =
+               JSON.decode!(File.read!(path))
+    end
+  end
+
   test "cancelled setup preserves an existing configuration", %{tmp_dir: dir} do
     path = Path.join(dir, "config.json")
     before = ~s({"version":1,"model":"anthropic:claude-sonnet-5"})
@@ -56,5 +103,8 @@ defmodule Lemieux.CLI.ACP.SetupTest do
       assert method["type"] == "terminal"
       assert method["args"] == ["acp", "setup" | argv]
     end
+
+    assert [%{"type" => "terminal", "methodId" => "setup"}] =
+             Setup.methods(2, argv, %{"auth" => %{"terminal" => %{}}})
   end
 end

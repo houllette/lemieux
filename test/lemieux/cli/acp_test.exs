@@ -377,6 +377,29 @@ defmodule Lemieux.CLI.ACPTest do
     refute_receive {:wire, %{"id" => 3, "result" => _success}}, 20
   end
 
+  test "v1 names a credential rejection and clears it before the next turn", %{tmp_dir: dir} do
+    {server, _provider, _store} =
+      connect(dir, [
+        [{:error, %{status: 401, body: "private provider response"}}],
+        [{:error, :offline}]
+      ])
+
+    id = open(server, dir)
+    prompt(server, id)
+
+    assert_receive {:wire, %{"id" => 3, "error" => %{"code" => -32_603, "message" => message}}}
+    assert message =~ "Provider rejected authentication"
+    refute message =~ "private provider response"
+
+    request(server, 4, "session/prompt", %{
+      "sessionId" => id,
+      "prompt" => [%{"type" => "text", "text" => "try again"}]
+    })
+
+    assert_receive {:wire, %{"id" => 4, "error" => %{"code" => -32_603, "message" => message}}}
+    assert message =~ "inspect the local transcript or log"
+  end
+
   test "malformed and unsupported requests do not start a provider", %{tmp_dir: dir} do
     {server, provider, _store} = connect(dir, [])
     Server.receive_line(server, "broken")
