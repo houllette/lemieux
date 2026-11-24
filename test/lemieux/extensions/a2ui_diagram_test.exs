@@ -122,6 +122,24 @@ defmodule Lemieux.Extensions.A2UIDiagramTest do
     assert wide.model_text =~ wide.structured_content["preview"]
   end
 
+  test "preview accepts Mermaid source and enforces the argument alternatives at runtime" do
+    source = "flowchart LR\nA --> B"
+    assert {:ok, result} = DiagramPreview.run(%{"source" => source}, %{})
+    assert result.structured_content["targetWidth"] == 80
+
+    for args <- [
+          %{},
+          %{"source" => source, "diagram" => mermaid(source)},
+          %{"source" => source, "componentSchema" => "Flowchart"},
+          %{"diagram" => mermaid(source), "componentSchema" => "Flowchart"},
+          %{"componentSchema" => "Flowchart", "width" => 80},
+          %{"source" => source, "width" => 201},
+          %{"source" => source, "unknown" => true}
+        ] do
+      assert {:error, _} = DiagramPreview.run(args, %{})
+    end
+  end
+
   test "catalog and preview schemas accept shipped native forms and reject unsupported input" do
     catalog =
       Path.join(:code.priv_dir(:lemieux), "a2ui/catalog.json") |> File.read!() |> JSON.decode!()

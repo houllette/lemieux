@@ -15,7 +15,10 @@ defmodule Lemieux.Extensions.A2UI.DiagramPreview do
   @impl true
   def description,
     do:
-      "Optional local diagram syntax/fit check. Prefer Mermaid source; native diagram components are accepted. Request componentSchema for the exact native record format, without rendering. Preview returns plaintext at width (default 80). Checks an illustration, not whether its actions happened."
+      "Optional local diagram syntax and fit check. Provide exactly one of source (preferred Mermaid), " <>
+        "diagram (a native component), or componentSchema (return a native component's format without rendering). " <>
+        "Use width only with source or diagram. The plaintext preview defaults to 80 cells. " <>
+        "A preview checks whether an illustration can render."
 
   @impl true
   def read_only?, do: true
@@ -25,14 +28,11 @@ defmodule Lemieux.Extensions.A2UI.DiagramPreview do
   def metadata, do: %{effects: %{class: "read", resource_types: []}, policy: %{approval: "never"}}
   @impl true
   def schema do
+    # Anthropic rejects top-level oneOf in tool schemas. run/2 enforces the
+    # argument combinations for every provider.
     %{
       "type" => "object",
       "additionalProperties" => false,
-      "oneOf" => [
-        %{"required" => ["source"]},
-        %{"required" => ["diagram"]},
-        %{"required" => ["componentSchema"], "not" => %{"required" => ["width"]}}
-      ],
       "properties" => %{
         "source" => %{
           "type" => "string",
@@ -66,6 +66,9 @@ defmodule Lemieux.Extensions.A2UI.DiagramPreview do
         {:error, "Unknown diagram componentSchema."}
     end
   end
+
+  def run(%{"componentSchema" => _type}, _context),
+    do: {:error, "provide componentSchema by itself"}
 
   def run(%{"source" => source} = args, context) when not is_map_key(args, "diagram"),
     do:
