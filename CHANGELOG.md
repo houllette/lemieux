@@ -7,7 +7,20 @@ Before 1.0, a minor release may change public APIs; each such change is listed
 with migration notes. [Support](docs/support.md) says what counts as public
 API.
 
-## Unreleased
+## 1.2.2 — 2026-11-24
+
+Restart `lmx` after updating from 1.2.1 on every platform, then resume with
+`lmx -c` or `lmx --resume SESSION`. The terminal state and runtime dependency
+changes require fresh initialization. Existing transcripts, personal config
+version 1, and extension API 1 remain compatible.
+
+- Search and switch sessions with `/resume`, scoped to this folder or all
+  sessions. Select a supported service tier with `/priority`. (#226)
+- Select Standard access for eligible OpenAI Responses models. The header
+  shows requested access and the provider's confirmation when available. (#227)
+- Use smaller automatic compaction retries and clearer turn-limit recovery.
+  See pending stdio requests in `/mcp` and verification details in Tasks. (#225)
+- Update JSV to 0.28.0 and IDNA to 8.0.0 across the library and release host. (#224)
 
 - Preserve provider spend and transcript order across retries, cancellation
   and resume. A synchronous prompt now receives the outcome of its own turn.
