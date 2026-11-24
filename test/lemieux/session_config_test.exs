@@ -2,6 +2,7 @@ defmodule Lemieux.SessionConfigTest do
   use ExUnit.Case, async: true
 
   alias Lemieux.Entry
+  alias Lemieux.Extensions.A2UI.DiagramPreview
   alias Lemieux.Extensions.Workspace.Skill
   alias Lemieux.Extensions.Workspace.SkillTool
   alias Lemieux.Provider.Priority
@@ -262,6 +263,18 @@ defmodule Lemieux.SessionConfigTest do
       assert {:ok, "other:first"} = Session.set_provider(session, "OTHER")
       assert_receive {:lemieux, ^id, {:model_changed, "test:model", "other:first"}}
       assert Session.snapshot(session).provider == "other"
+    end
+
+    test "switches to Anthropic with the built-in diagram preview tool", context do
+      {session, _provider} =
+        start(context,
+          provider: ReqLLM.new(api_keys: %{"openai" => "test-key", "anthropic" => "test-key"}),
+          model: "openai:gpt-4o-mini",
+          tools: [DiagramPreview]
+        )
+
+      assert {:ok, "anthropic:" <> _} = Session.set_provider(session, "anthropic")
+      assert Session.snapshot(session).provider == "anthropic"
     end
 
     test "refuses a provider with no compatible models", context do

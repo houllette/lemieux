@@ -19,6 +19,7 @@ API.
   identity. Rollback receipts apply only to the latest activation of the asset.
 - Reject invalid discovery charges, retries of terminal discovery records and
   invalid experiment clarification counts.
+- Allow switching to Anthropic while the A2UI `diagram_preview` tool is enabled.
 
 ## 1.2.1 — 2026-11-18
 
